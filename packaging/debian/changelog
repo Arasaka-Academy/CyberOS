@@ -1,3 +1,9 @@
+cyberos (2.3.0) unstable; urgency=medium
+
+  * Release CyberOS 2.3.0 with native Tailscale management, Bluetooth voice channel support, resilient BitTorrent defaults, and unified Web/TV controls.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Wed, 04 Nov 2026 13:31:46 +0000
+
 cyberos (2.2.14) unstable; urgency=medium
 
   * Reuse shared quiet surfaces for playback collapse and audio output actions; keep TV search icons and labels separate.

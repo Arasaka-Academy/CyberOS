@@ -1,6 +1,6 @@
 {
   "name": "@cyberos/shared",
-  "version": "2.2.14",
+  "version": "2.3.0",
   "type": "module",
   "exports": {
     ".": {
