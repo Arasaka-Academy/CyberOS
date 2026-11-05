@@ -22,6 +22,7 @@ import { MonitoringReader } from "@cyberos/monitoring";
 import type { ApiRouteContext, ServerDependencies } from "./context.js";
 import { createVodPlayerRuntime, type MonitoringQueryRequest } from "@cyberos/shared";
 import { AudioCoordinator } from "./lib/audio-coordinator.js";
+import { VoiceMediaStore } from "./lib/voice-media.js";
 import { UnixAudioRuntime, audioSocketPath } from "./lib/audio-runtime.js";
 import { MediaAudioFocus } from "./lib/audio-focus.js";
 import { CyberAudioClient } from "./lib/audio-client.js";
@@ -131,7 +132,8 @@ export async function buildServer({ buildInfo, config, db, monitoring: monitorin
   const capabilityRuntime = { db, config, adapters: capabilityAdapters };
   const audio = audioDependency ?? new AudioCoordinator(db,
     audioRuntime ?? new UnixAudioRuntime(audioSocketPath(config.paths.runDir)),
-    new CyberAudioClient(), new MediaAudioFocus(vodPlayer ?? createVodPlayerRuntime({ ...config.vodPlayer, enabled: true })));
+    new CyberAudioClient(), new MediaAudioFocus(vodPlayer ?? createVodPlayerRuntime({ ...config.vodPlayer, enabled: true })),
+    new VoiceMediaStore(config.paths.stateDir, db));
   const routeContext: ApiRouteContext = {
     audio,
     ...(buildInfo ? { buildInfo } : {}),

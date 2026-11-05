@@ -274,8 +274,9 @@ async fn handle(
             Ok(json!({}))
         }
         Request::Stop => {
-            state.lock().await.interrupt();
-            Ok(json!({}))
+            let mut current = state.lock().await;
+            current.interrupt();
+            Ok(json!({"generation":current.generation}))
         }
     }
 }

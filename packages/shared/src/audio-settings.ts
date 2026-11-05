@@ -34,8 +34,8 @@ export function normalizeAudioSettings(input: Record<string, unknown>, updatedAt
     speechEnabled: boolean("speechEnabled", true), outputDeviceId: optionalText("outputDeviceId", 512),
     volume: number("volume", 70, 0, 100), updatedAt
   };
-  if (settings.enabled && (!settings.cyberAudioBaseUrl || !settings.cyberAudioToken || !settings.inputDeviceId || !settings.outputDeviceId)) {
-    throw new Error("Voice requires a service, token, trusted input and explicit output");
+  if (settings.enabled && (!settings.cyberAudioBaseUrl || !settings.cyberAudioToken)) {
+    throw new Error("Voice requires a CyberAudio service and token");
   }
   return settings;
 }

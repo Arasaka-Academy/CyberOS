@@ -1545,6 +1545,42 @@ export interface VoiceTurnRecord {
   timings: Record<string, number>;
   createdAt: string;
   updatedAt: string;
+  source?: "device" | "browser";
+  clientId?: string | null;
+  audioError?: string | null;
+}
+
+export interface VoiceMedia {
+  id: string;
+  role: "user" | "assistant";
+  segment: number;
+  durationMs: number;
+  sizeBytes: number;
+}
+export interface VoiceHistoryTurn extends VoiceTurnRecord {
+  sequence: number;
+  revision: number;
+  source: "device" | "browser";
+  clientId: string | null;
+  userText: string;
+  assistantText: string;
+  awaitingApproval: boolean;
+  userAudio: VoiceMedia[];
+  assistantAudio: VoiceMedia[];
+  userAudioState: "available" | "unavailable" | "pending";
+  assistantAudioState: "available" | "unavailable" | "pending" | "incomplete";
+}
+export interface VoiceHistoryPage {
+  items: VoiceHistoryTurn[];
+  nextCursor: string | null;
+}
+export interface VoiceHistorySnapshot extends VoiceHistoryPage {
+  sessionId: string | null;
+  enabled: boolean;
+  configured: boolean;
+  speechEnabled: boolean;
+  maxRecordingSeconds: number;
+  status: AudioStatus;
 }
 
 export interface AudioDevice { id: string; name: string; connected: boolean }

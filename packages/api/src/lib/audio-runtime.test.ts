@@ -33,6 +33,14 @@ it("keeps BLE requests alive for transfer plus actual device playback", async ()
   await expect(operation).resolves.toBeUndefined();
 });
 
+it("returns the generation acknowledged by the stop request", async () => {
+  const { runtime, request } = await daemon();
+  const operation = runtime.stop();
+  const reply = await request;
+  reply.end(`${JSON.stringify({ ok: true, result: { generation: 7 } })}\n`);
+  await expect(operation).resolves.toBe(7);
+});
+
 it.each([["alsa/hdmi", 135_000], ["ble-playback:/org/bluez/hci0/dev_AA_BB_CC_DD_EE_FF", 270_000]])("bounds the %s IPC wait without changing ALSA", async (device, timeout) => {
   const { runtime, request } = await daemon();
   const operation = runtime.play(Buffer.from("wav"), device, 5, 1);

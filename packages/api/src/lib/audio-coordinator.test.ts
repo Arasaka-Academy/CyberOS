@@ -16,7 +16,7 @@ function fixture(transcript = "你好") {
     configure: async () => {}, devices: async () => ({ inputs: [{ id: "remote", name: "Remote", connected: true }], outputs: [{ id: "speaker", name: "Speaker", connected: true }] }),
     recording: async (id) => ({ id, deviceId: "remote", wav: Buffer.alloc(50).toString("base64") }),
     ack: async (id) => { daemon.recordings = daemon.recordings.filter((value) => value !== id); },
-    play: async (wav) => { played.push(wav.toString()); }, stop: async () => {}
+    play: async (wav) => { played.push(wav.toString()); }, stop: async () => ++daemon.generation
   };
   const client = { test: async () => ({ reachable: true, authenticated: true, sttReady: true, ttsReady: true, voices: ["serena"], error: null }), transcribe: async () => transcript, synthesize: async (_settings: unknown, text: string): Promise<Buffer> => Buffer.from(text) };
   const focus = { acquire: async () => "lease", renew: async () => {}, release: async () => {} };
@@ -186,6 +186,43 @@ describe("voice coordinator", () => {
     finish(Buffer.from("interrupted"));
     await result;
     expect(played).toEqual([]);
+  });
+  it("keeps a new output test alive when polling observes its own stop acknowledgement", async () => {
+    const { coordinator, runtime, daemon, client, played } = fixture();
+    daemon.recordings = [];
+    runtime.stop = async () => ++daemon.generation;
+    await coordinator.tick();
+    let finish!: (wav: Buffer) => void;
+    client.synthesize = vi.fn(() => new Promise<Buffer>((resolve) => { finish = resolve; }));
+    const speech = coordinator.testSpeech("new reply");
+    const result = expect(speech).resolves.toBeUndefined();
+    await vi.waitFor(() => expect(client.synthesize).toHaveBeenCalledOnce());
+    await coordinator.tick();
+    finish(Buffer.from("new reply"));
+    await result;
+    expect(played).toEqual(["new reply"]);
+  });
+  it("ignores a stale poll that finishes after a controlled output stop", async () => {
+    const { coordinator, runtime, daemon, client, played } = fixture();
+    daemon.recordings = [];
+    await coordinator.tick();
+    const beforeStop = { ...daemon };
+    let releasePoll!: (status: AudioDaemonStatus) => void;
+    const status = runtime.status;
+    runtime.status = vi.fn().mockImplementationOnce(() => new Promise<AudioDaemonStatus>((resolve) => { releasePoll = resolve; })).mockImplementation(status);
+    const poll = coordinator.tick();
+    await vi.waitFor(() => expect(runtime.status).toHaveBeenCalledOnce());
+    let finish!: (wav: Buffer) => void;
+    client.synthesize = vi.fn(() => new Promise<Buffer>((resolve) => { finish = resolve; }));
+    const speech = coordinator.testSpeech("new reply");
+    const result = expect(speech).resolves.toBeUndefined();
+    await vi.waitFor(() => expect(client.synthesize).toHaveBeenCalledOnce());
+    releasePoll(beforeStop);
+    await poll;
+    await coordinator.tick();
+    finish(Buffer.from("new reply"));
+    await result;
+    expect(played).toEqual(["new reply"]);
   });
   it("does not submit input using a poll snapshot taken before disable", async () => {
     const { db, coordinator, runtime } = fixture();

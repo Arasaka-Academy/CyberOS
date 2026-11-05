@@ -1,6 +1,6 @@
 ---
-title: 蓝牙语音通道
-description: 配置系统语音会话、CyberAudio、可信遥控器和主机语音输出。
+title: 系统语音通道
+description: 配置浏览器与 StickS3 共用的语音会话、可回放历史及 CyberAudio 服务。
 type: operation
 status: current
 audience: [operator, developer]
@@ -24,7 +24,8 @@ ATVV 1.0 / 16 kHz IMA ADPCM 输入，通过 BlueZ GATT 接收按住说话的录�
 遥控器不可用时可以先配置和检查服务，但不要以其他麦克风替代其验收。
 
 模型调用在 API 内协调；非 root 的 `cyberos-audiod` 只负责 GATT、音频解码、
-有界录音、WAV 转换和主机/BLE 输出，不持有 CyberAudio 凭据。浏览器不采集、播放或转发语音。
+有界录音、WAV 转换和主机/BLE 输出，不持有 CyberAudio 凭据。浏览器也可独立录音与回放，
+无需 StickS3 在线；两种输入共享同一个语音会话、上下文和审批规则。
 
 ## 配置
 
@@ -37,8 +38,25 @@ ATVV 1.0 / 16 kHz IMA ADPCM 输入，通过 BlueZ GATT 接收按住说话的录�
    朗读指令、播报开关和音量。输出离线不会切到其他扬声器。
 5. 保存后执行录音测试和语音输出测试。录音测试只显示转写，不创建 Agent 消息；
    BLE 输出必须等待设备确认扬声器播完；软件完成也不等于人耳已确认实际出声。
-6. 启用语音通道，按住语音键说话、松开投递。Agent 列表中的麦克风入口和
-   Audio 的“打开语音历史”进入同一个系统语音会话。
+6. 启用语音通道，按住语音键说话、松开投递。播放器上方的麦克风入口打开语音侧栏，
+   可回放双方历史，也可在浏览器“录音 → 试听 → 发送”。仅使用浏览器时可不选择设备输入、输出。
+   Audio 的“打开语音历史”及侧栏的完整会话入口仍进入同一个系统语音会话。
+
+浏览器只在点击开始录音后请求权限，优先 WebM/Opus，Safari 使用 MP4/AAC。
+录音最长 30 秒，且遵循保存的更短上限；单文件不超过 8 MiB。API 通过 FFmpeg 校验真实音频，
+统一为 16 kHz 单声道 PCM16 WAV。拒绝无效或超长文件，不创建 Agent 任务。
+失败保留当前页试听草稿，重试使用同一个幂等键；关闭侧栏会结束录音并保留草稿。
+识别失败且尚未创建 Agent 任务时，重试复用原轮次和已归档录音；任务一旦投递不重复执行。
+
+麦克风需要安全上下文。管理员可在 CyberMachine 启用仅 Tailnet 可访问的 HTTPS，
+代理现有 Nginx（API 仍绑定 loopback，不启用 Funnel）：
+
+```bash
+sudo tailscale serve status --json  # 变更前保存现有配置
+sudo tailscale serve --bg --https=443 http://127.0.0.1:80
+```
+
+使用 `tailscale status --json` 中本机 DNSName 对应的 HTTPS 地址访问。
 
 首次启用创建唯一系统语音会话；跨重启保留 ID 和上下文。普通聊天仍为 `chat`，
 语音会话为 `voice`。只能重置其模型上下文，不能普通删除；重置保留历史，
@@ -57,6 +75,10 @@ BLE 输出 ID 使用 `ble-playback:`，必须与当前 `bluez:` 输入路径匹�
 
 - 新录音打断旧播报，但不自动取消正在执行的 Agent 任务。旧结果仍留在历史，
   被打断轮次的后续语音不再抢播。最多两个未完成轮次，超出明确报忙。
+- 回复跟随发起端：设备输入使用保存的设备输出；浏览器输入只在发起的标签页自动播放，
+  其他页面仅更新历史。浏览器阻止自动播放时显示手动播放入口。关闭、后台、刷新后不补播旧回复。
+  历史回放始终使用当前浏览器；本地录音和回放临时暂停当前浏览器播放器，
+  只有原媒体会话、位置及用户操作均未改变时才恢复，不控制 NAS 的历史回放输出。
 - 录音和播报使用 15 秒媒体占用凭证，API 持续续约。VOD player 退出当前 MPV
   进程以真正释放 ALSA；保留原媒体、位置和暂停状态。到期或结束时仅在凭证
   仍有效且未被用户或 Agent 的新媒体操作替代时恢复。API/播放连接断开会停止语音。
@@ -78,7 +100,12 @@ STT 失败或空转写不创建 Agent 任务。TTS/输出失败不重跑 Agent�
 文字。429 按 `Retry-After` 有限重试，连接和响应体有超时及大小限制；重定向不
 转发凭据。录音唯一 ID、事务和命令幂等键防止重复投递。
 
-原始 WAV 仅暂存在 daemon 内存，识别后确认清除，未消费录音最长保留五分钟。
+用户录音在 daemon 确认清除前归档；Agent 每段合成后归档，按准确的 recordingId/jobId 关联。
+双方音频长期保存在配置 `stateDir/audio/history`（生产为 `/cyberos/state/audio/history`），
+不按时间自动淘汰；备份和容量规划应包含该目录。目录权限 0700、文件权限 0600，服务端生成文件名并原子发布。
+旧轮次缺少原音频时显示“无音频”；保存、合成失败或中断时保留文字并标记音频不可用或不完整，
+不会重跑 Agent 或为回放重新调用 TTS。录音测试不进入正式历史。
+daemon 未消费录音仍最长暂存五分钟，消费后确认清除其内存副本。
 API 重启保留已有任务关联，但抑制旧轮次播报；不重播可能已经播放的内容。
 蓝牙重连后重新发现特征并订阅，不复用旧 GATT 路径。
 
@@ -94,6 +121,10 @@ API 重启保留已有任务关联，但抑制旧轮次播报；不重播可能�
 | `POST /api/audio/test/speech` | 使用已保存配置在选定设备测试播报 |
 | `POST /api/audio/stop` | 打断播报，不取消 Agent |
 | `POST /api/audio/session/reset` | 空闲时重置默认语音上下文 |
+| `GET /api/audio/history` | 默认最近 20 轮，使用 before 稳定游标加载更早记录，limit 最大 50 |
+| `GET /api/audio/history/events` | SSE history 事件；每次重连同步最近页，客户端按 recordingId 合并 |
+| `POST /api/audio/recordings` | 一个 multipart file，x-voice-client 与 Idempotency-Key 标头，接受后返回 202 |
+| `GET /api/audio/media/:id` | 按保存资产 ID 回放，支持 Range；通道关闭或设备离线仍可读取 |
 
 ```bash
 systemctl status cyberos-audiod.service cyberos-vod-player.service cyberos-api.service

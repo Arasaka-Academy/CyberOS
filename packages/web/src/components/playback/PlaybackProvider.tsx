@@ -25,6 +25,7 @@ import {
 } from "../../lib/video-api.js";
 import { acceptPlaybackRevision } from "../../lib/playback-state.js";
 import { getPlaybackDockState, readPlaybackBarExpanded, writePlaybackBarExpanded } from "../../lib/playback-dock-state.js";
+import { acquireBrowserAudioFocus as acquireLocalFocus } from "../../lib/browser-audio-focus.js";
 
 export interface BrowserPlayback {
   fileId: string;
@@ -62,6 +63,7 @@ interface PlaybackContextValue {
   stopBrowser: () => void;
   toggleBrowser: () => Promise<void>;
   updateBrowser: (patch: Partial<BrowserPlayback>) => void;
+  acquireBrowserAudioFocus: () => () => void;
 }
 const PlaybackContext = createContext<PlaybackContextValue | null>(null);
 export const useOptionalPlayback = () => useContext(PlaybackContext);
@@ -108,6 +110,10 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   }, []);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const requestId = useRef(0);
+  const browserInteraction = useRef(0);
+  const acquireBrowserAudioFocus = useCallback(() => acquireLocalFocus(() => ({
+    video: videoRef.current, sessionId: browserRef.current?.session.id ?? null, revision: browserInteraction.current
+  })), []);
   const commit = useCallback((next: NasPlaybackStatus) => {
     const accepted = acceptPlaybackRevision(
       nasRef.current
@@ -174,6 +180,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     setBrowser(next);
   }, []);
   const stopBrowser = useCallback(() => {
+    browserInteraction.current++;
     requestId.current++;
     const current = browserRef.current;
     videoRef.current?.pause();
@@ -189,6 +196,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   }, [setPlayerOpen]);
   const playBrowser = useCallback(
     async (fileId: string, title: string, options: StreamOptions = {}) => {
+      browserInteraction.current++;
       const sequence = ++requestId.current;
       const old = browserRef.current;
       if (old) {
@@ -242,6 +250,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     [updateBrowser, setPlayerOpen],
   );
   const toggleBrowser = useCallback(async () => {
+    browserInteraction.current++;
     const current = browserRef.current;
     const video = videoRef.current;
     if (!current || !video || current.session.state !== "ready") return;
@@ -376,6 +385,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
       stopBrowser,
       toggleBrowser,
       updateBrowser,
+      acquireBrowserAudioFocus,
     }),
     [
       dock,
@@ -397,6 +407,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
       stopBrowser,
       toggleBrowser,
       updateBrowser,
+      acquireBrowserAudioFocus,
     ],
   );
   return (

@@ -33,7 +33,7 @@ beforeEach(async () => {
     collapseBar: vi.fn(), expandBar: vi.fn(), nas: null, error: null, browser: null, target: "nas", setTarget: vi.fn(),
     playerOpen: false, setPlayerOpen: vi.fn(), fullscreen: false, videoRef: createRef<HTMLVideoElement>(),
     refresh: vi.fn(async () => {}), control: vi.fn(async () => {}), playBrowser: vi.fn(async () => {}),
-    stopBrowser: vi.fn(), toggleBrowser: vi.fn(async () => {}), updateBrowser: vi.fn()
+    stopBrowser: vi.fn(), toggleBrowser: vi.fn(async () => {}), updateBrowser: vi.fn(), acquireBrowserAudioFocus: vi.fn(() => () => {})
   };
   music = { status: { ...status }, busy: false, error: null, libraryVersion: 0, drawerOpen: false, setDrawerOpen: vi.fn(), execute: vi.fn(async () => {}), refresh: vi.fn(async () => {}) };
   vi.mocked(usePlayback).mockImplementation(() => playback);

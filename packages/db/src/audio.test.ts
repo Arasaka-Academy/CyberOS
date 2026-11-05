@@ -34,7 +34,8 @@ describe("voice persistence", () => {
     expect(getAudioSettings(db)).toMatchObject({ enabled: false, inputDeviceId: null, maxRecordingSeconds: 30, cyberAudioToken: null });
     saveAudioSettings(db, { ...defaultAudioSettings(), cyberAudioToken: "private-token" });
     expect(saveAudioSettings(db, { cyberAudioBaseUrl: "https://example.com" }).cyberAudioToken).toBe("private-token");
-    expect(() => saveAudioSettings(db, { enabled: true })).toThrow();
+    expect(saveAudioSettings(db, { enabled: true })).toMatchObject({ enabled: true, inputDeviceId: null, outputDeviceId: null });
+    expect(() => saveAudioSettings(db, { cyberAudioToken: null })).toThrow();
   });
 
   it("delivers a recording exactly once and keeps the explicit job association", () => {

@@ -2,6 +2,8 @@ import { getMusicPlayer } from "./lib/music-api.js";
 import { MusicTakeoverDialog, MusicProvider } from "./components/music/MusicProvider.js";
 import { PlaybackBar } from "./components/playback/PlaybackBar.js";
 import { PlaybackMenu } from "./components/playback/PlaybackMenu.js";
+import { VoiceButton, VoiceDrawer } from "./components/voice/VoiceDrawer.js";
+import { useVoiceHistory, voiceState } from "./components/voice/useVoiceHistory.js";
 import { PlaybackProvider, usePlayback } from "./components/playback/PlaybackProvider.js";
 import { BrowserPlayer } from "./components/playback/BrowserPlayer.js";
 import { FormEvent, KeyboardEvent, PointerEvent, Suspense, lazy, useCallback, useEffect, useMemo, useReducer, useRef, useState, useTransition, type CSSProperties } from "react";
@@ -297,6 +299,11 @@ function AppContent() {
   const [notificationsLoading, setNotificationsLoading] = useState(true);
   const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
   const closeNotificationCenter = useCallback(() => setNotificationCenterOpen(false), []);
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  const closeVoice = useCallback(() => setVoiceOpen(false), []);
+  const voiceHistory = useVoiceHistory(voiceOpen);
+  const openVoice = useCallback(() => { setNotificationCenterOpen(false); setVoiceOpen(true); }, []);
+  const voiceEntry = <VoiceButton mobilePrimary open={voiceOpen} unread={voiceHistory.unread} state={voiceState(voiceHistory.snapshot)} onClick={openVoice} />;
   function setMobileView(view: "chat" | "workspace") {
     if (view === "workspace") changePanel("files");
     else navigation.openApp("agent");
@@ -1049,8 +1056,20 @@ function AppContent() {
   }
 
   function openNotificationCenter() {
+    setVoiceOpen(false);
     setNotificationCenterOpen(true);
     void refreshNotifications(true);
+  }
+
+  function openVoiceSession(sessionId: string) {
+    void getSessions().then(async (nextSessions) => {
+      const session = nextSessions.find((item) => item.id === sessionId);
+      if (!session) return;
+      setSessions(nextSessions);
+      setSettingsOpen(false);
+      navigation.openApp("agent");
+      await selectSession(session);
+    }).catch((nextError: unknown) => setError(toErrorMessage(nextError)));
   }
 
   useEffect(() => {
@@ -2597,10 +2616,11 @@ function AppContent() {
       style={appStyle}
       data-mobile-route={navigation.compact ? navigation.route : undefined}
     >
-      {navigation.compact && navigation.route === "home" ? <MobileHome connection={connection} unreadCount={notificationUnreadCount} approvalCount={capabilityApprovals.length} onOpenApp={navigation.openApp} onOpenNotifications={openNotificationCenter} /> : null}
+      {navigation.compact && navigation.route === "home" ? <MobileHome voiceEntry={voiceEntry} connection={connection} unreadCount={notificationUnreadCount} approvalCount={capabilityApprovals.length} onOpenApp={navigation.openApp} onOpenNotifications={openNotificationCenter} /> : null}
       <MobileAppScope.Provider value="agent">
       {!navigation.compact || navigation.route === "agent" ? <Suspense fallback={<ChatPaneSkeleton active />}>
       <ChatPane
+        voiceEntry={voiceEntry}
         playbackEntry={!navigation.compact ? <PlaybackMenu onOpenBluetoothSettings={() => void openSettings("bluetooth")} /> : null}
         active={!navigation.compact || navigation.route === "agent"}
         selectedRoot={selectedStoragePool}
@@ -2790,6 +2810,7 @@ function AppContent() {
       />
       </MobileAppScope.Provider>
 
+      <VoiceDrawer open={voiceOpen} onClose={closeVoice} history={voiceHistory} onOpenSession={openVoiceSession} onOpenSettings={() => void openSettings("audio")} />
       <NotificationCenter
         open={notificationCenterOpen}
         loading={notificationsLoading}

@@ -1,13 +1,17 @@
+import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import {
   defaultAudioSettings, deliverVoiceTurn, ensureVoiceSession, findVoiceSession,
   getAudioSettings, getJob, getVoiceTurn, listVoiceTurns, recoverVoiceTurns,
   reserveVoiceTurn, resetVoiceSession, suppressVoiceSpeech, updateVoiceTurn, voiceJobFinalText,
+  findBrowserVoiceTurn, reserveBrowserVoiceTurn, listVoiceHistory, findVoiceMedia, findVoiceInputMedia, setVoiceAudioError,
   type CyberOsDatabase
 } from "@cyberos/db";
-import type { AudioStatus, EffectiveAudioSettings, VoiceTurnRecord } from "@cyberos/shared";
+import type { AudioStatus, EffectiveAudioSettings, VoiceHistorySnapshot, VoiceTurnRecord } from "@cyberos/shared";
 import { CyberAudioClient, speechChunks, type AudioServiceStatus } from "./audio-client.js";
 import type { AudioFocusRuntime } from "./audio-focus.js";
 import { unavailableAudioStatus, validateBleAudioSelection, type AudioRuntime } from "./audio-runtime.js";
+import { normalizeVoiceAudio, VoiceInputError, type VoiceMediaStore } from "./voice-media.js";
 
 type AudioClient = Pick<CyberAudioClient, "test" | "transcribe" | "synthesize">;
 
@@ -21,6 +25,7 @@ export class AudioCoordinator {
   private epoch = 0;
   private configurationRevision = 0;
   private generation: number | null = null;
+  private stopping = 0;
   private lastConfiguration = "";
   private configuredAt = 0;
   private lease: { id: string; renewedAt: number } | null = null;
@@ -31,8 +36,9 @@ export class AudioCoordinator {
   private closed = false;
   private testDeadline = 0;
   private testResult: AudioStatus["test"] = { armed: false, transcript: null, error: null };
+  private decoding = 0;
 
-  constructor(private readonly db: CyberOsDatabase, readonly runtime: AudioRuntime, private readonly client: AudioClient = new CyberAudioClient(), private readonly focus: AudioFocusRuntime) {}
+  constructor(private readonly db: CyberOsDatabase, readonly runtime: AudioRuntime, private readonly client: AudioClient = new CyberAudioClient(), private readonly focus: AudioFocusRuntime, private readonly media?: VoiceMediaStore) {}
 
   start(): void {
     recoverVoiceTurns(this.db);
@@ -60,12 +66,68 @@ export class AudioCoordinator {
       turns, error: this.error, test: { ...this.testResult } };
   }
   async refreshStatus(): Promise<AudioStatus> { await this.tick(); return this.status(); }
+  history(before?: string, limit?: number): VoiceHistorySnapshot {
+    const settings = this.settings();
+    return { ...listVoiceHistory(this.db, { ...(before ? { before } : {}), ...(limit ? { limit } : {}) }),
+      sessionId: findVoiceSession(this.db)?.id ?? null, enabled: settings.enabled,
+      configured: Boolean(settings.cyberAudioBaseUrl && settings.cyberAudioToken), speechEnabled: settings.speechEnabled,
+      maxRecordingSeconds: Math.min(30, settings.maxRecordingSeconds), status: this.status() };
+  }
+  mediaPath(id: string): string | null { return this.media && findVoiceMedia(this.db, id) ? this.media.filePath(id) : null; }
+  browserTurn(clientId: string, key: string): VoiceTurnRecord | null { return findBrowserVoiceTurn(this.db, clientId, key); }
+  checkBrowserInput(): void {
+    const settings = this.settings();
+    if (!settings.enabled) throw new VoiceInputError("Voice channel is disabled", 409);
+    if (!settings.cyberAudioBaseUrl || !settings.cyberAudioToken) throw new VoiceInputError("Configure CyberAudio first", 409);
+    if (this.closed || !this.media) throw new VoiceInputError("Voice history unavailable", 503);
+  }
+  async submitBrowser(input: Buffer, clientId: string, key: string): Promise<VoiceTurnRecord> {
+    const existing = this.browserTurn(clientId, key);
+    if (existing && (existing.status !== "failed" || existing.jobId)) return existing;
+    this.checkBrowserInput();
+    if (this.decoding >= 2 || listVoiceTurns(this.db, true).length >= 2) throw new VoiceInputError("Voice channel busy", 409);
+    this.decoding++;
+    let wav: Buffer;
+    const savedInput = existing ? findVoiceInputMedia(this.db, existing.recordingId) : null;
+    try {
+      const original = savedInput && this.media ? await readFile(this.media.filePath(savedInput.id)) : input;
+      wav = await normalizeVoiceAudio(original, Math.min(30, this.settings().maxRecordingSeconds));
+    }
+    finally { this.decoding--; }
+    this.checkBrowserInput();
+    const id = existing?.recordingId ?? randomUUID();
+    let turn: VoiceTurnRecord;
+    try {
+      const current = this.browserTurn(clientId, key);
+      if (existing && current) {
+        if (current.status !== "failed" || current.jobId) return current;
+        if (listVoiceTurns(this.db, true).length >= 2) throw new Error("Voice channel busy");
+        turn = updateVoiceTurn(this.db, id, { status: "transcribing", error: null });
+      } else turn = reserveBrowserVoiceTurn(this.db, { recordingId: id, clientId, idempotencyKey: key });
+    }
+    catch { throw new VoiceInputError("Voice channel busy", 409); }
+    if (turn.recordingId !== id) return turn;
+    // Interrupt old speech synchronously. The newly accepted input owns the next reply.
+    this.epoch++;
+    suppressVoiceSpeech(this.db);
+    updateVoiceTurn(this.db, id, { speechSuppressed: false });
+    const revision = this.configurationRevision;
+    const settings = this.settings();
+    const operation = (async () => {
+      await this.stopOutput();
+      if (!savedInput) await this.archive(id, "user", 0, wav);
+      await this.transcribeWav(id, wav, settings, revision);
+    })().finally(() => { this.work.delete(operation); });
+    this.work.add(operation);
+    return getVoiceTurn(this.db, id)!;
+  }
   async validateSettings(settings: EffectiveAudioSettings): Promise<void> {
     validateBleAudioSelection(settings.inputDeviceId, settings.outputDeviceId);
     if (!settings.enabled) return;
+    if (!settings.inputDeviceId && !settings.outputDeviceId) return;
     const devices = await this.runtime.devices();
-    if (!devices.inputs.some((device) => device.id === settings.inputDeviceId)) throw new Error("Select a paired trusted ATVV input");
-    if (!devices.outputs.some((device) => device.id === settings.outputDeviceId && device.connected)) throw new Error("Selected audio output is offline");
+    if (settings.inputDeviceId && !devices.inputs.some((device) => device.id === settings.inputDeviceId)) throw new Error("Select a paired trusted ATVV input");
+    if (settings.outputDeviceId && !devices.outputs.some((device) => device.id === settings.outputDeviceId && device.connected)) throw new Error("Selected audio output is offline");
   }
   async settingsChanged(): Promise<void> {
     this.configurationRevision++;
@@ -80,7 +142,16 @@ export class AudioCoordinator {
   async stopSpeech(): Promise<void> {
     this.epoch++;
     suppressVoiceSpeech(this.db);
-    await this.runtime.stop().catch(() => {});
+    await this.stopOutput();
+  }
+  private async stopOutput(): Promise<void> {
+    const epoch = this.epoch;
+    this.stopping++;
+    try {
+      const generation = await this.runtime.stop();
+      if (epoch === this.epoch) this.generation = generation;
+    } catch { /* A lost acknowledgement leaves the next poll to interrupt conservatively. */ }
+    finally { this.stopping--; }
   }
   async serviceTest(): Promise<AudioServiceStatus> { return this.client.test(this.settings()); }
   async armRecordingTest(): Promise<void> {
@@ -118,24 +189,26 @@ export class AudioCoordinator {
 
   private async poll(): Promise<void> {
     const revision = this.configurationRevision;
+    const epoch = this.epoch;
+    const stopping = this.stopping > 0;
     const settings = this.settings();
     if (this.testResult.armed && Date.now() >= this.testDeadline) {
       this.testResult = { armed: false, transcript: null, error: "Recording test timed out" };
       this.testDeadline = 0;
     }
-    const config = { enabled: settings.enabled || this.testResult.armed, inputDeviceId: settings.inputDeviceId, maxRecordingSeconds: settings.maxRecordingSeconds };
+    const config = { enabled: (settings.enabled && Boolean(settings.inputDeviceId)) || this.testResult.armed, inputDeviceId: settings.inputDeviceId, maxRecordingSeconds: settings.maxRecordingSeconds };
     const signature = JSON.stringify(config);
+    let daemon = unavailableAudioStatus();
     try {
       if (signature !== this.lastConfiguration || Date.now() - this.configuredAt > 20_000) {
         await this.runtime.configure(config);
         this.lastConfiguration = signature;
         this.configuredAt = Date.now();
       }
-      this.daemon = await this.runtime.status();
-    } catch {
-      this.daemon = unavailableAudioStatus();
-    }
-    if (this.closed || revision !== this.configurationRevision) return;
+      daemon = await this.runtime.status();
+    } catch { /* Report the daemon as unavailable until the next poll. */ }
+    if (this.closed || revision !== this.configurationRevision || epoch !== this.epoch || stopping || this.stopping) return;
+    this.daemon = daemon;
     if (this.generation !== null && this.generation !== this.daemon.generation && this.daemon.available) {
       this.epoch++;
       suppressVoiceSpeech(this.db);
@@ -186,6 +259,7 @@ export class AudioCoordinator {
             agentMs: Math.max(0, Date.now() - Date.parse(turn.createdAt) - (turn.timings.sttMs ?? 0)) } });
           const operation = this.speak(ready, voiceJobFinalText(this.db, turn.jobId), settings).catch(() => {
             const interrupted = getVoiceTurn(this.db, turn.recordingId)?.speechSuppressed;
+            setVoiceAudioError(this.db, turn.recordingId, "Reply audio is unavailable or incomplete", "assistant");
             updateVoiceTurn(this.db, turn.recordingId, { status: interrupted ? "interrupted" : "failed", error: interrupted ? null : "Speech synthesis or selected output failed; text remains in voice history" });
           }).finally(() => { this.speech = null; });
           this.speech = operation;
@@ -200,7 +274,12 @@ export class AudioCoordinator {
     try {
       const recording = await this.runtime.recording(id);
       if (recording.id !== id || recording.deviceId !== settings.inputDeviceId) throw new Error("Recording identity mismatch");
-      const text = await this.client.transcribe(settings, Buffer.from(recording.wav, "base64"));
+      const wav = Buffer.from(recording.wav, "base64");
+      if (!testing && this.media) {
+        try { await this.archive(id, "user", 0, await normalizeVoiceAudio(wav, settings.maxRecordingSeconds)); }
+        catch { setVoiceAudioError(this.db, id, "Recording audio could not be saved", "user"); }
+      }
+      const text = await this.client.transcribe(settings, wav);
       if (this.closed) return;
       if (revision !== this.configurationRevision) {
         if (!testing) updateVoiceTurn(this.db, id, { status: "failed", error: "Configuration changed; transcription was not submitted" });
@@ -218,27 +297,54 @@ export class AudioCoordinator {
     } finally { await this.runtime.ack(id).catch(() => {}); }
   }
 
+  private async transcribeWav(id: string, wav: Buffer, settings: EffectiveAudioSettings, revision: number): Promise<void> {
+    const started = Date.now();
+    try {
+      const text = await this.client.transcribe(settings, wav);
+      if (this.closed || revision !== this.configurationRevision) throw new Error("Configuration changed");
+      if (!text) throw new Error("Empty transcription");
+      deliverVoiceTurn(this.db, id, text);
+      updateVoiceTurn(this.db, id, { timings: { sttMs: Date.now() - started } });
+    } catch {
+      updateVoiceTurn(this.db, id, { status: "failed", error: "Transcription failed; no Agent task created" });
+    }
+  }
+
+  private async archive(id: string, role: "user" | "assistant", segment: number, wav: Buffer): Promise<void> {
+    if (!this.media) return;
+    try { await this.media.archive(id, role, segment, wav); }
+    catch { setVoiceAudioError(this.db, id, "Audio could not be saved; text is retained", role); }
+  }
+
   private async speak(turn: VoiceTurnRecord | null, text: string, settings: EffectiveAudioSettings): Promise<void> {
-    validateBleAudioSelection(settings.inputDeviceId, settings.outputDeviceId);
+    const browser = turn?.source === "browser";
+    if (!browser) validateBleAudioSelection(settings.inputDeviceId, settings.outputDeviceId);
     const epoch = this.epoch;
     const owner = `speech:${turn?.recordingId ?? "test"}`;
     const started = Date.now();
     let firstPlayback = true;
     const valid = () => !this.closed && epoch === this.epoch && (!turn || !getVoiceTurn(this.db, turn.recordingId)?.speechSuppressed);
     try {
-      const initial = await this.runtime.status();
+      const initial = browser ? this.daemon : await this.runtime.status();
       const expectedGeneration = initial.generation;
-      if (initial.recordingId || (turn && expectedGeneration !== this.generation)) {
+      if (!browser && (initial.recordingId || (turn && expectedGeneration !== this.generation))) {
         this.epoch++;
         suppressVoiceSpeech(this.db);
       }
       const chunks = speechChunks(text);
       if (!turn && !chunks.length) throw new Error("Speech test has no speakable text");
       if (turn && valid()) updateVoiceTurn(this.db, turn.recordingId, { status: "synthesizing" });
-      for (const chunk of chunks) {
+      for (const [segment, chunk] of chunks.entries()) {
         if (!valid()) break;
         const wav = await this.client.synthesize(settings, chunk);
+        if (turn && this.media) await this.archive(turn.recordingId, "assistant", segment, await normalizeVoiceAudio(wav, 180));
         if (!valid()) break;
+        if (browser) {
+          if (firstPlayback && turn) updateVoiceTurn(this.db, turn.recordingId, { timings: { ...turn.timings,
+            ttsMs: Date.now() - started, replyMs: Date.now() - Date.parse(turn.createdAt) } });
+          firstPlayback = false;
+          continue;
+        }
         const status = await this.runtime.status();
         if (status.recordingId || status.generation !== expectedGeneration) {
           this.epoch++;

@@ -10,7 +10,7 @@ export interface AudioRuntime {
   recording(id: string): Promise<{ id: string; deviceId: string; wav: string }>;
   ack(id: string): Promise<void>;
   play(wav: Buffer, device: string, volume: number, generation: number): Promise<void>;
-  stop(): Promise<void>;
+  stop(): Promise<number>;
 }
 
 export class UnixAudioRuntime implements AudioRuntime {
@@ -21,7 +21,11 @@ export class UnixAudioRuntime implements AudioRuntime {
   recording(id: string): Promise<{ id: string; deviceId: string; wav: string }> { return this.request({ type: "recording", id }); }
   async ack(id: string): Promise<void> { await this.request({ type: "ack", id }); }
   async play(wav: Buffer, device: string, volume: number, generation: number): Promise<void> { await this.request({ type: "play", wav: wav.toString("base64"), device, volume, generation }, device.startsWith("ble-playback:") ? 270_000 : 135_000); }
-  async stop(): Promise<void> { await this.request({ type: "stop" }); }
+  async stop(): Promise<number> {
+    const { generation } = await this.request<{ generation: number }>({ type: "stop" });
+    if (!Number.isSafeInteger(generation) || generation < 0) throw new Error("Invalid audio stop acknowledgement");
+    return generation;
+  }
 
   private request<Result>(request: Record<string, unknown>, timeout = 15_000): Promise<Result> {
     return new Promise((resolve, reject) => {

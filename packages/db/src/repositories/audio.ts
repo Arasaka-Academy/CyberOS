@@ -39,11 +39,13 @@ interface TurnRow {
   recording_id: string; device_id: string; session_id: string | null; message_id: string | null;
   job_id: string | null; status: VoiceTurnRecord["status"]; speech_suppressed: number;
   error: string | null; timings_json: string; created_at: string; updated_at: string;
+  source: "device" | "browser"; client_id: string | null; audio_error: string | null;
 }
 function mapTurn(row: TurnRow): VoiceTurnRecord {
   return { recordingId: row.recording_id, deviceId: row.device_id, sessionId: row.session_id,
     messageId: row.message_id, jobId: row.job_id, status: row.status, speechSuppressed: Boolean(row.speech_suppressed),
-    error: row.error, timings: JSON.parse(row.timings_json) as Record<string, number>, createdAt: row.created_at, updatedAt: row.updated_at };
+    error: row.error, timings: JSON.parse(row.timings_json) as Record<string, number>, createdAt: row.created_at, updatedAt: row.updated_at,
+    source: row.source, clientId: row.client_id, audioError: row.audio_error };
 }
 export function getVoiceTurn(db: CyberOsDatabase, recordingId: string): VoiceTurnRecord | null {
   const row = db.prepare("SELECT * FROM audio_voice_turns WHERE recording_id = ?").get(recordingId) as TurnRow | undefined;

@@ -1,5 +1,5 @@
 import { Bell, Database, LoaderCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { APP_REGISTRY, MOBILE_DOCK_APPS, MOBILE_GRID_APPS, type AppDefinition, type MobileAppId } from "./apps.js";
 import { useMobileNavigation } from "./MobileNavigation.js";
@@ -64,7 +64,8 @@ function AppButton({ app, approvalCount, onOpenApp }: { app: AppDefinition; appr
   );
 }
 
-export function MobileHome({ connection, unreadCount, approvalCount, onOpenApp, onOpenNotifications }: {
+export function MobileHome({ connection, unreadCount, approvalCount, onOpenApp, onOpenNotifications, voiceEntry }: {
+  voiceEntry?: ReactNode;
   connection: ConnectionState;
   unreadCount: number;
   approvalCount: number;
@@ -85,10 +86,10 @@ export function MobileHome({ connection, unreadCount, approvalCount, onOpenApp, 
           <img src="/cyberos-icon.svg" alt="" aria-hidden="true" />
           <div><h1>CyberOS</h1><span className="mobile-connection" data-state={connection} role="status"><i aria-hidden="true" />{t(`mobile.connection.${connection}`)}</span></div>
         </div>
-        <button className="mobile-notifications" type="button" onClick={onOpenNotifications} aria-label={t("notifications.center.openWithCount", { count: unreadCount })}>
+        <div className="mobile-home-voice-actions">{voiceEntry}<button className="mobile-notifications" type="button" onClick={onOpenNotifications} aria-label={t("notifications.center.openWithCount", { count: unreadCount })}>
           <Bell size={21} aria-hidden="true" />
           {unreadCount > 0 ? <span className="mobile-app-badge" aria-hidden="true">{unreadCount > 99 ? "99+" : unreadCount}</span> : null}
-        </button>
+        </button></div>
       </header>
       <nav className="mobile-app-grid" aria-label={t("mobile.apps")}>
         {MOBILE_GRID_APPS.map((app) => <AppButton key={app.id} app={app} approvalCount={approvalCount} onOpenApp={onOpenApp} />)}

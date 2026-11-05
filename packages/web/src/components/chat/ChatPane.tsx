@@ -223,6 +223,7 @@ function ChatPaneContent({
   onRequestSystemPower,
   notificationUnreadCount,
   playbackEntry,
+  voiceEntry,
   onSelectSession,
   onApproveCapability,
   onRejectCapability,
@@ -261,6 +262,7 @@ function ChatPaneContent({
   onRequestSystemPower: (action: SystemPowerAction) => Promise<boolean>;
   notificationUnreadCount: number;
   playbackEntry?: ReactNode;
+  voiceEntry?: ReactNode;
   onSelectSession: (session: SessionSummary) => void;
   onApproveCapability: (approval: CapabilityApproval, options: CapabilityDecisionOptions) => void;
   onRejectCapability: (approval: CapabilityApproval) => void;
@@ -494,6 +496,7 @@ function ChatPaneContent({
               </span>
             ) : null}
           </button>
+          {voiceEntry}
           {playbackEntry}
           {/* Keep focus on the trigger while loading so the dialog can restore it on close. */}
           <button
@@ -519,6 +522,7 @@ function ChatPaneContent({
           subtitle={activeSessionTitle}
           headingRef={headingRef}
           actions={<PanelHeaderActions label={t("mobile.more")}>
+            {voiceEntry}
             <PanelHeaderAction mobilePrimary label={t("mobile.sessions")} onClick={() => setSessionsOpen(true)}><MessageSquare size={20} aria-hidden="true" /></PanelHeaderAction>
             <PanelHeaderAction label={t("chat.deleteSession")} disabled={deleteDisabled} onClick={() => setDeleteConfirmOpen(true)}><Trash2 size={18} aria-hidden="true" /></PanelHeaderAction>
           </PanelHeaderActions>}

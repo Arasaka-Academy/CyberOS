@@ -68,7 +68,7 @@ capability 必须满足支持版本、16kHz IMA ADPCM 与有界帧长。解码�
 | `recording` | 按 ID 返回录音及设备 ID |
 | `ack` | 按 ID 确认消费 |
 | `play` | base64 WAV、输出设备、音量和 generation |
-| `stop` | 中断当前播放并推进代次 |
+| `stop` | 中断当前播放并返回推进后的 `generation`，供调用方区分主动停止与后续外部打断 |
 
 请求帧上限为 9 MiB，读取超时 5 秒；响应为 `{ok:true,result:...}` 或 `{ok:false,error:...}`。它没有 hostd 那样的版本 envelope，不能直接复用其他服务协议。
 

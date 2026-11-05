@@ -22,4 +22,40 @@ CREATE TABLE audio_voice_turns (
 );
 CREATE INDEX idx_audio_voice_turns_status ON audio_voice_turns(status, created_at);
 `
+}, {
+  id: "010_audio_history",
+  sql: `
+ALTER TABLE audio_voice_turns ADD COLUMN source TEXT NOT NULL DEFAULT 'device' CHECK(source IN ('device','browser'));
+ALTER TABLE audio_voice_turns ADD COLUMN client_id TEXT;
+ALTER TABLE audio_voice_turns ADD COLUMN idempotency_key TEXT;
+ALTER TABLE audio_voice_turns ADD COLUMN audio_error TEXT;
+ALTER TABLE audio_voice_turns ADD COLUMN user_audio_error TEXT;
+ALTER TABLE audio_voice_turns ADD COLUMN assistant_audio_error TEXT;
+ALTER TABLE audio_voice_turns ADD COLUMN history_revision INTEGER NOT NULL DEFAULT 0;
+CREATE UNIQUE INDEX idx_audio_browser_idempotency ON audio_voice_turns(client_id, idempotency_key) WHERE idempotency_key IS NOT NULL;
+CREATE TABLE audio_voice_media (
+  id TEXT PRIMARY KEY,
+  recording_id TEXT NOT NULL REFERENCES audio_voice_turns(recording_id),
+  role TEXT NOT NULL CHECK(role IN ('user','assistant')),
+  segment INTEGER NOT NULL CHECK(segment >= 0),
+  duration_ms INTEGER NOT NULL CHECK(duration_ms > 0),
+  size_bytes INTEGER NOT NULL CHECK(size_bytes > 44),
+  UNIQUE(recording_id, role, segment)
+);
+CREATE TRIGGER audio_history_turn_updated AFTER UPDATE ON audio_voice_turns
+WHEN NEW.history_revision = OLD.history_revision BEGIN
+  UPDATE audio_voice_turns SET history_revision = history_revision + 1 WHERE recording_id = NEW.recording_id;
+END;
+CREATE TRIGGER audio_history_media_added AFTER INSERT ON audio_voice_media BEGIN
+  UPDATE audio_voice_turns SET history_revision = history_revision + 1 WHERE recording_id = NEW.recording_id;
+END;
+CREATE TRIGGER audio_history_job_updated AFTER UPDATE OF status ON jobs
+WHEN NEW.status != OLD.status BEGIN
+  UPDATE audio_voice_turns SET history_revision = history_revision + 1 WHERE job_id = NEW.id;
+END;
+CREATE TRIGGER audio_history_reply_added AFTER INSERT ON agent_events
+WHEN NEW.type = 'agent.completed' AND NEW.job_id IS NOT NULL BEGIN
+  UPDATE audio_voice_turns SET history_revision = history_revision + 1 WHERE job_id = NEW.job_id;
+END;
+`
 }];
