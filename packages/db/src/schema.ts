@@ -9,6 +9,7 @@ import { photosMetadataLookupMigrations } from "./migrations/photos-metadata-loo
 import { photosIndexPerformanceMigrations } from "./migrations/photos-index-performance.js";
 import type { Migration } from "./migrations/types.js";
 import { audioMigrations } from "./migrations/audio.js";
+import { photosSemanticMigrations } from "./migrations/photos-semantic.js";
 
 export type { Migration } from "./migrations/types.js";
 
@@ -21,7 +22,8 @@ export const migrations: Migration[] = [
   ...photosScanContentionMigrations,
   ...photosMetadataLookupMigrations,
   ...photosIndexPerformanceMigrations,
-  ...audioMigrations
+  ...audioMigrations,
+  ...photosSemanticMigrations
 ];
 
 export function runMigrations(db: Database.Database): void {

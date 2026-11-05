@@ -28,10 +28,15 @@ import {
   reservePhotosUpload,
   savePhotosLibrarySettings,
   savePhotosProcessingSettings,
-  defaultPhotosProcessingSettings
+  defaultPhotosProcessingSettings,
+  getPhotosSemanticSettings, publicPhotosSemanticSettings, getActivePhotosEmbeddingProfile,
+  savePhotosSemanticSettings, mergePhotosSemanticSettings, getPhotosSemanticStatus,
+  rebuildPhotosSemanticIndex, retryPhotosEmbeddingJobs
 } from "@cyberos/db";
 import { applyFileMutation, isPathInside } from "@cyberos/storage-tools";
 import {
+  PhotosEmbeddingClient,
+  type PhotosSemanticSettingsPatch,
   PHOTOS_DATA_DIRECTORY_NAME,
   PHOTOS_MAX_FILE_SIZE_BYTES,
   PHOTOS_METADATA_SCHEMA_VERSION,
@@ -53,6 +58,7 @@ import {
 } from "@cyberos/shared";
 import type { ApiRouteContext } from "../context.js";
 import { sendFileStream } from "../lib/files.js";
+import { PhotosSearchService } from "../lib/photos-search.js";
 import { PhotosMetadataFieldsReader } from "../lib/photos-metadata-fields.js";
 import { ProxyHttpClient } from "../lib/proxy-http.js";
 import {
@@ -82,6 +88,8 @@ export function registerPhotoRoutes(server: FastifyInstance, context: ApiRouteCo
   const { db, system } = context;
   const dataRoot = context.config.paths.dataRoot;
   const exports = new Map<string, PhotoExport>();
+  const search = new PhotosSearchService(db);
+  server.addHook("preClose", async () => search.close());
   const metadataFields = new PhotosMetadataFieldsReader(db.name);
   server.addHook("preClose", async () => metadataFields.close());
   const videoCache = new VideoCache({
@@ -151,6 +159,40 @@ export function registerPhotoRoutes(server: FastifyInstance, context: ApiRouteCo
     }
   );
 
+  server.get("/api/settings/photos/semantic-search", async () => ({
+    settings: publicPhotosSemanticSettings(getPhotosSemanticSettings(db), getActivePhotosEmbeddingProfile(db)),
+    status: getPhotosSemanticStatus(db)
+  }));
+  server.patch<{ Body: PhotosSemanticSettingsPatch }>("/api/settings/photos/semantic-search", async (request, reply) => {
+    try {
+      const settings = savePhotosSemanticSettings(db, request.body);
+      return { settings: publicPhotosSemanticSettings(settings, getActivePhotosEmbeddingProfile(db)), status: getPhotosSemanticStatus(db) };
+    } catch (error) { return reply.status(400).send({ error: error instanceof Error ? error.message : "Invalid semantic settings" }); }
+  });
+  server.post<{ Body: PhotosSemanticSettingsPatch }>("/api/settings/photos/semantic-search/test", async (request, reply) => {
+    let settings;
+    try {
+      settings = mergePhotosSemanticSettings(getPhotosSemanticSettings(db), request.body);
+      if (!settings.baseUrl) throw new Error("Embedding API URL is required");
+    } catch (error) { return reply.status(400).send({ error: error instanceof Error ? error.message : "Invalid semantic settings" }); }
+    try {
+      const client = new PhotosEmbeddingClient(settings);
+      const model = await client.getModel();
+      await client.text("photo", model);
+      // A tiny valid RGB image checks the image path without reading NAS files.
+      await client.image(Buffer.concat([Buffer.from("P6\n2 2\n255\n"), Buffer.alloc(12, 127)]), model);
+      return { model };
+    } catch (error) { return reply.status(502).send({ error: error instanceof Error ? error.message : "Embedding API test failed" }); }
+  });
+  server.post("/api/photos/semantic-index/rebuild", async (_request, reply) => {
+    rebuildPhotosSemanticIndex(db);
+    return reply.status(202).send({ status: getPhotosSemanticStatus(db) });
+  });
+  server.post("/api/photos/semantic-index/retry", async (_request, reply) => {
+    retryPhotosEmbeddingJobs(db);
+    return reply.status(202).send({ status: getPhotosSemanticStatus(db) });
+  });
+
   server.put<{
     Body: { storagePoolId?: string; path?: string };
   }>("/api/photos/settings", async (request, reply) => {
@@ -212,6 +254,9 @@ export function registerPhotoRoutes(server: FastifyInstance, context: ApiRouteCo
       if (!query.ok) {
         reply.status(400).send({ error: query.error });
         return;
+      }
+      if (query.value.filters?.text?.trim()) {
+        return reply.send(await search.query({ libraryUpdatedAt: settings.updatedAt, request: query.value }));
       }
       const requestWithoutCursor = { ...query.value, cursor: undefined };
       const fingerprint = photosQueryFingerprint(requestWithoutCursor);
@@ -311,6 +356,9 @@ export function registerPhotoRoutes(server: FastifyInstance, context: ApiRouteCo
         reply.status(400).send({ error: mapQuery.error });
         return;
       }
+      if (mapQuery.value.filters?.text?.trim()) {
+        return reply.send(await search.map({ libraryUpdatedAt: settings.updatedAt, request: mapQuery.value }));
+      }
       reply.send({
         clusters: queryPhotosMap(db, { libraryUpdatedAt: settings.updatedAt, request: mapQuery.value }),
         metadataIndex: getPhotosMetadataIndexStatus(db, settings.updatedAt)
@@ -346,16 +394,17 @@ export function registerPhotoRoutes(server: FastifyInstance, context: ApiRouteCo
     const settings = getPhotosLibrarySettings(db);
     const status = getPhotosLibraryStatus(db, settings);
     const workerHealth = getPhotosWorkerHealth(db);
+    const semanticIndex = getPhotosSemanticStatus(db);
     if (!settings) {
-      reply.send({ status, workerHealth });
+      reply.send({ status, workerHealth, semanticIndex });
       return;
     }
     try {
       await resolveLibraryScope(context, settings);
-      reply.send({ status, workerHealth });
+      reply.send({ status, workerHealth, semanticIndex });
     } catch (error) {
       if (error instanceof StorageScopeError) {
-        reply.send({ status: { ...status, state: "offline", error: error.message }, workerHealth });
+        reply.send({ status: { ...status, state: "offline", error: error.message }, workerHealth, semanticIndex });
         return;
       }
       throw error;
@@ -978,6 +1027,7 @@ function photoSortValue(photo: PhotoQueryAsset, request: PhotoQueryRequest): str
     case "size_bytes": return photo.sizeBytes;
     case "rating": return photo.metadata?.rating ?? null;
     case "distance": return photo.distanceMeters;
+    case "relevance": return null;
     case "captured_at": return photo.metadata?.capturedAt ?? photo.metadata?.capturedAtLocal ?? photo.takenAt;
   }
 }
@@ -1003,7 +1053,7 @@ function validatePhotoQuery(body: unknown): ValidationResult<PhotoQueryRequest> 
   if (request.includeFacets !== undefined && typeof request.includeFacets !== "boolean") {
     return invalid("includeFacets must be a boolean");
   }
-  const sortFields = new Set(["captured_at", "indexed_at", "name", "size_bytes", "rating", "distance"]);
+  const sortFields = new Set(["captured_at", "indexed_at", "name", "size_bytes", "rating", "distance", "relevance"]);
   if (request.sort && (!isObject(request.sort) || !hasOnlyKeys(request.sort, ["field", "direction"]) ||
     !sortFields.has(request.sort.field) || !["asc", "desc"].includes(request.sort.direction))) {
     return invalid("Photo query sort is invalid");
@@ -1017,6 +1067,7 @@ function validatePhotoQuery(body: unknown): ValidationResult<PhotoQueryRequest> 
     ...(request.limit !== undefined ? { limit: request.limit } : {}),
     ...(request.includeFacets !== undefined ? { includeFacets: request.includeFacets } : {})
   };
+  if (normalized.sort?.field === "relevance" && !normalized.filters?.text?.trim()) return invalid("Relevance sorting requires a keyword");
   if (normalized.sort?.field === "distance" && normalized.filters?.location?.kind !== "near") {
     return invalid("Distance sorting requires a nearby location filter");
   }

@@ -4,6 +4,7 @@ import { useMobileBack, useMobileNavigation } from "../../mobile/MobileNavigatio
 import { PowerControl } from "../power/PowerControl.js";
 import { FormEvent, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { PhotosSemanticSettingsCard } from "./PhotosSemanticSettingsCard.js";
 import { SettingsSecretField } from "./SettingsSecretField.js";
 import { systemProxyUrl, type SystemProxySettingsRecord } from "@cyberos/shared";
 import { getSystemProxySettings } from "../../api.js";
@@ -1142,6 +1143,7 @@ export function SettingsPhotosPage({
       <form className="settings-form" onSubmit={(event) => void submit(event)} onChange={() => setSaved(false)}>
         <div className="settings-content-body">
           <div className="settings-page-grid">
+          <PhotosSemanticSettingsCard />
           <section className="settings-section-card">
             <header>
               <div>

@@ -1,0 +1,30 @@
+[Unit]
+Description=CyberOS Photos embedding worker
+Documentation=file:///usr/share/doc/cyberos/README.md
+After=cyberos-api.service cyberos-state-init.service network-online.target
+Requires=cyberos-api.service cyberos-state-init.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cyberos
+Group=cyberos
+Environment=CYBEROS_ROOT=/cyberos
+Environment=CYBEROS_ENVIRONMENT=production
+WorkingDirectory=/cyberos/state
+ExecStart=/usr/local/bin/node /usr/lib/cyberos/apps/worker/dist/photos-embeddings.js
+Restart=on-failure
+RestartSec=5
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/cyberos/state /cyberos/logs
+NoNewPrivileges=yes
+PrivateTmp=yes
+CapabilityBoundingSet=
+MemoryMax=256M
+CPUQuota=100%
+TasksMax=64
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

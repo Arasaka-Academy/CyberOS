@@ -312,7 +312,7 @@ if command -v systemctl >/dev/null 2>&1; then
     cyberos-monitor.service \
     cyberos-alerter.service \
     cyberos-worker@1.service \
-    cyberos-photos.service \
+    cyberos-photos.service cyberos-photos-embeddings.service \
     cyberos-downloader.service \
     cyberos-bluetoothd.service \
     cyberos-audiod.service \
@@ -329,7 +329,7 @@ if command -v systemctl >/dev/null 2>&1; then
   if ! systemctl restart cyberos-alerter.service; then
     log "warning: alerting service failed to start; core services remain available"
   fi
-  systemctl restart cyberos-worker@1.service cyberos-photos.service cyberos-downloader.service cyberos-bluetoothd.service cyberos-indexer.service
+  systemctl restart cyberos-worker@1.service cyberos-photos.service cyberos-photos-embeddings.service cyberos-downloader.service cyberos-bluetoothd.service cyberos-indexer.service
   systemctl enable --now \
     cyberos-maintenance.timer \
     cyberos-backup-daily.timer \

@@ -30,6 +30,8 @@ export * from "./repositories/monitoring-alerts.js";
 export * from "./repositories/operation-notifications.js";
 export * from "./repositories/photos.js";
 export * from "./repositories/photos-metadata.js";
+export * from "./repositories/photos-semantic.js";
+export * from "./repositories/photos-search.js";
 export * from "./repositories/sessions.js";
 export * from "./repositories/settings.js";
 export {

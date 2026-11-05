@@ -1,9 +1,13 @@
+import { createServer } from "node:http";
+import { once } from "node:events";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  activatePhotosEmbeddingModel,
+  getPhotosSemanticSettings,
   claimNextPhotosJob,
   enqueuePhotosJob,
   finishPhotosJob,
@@ -34,6 +38,56 @@ afterEach(async () => {
 });
 
 describe("photos API", () => {
+  it("tests drafts without saving secrets and searches through the reader with offline fallback", async () => {
+    const model = { protocol: "cyberos-photos-embedding/v1" as const, model: "test-model", revision: "one",
+      embeddingSpaceId: "test-space", dimensions: 2, normalized: true as const, modalities: ["image", "text"] as ("image" | "text")[] };
+    let online = true;
+    let textCalls = 0;
+    const remote = createServer((request, response) => {
+      request.resume();
+      if (!online) { response.writeHead(503).end(); return; }
+      if (request.headers.authorization !== "Bearer test-secret") { response.writeHead(401).end(); return; }
+      response.setHeader("content-type", "application/json");
+      if (request.url === "/v1/model") response.end(JSON.stringify(model));
+      else {
+        if (request.url?.endsWith("/text")) textCalls++;
+        response.end(JSON.stringify({ embeddingSpaceId: model.embeddingSpaceId, dimensions: 2, embeddings: [[1, 0]] }));
+      }
+    });
+    remote.listen(0, "127.0.0.1"); await once(remote, "listening");
+    const address = remote.address();
+    if (!address || typeof address === "string") throw new Error("Invalid test listener");
+    const { app, root } = await setup();
+    try {
+      await configure(app);
+      const draft = { enabled: true, baseUrl: `http://127.0.0.1:${address.port}`, model: model.model, apiKey: "test-secret" };
+      expect((await app.inject({ method: "POST", url: "/api/settings/photos/semantic-search/test", payload: draft })).statusCode).toBe(200);
+      expect(getPhotosSemanticSettings(db!).enabled).toBe(false);
+      const saved = await app.inject({ method: "PATCH", url: "/api/settings/photos/semantic-search", payload: draft });
+      expect(saved.statusCode).toBe(200); expect(saved.body).not.toContain("test-secret");
+      const retained = await app.inject({ method: "PATCH", url: "/api/settings/photos/semantic-search", payload: { enabled: true } });
+      expect(retained.json().settings.apiKeyConfigured).toBe(true);
+      activatePhotosEmbeddingModel(db!, model, retained.json().settings.generation);
+      const library = getPhotosLibrarySettings(db!)!;
+      const asset = await addPhotos(root, library, "海边.jpg", "2025-01-02T00:00:00.000Z");
+      const source = db!.prepare("SELECT content_hash || ':' || derivative_schema_version || ':' || preview_key AS key FROM photos_assets WHERE id=?").get(asset.id) as { key: string };
+      const vector = Buffer.alloc(8); vector.writeFloatLE(1, 0);
+      db!.prepare("INSERT INTO photos_embedding_cache VALUES(?,?,?,?,?)").run(model.embeddingSpaceId, source.key, 2, vector, new Date().toISOString());
+      db!.prepare("INSERT INTO photos_asset_embeddings VALUES(?,?,?)").run(asset.id, model.embeddingSpaceId, source.key);
+      const query = (text: string) => app.inject({ method: "POST", url: "/api/photos/query", payload: { filters: { text }, sort: { field: "relevance", direction: "desc" } } });
+      const first = await Promise.all([query("日落"), query("日落")]);
+      expect(first[0]!.statusCode).toBe(200);
+      expect(first[0]!.json()).toMatchObject({ total: 1, search: { mode: "hybrid" } });
+      expect(textCalls).toBe(2); // draft test plus one coalesced query
+      online = false;
+      expect((await query("日落")).json().search.mode).toBe("hybrid");
+      expect((await query("海边")).json()).toMatchObject({ total: 1, search: { mode: "lexical", semanticState: "unavailable" } });
+      expect((await query("外星飞船")).json().total).toBe(0);
+      expect((await app.inject({ method: "POST", url: "/api/photos/semantic-index/rebuild" })).statusCode).toBe(202);
+      expect((await app.inject({ method: "POST", url: "/api/photos/semantic-index/retry" })).statusCode).toBe(202);
+    } finally { await app.close(); remote.closeAllConnections(); await new Promise<void>((resolve) => remote.close(() => resolve())); }
+  });
+
   it("defaults existing photo settings to direct map downloads without losing processing preferences", async () => {
     const { app } = await setup();
     try {

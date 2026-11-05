@@ -1,3 +1,4 @@
+import type { PhotosSemanticIndexStatus, PhotosSearchInfo } from "@cyberos/shared";
 import { ModalPortal } from "../common/ModalPortal.js";
 import { useAppScroll, useAppViewState, useMobileBack } from "../../mobile/MobileNavigation.js";
 import {
@@ -121,6 +122,9 @@ export function PhotoLibraryPanel({
   const { t } = useTranslation();
   const [settings, setSettings] = useState<PhotoLibrarySettings | null>(null);
   const [status, setStatus] = useState<PhotoLibraryStatus | null>(null);
+  const [semanticIndex, setSemanticIndex] = useState<PhotosSemanticIndexStatus | null>(null);
+  const [searchInfo, setSearchInfo] = useState<PhotosSearchInfo | null>(null);
+  const browseSortRef = useRef<PhotoQuerySortField>("captured_at");
   const [workerHealth, setWorkerHealth] = useState<PhotoWorkerHealth | null>(null);
   const [clock, setClock] = useState(() => Date.now());
   const [photos, setPhotos] = useState<PhotoQueryAsset[]>([]);
@@ -192,7 +196,8 @@ export function PhotoLibraryPanel({
   const lightboxMediaKind = lightboxPhoto ? photoMediaKindForAsset(lightboxPhoto) : null;
   const statusBusy = isPhotoBusy(status?.state);
   const queryFilters = useMemo(() => readyPhotoQueryFilters(filters, metadataFields), [filters, metadataFields]);
-  const queryKey = useMemo(() => JSON.stringify({ filters: queryFilters, sortField, sortDirection }), [queryFilters, sortDirection, sortField]);
+  const effectiveSortField = sortField === "relevance" && !queryFilters.text?.trim() ? "captured_at" : sortField;
+  const queryKey = useMemo(() => JSON.stringify({ filters: queryFilters, sortField: effectiveSortField, sortDirection }), [queryFilters, sortDirection, effectiveSortField]);
   const runtimeAlert = photoRuntimeAlert(status, workerHealth);
   const runtimeAlertLabel = runtimeAlert
     ? [
@@ -247,24 +252,25 @@ export function PhotoLibraryPanel({
     try {
       const page = await queryPhotos({
         filters: queryFilters,
-        sort: { field: sortField, direction: sortDirection },
+        sort: { field: effectiveSortField, direction: sortDirection },
         cursor,
         limit: 60,
-        includeFacets: !cursor && !background
+        includeFacets: !cursor
       });
       if (requestId !== timelineRequestRef.current) return;
       if (background && !canRefreshSnapshotRef.current()) return;
       setPhotos((current) => cursor ? mergePhotos(current, page.photos) : page.photos);
+      setSearchInfo(page.search ?? null);
       setNextCursor(page.nextCursor);
       setTotal(page.total);
-      if (!cursor && !background) {
+      if (!cursor) {
         paginatedRef.current = false;
         setFacets(page.facets);
       }
     } finally {
       if (requestId === timelineRequestRef.current) timelinePendingRef.current = false;
     }
-  }, [queryFilters, sortDirection, sortField]);
+  }, [queryFilters, sortDirection, effectiveSortField]);
   timelineLoadRef.current = loadTimeline;
   queryKeyRef.current = queryKey;
 
@@ -281,6 +287,7 @@ export function PhotoLibraryPanel({
       setSettings(nextSettings);
       setStatus(snapshot.status);
       setWorkerHealth(snapshot.workerHealth);
+      setSemanticIndex(snapshot.semanticIndex ?? null);
       if (nextSettings) {
         loadedQueryKeyRef.current = queryKeyRef.current;
         const [, fields] = await Promise.all([
@@ -346,20 +353,23 @@ export function PhotoLibraryPanel({
         const snapshot = await getPhotoStatus();
         if (!active) return;
         nextBusy = isPhotoBusy(snapshot.status.state);
-        const version = JSON.stringify([snapshot.status.updatedAt, snapshot.status.total, snapshot.status.processed, snapshot.status.state]);
+        const version = JSON.stringify([snapshot.status.updatedAt, snapshot.status.total, snapshot.status.processed, snapshot.status.state,
+          snapshot.semanticIndex?.indexed, snapshot.semanticIndex?.embeddingSpaceId, snapshot.semanticIndex?.state,
+          snapshot.semanticIndex?.epoch, snapshot.semanticIndex?.minSimilarity]);
         const timelineChanged = version !== lastSnapshotVersionRef.current;
         if (nextBusy || statusBusy) catalogDirtyRef.current = true;
         setStatus(snapshot.status);
         setWorkerHealth(snapshot.workerHealth);
+        setSemanticIndex(snapshot.semanticIndex ?? null);
         if (timelineChanged && Date.now() - lastSnapshotRefreshRef.current >= 5_000
             && !timelinePendingRef.current && canRefreshSnapshotRef.current()) {
           await loadTimeline(null, true);
           if (active && canRefreshSnapshotRef.current()) lastSnapshotVersionRef.current = version;
         }
-        if (!nextBusy && catalogDirtyRef.current) {
+        if (!nextBusy && catalogDirtyRef.current && canRefreshSnapshotRef.current()) {
           const requestKey = queryKeyRef.current;
           const [page, fields] = await Promise.all([
-            queryPhotos({ filters: queryFilters, sort: { field: sortField, direction: sortDirection }, limit: 1, includeFacets: true }),
+            queryPhotos({ filters: queryFilters, sort: { field: effectiveSortField, direction: sortDirection }, limit: 1, includeFacets: true }),
             getPhotoMetadataFields()
           ]);
           if (active && queryKeyRef.current === requestKey) {
@@ -379,7 +389,7 @@ export function PhotoLibraryPanel({
       active = false;
       if (timer !== null) window.clearTimeout(timer);
     };
-  }, [loadTimeline, onNotifyError, queryFilters, settings, sortDirection, sortField, statusBusy]);
+  }, [loadTimeline, onNotifyError, queryFilters, settings, sortDirection, effectiveSortField, statusBusy]);
 
   useEffect(() => {
     if (!status?.nextRetryAt) return undefined;
@@ -440,6 +450,7 @@ export function PhotoLibraryPanel({
       const snapshot = await getPhotoStatus();
       setStatus(snapshot.status);
       setWorkerHealth(snapshot.workerHealth);
+      setSemanticIndex(snapshot.semanticIndex ?? null);
       onNotifySuccess(t("workspace.photos.scanQueued"));
     } catch (error) {
       onNotifyError(errorMessage(error));
@@ -458,6 +469,15 @@ export function PhotoLibraryPanel({
       await loadTimeline(nextCursor);
     } catch (error) {
       if (queryKeyRef.current !== loadQueryKey) return;
+      if (error && typeof error === "object" && "statusCode" in error && error.statusCode === 409) {
+        try { await loadTimeline(null); }
+        catch (refreshError) {
+          if (queryKeyRef.current !== loadQueryKey) return;
+          const message = errorMessage(refreshError);
+          setPaginationError(message); onNotifyError(message);
+        }
+        return;
+      }
       const message = errorMessage(error);
       setPaginationError(message);
       onNotifyError(message);
@@ -513,6 +533,7 @@ export function PhotoLibraryPanel({
       const snapshot = await getPhotoStatus();
       setStatus(snapshot.status);
       setWorkerHealth(snapshot.workerHealth);
+      setSemanticIndex(snapshot.semanticIndex ?? null);
       if (!isPhotoBusy(snapshot.status.state)) await loadTimeline();
     } catch (error) {
       onNotifyError(errorMessage(error));
@@ -624,6 +645,10 @@ export function PhotoLibraryPanel({
     event.preventDefault();
     const text = searchText.trim();
     if ((filters.text ?? "") === text) return;
+    if (text && semanticIndex && semanticIndex.state !== "disabled") {
+      if (sortField !== "relevance") browseSortRef.current = sortField;
+      setSortField("relevance"); setSortDirection("desc");
+    } else if (!text && sortField === "relevance") setSortField(browseSortRef.current);
     setFilters((current) => {
       if (text) return { ...current, text };
       const { text: _text, ...rest } = current;
@@ -780,6 +805,9 @@ export function PhotoLibraryPanel({
         <PhotoQuerySkeleton />
       ) : settings ? (
         <div className="photo-query-panel">
+          {filters.text?.trim() && semanticIndex?.state !== "disabled" && (searchInfo || semanticIndex) ? <p className="photo-semantic-status" role="status">
+            {searchInfo?.semanticState === "unavailable" ? t("workspace.photos.semanticUnavailable") : t("workspace.photos.semanticCoverage", { indexed: semanticIndex?.indexed ?? searchInfo?.indexed ?? 0, total: semanticIndex?.total ?? searchInfo?.total ?? 0 })}
+          </p> : null}
           <div className="photo-query-toolbar">
             <form className="photo-search-field" role="search" onSubmit={submitSearch}>
               <button type="submit" data-tooltip={t("workspace.photos.search")} aria-label={t("workspace.photos.search")}>
@@ -804,8 +832,9 @@ export function PhotoLibraryPanel({
             <label className="photo-sort-field">
               <span>{t("workspace.photos.sort")}</span>
               <CustomSelect
-                value={sortField}
+                value={effectiveSortField}
                 options={[
+                  ...(filters.text?.trim() ? [{ value: "relevance", label: t("workspace.photos.sortRelevance") }] : []),
                   { value: "captured_at", label: t("workspace.photos.sortCaptured") },
                   { value: "indexed_at", label: t("workspace.photos.sortIndexed") },
                   { value: "name", label: t("workspace.photos.sortName") },

@@ -5,6 +5,7 @@ export * from "./tailscale.js";
 export * from "./monitoring.js";
 export * from "./monitoring-alerts.js";
 export * from "./photos-config.js";
+export * from "./photos-semantic.js";
 export * from "./vod-player-protocol.js";
 export * from "./terminal-protocol.js";
 export * from "./types.js";

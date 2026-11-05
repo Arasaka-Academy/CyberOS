@@ -663,7 +663,7 @@ export interface PhotosQueryFilters {
   };
 }
 
-export type PhotosQuerySortField = "captured_at" | "indexed_at" | "name" | "size_bytes" | "rating" | "distance";
+export type PhotosQuerySortField = "captured_at" | "indexed_at" | "name" | "size_bytes" | "rating" | "distance" | "relevance";
 
 export interface PhotosQueryRequest {
   filters?: PhotosQueryFilters;
@@ -708,6 +708,7 @@ export interface PhotoQueryPage {
   total: number;
   facets: PhotosQueryFacets | null;
   metadataIndex: PhotosMetadataIndexStatus;
+  search?: import("./photos-semantic.js").PhotosSearchInfo;
 }
 
 export interface PhotosMetadataField {
@@ -744,6 +745,7 @@ export interface PhotosMapCluster {
 export interface PhotosMapQueryResult {
   clusters: PhotosMapCluster[];
   metadataIndex: PhotosMetadataIndexStatus;
+  search?: import("./photos-semantic.js").PhotosSearchInfo;
 }
 
 export interface PhotosManagedMapInfo {

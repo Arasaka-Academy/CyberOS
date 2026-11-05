@@ -21,7 +21,7 @@ export const COMPONENTS = Object.freeze({
   web: { path: "apps/web/dist", kind: "static", units: [] },
   docs: { path: "docs/dist", kind: "static", units: [] },
   api: { path: "apps/api/dist", kind: "node", units: ["cyberos-api.service"] },
-  worker: { path: "apps/worker/dist", kind: "node", units: ["cyberos-worker@*.service"] },
+  worker: { path: "apps/worker/dist", kind: "node", units: ["cyberos-worker@*.service", "cyberos-photos-embeddings.service"] },
   ops: { path: "apps/ops/dist", kind: "node", units: ["cyberos-health.service", "cyberos-maintenance.service"] },
   backup: { path: "apps/backup/dist", kind: "node", units: ["cyberos-backup-daily.service", "cyberos-backup-weekly.service"] },
   "media-streamer": { path: "apps/media-streamer/dist", kind: "node", units: ["cyberos-media-streamer.service"] },

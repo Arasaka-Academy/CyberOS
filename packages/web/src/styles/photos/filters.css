@@ -320,3 +320,5 @@
   font-family: var(--font-emphasis);
   font-weight: 800;
 }
+
+.photo-semantic-status { margin: 0; padding: 6px 12px; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }

@@ -2068,13 +2068,32 @@ export async function getPhotoLibraryStatus(): Promise<PhotoLibraryStatus> {
 export async function getPhotoStatus(): Promise<{
   status: PhotoLibraryStatus;
   workerHealth: PhotoWorkerHealth;
+  semanticIndex?: import("@cyberos/shared").PhotosSemanticIndexStatus;
 }> {
   const response = await fetch("/api/photos/status");
   await ensureOk(response);
   return (await response.json()) as {
     status: PhotoLibraryStatus;
     workerHealth: PhotoWorkerHealth;
+    semanticIndex?: import("@cyberos/shared").PhotosSemanticIndexStatus;
   };
+}
+
+export interface PhotosSemanticSettingsResponse {
+  settings: import("@cyberos/shared").PhotosSemanticSettings;
+  status: import("@cyberos/shared").PhotosSemanticIndexStatus;
+}
+export function getPhotosSemanticSettings(): Promise<PhotosSemanticSettingsResponse> {
+  return fetchJson("/api/settings/photos/semantic-search");
+}
+export function savePhotosSemanticSettings(patch: import("@cyberos/shared").PhotosSemanticSettingsPatch): Promise<PhotosSemanticSettingsResponse> {
+  return fetchJson("/api/settings/photos/semantic-search", jsonRequest("PATCH", patch));
+}
+export function testPhotosSemanticSettings(patch: import("@cyberos/shared").PhotosSemanticSettingsPatch): Promise<{ model: import("@cyberos/shared").PhotosEmbeddingModel }> {
+  return fetchJson("/api/settings/photos/semantic-search/test", jsonRequest("POST", patch));
+}
+export function runPhotosSemanticIndex(action: "rebuild" | "retry"): Promise<{ status: import("@cyberos/shared").PhotosSemanticIndexStatus }> {
+  return fetchJson(`/api/photos/semantic-index/${action}`, { method: "POST" });
 }
 
 export async function getPhotoProcessingSettings(): Promise<PhotoProcessingSettings> {

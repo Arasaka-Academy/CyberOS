@@ -338,11 +338,12 @@ export function queryPhotosAssets(
     libraryUpdatedAt: string;
     request: PhotosQueryRequest;
     cursor?: PhotosQueryCursor | null;
+    matchingIds?: readonly string[];
   }
 ): { photos: PhotosQueryAsset[]; hasMore: boolean; total: number; facets: PhotosQueryFacets | null } {
   const request = input.request;
   const limit = Math.max(1, Math.min(request.limit ?? 60, 100));
-  const query = buildQuery(input.libraryUpdatedAt, request.filters ?? {}, request.sort);
+  const query = buildQuery(input.libraryUpdatedAt, request.filters ?? {}, request.sort, input.matchingIds);
   const cursorSql = buildCursorSql(input.cursor ?? null, request.sort?.direction ?? "desc");
   const orderDirection = request.sort?.direction === "asc" ? "ASC" : "DESC";
   const rows = db.prepare(`
@@ -363,7 +364,7 @@ export function queryPhotosAssets(
     hasMore: rows.length > limit,
     total,
     facets: request.includeFacets
-      ? loadFacets(db, input.libraryUpdatedAt, request.filters ?? {})
+      ? loadFacets(db, input.libraryUpdatedAt, request.filters ?? {}, input.matchingIds)
       : null
   };
 }
@@ -442,12 +443,12 @@ export function getPhotosMetadataDetail(
 
 export function queryPhotosMap(
   db: CyberOsDatabase,
-  input: { libraryUpdatedAt: string; request: PhotosMapQueryRequest }
+  input: { libraryUpdatedAt: string; request: PhotosMapQueryRequest; matchingIds?: readonly string[] }
 ): PhotosMapCluster[] {
   const columns = Math.max(1, Math.min(input.request.columns ?? 64, 64));
   const rows = Math.max(1, Math.min(input.request.rows ?? 64, 64));
   const filters: PhotosQueryFilters = { ...(input.request.filters ?? {}), location: input.request.bounds };
-  const query = buildQuery(input.libraryUpdatedAt, filters, { field: "captured_at", direction: "desc" });
+  const query = buildQuery(input.libraryUpdatedAt, filters, { field: "captured_at", direction: "desc" }, input.matchingIds);
   const west = input.request.bounds.west;
   const east = input.request.bounds.east;
   const south = input.request.bounds.south;
@@ -493,7 +494,8 @@ export function queryPhotosMap(
 function buildQuery(
   libraryUpdatedAt: string,
   filters: PhotosQueryFilters,
-  sort: PhotosQueryRequest["sort"]
+  sort: PhotosQueryRequest["sort"],
+  matchingIds?: readonly string[]
 ): { cte: string; params: unknown[]; postWhere: string; postParams: unknown[] } {
   const where = ["a.library_updated_at = ?", "a.status = 'ready'"];
   const whereParams: unknown[] = [libraryUpdatedAt];
@@ -502,9 +504,13 @@ function buildQuery(
   let requiresMetadata = false;
 
   if (filters.text?.trim()) {
-    where.push("a.id IN (SELECT asset_id FROM photos_metadata_fts WHERE photos_metadata_fts MATCH ?)");
-    whereParams.push(toFtsQuery(filters.text));
-    requiresMetadata = true;
+    where.push(`(a.id IN (SELECT asset_id FROM photos_metadata_fts WHERE photos_metadata_fts MATCH ?)
+      OR instr(lower(a.name),?)>0 OR EXISTS(SELECT 1 FROM photos_keywords k WHERE k.asset_id=a.id AND instr(k.normalized_keyword,?)>0))`);
+    whereParams.push(toFtsQuery(filters.text), normalizeText(filters.text), normalizeText(filters.text));
+  }
+  if (matchingIds !== undefined) {
+    where.push("a.id IN (SELECT value FROM json_each(?))");
+    whereParams.push(JSON.stringify(matchingIds));
   }
   addDateRange(where, whereParams, CAPTURE_SORT_EXPRESSION, filters.capturedAt);
   if (filters.capturedAt) requiresMetadata = true;
@@ -676,12 +682,13 @@ function haversineExpression(): string {
 function loadFacets(
   db: CyberOsDatabase,
   libraryUpdatedAt: string,
-  filters: PhotosQueryFilters
+  filters: PhotosQueryFilters,
+  matchingIds?: readonly string[]
 ): PhotosQueryFacets {
   const facetQuery = (excluded: keyof PhotosQueryFilters) => {
     const next = { ...filters };
     delete next[excluded];
-    return buildQuery(libraryUpdatedAt, next, { field: "captured_at", direction: "desc" });
+    return buildQuery(libraryUpdatedAt, next, { field: "captured_at", direction: "desc" }, matchingIds);
   };
   const categorical = (
     expression: string,
@@ -704,7 +711,7 @@ function loadFacets(
     WHERE ${keywordQuery.postWhere} AND q.schema_version = ?
     GROUP BY k.normalized_keyword ORDER BY count DESC, value ASC LIMIT 100
   `).all(...keywordQuery.params, ...keywordQuery.postParams, PHOTOS_METADATA_SCHEMA_VERSION) as Array<{ value: string; count: number }>;
-  const query = buildQuery(libraryUpdatedAt, filters, { field: "captured_at", direction: "desc" });
+  const query = buildQuery(libraryUpdatedAt, filters, { field: "captured_at", direction: "desc" }, matchingIds);
   const numericRow = db.prepare(`
     ${query.cte}
     SELECT
@@ -904,3 +911,6 @@ function parseStringArray(value: string | null): string[] {
     return [];
   }
 }
+
+// Shared by the semantic reader so every existing metadata and geo filter has one implementation.
+export { buildQuery as buildPhotosMetadataQuery, toFtsQuery as photosFtsQuery };

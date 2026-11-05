@@ -1,7 +1,7 @@
 [Unit]
 Description=CyberOS state database initialization
 After=local-fs.target
-Before=cyberos-api.service cyberos-worker@1.service cyberos-monitor.service cyberos-alerter.service cyberos-photos.service cyberos-downloader.service cyberos-indexer.service cyberos-vod-player.service cyberos-bluetoothd.service
+Before=cyberos-api.service cyberos-worker@1.service cyberos-monitor.service cyberos-alerter.service cyberos-photos.service cyberos-photos-embeddings.service cyberos-downloader.service cyberos-indexer.service cyberos-vod-player.service cyberos-bluetoothd.service
 
 [Service]
 Type=oneshot

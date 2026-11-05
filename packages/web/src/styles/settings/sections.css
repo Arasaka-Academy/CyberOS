@@ -182,3 +182,7 @@
   font-size: 11px;
   line-height: 1.4;
 }
+
+.photos-semantic-settings .settings-card-actions { flex-wrap: wrap; }
+.photos-semantic-settings .settings-summary-list dd { white-space: normal; overflow-wrap: anywhere; }
+.photos-semantic-settings .settings-inline-alert { flex-wrap: wrap; overflow-wrap: anywhere; }
