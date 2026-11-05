@@ -6,8 +6,8 @@ import * as sqliteVec from "sqlite-vec";
 import {
   openCyberOsDb, savePhotosLibrarySettings,
   getPhotosSemanticSettings, savePhotosSemanticSettings, publicPhotosSemanticSettings,
-  activatePhotosEmbeddingModel, reconcilePhotosEmbeddingJobs, claimPhotosEmbeddingJob,
-  completePhotosEmbeddingJob, getPhotosSemanticStatus, rebuildPhotosSemanticIndex,
+  activatePhotosEmbeddingModel, getActivePhotosEmbeddingProfile, reconcilePhotosEmbeddingJobs, claimPhotosEmbeddingJob,
+  completePhotosEmbeddingJob, getPhotosSemanticStatus, rebuildPhotosSemanticIndex, prunePhotosEmbeddingCache,
   queryPhotosAssets, rankPhotosSearchMatches,
   type CyberOsDatabase
 } from "./index.js";
@@ -75,6 +75,27 @@ describe("Photos semantic index", () => {
     expect(() => savePhotosSemanticSettings(db, { baseUrl: "https://user:password@example.test" })).toThrow();
   });
 
+  it("scores each eligible shared input once and excludes stale, orphaned and historical vectors", () => {
+    asset("one", "same"); asset("two", "same"); asset("stale"); asset("unindexed-海边"); enable();
+    reconcilePhotosEmbeddingJobs(db);
+    let job;
+    while ((job = claimPhotosEmbeddingJob(db, "worker", 30_000))) completePhotosEmbeddingJob(db, job, [1, 0]);
+    db.prepare("DELETE FROM photos_asset_embeddings WHERE asset_id='unindexed-海边'").run();
+    db.prepare("UPDATE photos_assets SET content_hash='new' WHERE id='stale'").run();
+    db.prepare("INSERT INTO photos_embedding_profiles(embedding_space_id,model,revision,dimensions,min_similarity,created_at) VALUES('historical','old','old',2,0.35,'2020-01-01')").run();
+    db.prepare("INSERT INTO photos_embedding_cache(embedding_space_id,input_key,dimensions,vector,created_at) VALUES('historical','old',2,?,'2020-01-01')").run(Buffer.from(new Float32Array([1, 0]).buffer));
+    let scored = 0;
+    db.function("vec_distance_cosine", (_left: Buffer, _right: Buffer) => { scored++; return 0; });
+    const result = rankPhotosSearchMatches(db, { libraryUpdatedAt: library,
+      request: { filters: { text: "海边" }, sort: { field: "name", direction: "asc" } }, embedding: [1, 0] });
+    expect(result.map(({ id }) => id)).toEqual(["one", "two", "unindexed-海边"]);
+    expect(result[0]!.score).toBeCloseTo(1 / 61);
+    expect(scored).toBe(1);
+    expect(rankPhotosSearchMatches(db, { libraryUpdatedAt: library,
+      request: { filters: { text: "海边", cameraModels: ["missing"] } }, embedding: [1, 0] })).toEqual([]);
+    expect(scored).toBe(1);
+  });
+
   it("recovers leases and rejects a result when the source changes", () => {
     asset("one"); enable();
     reconcilePhotosEmbeddingJobs(db);
@@ -130,5 +151,42 @@ describe("Photos semantic index", () => {
     activatePhotosEmbeddingModel(db, { ...model, embeddingSpaceId: "new-space", revision: "new" }, settings.generation);
     expect(getPhotosSemanticStatus(db).imagesPerSecond).toBeNull();
     expect(getPhotosSemanticStatus(db).indexed).toBe(0);
+  });
+
+  it("starts the orphan grace period on last-reference removal and resets it on reuse", () => {
+    asset("one", "shared"); asset("two", "shared"); enable(); reconcilePhotosEmbeddingJobs(db);
+    let job;
+    while ((job = claimPhotosEmbeddingJob(db, "worker", 30_000))) completePhotosEmbeddingJob(db, job, [1, 0]);
+    const start = new Date(Date.now() + 1000);
+    db.prepare("DELETE FROM photos_assets WHERE id='one'").run();
+    expect(prunePhotosEmbeddingCache(db, start).removedVectors).toBe(0);
+    expect(db.prepare("SELECT unreferenced_at FROM photos_embedding_cache").pluck().get()).toBeNull();
+    db.prepare("UPDATE photos_assets SET content_hash='replaced' WHERE id='two'").run();
+    prunePhotosEmbeddingCache(db, start);
+    expect(db.prepare("SELECT unreferenced_at FROM photos_embedding_cache").pluck().get()).toBe(start.toISOString());
+    expect(prunePhotosEmbeddingCache(db, new Date(start.getTime() + 6 * 86400_000)).removedVectors).toBe(0);
+    db.prepare("UPDATE photos_assets SET content_hash='shared' WHERE id='two'").run(); reconcilePhotosEmbeddingJobs(db);
+    expect(db.prepare("SELECT unreferenced_at FROM photos_embedding_cache").pluck().get()).toBeNull();
+    expect(prunePhotosEmbeddingCache(db, new Date(start.getTime() + 8 * 86400_000)).removedVectors).toBe(0);
+    db.prepare("DELETE FROM photos_assets").run();
+    const lost = new Date(start.getTime() + 9 * 86400_000); prunePhotosEmbeddingCache(db, lost);
+    expect(prunePhotosEmbeddingCache(db, new Date(lost.getTime() + 7 * 86400_000))).toEqual({ removedVectors: 1, removedBytes: 8 });
+  });
+
+  it("expires old spaces in bounded batches, preserving the active model and live task leases", () => {
+    asset("one"); asset("two"); enable(); reconcilePhotosEmbeddingJobs(db);
+    const completed = claimPhotosEmbeddingJob(db, "worker", 30_000)!; completePhotosEmbeddingJob(db, completed, [1, 0]);
+    const running = claimPhotosEmbeddingJob(db, "worker", 40 * 86400_000)!;
+    db.prepare("INSERT INTO photos_embedding_cache(embedding_space_id,input_key,dimensions,vector,created_at) VALUES(?,?,?,?,?)")
+      .run(model.embeddingSpaceId, running.inputKey, 2, Buffer.from(new Float32Array([1, 0]).buffer), new Date().toISOString());
+    const settings = savePhotosSemanticSettings(db, { baseUrl: "https://new.example.test" });
+    activatePhotosEmbeddingModel(db, { ...model, embeddingSpaceId: "next-space", revision: "next" }, settings.generation);
+    const start = new Date(); prunePhotosEmbeddingCache(db, start);
+    expect(prunePhotosEmbeddingCache(db, new Date(start.getTime() + 29 * 86400_000)).removedVectors).toBe(0);
+    expect(prunePhotosEmbeddingCache(db, new Date(start.getTime() + 31 * 86400_000), 1).removedVectors).toBe(1);
+    expect(db.prepare("SELECT input_key FROM photos_embedding_cache").pluck().get()).toBe(running.inputKey);
+    expect(prunePhotosEmbeddingCache(db, new Date(start.getTime() + 41 * 86400_000), 1).removedVectors).toBe(1);
+    expect(getActivePhotosEmbeddingProfile(db)?.embeddingSpaceId).toBe("next-space");
+    expect(getPhotosSemanticStatus(db).cache).toMatchObject({ vectors: 0, bytes: 0, retiredSpaces: 1 });
   });
 });

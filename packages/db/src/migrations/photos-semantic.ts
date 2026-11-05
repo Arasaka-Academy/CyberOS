@@ -72,4 +72,19 @@ CREATE TABLE photos_embedding_jobs (
 );
 CREATE INDEX idx_photos_embedding_jobs_pending ON photos_embedding_jobs(embedding_space_id,status,next_attempt_at,created_at);
 `
+}, {
+  id: "012_photos_embedding_retention",
+  sql: `
+ALTER TABLE photos_embedding_profiles ADD COLUMN retired_at TEXT;
+ALTER TABLE photos_embedding_cache ADD COLUMN unreferenced_at TEXT;
+CREATE INDEX idx_photos_embedding_cache_unreferenced ON photos_embedding_cache(unreferenced_at);
+CREATE INDEX idx_photos_embedding_jobs_input ON photos_embedding_jobs(embedding_space_id,input_key);
+DROP TRIGGER photos_embedding_asset_changed;
+CREATE TRIGGER photos_embedding_asset_changed AFTER UPDATE OF content_hash,preview_key,derivative_schema_version,status,library_updated_at ON photos_assets
+WHEN old.content_hash IS NOT new.content_hash OR old.preview_key IS NOT new.preview_key
+  OR old.derivative_schema_version IS NOT new.derivative_schema_version
+  OR old.status IS NOT new.status OR old.library_updated_at IS NOT new.library_updated_at BEGIN
+  UPDATE photos_embedding_runtime SET asset_revision=asset_revision+1 WHERE id=1;
+END;
+`
 }];

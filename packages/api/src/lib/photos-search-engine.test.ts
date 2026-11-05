@@ -78,3 +78,13 @@ it("rejects text vectors from an obsolete model before scoring", () => {
   expect(() => engine.query({ libraryUpdatedAt: library, request: { filters: { text: "海边" } },
     search: { ...search, mode: "hybrid", semanticState: "ready", embeddingSpaceId: "old-space" }, embedding: [1, 0] })).toThrow(/model changed/iu);
 });
+
+it("invalidates an existing snapshot when the preview processing version changes", () => {
+  add("a"); add("b");
+  const engine = new PhotosSearchEngine(db);
+  const input = { libraryUpdatedAt: library, request: { filters: { text: "海边" }, limit: 1 }, search };
+  const first = engine.query(input);
+  expect(first.nextCursor).toBeTruthy();
+  db.prepare("UPDATE photos_assets SET derivative_schema_version=derivative_schema_version+1 WHERE id='a'").run();
+  expect(() => engine.query({ ...input, request: { ...input.request, cursor: first.nextCursor } })).toThrow(/changed|expired/iu);
+});

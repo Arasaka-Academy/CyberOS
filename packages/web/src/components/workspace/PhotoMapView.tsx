@@ -41,6 +41,7 @@ export function PhotoMapView({
   const searchBoundsRef = useRef(onSearchBounds);
   const clustersRef = useRef<PhotoMapQueryResult["clusters"]>([]);
   const loadRequestRef = useRef(0);
+  const loadAbortRef = useRef<AbortController | null>(null);
   const boundsRef = useRef<PhotoLocationBounds>(WORLD_BOUNDS);
   const [mapStatus, setMapStatus] = useState<PhotoMapSettingsResponse | null>(null);
   const [mapRequestError, setMapRequestError] = useState<string | null>(null);
@@ -55,6 +56,9 @@ export function PhotoMapView({
 
   const loadPoints = useCallback(async (nextBounds: PhotoLocationBounds, commitBounds = false) => {
     const requestId = ++loadRequestRef.current;
+    loadAbortRef.current?.abort();
+    const controller = new AbortController();
+    loadAbortRef.current = controller;
     setLoading(true);
     try {
       const next = await queryPhotoMap({
@@ -62,7 +66,7 @@ export function PhotoMapView({
         bounds: nextBounds,
         columns: 64,
         rows: 64
-      });
+      }, controller.signal);
       if (requestId !== loadRequestRef.current) return;
       setResult(next);
       setBounds(nextBounds);
@@ -70,7 +74,7 @@ export function PhotoMapView({
       setPendingBounds(null);
       if (commitBounds) searchBoundsRef.current(nextBounds);
     } catch (error) {
-      if (requestId === loadRequestRef.current) {
+      if (!controller.signal.aborted && requestId === loadRequestRef.current) {
         errorRef.current(error instanceof Error ? error.message : String(error));
       }
     } finally {
@@ -102,6 +106,7 @@ export function PhotoMapView({
     return () => {
       active = false;
       loadRequestRef.current += 1;
+      loadAbortRef.current?.abort();
     };
   }, [loadPoints]);
 

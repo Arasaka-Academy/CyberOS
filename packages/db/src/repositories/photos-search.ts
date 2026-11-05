@@ -16,44 +16,53 @@ export function rankPhotosSearchMatches(db: CyberOsDatabase, input: {
   embedding?: number[];
 }): PhotosSearchMatch[] {
   const { text = "", ...filters } = input.request.filters ?? {};
-  const query = buildPhotosMetadataQuery(input.libraryUpdatedAt, filters, input.request.sort);
-  const cohort = db.prepare(`${query.cte} SELECT id,sort_value AS sortValue
-    FROM matches WHERE ${query.postWhere}`).all(...query.params, ...query.postParams) as Omit<PhotosSearchMatch, "score">[];
+  const relevance = !input.request.sort || input.request.sort.field === "relevance";
+  // Relevance ignores the metadata sort value. Use an asset-only expression so
+  // SQLite can omit the metadata join unless a filter actually needs it.
+  const query = buildPhotosMetadataQuery(input.libraryUpdatedAt, filters,
+    relevance ? { field: "indexed_at", direction: "desc" } : input.request.sort);
   const normalizedText = text.normalize("NFKC").trim().toLowerCase();
   const lexical = db.prepare(`${query.cte}, fts_hits AS MATERIALIZED (
       SELECT asset_id,bm25(photos_metadata_fts) AS rank FROM photos_metadata_fts WHERE photos_metadata_fts MATCH ?
     )
-    SELECT q.id FROM matches q LEFT JOIN fts_hits f ON f.asset_id=q.id
+    SELECT q.id,q.sort_value AS sortValue FROM matches q LEFT JOIN fts_hits f ON f.asset_id=q.id
     WHERE ${query.postWhere} AND (f.asset_id IS NOT NULL OR instr(lower(q.name),?)>0
       OR EXISTS(SELECT 1 FROM photos_keywords k WHERE k.asset_id=q.id AND instr(k.normalized_keyword,?)>0))
     ORDER BY CASE WHEN lower(q.name)=? OR EXISTS(SELECT 1 FROM photos_keywords k WHERE k.asset_id=q.id AND k.normalized_keyword=?) THEN 0 ELSE 1 END,
       COALESCE(f.rank,0),q.id`)
-    .all(...query.params, photosFtsQuery(text), ...query.postParams, normalizedText, normalizedText, normalizedText, normalizedText) as { id: string }[];
-  const scores = new Map<string, number>();
-  const addRanks = (rows: { id: string }[]) => rows.forEach((row, index) => scores.set(row.id, (scores.get(row.id) ?? 0) + 1 / (60 + index + 1)));
+    .all(...query.params, photosFtsQuery(text), ...query.postParams, normalizedText, normalizedText, normalizedText, normalizedText) as Omit<PhotosSearchMatch, "score">[];
+  const scores = new Map<string, PhotosSearchMatch>();
+  const addRanks = (rows: Omit<PhotosSearchMatch, "score">[]) => rows.forEach((row, index) => {
+    scores.set(row.id, { ...row, score: (scores.get(row.id)?.score ?? 0) + 1 / (60 + index + 1) });
+  });
   addRanks(lexical);
   const profile = getActivePhotosEmbeddingProfile(db);
   if (profile && input.embedding) {
     const vector = normalizePhotosEmbedding(input.embedding, profile.dimensions);
     const blob = Buffer.alloc(vector.length * 4);
     vector.forEach((value, index) => blob.writeFloatLE(value, index * 4));
+    // Resolve only eligible current-space cache rowids before reading BLOBs.
+    // SQLite visits the IN rowid set in storage order and scores shared inputs
+    // once, avoiding random vector reads, old spaces and orphaned cache rows.
     const semantic = db.prepare(`${query.cte}, eligible AS MATERIALIZED (
-      SELECT id,content_hash || ':' || derivative_schema_version || ':' || preview_key AS input_key
+      SELECT id,sort_value,content_hash || ':' || derivative_schema_version || ':' || preview_key AS input_key
       FROM matches WHERE ${query.postWhere}
+    ), vector_input AS (SELECT ? AS vector), selected AS MATERIALIZED (
+      SELECT q.id,q.sort_value,c.rowid AS cache_id FROM eligible q
+      JOIN photos_asset_embeddings b ON b.asset_id=q.id AND b.input_key=q.input_key
+      JOIN photos_embedding_cache c ON c.embedding_space_id=b.embedding_space_id AND c.input_key=b.input_key
+      WHERE b.embedding_space_id=? AND c.dimensions=?
     ), distances AS MATERIALIZED (
-      SELECT q.id,1-vec_distance_cosine(c.vector,?) AS similarity
-      FROM photos_embedding_cache c NOT INDEXED
-      CROSS JOIN photos_asset_embeddings b INDEXED BY idx_photos_embedding_bindings_cache
-      JOIN eligible q ON q.id=b.asset_id AND q.input_key=b.input_key
-      WHERE c.embedding_space_id=? AND c.dimensions=? AND b.embedding_space_id=c.embedding_space_id AND b.input_key=c.input_key
-    ) SELECT id FROM distances WHERE similarity>=? ORDER BY similarity DESC,id ASC`)
+      SELECT c.rowid AS cache_id,1-vec_distance_cosine(c.vector,(SELECT vector FROM vector_input)) AS similarity
+      FROM photos_embedding_cache c WHERE c.rowid IN (SELECT cache_id FROM selected)
+    ) SELECT s.id,s.sort_value AS sortValue FROM distances d JOIN selected s ON s.cache_id=d.cache_id
+      WHERE d.similarity>=? ORDER BY d.similarity DESC,s.id ASC`)
       .all(...query.params, ...query.postParams, blob, profile.embeddingSpaceId, profile.dimensions,
-        profile.minSimilarity) as { id: string }[];
+        profile.minSimilarity) as Omit<PhotosSearchMatch, "score">[];
     addRanks(semantic);
   }
-  const matches = cohort.filter((row) => scores.has(row.id)).map((row) => ({ ...row, score: scores.get(row.id)! }));
+  const matches = [...scores.values()];
   const direction = input.request.sort?.direction === "asc" ? 1 : -1;
-  const relevance = !input.request.sort || input.request.sort.field === "relevance";
   matches.sort((left, right) => {
     const a = relevance ? left.score : left.sortValue;
     const b = relevance ? right.score : right.sortValue;
@@ -68,7 +77,8 @@ export function rankPhotosSearchMatches(db: CyberOsDatabase, input: {
 /** Facets for an already filtered snapshot: every count uses exactly its match IDs. */
 export function loadPhotosSearchFacets(db: CyberOsDatabase, ids: readonly string[]): PhotosQueryFacets {
   const matches = JSON.stringify(ids);
-  const cte = `WITH matched AS MATERIALIZED (SELECT * FROM photos_asset_metadata
+  const cte = `WITH matched AS MATERIALIZED (SELECT asset_id,media_kind,camera_model,lens_model,rating,
+    iso,aperture,exposure_time_seconds,focal_length_mm FROM photos_asset_metadata
     WHERE schema_version=? AND asset_id IN (SELECT value FROM json_each(?)))`;
   const categories = db.prepare(`${cte} SELECT kind,value,COUNT(*) AS count FROM (
     SELECT 'mediaKinds' AS kind,media_kind AS value FROM matched

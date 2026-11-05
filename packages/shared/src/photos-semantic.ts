@@ -43,6 +43,7 @@ export interface PhotosSemanticSettings extends Omit<PhotosSemanticSettingsRecor
 }
 
 export interface PhotosSemanticIndexStatus {
+  cache?: { vectors: number; bytes: number; retiredSpaces: number; lastCleanupAt: string; removedVectors: number; removedBytes: number };
   state: "disabled" | "pending" | "indexing" | "ready" | "degraded" | "blocked";
   total: number;
   indexed: number;

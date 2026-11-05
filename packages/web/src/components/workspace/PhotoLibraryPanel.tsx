@@ -169,6 +169,7 @@ export function PhotoLibraryPanel({
   const libraryRequestRef = useRef(0);
   const configurationUpdatedAtRef = useRef(configurationUpdatedAt);
   const timelineRequestRef = useRef(0);
+  const timelineAbortRef = useRef<AbortController | null>(null);
   const timelineLoadRef = useRef<((cursor?: string | null) => Promise<void>) | null>(null);
   const loadedQueryKeyRef = useRef<string | null>(null);
   const queryKeyRef = useRef("");
@@ -247,6 +248,9 @@ export function PhotoLibraryPanel({
     if (background && (timelinePendingRef.current || !canRefreshSnapshotRef.current())) return;
     if (cursor) paginatedRef.current = true;
     const requestId = cursor ? timelineRequestRef.current : ++timelineRequestRef.current;
+    timelineAbortRef.current?.abort();
+    const controller = new AbortController();
+    timelineAbortRef.current = controller;
     timelinePendingRef.current = true;
     lastSnapshotRefreshRef.current = Date.now();
     try {
@@ -256,8 +260,8 @@ export function PhotoLibraryPanel({
         cursor,
         limit: 60,
         includeFacets: !cursor
-      });
-      if (requestId !== timelineRequestRef.current) return;
+      }, controller.signal);
+      if (controller.signal.aborted || requestId !== timelineRequestRef.current) return;
       if (background && !canRefreshSnapshotRef.current()) return;
       setPhotos((current) => cursor ? mergePhotos(current, page.photos) : page.photos);
       setSearchInfo(page.search ?? null);
@@ -267,8 +271,10 @@ export function PhotoLibraryPanel({
         paginatedRef.current = false;
         setFacets(page.facets);
       }
+    } catch (error) {
+      if (!controller.signal.aborted) throw error;
     } finally {
-      if (requestId === timelineRequestRef.current) timelinePendingRef.current = false;
+      if (timelineAbortRef.current === controller) timelinePendingRef.current = false;
     }
   }, [queryFilters, sortDirection, effectiveSortField]);
   timelineLoadRef.current = loadTimeline;
@@ -341,11 +347,14 @@ export function PhotoLibraryPanel({
 
   useEffect(() => () => {
     libraryRequestRef.current += 1;
+    timelineRequestRef.current += 1;
+    timelineAbortRef.current?.abort();
   }, []);
 
   useEffect(() => {
     if (!settings) return undefined;
     let active = true;
+    const controller = new AbortController();
     let timer: number | null = null;
     const poll = async (): Promise<void> => {
       let nextBusy = statusBusy;
@@ -369,7 +378,7 @@ export function PhotoLibraryPanel({
         if (!nextBusy && catalogDirtyRef.current && canRefreshSnapshotRef.current()) {
           const requestKey = queryKeyRef.current;
           const [page, fields] = await Promise.all([
-            queryPhotos({ filters: queryFilters, sort: { field: effectiveSortField, direction: sortDirection }, limit: 1, includeFacets: true }),
+            queryPhotos({ filters: queryFilters, sort: { field: effectiveSortField, direction: sortDirection }, limit: 1, includeFacets: true }, controller.signal),
             getPhotoMetadataFields()
           ]);
           if (active && queryKeyRef.current === requestKey) {
@@ -387,6 +396,7 @@ export function PhotoLibraryPanel({
     timer = window.setTimeout(() => void poll(), statusBusy ? 2_000 : 5_000);
     return () => {
       active = false;
+      controller.abort();
       if (timer !== null) window.clearTimeout(timer);
     };
   }, [loadTimeline, onNotifyError, queryFilters, settings, sortDirection, effectiveSortField, statusBusy]);

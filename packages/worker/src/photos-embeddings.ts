@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import os from "node:os";
-import { openCyberOsDb, touchPhotosEmbeddingWorker } from "@cyberos/db";
+import { openCyberOsDb, prunePhotosEmbeddingCache, touchPhotosEmbeddingWorker } from "@cyberos/db";
 import { loadCyberOsRuntime } from "@cyberos/shared";
 import { processPhotosEmbeddingTick } from "./photos-embedding-processor.js";
 
@@ -10,11 +10,17 @@ const controller = new AbortController();
 const workerId = `photos-embeddings:${os.hostname()}:${process.pid}:${randomUUID()}`;
 let active = false;
 let closed = false;
+let nextCleanup = 0;
 
 async function tick(): Promise<void> {
   if (active || controller.signal.aborted) return;
   active = true;
   try {
+    if (Date.now() >= nextCleanup) {
+      const cleaned = prunePhotosEmbeddingCache(db);
+      nextCleanup = Date.now() + 300_000;
+      if (cleaned.removedVectors) console.info("Photos embedding cache cleanup", cleaned);
+    }
     const worked = await processPhotosEmbeddingTick({ db, stateDir: config.paths.stateDir, workerId, signal: controller.signal });
     if (worked && !controller.signal.aborted) queueMicrotask(() => void tick());
   } catch (error) {

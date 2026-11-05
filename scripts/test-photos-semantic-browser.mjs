@@ -11,6 +11,7 @@ const space = "a".repeat(64);
 const defaults = { enabled: true, baseUrl: "https://mac-mini.example.ts.net:9443", model: "Qwen/Qwen3-VL-Embedding-2B",
   apiKeyConfigured: true, dimensions: 2048, embeddingSpaceId: space, minSimilarity: 0.35 };
 const status = { state: "pending", total: 12345, indexed: 100, pending: 12244, failed: 1,
+  cache: { vectors: 15000, bytes: 122880000, retiredSpaces: 1, lastCleanupAt: "2026-11-05", removedVectors: 4, removedBytes: 32768 },
   embeddingSpaceId: space, dimensions: 2048, error: null, estimatedRemainingSeconds: 18000 };
 const harness = `
 import React from 'react';
@@ -24,9 +25,11 @@ await initI18n();
 await i18n.changeLanguage(new URLSearchParams(location.search).has('zh') ? 'zh-CN' : 'en');
 const library = new URLSearchParams(location.search).has('library');
 const noop = () => {};
+globalThis.__photoErrors = [];
+const notifyError = message => globalThis.__photoErrors.push(message);
 createRoot(document.getElementById('root')).render(<div className="app-shell" style={{display:'block',height:'100dvh',overflow:'auto'}}>
   {library ? <PhotoLibraryPanel pools={[{id:'pool',name:'Photos',path:'.',filesystem:'ext4',status:'ready'}]} locale="en"
-    onWorkQueuesChanged={noop} onNotifyError={noop} onNotifySuccess={noop} onNotifyWarning={noop} onOpenSettings={noop} configurationUpdatedAt={null} /> :
+    onWorkQueuesChanged={noop} onNotifyError={notifyError} onNotifySuccess={noop} onNotifyWarning={noop} onOpenSettings={noop} configurationUpdatedAt={null} /> :
   <section className="settings-modal" style={{width:'100%',height:'100%',maxHeight:'none',display:'block'}}>
     <main className="settings-section-page"><div className="settings-section-body"><PhotosSemanticSettingsCard /></div></main>
   </section>}<TooltipLayer />
@@ -106,17 +109,18 @@ async function open(t, { width = 1440, zh = false, failInitial = false, library 
   return { page, card, writes, tests, queries, releaseSlow: () => slow.resolve(), gets: () => gets, statusReads: () => statusReads };
 }
 
-test("keyword searches prefer relevance, ignore late responses and show empty offline results", async t => {
+test("keyword searches cancel obsolete requests, prefer relevance and show empty offline results", async t => {
   const { page, queries, releaseSlow } = await open(t, { library: true });
   const input = page.locator('input[type="search"]');
   await expect(page.locator(".photo-tile")).toHaveCount(2);
   await input.fill("slow"); await input.press("Enter");
   await expect.poll(() => queries.some(query => query.filters?.text === "slow")).toBe(true);
+  const slowCancelled = page.waitForEvent("requestfailed", request => request.url().endsWith("/api/photos/query") && request.postDataJSON().filters?.text === "slow");
   await input.fill("fast"); await input.press("Enter");
   await expect(page.locator(".photo-name").first()).toHaveText("fast-0.jpg");
   assert.equal(queries.filter(query => query.filters?.text === "fast").at(-1).sort.field, "relevance");
-  const slowResponse = page.waitForResponse(response => response.url().endsWith("/api/photos/query") && response.request().postDataJSON().filters?.text === "slow");
-  releaseSlow(); await (await slowResponse).finished();
+  assert.match((await slowCancelled).failure().errorText, /abort/iu);
+  releaseSlow();
   await page.evaluate(() => new Promise(resolve => globalThis.requestAnimationFrame(() => globalThis.requestAnimationFrame(resolve))));
   await expect(page.locator(".photo-name").first()).toHaveText("fast-0.jpg");
   await input.fill("none"); await input.press("Enter");
@@ -125,6 +129,7 @@ test("keyword searches prefer relevance, ignore late responses and show empty of
   await input.fill(""); await input.press("Enter");
   await expect(page.locator(".photo-name").first()).toHaveText("browse-0.jpg");
   assert.equal(queries.at(-1).sort.field, "captured_at");
+  assert.deepEqual(await page.evaluate(() => globalThis.__photoErrors), []);
 });
 
 test("a background index update preserves a paginated result and selection", async t => {

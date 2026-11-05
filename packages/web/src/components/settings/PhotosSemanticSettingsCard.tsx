@@ -8,9 +8,11 @@ import {
 import { Switch } from "../common/Switch.js";
 import { HelpTip } from "../common/HelpTip.js";
 import { SettingsSecretField } from "./SettingsSecretField.js";
+import { formatBytes } from "../../i18n/format.js";
+import { resolveSupportedLocale } from "../../i18n/locale.js";
 
 export function PhotosSemanticSettingsCard() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [saved, setSaved] = useState<PhotosSemanticSettingsResponse["settings"] | null>(null);
   const [draft, setDraft] = useState<PhotosSemanticSettingsPatch | null>(null);
   const [status, setStatus] = useState<PhotosSemanticIndexStatus | null>(null);
@@ -83,6 +85,7 @@ export function PhotosSemanticSettingsCard() {
       <div><dt>{t("settings.photos.semantic.status")}</dt><dd>{t(`settings.photos.semantic.states.${status.state}`)}</dd></div>
       <div><dt>{t("settings.photos.semantic.coverage")}</dt><dd>{status.indexed.toLocaleString()} / {status.total.toLocaleString()} · {status.total ? Math.round(status.indexed / status.total * 100) : 0}%</dd></div>
       <div><dt>{t("settings.photos.semantic.pending")}</dt><dd>{status.pending.toLocaleString()} · {t("settings.photos.semantic.failed", { count: status.failed })}</dd></div>
+      {status.cache ? <div><dt>{t("settings.photos.semantic.cache")}</dt><dd>{formatBytes(status.cache.bytes, resolveSupportedLocale(i18n.language))} · {t("settings.photos.semantic.retiredSpaces", { count: status.cache.retiredSpaces })}</dd></div> : null}
       {dimensions ? <div><dt>{t("settings.photos.semantic.dimensions")}</dt><dd>{dimensions}</dd></div> : null}
       {space ? <div><dt>{t("settings.photos.semantic.version")}</dt><dd className="is-mono">{space}</dd></div> : null}
       {status.estimatedRemainingSeconds !== null ? <div><dt>{t("settings.photos.semantic.remaining")}</dt><dd>{Math.ceil(status.estimatedRemainingSeconds / 60).toLocaleString()} {t("settings.photos.semantic.minutes")}</dd></div> : null}

@@ -4,10 +4,11 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   activatePhotosEmbeddingModel,
   getPhotosSemanticSettings,
+  savePhotosSemanticSettings,
   claimNextPhotosJob,
   enqueuePhotosJob,
   finishPhotosJob,
@@ -38,6 +39,32 @@ afterEach(async () => {
 });
 
 describe("photos API", () => {
+  it("cancels upstream inference when an HTTP search client disconnects", async () => {
+    let started = false, disconnected = false;
+    const remote = createServer((request, response) => {
+      request.resume(); started = true;
+      response.once("close", () => { disconnected = true; });
+    });
+    remote.listen(0, "127.0.0.1"); await once(remote, "listening");
+    const remoteAddress = remote.address();
+    if (!remoteAddress || typeof remoteAddress === "string") throw new Error("Invalid test listener");
+    const { app } = await setup();
+    try {
+      await configure(app);
+      const settings = savePhotosSemanticSettings(db!, { enabled: true, model: "test-model", baseUrl: `http://127.0.0.1:${remoteAddress.port}` });
+      activatePhotosEmbeddingModel(db!, { protocol: "cyberos-photos-embedding/v1", model: "test-model", revision: "one",
+        embeddingSpaceId: "test-space", dimensions: 2, normalized: true, modalities: ["image", "text"] }, settings.generation);
+      const address = await app.listen({ host: "127.0.0.1", port: 0 });
+      const controller = new AbortController();
+      const pending = fetch(`${address}/api/photos/query`, { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ filters: { text: "海边" } }), signal: controller.signal });
+      const rejected = expect(pending).rejects.toMatchObject({ name: "AbortError" });
+      await vi.waitFor(() => expect(started).toBe(true));
+      controller.abort(); await rejected;
+      await vi.waitFor(() => expect(disconnected).toBe(true));
+      expect((await app.inject("/health")).statusCode).toBe(200);
+    } finally { await app.close(); remote.closeAllConnections(); await new Promise<void>((resolve) => remote.close(() => resolve())); }
+  });
   it("tests drafts without saving secrets and searches through the reader with offline fallback", async () => {
     const model = { protocol: "cyberos-photos-embedding/v1" as const, model: "test-model", revision: "one",
       embeddingSpaceId: "test-space", dimensions: 2, normalized: true as const, modalities: ["image", "text"] as ("image" | "text")[] };
@@ -72,7 +99,7 @@ describe("photos API", () => {
       const asset = await addPhotos(root, library, "海边.jpg", "2025-01-02T00:00:00.000Z");
       const source = db!.prepare("SELECT content_hash || ':' || derivative_schema_version || ':' || preview_key AS key FROM photos_assets WHERE id=?").get(asset.id) as { key: string };
       const vector = Buffer.alloc(8); vector.writeFloatLE(1, 0);
-      db!.prepare("INSERT INTO photos_embedding_cache VALUES(?,?,?,?,?)").run(model.embeddingSpaceId, source.key, 2, vector, new Date().toISOString());
+      db!.prepare("INSERT INTO photos_embedding_cache(embedding_space_id,input_key,dimensions,vector,created_at) VALUES(?,?,?,?,?)").run(model.embeddingSpaceId, source.key, 2, vector, new Date().toISOString());
       db!.prepare("INSERT INTO photos_asset_embeddings VALUES(?,?,?)").run(asset.id, model.embeddingSpaceId, source.key);
       const query = (text: string) => app.inject({ method: "POST", url: "/api/photos/query", payload: { filters: { text }, sort: { field: "relevance", direction: "desc" } } });
       const first = await Promise.all([query("日落"), query("日落")]);

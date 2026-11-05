@@ -256,7 +256,8 @@ export function registerPhotoRoutes(server: FastifyInstance, context: ApiRouteCo
         return;
       }
       if (query.value.filters?.text?.trim()) {
-        return reply.send(await search.query({ libraryUpdatedAt: settings.updatedAt, request: query.value }));
+        return reply.send(await withPhotoSearchDisconnect(reply, (signal) =>
+          search.query({ libraryUpdatedAt: settings.updatedAt, request: query.value }, signal)));
       }
       const requestWithoutCursor = { ...query.value, cursor: undefined };
       const fingerprint = photosQueryFingerprint(requestWithoutCursor);
@@ -357,7 +358,8 @@ export function registerPhotoRoutes(server: FastifyInstance, context: ApiRouteCo
         return;
       }
       if (mapQuery.value.filters?.text?.trim()) {
-        return reply.send(await search.map({ libraryUpdatedAt: settings.updatedAt, request: mapQuery.value }));
+        return reply.send(await withPhotoSearchDisconnect(reply, (signal) =>
+          search.map({ libraryUpdatedAt: settings.updatedAt, request: mapQuery.value }, signal)));
       }
       reply.send({
         clusters: queryPhotosMap(db, { libraryUpdatedAt: settings.updatedAt, request: mapQuery.value }),
@@ -1240,4 +1242,12 @@ function isMetadataScalar(value: unknown): value is string | number | boolean {
 
 function invalid<T>(error: string): ValidationResult<T> {
   return { ok: false, error };
+}
+
+async function withPhotoSearchDisconnect<T>(reply: FastifyReply, run: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  const controller = new AbortController();
+  const disconnect = () => { if (!reply.raw.writableEnded) controller.abort(); };
+  reply.raw.once("close", disconnect);
+  try { return await run(controller.signal); }
+  finally { reply.raw.removeListener("close", disconnect); }
 }

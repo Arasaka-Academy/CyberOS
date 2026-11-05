@@ -149,6 +149,8 @@ export function activatePhotosEmbeddingModel(db: CyberOsDatabase, input: PhotosE
     }
     db.prepare(`INSERT OR IGNORE INTO photos_embedding_profiles(embedding_space_id,model,revision,dimensions,created_at) VALUES(?,?,?,?,?)`)
       .run(model.embeddingSpaceId, model.model, model.revision, model.dimensions, new Date().toISOString());
+    db.prepare(`UPDATE photos_embedding_profiles SET retired_at=CASE WHEN embedding_space_id=? THEN NULL ELSE COALESCE(retired_at,?) END`)
+      .run(model.embeddingSpaceId, new Date().toISOString());
     if (runtime.embedding_space_id !== model.embeddingSpaceId) {
       db.prepare("UPDATE photos_embedding_runtime SET total_inference_ms=0,completed_images=0,last_success_at=NULL WHERE id=1").run();
     }
@@ -196,7 +198,9 @@ export function getPhotosSemanticStatus(db: CyberOsDatabase, now = new Date()): 
   const failedReason = counts.failed ? db.prepare(`SELECT j.error FROM photos_embedding_jobs j JOIN photos_assets a ON a.id=j.asset_id
     WHERE j.status='failed' AND j.embedding_space_id=? AND a.library_updated_at=? ORDER BY j.created_at DESC LIMIT 1`)
     .pluck().get(profile?.embeddingSpaceId ?? "", library?.updatedAt ?? "") as string | undefined : undefined;
+  const cache = db.prepare("SELECT value_json FROM system_settings WHERE key='photos_embedding_cache_maintenance'").pluck().get() as string | undefined;
   return { state, ...counts, pending, embeddingSpaceId: profile?.embeddingSpaceId ?? null, dimensions: profile?.dimensions ?? null,
+    ...(cache ? { cache: JSON.parse(cache) as NonNullable<PhotosSemanticIndexStatus["cache"]> } : {}),
     minSimilarity: profile?.minSimilarity ?? null, epoch: runtime.epoch,
     error: runtime.error ?? failedReason ?? (settings.enabled && profile && stale ? "Embedding worker has no recent heartbeat" : null),
     lastSuccessAt: runtime.last_success_at, workerHeartbeatAt: runtime.heartbeat_at, nextAttemptAt: runtime.next_attempt_at,
@@ -270,6 +274,8 @@ export function claimPhotosEmbeddingJob(db: CyberOsDatabase, workerId: string, l
 function bind(db: CyberOsDatabase, assetId: string, spaceId: string, inputKey: string): void {
   db.prepare(`INSERT INTO photos_asset_embeddings(asset_id,embedding_space_id,input_key) VALUES(?,?,?)
     ON CONFLICT(asset_id,embedding_space_id) DO UPDATE SET input_key=excluded.input_key`).run(assetId, spaceId, inputKey);
+  db.prepare("UPDATE photos_embedding_cache SET unreferenced_at=NULL WHERE embedding_space_id=? AND input_key=? AND unreferenced_at IS NOT NULL")
+    .run(spaceId, inputKey);
 }
 
 export function getCachedPhotosEmbedding(db: CyberOsDatabase, job: PhotosEmbeddingJob): number[] | null {
@@ -326,5 +332,55 @@ export function rebuildPhotosSemanticIndex(db: CyberOsDatabase): void {
     }
     db.prepare(`UPDATE photos_embedding_runtime SET epoch=epoch+1,error=NULL,failures=0,next_attempt_at=NULL,
       total_inference_ms=0,completed_images=0,connection_state='pending' WHERE id=1`).run();
+  }).immediate();
+}
+
+/** Bounded derived-cache maintenance. Grace starts when an input loses its last
+ * reference (7 days), or when a model space is retired (30 days). */
+export function prunePhotosEmbeddingCache(db: CyberOsDatabase, now = new Date(), limit = 256): { removedVectors: number; removedBytes: number } {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 1000) throw new Error("Invalid embedding cleanup batch size");
+  return db.transaction(() => {
+    const space = getPhotosEmbeddingRuntime(db).embedding_space_id;
+    const library = getPhotosLibrarySettings(db)?.updatedAt ?? "";
+    const timestamp = now.toISOString();
+    const orphanBefore = new Date(now.getTime() - 7 * 86400_000).toISOString();
+    const retiredBefore = new Date(now.getTime() - 30 * 86400_000).toISOString();
+    db.prepare(`UPDATE photos_embedding_profiles SET retired_at=COALESCE(retired_at,?)
+      WHERE embedding_space_id<>? AND retired_at IS NULL`).run(timestamp, space ?? "");
+    db.prepare(`DELETE FROM photos_asset_embeddings WHERE rowid IN (
+      SELECT b.rowid FROM photos_asset_embeddings b WHERE NOT EXISTS (
+        SELECT 1 FROM photos_assets a WHERE a.id=b.asset_id AND a.library_updated_at=? AND ${ELIGIBLE}
+          AND ${photosEmbeddingInputSql}=b.input_key) LIMIT ?
+    )`).run(library, limit);
+    // Expired/queued tasks for retired models cannot publish into the current
+    // space. Keep a live lease until its worker has returned or it expires.
+    db.prepare(`DELETE FROM photos_embedding_jobs WHERE rowid IN (
+      SELECT j.rowid FROM photos_embedding_jobs j JOIN photos_embedding_profiles p USING(embedding_space_id)
+      WHERE p.embedding_space_id<>? AND p.retired_at<=?
+        AND (j.status<>'running' OR j.lease_expires_at<=?) LIMIT ?
+    )`).run(space ?? "", retiredBefore, timestamp, limit);
+    const referenced = `EXISTS(SELECT 1 FROM photos_asset_embeddings b
+        WHERE b.embedding_space_id=c.embedding_space_id AND b.input_key=c.input_key)
+      OR EXISTS(SELECT 1 FROM photos_embedding_jobs j
+        WHERE j.embedding_space_id=c.embedding_space_id AND j.input_key=c.input_key)`;
+    db.prepare(`UPDATE photos_embedding_cache AS c SET unreferenced_at=NULL WHERE unreferenced_at IS NOT NULL AND (${referenced})`).run();
+    db.prepare(`UPDATE photos_embedding_cache SET unreferenced_at=? WHERE rowid IN (
+      SELECT c.rowid FROM photos_embedding_cache c WHERE c.unreferenced_at IS NULL AND NOT (${referenced}) LIMIT ?
+    )`).run(timestamp, limit);
+    const removed = db.prepare(`DELETE FROM photos_embedding_cache WHERE rowid IN (
+      SELECT c.rowid FROM photos_embedding_cache c JOIN photos_embedding_profiles p USING(embedding_space_id)
+      WHERE (c.unreferenced_at<=? OR (p.embedding_space_id<>? AND p.retired_at<=?))
+        AND NOT EXISTS(SELECT 1 FROM photos_embedding_jobs j WHERE j.embedding_space_id=c.embedding_space_id
+          AND j.input_key=c.input_key AND (j.status<>'running' OR j.lease_expires_at>?))
+      LIMIT ?
+    ) RETURNING dimensions`).all(orphanBefore, space ?? "", retiredBefore, timestamp, limit) as { dimensions: number }[];
+    const result = { removedVectors: removed.length, removedBytes: removed.reduce((sum, row) => sum + row.dimensions * 4, 0) };
+    const stats = db.prepare(`SELECT COUNT(*) AS vectors,COALESCE(SUM(p.dimensions*4),0) AS bytes
+      FROM photos_embedding_profiles p JOIN photos_embedding_cache c USING(embedding_space_id)`).get() as { vectors: number; bytes: number };
+    const retiredSpaces = db.prepare("SELECT COUNT(*) FROM photos_embedding_profiles WHERE retired_at IS NOT NULL").pluck().get() as number;
+    db.prepare(`INSERT INTO system_settings(key,value_json,updated_at) VALUES('photos_embedding_cache_maintenance',?,?)
+      ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json,updated_at=excluded.updated_at`)
+      .run(JSON.stringify({ ...stats, retiredSpaces, lastCleanupAt: timestamp, ...result }), timestamp);
+    return result;
   }).immediate();
 }

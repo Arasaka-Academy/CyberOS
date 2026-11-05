@@ -1,3 +1,9 @@
+cyberos (2.3.2) unstable; urgency=medium
+
+  * Optimize Photos semantic search, cancellation and derived vector retention.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Thu, 05 Nov 2026 14:45:29 +0000
+
 cyberos (2.3.1) unstable; urgency=medium
 
   * Add Photos keyword search with private remote embeddings, durable local indexing, and hybrid retrieval.

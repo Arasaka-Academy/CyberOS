@@ -1,11 +1,14 @@
 import asyncio
 import io
 import unittest
+from unittest.mock import patch
+from types import SimpleNamespace, ModuleType
 
 import httpx
 from PIL import Image
 
-from service import ServiceConfig, create_app, InferenceQueue, MAX_IMAGE_BYTES
+from service import ServiceConfig, create_app, InferenceQueue, MAX_IMAGE_BYTES, project_embeddings, MlxBackend
+from fastapi import HTTPException
 
 
 class Backend:
@@ -98,6 +101,69 @@ class ServiceTests(unittest.IsolatedAsyncioTestCase):
     def test_embedding_identity_changes_with_preprocessing(self):
         changed = ServiceConfig(model="test/model", revision="test-revision", dimensions=2, max_pixels=262144)
         self.assertNotEqual(changed.embedding_space_id, self.config.embedding_space_id)
+
+    async def test_disconnected_queued_request_never_runs_inference(self):
+        started, release, lost = asyncio.Event(), asyncio.Event(), asyncio.Event()
+        seen = []
+        async def infer(value):
+            seen.append(value)
+            if value == "running":
+                started.set()
+                await release.wait()
+            return value
+        class Request:
+            async def is_disconnected(self):
+                return lost.is_set()
+        queue = InferenceQueue(infer)
+        await queue.start()
+        try:
+            running = asyncio.create_task(queue.submit("running", 1))
+            await started.wait()
+            obsolete = asyncio.create_task(queue.submit("obsolete", 0, Request()))
+            lost.set()
+            with self.assertRaises(HTTPException) as error:
+                await asyncio.wait_for(obsolete, 1)
+            self.assertEqual(error.exception.status_code, 499)
+            release.set()
+            await running
+            await queue.submit("latest", 0)
+            self.assertEqual(seen, ["running", "latest"])
+        finally:
+            release.set()
+            await queue.close()
+
+    def test_dimension_projection_renormalizes_and_has_a_distinct_identity(self):
+        self.assertEqual(project_embeddings([[3., 4., 12.]], 2), [[.6, .8]])
+        for vector in ([[0., 0., 1.]], [[float("nan"), 1.]], [[1.]]):
+            with self.assertRaises(ValueError):
+                project_embeddings(vector, 2)
+        self.assertNotEqual(ServiceConfig(dimensions=512).embedding_space_id, ServiceConfig().embedding_space_id)
+
+    def test_independent_requests_never_reuse_rope_state(self):
+        language = SimpleNamespace(_position_ids="stale-2d", _rope_deltas="stale-image")
+        class Embeddings:
+            def astype(self, _dtype):
+                return self
+            def tolist(self):
+                return [[1., 0.]]
+        class Model:
+            language_model = language
+            def process(inner, _inputs, processor):
+                self.assertIsNone(language._position_ids)
+                self.assertIsNone(language._rope_deltas)
+                language._position_ids = "cached-2d"
+                language._rope_deltas = "cached-image"
+                return Embeddings()
+        core = SimpleNamespace(eval=lambda _value: None, clear_cache=lambda: None, float32="float32")
+        mlx = ModuleType("mlx")
+        mlx.core = core
+        backend = MlxBackend.__new__(MlxBackend)
+        backend.model, backend.processor, backend.dimensions = Model(), object(), 2
+        with patch.dict("sys.modules", {"mlx": mlx, "mlx.core": core}):
+            self.assertEqual(backend.embed([{"text": "long query"}]), [[1., 0.]])
+            self.assertEqual(backend.embed([{"text": "short"}]), [[1., 0.]])
+        self.assertIsNone(language._position_ids)
+        self.assertIsNone(language._rope_deltas)
 
 
 if __name__ == "__main__":

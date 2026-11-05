@@ -2016,8 +2016,8 @@ export async function getPhotoTimeline(cursor?: string | null, limit = 60): Prom
   return (await response.json()) as PhotoTimelinePage;
 }
 
-export async function queryPhotos(input: PhotoQueryRequest): Promise<PhotoQueryPage> {
-  const response = await fetch("/api/photos/query", jsonRequest("POST", input));
+export async function queryPhotos(input: PhotoQueryRequest, signal?: AbortSignal): Promise<PhotoQueryPage> {
+  const response = await fetch("/api/photos/query", { ...jsonRequest("POST", input), signal: signal ?? null });
   await ensureOk(response);
   return (await response.json()) as PhotoQueryPage;
 }
@@ -2043,8 +2043,8 @@ export async function getPhotoMetadataFields(query = ""): Promise<PhotoMetadataF
   return ((await response.json()) as { fields: PhotoMetadataField[] }).fields;
 }
 
-export async function queryPhotoMap(input: PhotoMapQueryRequest): Promise<PhotoMapQueryResult> {
-  const response = await fetch("/api/photos/map/query", jsonRequest("POST", input));
+export async function queryPhotoMap(input: PhotoMapQueryRequest, signal?: AbortSignal): Promise<PhotoMapQueryResult> {
+  const response = await fetch("/api/photos/map/query", { ...jsonRequest("POST", input), signal: signal ?? null });
   await ensureOk(response);
   return (await response.json()) as PhotoMapQueryResult;
 }

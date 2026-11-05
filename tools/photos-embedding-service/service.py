@@ -8,6 +8,7 @@ import hmac
 import io
 import itertools
 import json
+import logging
 import math
 from pathlib import Path
 from typing import Annotated
@@ -29,7 +30,7 @@ class ServiceConfig:
     max_pixels: int = 768 * 768
     instruction: str = "Represent the user's input."
     backend_version: str = "0.1.0"
-    pipeline_version: int = 1
+    pipeline_version: int = 2
     min_pixels: int = 4096
     max_length: int = 8192
     runtime_fingerprint: str = "b2f316df3402ee63721dbb6149fb1f2e9c5c6a434a9ca64091049a900091a9ee"
@@ -37,7 +38,9 @@ class ServiceConfig:
     @property
     def embedding_space_id(self):
         payload = {**asdict(self), "pooling": "last_non_padding_token", "normalization": "l2",
-                   "backend": "mlx-embeddings", "weight_quantization": None}
+                   "backend": "mlx-embeddings", "weight_quantization": None, "request_state": "fresh_rope_positions_v1"}
+        if self.dimensions != 2048:
+            payload["projection"] = "prefix_then_l2_v1"
         return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
     def manifest(self):
@@ -68,13 +71,27 @@ class InferenceQueue:
             if not future.done():
                 future.cancel()
 
-    async def submit(self, value, priority):
+    async def submit(self, value, priority, request=None):
         future = asyncio.get_running_loop().create_future()
         try:
             self.queue.put_nowait((priority, next(self.sequence), value, future))
         except asyncio.QueueFull as error:
             raise HTTPException(429, "Inference queue is full", headers={"Retry-After": "1"}) from error
-        return await future
+        if request is None:
+            return await future
+        async def disconnected():
+            while not await request.is_disconnected():
+                await asyncio.sleep(.1)
+        monitor = asyncio.create_task(disconnected())
+        try:
+            await asyncio.wait((future, monitor), return_when=asyncio.FIRST_COMPLETED)
+            if future.done():
+                return await future
+            raise HTTPException(499, "Request cancelled")
+        finally:
+            monitor.cancel()
+            if not future.done():
+                future.cancel()
 
     async def run(self):
         while True:
@@ -145,6 +162,7 @@ def create_app(config, token, backend):
             return {"embeddingSpaceId": config.embedding_space_id, "dimensions": config.dimensions,
                     "embeddings": validated_vectors(vectors, len(inputs), config.dimensions)}
         except Exception as error:
+            logging.getLogger("photos-embedding").exception("Model inference failed")
             # Never echo model internals, paths, request contents or credentials.
             raise HTTPException(502, "Model inference failed") from error
 
@@ -179,11 +197,11 @@ def create_app(config, token, backend):
         return config.manifest()
 
     @app.post("/v1/embeddings/text", dependencies=[Depends(authenticate)])
-    async def text(body: TextInput):
+    async def text(body: TextInput, request: Request):
         check_model(body.model)
         if any(not value.strip() for value in body.texts):
             raise HTTPException(400, "Text must not be blank")
-        return await queue.submit([{"text": value, "instruction": config.instruction} for value in body.texts], priority=0)
+        return await queue.submit([{"text": value, "instruction": config.instruction} for value in body.texts], priority=0, request=request)
 
     @app.post("/v1/embeddings/image", dependencies=[Depends(authenticate)])
     async def image(request: Request):
@@ -207,13 +225,16 @@ def create_app(config, token, backend):
                     picture = picture.resize((max(1, int(picture.width * scale)), max(1, int(picture.height * scale))), Image.Resampling.LANCZOS)
             except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as error:
                 raise HTTPException(400, "Invalid image") from error
-        return await queue.submit([{"image": picture, "instruction": config.instruction}], priority=1)
+        return await queue.submit([{"image": picture, "instruction": config.instruction}], priority=1, request=request)
 
     return app
 
 
 class MlxBackend:
     def __init__(self, model_path, config):
+        if not 64 <= config.dimensions <= 2048:
+            raise ValueError("Qwen3-VL-Embedding-2B dimensions must be 64..2048")
+        self.dimensions = config.dimensions
         from importlib.metadata import version
         from mlx_embeddings import load
         if version("mlx-embeddings") != config.backend_version:
@@ -232,11 +253,34 @@ class MlxBackend:
 
     def embed(self, inputs):
         import mlx.core as mx
-        embeddings = self.model.process(inputs, processor=self.processor)
-        mx.eval(embeddings)
-        result = embeddings.astype(mx.float32).tolist()
-        mx.clear_cache()
-        return result
+        # Independent embedding requests must not reuse autoregressive RoPE
+        # state. mlx-embeddings 0.1.0 can reuse an earlier request's 2D position
+        # IDs as a 3D array, or silently reuse image positions for later text.
+        language_model = self.model.language_model
+        language_model._position_ids = None
+        language_model._rope_deltas = None
+        try:
+            embeddings = self.model.process(inputs, processor=self.processor)
+            mx.eval(embeddings)
+            return project_embeddings(embeddings.astype(mx.float32).tolist(), self.dimensions)
+        finally:
+            language_model._position_ids = None
+            language_model._rope_deltas = None
+            mx.clear_cache()
+
+
+def project_embeddings(vectors, dimensions):
+    """MRL prefix projection; images and text use the same dimension and norm."""
+    result = []
+    for vector in vectors:
+        if dimensions < 1 or len(vector) < dimensions or not all(math.isfinite(value) for value in vector):
+            raise ValueError("Invalid source embedding for projection")
+        prefix = vector[:dimensions]
+        norm = math.sqrt(sum(value * value for value in prefix))
+        if norm == 0:
+            raise ValueError("Embedding prefix has zero norm")
+        result.append([value / norm for value in prefix])
+    return result
 
 
 def main():
