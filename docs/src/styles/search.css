@@ -1,0 +1,90 @@
+site-search button[data-open-modal] {
+  min-width: 32px;
+  border: 1px solid var(--cyberos-hud-line-neutral);
+  color: var(--cyberos-hud-muted);
+  background: var(--cyberos-hud-panel);
+  transition: border-color var(--cyberos-hud-duration-state) var(--cyberos-hud-easing);
+}
+
+site-search button[data-open-modal]:hover {
+  border-color: var(--cyberos-hud-cyan);
+  color: var(--cyberos-hud-cyan);
+}
+
+site-search dialog {
+  border: 1px solid var(--cyberos-hud-line-neutral);
+  border-top: 2px solid var(--cyberos-hud-red-soft);
+  color: var(--cyberos-hud-text);
+  background: var(--cyberos-hud-deep);
+  box-shadow: none;
+}
+
+site-search dialog::backdrop {
+  background: var(--cyberos-hud-overlay);
+  backdrop-filter: none;
+}
+
+#starlight__search {
+  --pagefind-ui-primary: var(--cyberos-hud-cyan);
+  --pagefind-ui-text: var(--cyberos-hud-muted);
+  --pagefind-ui-font: var(--cyberos-doc-font-body);
+  --pagefind-ui-background: var(--cyberos-hud-void);
+  --pagefind-ui-border: var(--cyberos-hud-line-neutral);
+  --pagefind-ui-border-radius: 0;
+  --pagefind-ui-border-width: 1px;
+  --sl-search-corners: 0px;
+}
+
+#starlight__search .pagefind-ui__search-input {
+  border: 1px solid var(--cyberos-hud-line-neutral);
+  color: var(--cyberos-hud-text);
+  background: var(--cyberos-hud-void);
+  font-size: 1rem;
+}
+
+#starlight__search .pagefind-ui__result {
+  border-color: var(--cyberos-hud-line-neutral);
+}
+
+#starlight__search .pagefind-ui__result-title {
+  font-family: var(--cyberos-doc-font-ui);
+  font-size: 1rem;
+}
+
+#starlight__search .pagefind-ui__result-link {
+  color: var(--cyberos-hud-text);
+}
+
+#starlight__search .pagefind-ui__result-link:hover {
+  color: var(--cyberos-hud-cyan);
+}
+
+#starlight__search .pagefind-ui__result-excerpt {
+  font-size: 0.875rem;
+  line-height: 1.8;
+}
+
+#starlight__search mark {
+  color: var(--cyberos-hud-yellow);
+  background: var(--cyberos-hud-yellow-wash);
+}
+
+#starlight__search .pagefind-ui__button {
+  border: 1px solid var(--cyberos-hud-line-neutral);
+  color: var(--cyberos-hud-text);
+  background: var(--cyberos-hud-panel);
+  font-size: 0.875rem;
+}
+
+#starlight__search .pagefind-ui__button:hover {
+  border-color: var(--cyberos-hud-cyan);
+  color: var(--cyberos-hud-cyan);
+}
+
+@media (max-width: 49.999rem) {
+  site-search button[data-open-modal] {
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+  }
+}

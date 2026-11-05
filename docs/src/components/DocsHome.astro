@@ -1,0 +1,82 @@
+---
+const sections = [
+  {
+    title: '开始使用',
+    description: '准备环境，运行 CyberOS，理解配置与存储边界。',
+    links: [
+      { label: '快速开始', href: '/docs/start/quick-start/' },
+      { label: '本地开发', href: '/docs/start/local-development/' },
+      { label: '配置与运行时', href: '/docs/start/configuration/' }
+    ]
+  },
+  {
+    title: '教程与操作',
+    description: '使用工作区、管理媒体，完成备份与日常任务。',
+    links: [
+      { label: 'Web 工作区', href: '/docs/how-to/web-workspace/' },
+      { label: '影视库', href: '/docs/how-to/video-library/' },
+      { label: '备份与恢复', href: '/docs/how-to/backup-restore/' }
+    ]
+  },
+  {
+    title: '架构与设计',
+    description: '从系统全貌到运行时流程，了解组件如何协作。',
+    links: [
+      { label: '系统总览', href: '/docs/architecture/system-overview/' },
+      { label: '运行时流程', href: '/docs/architecture/runtime-flows/' },
+      { label: '安全与信任', href: '/docs/architecture/security/' }
+    ]
+  },
+  {
+    title: '组件',
+    description: '查看 Web、API、Agent 和原生服务的职责与实现。',
+    links: [
+      { label: 'Web UI', href: '/docs/components/web/' },
+      { label: 'Fastify API', href: '/docs/components/api/' },
+      { label: 'Agent 与 Worker', href: '/docs/components/agent-worker/' }
+    ]
+  },
+  {
+    title: '运维',
+    description: '部署、验收与回滚，定位设备和服务运行中的问题。',
+    links: [
+      { label: 'Debian 部署', href: '/docs/operations/deployment/' },
+      { label: 'cybermachine 部署', href: '/docs/operations/cybermachine/' },
+      { label: '故障排查', href: '/docs/operations/troubleshooting/' }
+    ]
+  },
+  {
+    title: '参考',
+    description: '查询 API、数据结构、服务单元与前端设计规范。',
+    links: [
+      { label: 'HTTP API', href: '/docs/reference/api/' },
+      { label: '数据库', href: '/docs/reference/database/' },
+      { label: '前端设计规范', href: '/docs/reference/frontend-design/' }
+    ]
+  }
+];
+---
+
+<div class="docs-home not-content">
+  <div class="docs-home-start">
+    <p>原生 Linux NAS，以 systemd 管理服务，SQLite 保存状态。</p>
+    <a class="docs-primary-link" href="/docs/start/quick-start/">
+      快速开始
+      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14m-6-6 6 6-6 6" /></svg>
+    </a>
+  </div>
+  <nav class="docs-directory" aria-label="文档栏目">
+    {sections.map((section, index) => (
+      <section class="docs-directory-row" aria-labelledby={`docs-section-${index + 1}`}>
+        <span class="docs-directory-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+        <div class="docs-directory-content">
+          <h2 id={`docs-section-${index + 1}`}>{section.title}</h2>
+          <p>{section.description}</p>
+          <ul class="docs-directory-links">
+            {section.links.map((link) => <li><a href={link.href}>{link.label}<span aria-hidden="true">↗</span></a></li>)}
+          </ul>
+        </div>
+      </section>
+    ))}
+  </nav>
+</div>

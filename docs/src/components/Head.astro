@@ -10,6 +10,11 @@ import StarlightHead from '@astrojs/starlight/components/Head.astro';
   // Starlight does not forward button attributes through its toolbar components.
   // Reuse its localized labels for the compact search and mobile menu controls.
   function labelCompactButtons() {
+    for (const diagram of document.querySelectorAll<HTMLElement>('pre.mermaid')) {
+      diagram.tabIndex = 0;
+      diagram.setAttribute('role', 'region');
+      diagram.setAttribute('aria-label', '文档图表');
+    }
     for (const button of document.querySelectorAll<HTMLButtonElement>(
       'site-search [data-open-modal], .sl-menu-button, .expressive-code .copy button'
     )) {
@@ -36,13 +41,26 @@ import StarlightHead from '@astrojs/starlight/components/Head.astro';
     }
   }
 
+  // Pagefind loads on idle and may insert its input after the dialog opens.
+  function focusSearchWhenReady(root: Element) {
+    const input = root.matches('.pagefind-ui__search-input')
+      ? root
+      : root.querySelector('.pagefind-ui__search-input');
+    if (!(input instanceof HTMLInputElement)) return;
+    const dialog = input.closest('site-search dialog[open]');
+    if (dialog && (document.activeElement === dialog || document.activeElement === dialog.querySelector('[data-close-modal]'))) input.focus();
+  }
+
   mountTooltipLayer();
   labelCompactButtons();
   const observer = new MutationObserver((records) => {
     for (const record of records) {
       if (record.type === 'attributes' && record.target instanceof Element) migrateNativeTooltips(record.target);
       for (const node of record.addedNodes) {
-        if (node instanceof Element) migrateNativeTooltips(node);
+        if (node instanceof Element) {
+          migrateNativeTooltips(node);
+          focusSearchWhenReady(node);
+        }
       }
     }
   });

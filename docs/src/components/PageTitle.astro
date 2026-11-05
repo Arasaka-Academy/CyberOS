@@ -1,0 +1,20 @@
+---
+const { entry, sidebar } = Astro.locals.starlightRoute;
+type SidebarEntry = (typeof sidebar)[number];
+
+function containsCurrent(item: SidebarEntry): boolean {
+  return item.type === 'link' ? item.isCurrent : item.entries.some(containsCurrent);
+}
+
+const sectionIndex = sidebar.findIndex((item) => item.type === 'group' && containsCurrent(item));
+const section = sidebar[sectionIndex];
+const context = section
+  ? `${String(sectionIndex + 1).padStart(2, '0')} / ${section.label}`
+  : 'CYBEROS / DOCUMENTATION';
+---
+
+<header class="docs-page-heading">
+  <p class="docs-page-context" data-pagefind-ignore>{context}</p>
+  <h1 id="_top" tabindex="-1">{entry.data.title}</h1>
+  {entry.data.description && <p class="docs-page-description">{entry.data.description}</p>}
+</header>
