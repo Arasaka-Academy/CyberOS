@@ -136,7 +136,7 @@ export function VideoLibraryPanel({
   const detailSequence = useRef(0);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
-  const returnFocus = useRef<{ element: HTMLElement; scroll: number; poster: number; titleId: string; regionIndex: number; railScroll: number } | null>(null);
+  const returnFocus = useRef<{ element: HTMLElement; scroll: number; poster: number; titleId: string; regionIndex: number } | null>(null);
   const collectionFocus = useRef<string | null>(null);
   const activeDetailId = detailId ?? detail?.id;
   const reload = useCallback(() => setVersion((v) => v + 1), []);
@@ -279,14 +279,13 @@ export function VideoLibraryPanel({
   };
   const open = async (title: MediaTitleSummary, preferred?: string) => {
     if (tv && document.activeElement instanceof HTMLElement) {
-      const region = document.activeElement.closest<HTMLElement>('[data-tv-region="rail"], [data-tv-region="grid"]');
+      const region = document.activeElement.closest<HTMLElement>('[data-tv-region="grid"]');
       returnFocus.current = {
         element: document.activeElement,
         scroll: contentRef.current?.scrollTop ?? 0,
         poster: [...(panelRef.current?.querySelectorAll(".video-poster") ?? [])].indexOf(document.activeElement),
         titleId: title.id,
-        regionIndex: [...(panelRef.current?.querySelectorAll('[data-tv-region="rail"], [data-tv-region="grid"]') ?? [])].indexOf(region as HTMLElement),
-        railScroll: region?.scrollLeft ?? 0,
+        regionIndex: [...(panelRef.current?.querySelectorAll('[data-tv-region="grid"]') ?? [])].indexOf(region as HTMLElement),
       };
     }
     const sequence = ++detailSequence.current;
@@ -336,12 +335,11 @@ export function VideoLibraryPanel({
     if (requestedTitleId) onCloseRequestedTitle?.(restoreSearch);
     if (tv && restoreSearch && !requestedTitleId) window.requestAnimationFrame(() => {
       const target = returnFocus.current;
-      const region = target ? panelRef.current?.querySelectorAll<HTMLElement>('[data-tv-region="rail"], [data-tv-region="grid"]')[target.regionIndex] : null;
+      const region = target ? panelRef.current?.querySelectorAll<HTMLElement>('[data-tv-region="grid"]')[target.regionIndex] : null;
       const byTitle = [...(region?.querySelectorAll<HTMLElement>("[data-tv-title]") ?? [])].find(element => element.dataset.tvTitle === target?.titleId);
       const element = target?.element.isConnected ? target.element : byTitle ?? (target ? panelRef.current?.querySelectorAll<HTMLElement>(".video-poster")[target.poster] : null);
       if (element) {
         if (contentRef.current) contentRef.current.scrollTop = target?.scroll ?? 0;
-        if (region) region.scrollLeft = target?.railScroll ?? 0;
         element.focus({ preventScroll: true });
       } else panelRef.current?.querySelector<HTMLElement>('.video-navigation button[aria-pressed="true"]')?.focus();
     });
@@ -507,8 +505,8 @@ export function VideoLibraryPanel({
         setDetail(await getVideoDetail(detail.id));
       });
   };
-  const posters = (titles: MediaTitleSummary[], rail = false, next = false) => (
-    <div className={rail ? "video-poster-rail" : "video-poster-wall"} data-tv-region={rail ? "rail" : "grid"}>
+  const posters = (titles: MediaTitleSummary[], next = false) => (
+    <div className="video-poster-wall" data-tv-region="grid">
       {titles.map((title) => (
         <VideoPoster
           key={title.id}
@@ -830,7 +828,7 @@ export function VideoLibraryPanel({
             </div>
             {detail.seasons.length ? (
               <section className="video-seasons" data-tv-region="episodes">
-                <nav>
+                <nav data-tv-region="seasons">
                   {detail.seasons.map((s) => (
                     <button
                       data-tv-focusable
@@ -1087,7 +1085,6 @@ export function VideoLibraryPanel({
                   </h3>
                   {posters(
                     titles as MediaTitleSummary[],
-                    true,
                     name === "upNext",
                   )}
                 </section>

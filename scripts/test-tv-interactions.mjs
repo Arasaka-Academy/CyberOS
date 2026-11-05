@@ -44,13 +44,15 @@ async function library(t, options = {}) {
     } else reads.push(url);
     if (url.pathname.endsWith("/events")) return route.fulfill({ status: 204 });
     if (url.pathname === "/api/media/titles" && url.searchParams.get("query") && options.searchFailure?.()) return route.fulfill({ status: 503, json: { error: "Search unavailable" } });
+    if (/^\/api\/media\/titles\/[^/]+$/u.test(url.pathname)) return route.fulfill({
+      json: { title: { ...(options.detail ?? detail), id: decodeURIComponent(url.pathname.split("/").at(-1)) } }
+    });
     const fixtures = {
       "/api/media/home": options.home ?? { continueWatching: [], recentlyAdded: [title], movies: [], series: [title], watchlist: [], upNext: [], collections: [] },
-      "/api/media/collections": { collections: [{ id: "collection-1", name: "Test collection", kind: "manual", titleIds: [title.id] }] },
+      "/api/media/collections": { collections: options.collections ?? [{ id: "collection-1", name: "Test collection", kind: "manual", titleIds: [title.id] }] },
       "/api/media/sources": { sources: [] },
       "/api/media/filter-options": { years: [2024, 1999], genres: ["Drama", "Sci-Fi"] },
       "/api/media/titles": { titles: [title], nextCursor: null },
-      "/api/media/titles/series-1": { title: detail },
       "/api/media/files/file-2/play": { status: globalThis.structuredClone(playback) },
       "/api/playback/status": { status: globalThis.structuredClone(options.playback ?? playback) },
       "/api/playback/command": { status: globalThis.structuredClone(options.playback ?? playback) },
@@ -60,7 +62,27 @@ async function library(t, options = {}) {
     };
     await route.fulfill({ status: url.pathname in fixtures ? 200 : 503, json: fixtures[url.pathname] ?? { error: "Not available in TV test" } });
   });
-  await page.goto(`${baseUrl}tv/`);
+  if (options.tv === false) {
+    await page.route("**/__video_fixture__", route => route.fulfill({
+      contentType: "text/html; charset=utf-8",
+      body: `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/src/styles.css"></head><body><main id="root" class="app-shell" style="display:block;height:100dvh;max-width:${options.panelWidth ? `${options.panelWidth}px` : "100%"}"></main><script type="module">
+        import RefreshRuntime from "/@react-refresh";
+        RefreshRuntime.injectIntoGlobalHook(window);
+        window.$RefreshReg$ = () => {};
+        window.$RefreshSig$ = () => type => type;
+        window.__vite_plugin_react_preamble_installed__ = true;
+        const R = await import("/node_modules/.vite/deps/react.js");
+        const React = R.default ?? R;
+        const D = await import("/node_modules/.vite/deps/react-dom_client.js");
+        const createRoot = D.createRoot ?? D.default.createRoot;
+        await (await import("/src/i18n/index.ts")).initI18n();
+        const { PlaybackProvider } = await import("/src/components/playback/PlaybackProvider.tsx");
+        const { VideoLibraryPanel } = await import("/src/components/video/VideoLibraryPanel.tsx");
+        createRoot(document.getElementById("root")).render(React.createElement(PlaybackProvider, null, React.createElement(VideoLibraryPanel)));
+      </script></body></html>`
+    }));
+  }
+  await page.goto(`${baseUrl}${options.tv === false ? "__video_fixture__" : "tv/"}`);
   await page.locator(".video-poster").first().waitFor();
   return { page, writes, reads };
 }
@@ -311,16 +333,139 @@ test("episode takeover submits the chosen episode and busy confirmation blocks B
   await page.locator(".music-dialog").waitFor({ state: "detached" });
 });
 
-test("directional navigation remembers a poster in each horizontal region", async t => {
+test("directional navigation remembers a poster in each home group", async t => {
   const titles = [0, 1, 2].map(index => ({ ...title, id: `title-${index}`, title: `Title ${index}` }));
   const { page } = await library(t, { home: { continueWatching: [], recentlyAdded: titles, movies: [], series: [], watchlist: titles, upNext: [], collections: [] }, reducedMotion: "reduce" });
-  const rails = page.locator(".video-poster-rail");
-  await rails.nth(0).locator("button").nth(1).focus();
+  const groups = page.locator(".video-home-row > div");
+  await groups.nth(0).locator("button").nth(1).focus();
   await page.keyboard.press("ArrowDown");
-  assert.equal(await rails.nth(1).evaluate(element => element.contains(globalThis.document.activeElement)), true);
+  assert.equal(await groups.nth(1).evaluate(element => element.contains(globalThis.document.activeElement)), true);
   await page.keyboard.press("ArrowRight");
   await page.keyboard.press("ArrowUp");
-  assert.equal(await rails.nth(0).locator("button").nth(1).evaluate(element => globalThis.document.activeElement === element), true);
+  assert.equal(await groups.nth(0).locator("button").nth(1).evaluate(element => globalThis.document.activeElement === element), true);
+});
+
+async function assertNoHorizontalOverflow(page, selectors) {
+  const overflow = await page.locator(selectors).evaluateAll(elements => elements
+    .filter(element => element.scrollWidth > element.clientWidth + 1)
+    .map(element => ({ className: element.className, width: element.clientWidth, scroll: element.scrollWidth })));
+  assert.deepEqual(overflow, []);
+}
+
+async function visualRows(buttons) {
+  return buttons.evaluateAll(elements => {
+    const rows = [];
+    elements.forEach((element, index) => {
+      const top = Math.round(element.getBoundingClientRect().top);
+      const row = rows.find(row => Math.abs(row.top - top) < 2);
+      if (row) row.indices.push(index);
+      else rows.push({ top, indices: [index] });
+    });
+    return rows.map(row => row.indices);
+  });
+}
+
+for (const tv of [false, true]) for (const locale of ["en-US", "zh-CN"]) {
+  for (const width of tv ? [1920, 1280, 720, 320] : [1440, 820, 560, 390, 320]) {
+    test(`${tv ? "TV" : "Web"} ${locale} ${width}px: video content wraps inside its panel`, async t => {
+      const longText = "很长的名称VeryLongUnbrokenMediaMetadata".repeat(12);
+      const titles = Array.from({ length: 14 }, (_, index) => ({ ...title, id: `title-${index}`, title: `${longText} ${index}` }));
+      const { page } = await library(t, {
+        tv, locale, viewport: { width, height: tv && width === 720 ? 540 : 900 },
+        panelWidth: !tv && width === 1440 ? 480 : undefined,
+        reducedMotion: "reduce",
+        home: { continueWatching: titles, recentlyAdded: titles, movies: [], series: [], watchlist: titles, upNext: titles.map(title => ({ title, fileId: "file-2" })), collections: [] },
+        detail: { ...detail, title: longText, overview: longText, genres: [longText], credits: [{ name: longText, role: "Actor" }],
+          seasons: Array.from({ length: 12 }, (_, index) => ({ ...detail.seasons[0], id: `season-${index}`, seasonNumber: index + 1, name: index === 11 ? longText : `Season ${index + 1}` })) },
+        collections: [{ id: "collection-1", name: longText, kind: "manual", titleIds: titles.map(title => title.id) }]
+      });
+      const groups = page.locator(".video-home-row > div");
+      assert.equal(await groups.count(), 4);
+      for (let group = 0; group < 4; group++) {
+        const posters = groups.nth(group).locator(".video-poster");
+        assert.equal(await posters.count(), 14);
+        assert.ok((await visualRows(posters)).length > 1, "posters must occupy multiple rows");
+      }
+      await assertNoHorizontalOverflow(page, ".video-panel, .video-content, .video-navigation, .video-home-row > div");
+      await groups.last().locator("button").last().scrollIntoViewIfNeeded();
+      assert.ok(await page.locator(".video-content").evaluate(element => element.scrollTop > 0));
+      const output = fileURLToPath(new URL("../.cyberos/video-review/", import.meta.url));
+      await mkdir(output, { recursive: true });
+      await page.locator(".video-content").evaluate(element => { element.scrollTop = 0; });
+      await page.screenshot({ path: `${output}/${tv ? "tv" : "web"}-${locale}-${width}.png` });
+      await groups.first().locator("button").first().click();
+      await page.locator(".video-detail").waitFor();
+      const seasons = page.locator(".video-seasons nav button");
+      assert.ok((await visualRows(seasons)).length > 1, "season controls must wrap");
+      await assertNoHorizontalOverflow(page, ".video-panel, .video-content, .video-navigation, .video-detail, .video-detail-main, .video-actions, .video-version, .video-seasons nav");
+      await page.locator(".video-back").click();
+      await page.locator(".video-navigation button").nth(3).click();
+      await page.locator(".video-collections").waitFor();
+      await assertNoHorizontalOverflow(page, ".video-panel, .video-content, .video-navigation, .video-collections, .video-collections > div");
+    });
+  }
+}
+
+test("poster grid arrows visit adjacent rows and cross groups only at vertical boundaries", async t => {
+  const titles = Array.from({ length: 14 }, (_, index) => ({ ...title, id: `title-${index}` }));
+  const { page } = await library(t, { viewport: { width: 720, height: 900 }, reducedMotion: "reduce",
+    home: { continueWatching: [], recentlyAdded: titles, movies: [], series: [], watchlist: titles, upNext: [], collections: [] } });
+  const groups = page.locator(".video-home-row > div");
+  const posters = groups.first().locator("button");
+  assert.deepEqual((await visualRows(posters)).slice(0, 2), [[0, 1, 2], [3, 4, 5]]);
+  await posters.first().focus();
+  for (const [key, index] of [["ArrowRight", 1], ["ArrowDown", 4], ["ArrowLeft", 3], ["ArrowUp", 0], ["ArrowLeft", 0]]) {
+    await page.keyboard.press(key);
+    assert.equal(await posters.nth(index).evaluate(element => element === globalThis.document.activeElement), true, `${key} should focus poster ${index}`);
+  }
+  await posters.nth(2).focus();
+  await page.keyboard.press("ArrowRight");
+  assert.equal(await posters.nth(2).evaluate(element => element === globalThis.document.activeElement), true);
+  await posters.last().focus();
+  await page.keyboard.press("ArrowDown");
+  assert.equal(await groups.nth(1).evaluate(element => element.contains(globalThis.document.activeElement)), true);
+  await page.keyboard.press("ArrowUp");
+  assert.equal(await posters.last().evaluate(element => element === globalThis.document.activeElement), true);
+});
+
+test("wrapped navigation and season controls follow their visual rows", async t => {
+  const { page } = await library(t, { viewport: { width: 320, height: 900 }, reducedMotion: "reduce",
+    detail: { ...detail, seasons: Array.from({ length: 12 }, (_, index) => ({ ...detail.seasons[0], id: `season-${index}`, seasonNumber: index + 1, name: `Season ${index + 1}` })) } });
+  for (const buttons of [page.locator(".video-navigation button"), page.locator(".video-seasons nav button")]) {
+    if (await buttons.count() === 0) await openDetail(page);
+    const rows = await visualRows(buttons);
+    assert.ok(rows.length > 1);
+    await buttons.nth(rows[0][0]).focus();
+    await page.keyboard.press("ArrowDown");
+    assert.equal(await buttons.nth(rows[1][0]).evaluate(element => element === globalThis.document.activeElement), true);
+    await page.keyboard.press("ArrowUp");
+    assert.equal(await buttons.nth(rows[0][0]).evaluate(element => element === globalThis.document.activeElement), true);
+    await buttons.nth(rows[0].at(-1)).focus();
+    await page.keyboard.press("ArrowRight");
+    assert.equal(await buttons.nth(rows[0].at(-1)).evaluate(element => element === globalThis.document.activeElement), true);
+  }
+});
+
+test("returning from detail restores a poster in a lower grid row and its vertical scroll", async t => {
+  const titles = Array.from({ length: 24 }, (_, index) => ({ ...title, id: `title-${index}` }));
+  const { page } = await library(t, { viewport: { width: 720, height: 540 }, reducedMotion: "reduce",
+    home: { continueWatching: [], recentlyAdded: titles, movies: [], series: [], watchlist: [], upNext: [], collections: [] } });
+  const poster = page.locator(".video-poster").nth(15);
+  await poster.focus();
+  const scroll = await page.locator(".video-content").evaluate(element => element.scrollTop);
+  assert.ok(scroll > 0);
+  await page.keyboard.press("Enter");
+  await page.locator(".video-detail").waitFor();
+  await key(page, "BrowserBack");
+  await page.waitForFunction(() => globalThis.document.activeElement?.getAttribute("data-tv-title") === "title-15");
+  assert.equal(await page.locator(".video-content").evaluate(element => element.scrollTop), scroll);
+});
+
+test("up-next posters still select the recommended episode", async t => {
+  const { page } = await library(t, { home: { continueWatching: [], recentlyAdded: [title], movies: [], series: [], watchlist: [], upNext: [{ title, fileId: "file-2" }], collections: [] } });
+  await page.locator(".video-home-row").first().locator(".video-poster").click();
+  await page.locator(".video-detail").waitFor();
+  assert.equal(await page.locator(".video-episode.is-selected strong").textContent(), "Episode two");
 });
 
 test("native Home navigates once, ignores historical snapshots, and sends no stop command", async t => {
@@ -360,6 +505,8 @@ test("versions can be selected by remote and their full file metadata is availab
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   assert.match(await version.textContent(), /Version 2.*2160p.*hevc/);
+  // Let the select restore its trigger focus before moving to the next control.
+  await version.evaluate(() => new Promise(resolve => globalThis.requestAnimationFrame(resolve)));
   await page.locator(".tv-file-details summary").focus();
   await page.keyboard.press("Enter");
   assert.equal(await page.locator(".tv-file-details").getAttribute("open"), "");

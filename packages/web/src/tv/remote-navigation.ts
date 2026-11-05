@@ -80,12 +80,23 @@ function moveFocus(direction: Direction, scope: ParentNode, memory: WeakMap<HTML
     const dy = rect.y + rect.height / 2 - origin.y - origin.height / 2;
     const primary = direction === "left" ? -dx : direction === "right" ? dx : direction === "up" ? -dy : dy;
     const secondary = direction === "left" || direction === "right" ? Math.abs(dy) : Math.abs(dx);
-    return { candidate, region: candidate.closest<HTMLElement>("[data-tv-region]"), primary, score: primary + secondary * 1.8 };
+    return { candidate, rect, region: candidate.closest<HTMLElement>("[data-tv-region]"), primary, secondary, score: primary + secondary * 1.8 };
   }).filter(item => item.primary > 4).sort((a, b) => a.score - b.score);
-  // Horizontal rows hand Up/Down to their neighboring section, not another item in the row.
-  const horizontal = region && ["navigation", "rail", "keyboard-row", "candidates", "search-header"].includes(region.dataset.tvRegion ?? "");
-  const within = region && !(horizontal && (direction === "up" || direction === "down")) ? scored.find(item => item.region === region) : undefined;
-  const best = within ?? scored.find(item => item.region !== region) ?? scored[0];
+  const grid = region && ["grid", "navigation", "seasons"].includes(region.dataset.tvRegion ?? "");
+  const inline = direction === "left" || direction === "right";
+  const rowDistance = (rect: DOMRect) => direction === "up" ? origin.top - rect.bottom : rect.top - origin.bottom;
+  const horizontal = region && ["keyboard-row", "candidates", "search-header"].includes(region.dataset.tvRegion ?? "");
+  const within = grid
+    ? scored.filter(item => item.region === region && (inline
+      ? Math.min(origin.bottom, item.rect.bottom) > Math.max(origin.top, item.rect.top)
+      : rowDistance(item.rect) >= -1))
+      .sort((a, b) => inline ? a.primary - b.primary : rowDistance(a.rect) - rowDistance(b.rect) || a.secondary - b.secondary)[0]
+    : region && !(horizontal && !inline) ? scored.find(item => item.region === region) : undefined;
+  // Grid rows stop at their horizontal edges; vertical boundaries lead to the next content group.
+  if (grid && inline && !within) return;
+  const content = grid ? region.closest(".video-content") : null;
+  const neighbor = content ? scored.find(item => item.region !== region && item.candidate.closest(".video-content") === content) : undefined;
+  const best = within ?? neighbor ?? scored.find(item => item.region !== region) ?? scored[0];
   if (!best) return;
   const remembered = best.region !== region && best.region ? memory.get(best.region) : null;
   const next = remembered && scored.some(item => item.candidate === remembered) ? remembered : best.candidate;
