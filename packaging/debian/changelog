@@ -1,3 +1,9 @@
+cyberos (2.3.1) unstable; urgency=medium
+
+  * Add Photos keyword search with private remote embeddings, durable local indexing, and hybrid retrieval.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Thu, 05 Nov 2026 13:57:24 +0000
+
 cyberos (2.3.0) unstable; urgency=medium
 
   * Release CyberOS 2.3.0 with native Tailscale management, Bluetooth voice channel support, resilient BitTorrent defaults, and unified Web/TV controls.
