@@ -523,6 +523,7 @@ export interface PhotosAssetRecord {
 }
 
 export interface PhotosProcessingSettingsRecord {
+  mapDownloadUseProxy: boolean;
   processingConcurrency: number;
   scanIntervalMs: number;
   maxAutoRetries: number;

@@ -283,6 +283,7 @@ export class PhotosMapArchiveManager implements PhotosMapArchiveRuntime {
       await rm(this.partialPath, { force: true }).catch(() => undefined);
       throw error;
     } finally {
+      controller.abort();
       if (idleTimer) clearTimeout(idleTimer);
       signal.removeEventListener("abort", abortFromParent);
     }

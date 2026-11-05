@@ -164,6 +164,7 @@ export const DEFAULT_DOWNLOAD_SETTINGS: Omit<DownloadSettingsRecord, "updatedAt"
 };
 
 export const DEFAULT_PHOTOS_PROCESSING_SETTINGS: Omit<PhotosProcessingSettingsRecord, "updatedAt"> = {
+  mapDownloadUseProxy: false,
   processingConcurrency: PHOTOS_DEFAULT_PROCESSING_CONCURRENCY,
   scanIntervalMs: PHOTOS_DEFAULT_SCAN_INTERVAL_MS,
   maxAutoRetries: PHOTOS_DEFAULT_MAX_AUTO_RETRIES,
@@ -873,6 +874,7 @@ function normalizePhotosProcessingSettings(
   updatedAt: string
 ): PhotosProcessingSettingsRecord {
   const value = { ...DEFAULT_PHOTOS_PROCESSING_SETTINGS, ...settings };
+  if (typeof value.mapDownloadUseProxy !== "boolean") throw new Error("Photo map proxy setting must be a boolean");
   const integer = (name: string, candidate: unknown, minimum: number, maximum: number): number => {
     if (typeof candidate !== "number" || !Number.isSafeInteger(candidate) || candidate < minimum || candidate > maximum) {
       throw new Error(`${name} must be an integer between ${minimum} and ${maximum}`);
@@ -882,6 +884,7 @@ function normalizePhotosProcessingSettings(
   const retryBaseDelayMs = integer("Photos retry base delay", value.retryBaseDelayMs, 500, 1_800_000);
   const retryMaxDelayMs = integer("Photos retry maximum delay", value.retryMaxDelayMs, retryBaseDelayMs, 1_800_000);
   return {
+    mapDownloadUseProxy: value.mapDownloadUseProxy,
     processingConcurrency: integer("Photos processing concurrency", value.processingConcurrency, 1, 4),
     scanIntervalMs: integer("Photos scan interval", value.scanIntervalMs, 60_000, 86_400_000),
     maxAutoRetries: integer("Photos automatic retries", value.maxAutoRetries, 0, 20),

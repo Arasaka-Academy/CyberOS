@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { access, mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -273,6 +275,31 @@ describe("PhotosMapArchiveManager", () => {
     expect((await manager.getStatus()).download.state).toBe("failed");
     await expect(access(manager.archivePath)).rejects.toMatchObject({ code: "ENOENT" });
     await expect(access(manager.partialPath)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("releases an unfinished HTTP error response when the download fails", async () => {
+    let responseClosed = false;
+    const upstream = createServer((_request, response) => {
+      response.on("close", () => { responseClosed = true; });
+      response.writeHead(503);
+      response.write("temporarily unavailable");
+    });
+    await new Promise<void>((resolve) => upstream.listen(0, "127.0.0.1", resolve));
+    try {
+      const { port } = upstream.address() as AddressInfo;
+      const manager = new PhotosMapArchiveManager({
+        dataDir: await temporaryDirectory(),
+        source: mapSource(pmtilesFixture(2)),
+        fetchImpl: (_input, init) => fetch(`http://127.0.0.1:${port}/map`, init)
+      });
+      await manager.startDownload();
+      await manager.waitForIdle();
+      expect((await manager.getStatus()).download.error).toContain("HTTP 503");
+      await expect.poll(() => responseClosed, { timeout: 1_000 }).toBe(true);
+    } finally {
+      upstream.closeAllConnections();
+      await new Promise<void>((resolve) => upstream.close(() => resolve()));
+    }
   });
 });
 

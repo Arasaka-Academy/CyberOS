@@ -15,6 +15,7 @@ import {
   getPhotosLibraryStatus,
   getPhotosWorkerHealth,
   getPhotosProcessingSettings,
+  getSystemProxySettings,
   getPhotosMetadataDetail,
   getPhotosMetadataIndexStatus,
   hasCompletedPhotosScan,
@@ -53,6 +54,7 @@ import {
 import type { ApiRouteContext } from "../context.js";
 import { sendFileStream } from "../lib/files.js";
 import { PhotosMetadataFieldsReader } from "../lib/photos-metadata-fields.js";
+import { ProxyHttpClient } from "../lib/proxy-http.js";
 import {
   defaultPhotosMapSource,
   PhotosMapArchiveError,
@@ -86,11 +88,28 @@ export function registerPhotoRoutes(server: FastifyInstance, context: ApiRouteCo
     dataDir: context.config.paths.stateDir,
     transcoder: context.videoTranscoder ?? ffmpegVideoTranscoder
   });
+  function requiredMapProxy() {
+    try {
+      const proxy = getSystemProxySettings(db);
+      if (proxy?.host && proxy.port !== null) return proxy;
+    } catch {
+      // Invalid settings must not silently switch an opted-in download to direct.
+    }
+    throw new Error("Configure a valid system proxy before enabling map downloads");
+  }
+  const mapHttp = new ProxyHttpClient(() => {
+    const settings = getPhotosProcessingSettings(db) ?? defaultPhotosProcessingSettings();
+    return settings.mapDownloadUseProxy ? requiredMapProxy() : null;
+  }, undefined, { followHttpsRedirects: true });
   const mapArchive = context.photosMap ?? new PhotosMapArchiveManager({
     dataDir: context.config.paths.stateDir,
-    source: defaultPhotosMapSource(context.config.photos.baseMapUrl)
+    source: defaultPhotosMapSource(context.config.photos.baseMapUrl),
+    fetchImpl: (url, init) => mapHttp.fetch(url, init)
   });
-  server.addHook("onClose", async () => mapArchive.close());
+  server.addHook("onClose", async () => {
+    await mapArchive.close();
+    await mapHttp.close();
+  });
 
   server.get("/api/photos/settings", async () => ({ settings: getPhotosLibrarySettings(db) }));
 
@@ -115,7 +134,16 @@ export function registerPhotoRoutes(server: FastifyInstance, context: ApiRouteCo
         } catch {
           current = defaultPhotosProcessingSettings();
         }
-        const settings = savePhotosProcessingSettings(db, { ...current, ...request.body });
+        const input = { ...current, ...request.body };
+        if (typeof input.mapDownloadUseProxy !== "boolean") throw new Error("Photo map proxy setting must be a boolean");
+        if (input.mapDownloadUseProxy) {
+          try {
+            requiredMapProxy();
+          } catch (error) {
+            return reply.status(409).send({ error: error instanceof Error ? error.message : "System proxy is unavailable" });
+          }
+        }
+        const settings = savePhotosProcessingSettings(db, input);
         reply.send({ settings });
       } catch (error) {
         reply.status(400).send({ error: error instanceof Error ? error.message : "Photo settings are invalid" });

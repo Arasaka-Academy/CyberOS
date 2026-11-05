@@ -253,7 +253,7 @@ type ReindexRequest = Operation<"reindex", { storagePoolId: string; path?: strin
 type PhotoManageRequest =
   | Operation<"configure", { storagePoolId: string; path: string }>
   | (Operation<"processing"> & OptionalJsonFields<
-    "processingConcurrency" | "scanIntervalMs" | "maxAutoRetries" | "retryBaseDelayMs" |
+    "mapDownloadUseProxy" | "processingConcurrency" | "scanIntervalMs" | "maxAutoRetries" | "retryBaseDelayMs" |
     "retryMaxDelayMs" | "commandTimeoutMs" | "maxFileSizeBytes" | "maxXmpSizeBytes" |
     "maxIntermediateBytes" | "minFreeSpaceBytes" | "maxDecodedPixels"
   >)
@@ -595,6 +595,7 @@ const schemas: Record<string, JsonSchema> = {
   "cyberos.photos.manage-propose": proposal(operationUnion(
     operation("configure", { storagePoolId, path: relativePath }, ["storagePoolId", "path"]),
     operation("processing", {
+      mapDownloadUseProxy: boolean,
       processingConcurrency: integer(1, 4),
       scanIntervalMs: integer(60_000, 86_400_000),
       maxAutoRetries: integer(0, 20),

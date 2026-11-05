@@ -161,6 +161,13 @@ describe("capability contracts", () => {
     expect(() => registry.register({ ...descriptor!, approval: "none" })).toThrow("must require first-party approval");
   });
 
+  it("accepts the boolean map proxy preference through the photo settings proposal", () => {
+    const descriptor = createCatalogDescriptors().find((item) => item.id === "cyberos.photos.manage-propose")!;
+    const validator = z.fromJSONSchema(descriptor.inputSchema as Parameters<typeof z.fromJSONSchema>[0]);
+    expect(validator.safeParse({ request: { operation: "processing", mapDownloadUseProxy: true } }).success).toBe(true);
+    expect(validator.safeParse({ request: { operation: "processing", mapDownloadUseProxy: "true" } }).success).toBe(false);
+  });
+
   it("treats cancellation as an owner-scoped safety control", () => {
     const registry = new CapabilityRegistry();
     const descriptor = createCatalogDescriptors().find((item) => item.id === "cyberos.runs.cancel")!;

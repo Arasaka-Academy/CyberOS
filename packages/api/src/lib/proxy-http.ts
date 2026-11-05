@@ -10,7 +10,8 @@ export class ProxyHttpClient {
 
   constructor(
     private readonly resolveProxy: () => SystemProxySettingsRecord | null,
-    private readonly tls?: { ca: string }
+    private readonly tls?: { ca: string },
+    private readonly options: { followHttpsRedirects?: boolean } = {}
   ) {}
 
   async fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
@@ -24,16 +25,34 @@ export class ProxyHttpClient {
       if (this.active) this.retire(this.active.dispatcher);
       this.active = { key, dispatcher };
     }
-    const response = await undiciFetch(input as string | URL, {
+    const requestInit = {
       ...(init as Parameters<typeof undiciFetch>[1]),
       dispatcher: this.active.dispatcher,
-      redirect: "manual"
-    });
-    if (response.status >= 300 && response.status < 400) {
+      redirect: "manual" as const
+    };
+    let target = input;
+    for (let redirects = 0; ; redirects += 1) {
+      const response = await undiciFetch(target as string | URL, requestInit);
+      if (response.status < 300 || response.status >= 400) return response as unknown as Response;
       await response.body?.cancel();
-      throw new Error("Upstream redirects are not allowed");
+      const location = response.headers.get("location");
+      const method = requestInit.method ?? (input instanceof Request ? input.method : "GET");
+      if (!this.options.followHttpsRedirects || ![301, 302, 303, 307, 308].includes(response.status)
+        || !location || !["GET", "HEAD"].includes(method.toUpperCase())) {
+        throw new Error("Upstream redirects are not allowed");
+      }
+      if (redirects >= 5) throw new Error("Upstream redirect limit exceeded");
+      const next = new URL(location, response.url);
+      if (next.protocol !== "https:" || next.username || next.password) {
+        throw new Error("Upstream redirects must use HTTPS without credentials");
+      }
+      if (new URL(response.url).origin !== next.origin) {
+        const headers = new Headers(requestInit.headers as HeadersInit);
+        for (const name of ["authorization", "cookie", "proxy-authorization", "host"]) headers.delete(name);
+        requestInit.headers = Array.from(headers.entries());
+      }
+      target = next;
     }
-    return response as unknown as Response;
   }
 
   async close(): Promise<void> {

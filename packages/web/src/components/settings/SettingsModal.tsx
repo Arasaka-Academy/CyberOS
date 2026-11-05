@@ -5,6 +5,8 @@ import { PowerControl } from "../power/PowerControl.js";
 import { FormEvent, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { SettingsSecretField } from "./SettingsSecretField.js";
+import { systemProxyUrl, type SystemProxySettingsRecord } from "@cyberos/shared";
+import { getSystemProxySettings } from "../../api.js";
 import {
   AlertTriangle,
   Activity,
@@ -660,6 +662,7 @@ export function SettingsModal({
               loading={loading}
               onLibrarySettingsChange={onPhotoLibrarySettingsChange}
               onSettingsChange={onPhotoProcessingSettingsChange}
+              onOpenProxy={() => onSectionChange("proxy")}
               onRequestCreateFolder={onRequestCreateFolder}
               onClose={onClose}
             />
@@ -1042,6 +1045,7 @@ export function SettingsPhotosPage({
   loading,
   onLibrarySettingsChange,
   onSettingsChange,
+  onOpenProxy,
   onRequestCreateFolder,
   onClose
 }: {
@@ -1053,6 +1057,7 @@ export function SettingsPhotosPage({
   loading: boolean;
   onLibrarySettingsChange: (input: PhotoLibraryDraft) => Promise<PhotoLibrarySettings>;
   onSettingsChange: (patch: Partial<PhotoSettingsDraft>) => Promise<void>;
+  onOpenProxy: () => void;
   onRequestCreateFolder?: (input: {
     storagePoolId: string;
     parentPath: string;
@@ -1067,10 +1072,24 @@ export function SettingsPhotosPage({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [proxy, setProxy] = useState<SystemProxySettingsRecord | null>(null);
+  const [proxyLoading, setProxyLoading] = useState(true);
+  const [proxyUnavailable, setProxyUnavailable] = useState(false);
+
+  useEffect(() => {
+    let disposed = false;
+    void getSystemProxySettings().then((settings) => {
+      if (!disposed) setProxy(settings);
+    }).catch(() => {
+      if (!disposed) setProxyUnavailable(true);
+    }).finally(() => {
+      if (!disposed) setProxyLoading(false);
+    });
+    return () => { disposed = true; };
+  }, []);
 
   useEffect(() => {
     setDraft(photoSettingsDraft(processingSettings));
-    setSaved(false);
   }, [processingSettings]);
 
   useEffect(() => {
@@ -1086,6 +1105,7 @@ export function SettingsPhotosPage({
   const hasStatusProblem = !settings || Boolean(status?.error) ||
     status?.state === "degraded" || status?.state === "offline" || status?.state === "unconfigured";
   const selectedPool = storagePools.find((pool) => pool.id === libraryDraft?.storagePoolId) ?? null;
+  const proxyConfigured = Boolean(proxy?.host && proxy.port !== null);
   const libraryChanged = Boolean(libraryDraft && (
     libraryDraft.storagePoolId !== settings?.storagePoolId || libraryDraft.path !== settings?.path
   ));
@@ -1119,7 +1139,7 @@ export function SettingsPhotosPage({
 
   return (
     <>
-      <form className="settings-form" onSubmit={(event) => void submit(event)}>
+      <form className="settings-form" onSubmit={(event) => void submit(event)} onChange={() => setSaved(false)}>
         <div className="settings-content-body">
           <div className="settings-page-grid">
           <section className="settings-section-card">
@@ -1174,6 +1194,41 @@ export function SettingsPhotosPage({
           <section className="settings-section-card">
             <header>
               <div>
+                <h3>{t("settings.photos.mapTitle")}</h3>
+              </div>
+            </header>
+            <div className="settings-switch-row">
+              <div className="settings-proxy-summary">
+                <strong className="help-label">
+                  {t("settings.photos.mapDownloadUseProxy")}
+                  <HelpTip label={t("settings.photos.mapDownloadUseProxy")} content={t("settings.photos.mapDownloadProxyHelp")} />
+                </strong>
+                <span role={proxyUnavailable ? "alert" : undefined}>
+                  {proxyLoading ? t("common.states.loading") : proxyUnavailable ? t("settings.photos.proxyUnavailable")
+                    : proxyConfigured && proxy ? systemProxyUrl(proxy) : t("settings.photos.proxyMissing")}
+                </span>
+              </div>
+              <Switch
+                checked={draft.mapDownloadUseProxy}
+                ariaLabel={t("settings.photos.mapDownloadUseProxy")}
+                disabled={loading || saving || !processingSettings || (!draft.mapDownloadUseProxy && (proxyLoading || !proxyConfigured))}
+                onCheckedChange={(checked) => {
+                  setDraft((current) => ({ ...current, mapDownloadUseProxy: checked }));
+                  setSaved(false);
+                  setSaveError(null);
+                }}
+              />
+            </div>
+            <div className="settings-card-actions">
+              <button className="secondary-button" type="button" onClick={onOpenProxy} disabled={saving}>
+                {t("settings.photos.configureProxy")}
+              </button>
+            </div>
+          </section>
+
+          <section className="settings-section-card">
+            <header>
+              <div>
                 <h3>{t("settings.photos.processingTitle")}</h3>
                 <p>{t("settings.photos.processingDescription")}</p>
               </div>
@@ -1211,7 +1266,7 @@ export function SettingsPhotosPage({
               <DownloadNumberField label={t("settings.photos.maxXmpSizeBytes")} value={draft.maxXmpSizeBytes} min={1024} max={64 * 1024 ** 2} step={1024} onChange={(value) => setDraft((current) => ({ ...current, maxXmpSizeBytes: value ?? 1024 }))} />
               <DownloadNumberField label={t("settings.photos.maxIntermediateBytes")} value={draft.maxIntermediateBytes} min={64 * 1024 ** 2} max={8 * 1024 ** 3} step={1024 ** 2} onChange={(value) => setDraft((current) => ({ ...current, maxIntermediateBytes: value ?? 64 * 1024 ** 2 }))} />
               <DownloadNumberField label={t("settings.photos.minFreeSpaceBytes")} value={draft.minFreeSpaceBytes} min={0} max={1024 ** 4} step={1024 ** 2} onChange={(value) => setDraft((current) => ({ ...current, minFreeSpaceBytes: value ?? 0 }))} />
-              <DownloadNumberField label={t("settings.photos.maxDecodedPixels")} value={draft.maxDecodedPixels} min={1_000_000} max={268_402_689} step={1_000_000} onChange={(value) => setDraft((current) => ({ ...current, maxDecodedPixels: value ?? 1_000_000 }))} />
+              <DownloadNumberField label={t("settings.photos.maxDecodedPixels")} value={draft.maxDecodedPixels} min={1_000_000} max={268_402_689} onChange={(value) => setDraft((current) => ({ ...current, maxDecodedPixels: value ?? 1_000_000 }))} />
             </fieldset>
           </section>
           </div>
@@ -1267,6 +1322,7 @@ function photoSettingsDraft(settings: PhotoProcessingSettings | null): PhotoSett
     return draft;
   }
   return {
+    mapDownloadUseProxy: false,
     processingConcurrency: 1,
     scanIntervalMs: 1_800_000,
     maxAutoRetries: 5,

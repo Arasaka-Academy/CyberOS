@@ -34,6 +34,55 @@ afterEach(async () => {
 });
 
 describe("photos API", () => {
+  it("defaults existing photo settings to direct map downloads without losing processing preferences", async () => {
+    const { app } = await setup();
+    try {
+      const initial = (await app.inject("/api/settings/photos")).json().settings;
+      const legacy = { ...initial, processingConcurrency: 3 };
+      delete legacy.mapDownloadUseProxy;
+      db!.prepare("INSERT INTO system_settings (key, value_json, updated_at) VALUES (?, ?, ?)")
+        .run("photos_processing_settings", JSON.stringify(legacy), legacy.updatedAt);
+      const loaded = await app.inject("/api/settings/photos");
+      expect(loaded.statusCode).toBe(200);
+      expect(loaded.json().settings).toMatchObject({ processingConcurrency: 3, mapDownloadUseProxy: false });
+      const saved = await app.inject({ method: "PATCH", url: "/api/settings/photos", payload: { maxAutoRetries: 8 } });
+      expect(saved.json().settings).toMatchObject({ processingConcurrency: 3, maxAutoRetries: 8, mapDownloadUseProxy: false });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("requires a configured system proxy to enable map downloads and allows disabling after it is removed", async () => {
+    const { app } = await setup();
+    try {
+      const missing = await app.inject({ method: "PATCH", url: "/api/settings/photos", payload: { mapDownloadUseProxy: true } });
+      expect(missing.statusCode).toBe(409);
+      expect((await app.inject("/api/settings/photos")).json().settings.mapDownloadUseProxy).toBe(false);
+      expect((await app.inject({ method: "PATCH", url: "/api/settings/proxy", payload: { protocol: "socks5", host: "127.0.0.1", port: 1080 } })).statusCode).toBe(200);
+      const enabled = await app.inject({ method: "PATCH", url: "/api/settings/photos", payload: { mapDownloadUseProxy: true } });
+      expect(enabled.statusCode).toBe(200);
+      expect((await app.inject("/api/settings/photos")).json().settings.mapDownloadUseProxy).toBe(true);
+      db!.prepare("UPDATE system_settings SET value_json = ? WHERE key = 'system_proxy_settings'").run('{"protocol":"invalid"}');
+      expect((await app.inject({ method: "PATCH", url: "/api/settings/photos", payload: { mapDownloadUseProxy: true } })).statusCode).toBe(409);
+      const disabled = await app.inject({ method: "PATCH", url: "/api/settings/photos", payload: { mapDownloadUseProxy: false } });
+      expect(disabled.statusCode).toBe(200);
+      expect(disabled.json().settings.mapDownloadUseProxy).toBe(false);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it.each(["true", 1, null])("rejects a non-boolean map proxy preference: %s", async (mapDownloadUseProxy) => {
+    const { app } = await setup();
+    try {
+      const response = await app.inject({ method: "PATCH", url: "/api/settings/photos", payload: { mapDownloadUseProxy } });
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error).toMatch(/boolean/iu);
+    } finally {
+      await app.close();
+    }
+  });
+
   it("serves health while a filesystem metadata field query is still running", async () => {
     const { app, root } = await setup();
     try {

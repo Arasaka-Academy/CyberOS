@@ -30,8 +30,15 @@ afterEach(async () => {
 });
 
 describe("explicit outbound proxy", () => {
-  it.each(["http", "https", "socks5"] as const)("forwards HTTPS through %s with proxy-side DNS", async (protocol) => {
-    const origin = await listen(createHttpsServer({ key, cert }, (req, res) => res.end(`received ${req.url}`)));
+  it.each(["http", "https", "socks5"] as const)("keeps the %s proxy snapshot across HTTPS redirects with proxy-side DNS", async (protocol) => {
+    let selectedProxy: SystemProxySettingsRecord | null = null;
+    const origin = await listen(createHttpsServer({ key, cert }, (req, res) => {
+      if (req.url === "/proxy-test") {
+        selectedProxy = null;
+        res.writeHead(302, { location: "https://image.tmdb.org/map.pmtiles" });
+        res.end();
+      } else res.end(`received ${req.url}`);
+    }));
     const destinations: string[] = [];
     const tunnel = (socket: Socket, initial: Buffer) => {
       const upstream = connect(origin, "127.0.0.1", () => { if (initial.length) upstream.write(initial); socket.pipe(upstream).pipe(socket); });
@@ -73,11 +80,30 @@ describe("explicit outbound proxy", () => {
       });
       port = await listen(proxy);
     }
-    const client = new ProxyHttpClient(() => ({ protocol, host: "127.0.0.1", port, updatedAt: "test" }), { ca });
+    selectedProxy = { protocol, host: "127.0.0.1", port, updatedAt: "test" };
+    const client = new ProxyHttpClient(() => selectedProxy, { ca }, { followHttpsRedirects: true });
     clients.push(client);
     const response = await client.fetch("https://api.themoviedb.org/proxy-test", { signal: AbortSignal.timeout(3000) });
-    expect(await response.text()).toBe("received /proxy-test");
-    expect(destinations).toEqual(["api.themoviedb.org:443"]);
+    expect(await response.text()).toBe("received /map.pmtiles");
+    expect(destinations).toEqual(["api.themoviedb.org:443", "image.tmdb.org:443"]);
+  });
+
+  it("follows relative HTTPS redirects directly, rejects downgrade and stops after five redirects", async () => {
+    let loopRequests = 0;
+    const port = await listen(createHttpsServer({ key, cert }, (req, res) => {
+      if (req.url === "/relative") res.writeHead(302, { location: "/ready" });
+      else if (req.url === "/loop") {
+        loopRequests += 1;
+        res.writeHead(307, { location: "/loop" });
+      } else if (req.url === "/downgrade") res.writeHead(302, { location: "http://127.0.0.1:9/" });
+      res.end("ready");
+    }));
+    const client = new ProxyHttpClient(() => null, { ca }, { followHttpsRedirects: true });
+    clients.push(client);
+    expect(await (await client.fetch(`https://127.0.0.1:${port}/relative`)).text()).toBe("ready");
+    await expect(client.fetch(`https://127.0.0.1:${port}/downgrade`)).rejects.toThrow(/HTTPS/iu);
+    await expect(client.fetch(`https://127.0.0.1:${port}/loop`)).rejects.toThrow(/redirect.*limit/iu);
+    expect(loopRequests).toBe(6);
   });
 
   it("uses new settings on subsequent requests, rejects redirects and never falls back to direct", async () => {

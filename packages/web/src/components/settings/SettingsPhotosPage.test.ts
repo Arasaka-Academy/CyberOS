@@ -37,6 +37,7 @@ describe("SettingsPhotosPage", () => {
       loading: false,
       onLibrarySettingsChange: async (input) => ({ ...input, updatedAt: new Date(0).toISOString() }),
       onSettingsChange: async () => undefined,
+      onOpenProxy: () => undefined,
       onRequestCreateFolder: async () => undefined,
       onClose: () => undefined
     }));
@@ -45,6 +46,9 @@ describe("SettingsPhotosPage", () => {
     expect(html).toContain("Storage pool");
     expect(html).toContain("Main storage");
     expect(html).toContain("Change directory");
+    expect(html).toContain("Offline map");
+    expect(html).toContain("Use system proxy for downloads");
+    expect(html).toContain("Configure proxy");
     expect(html).toContain("Processing concurrency");
     expect(html).toContain("Retry Policy");
     expect(html).toContain("Resource Limits");
@@ -78,6 +82,7 @@ describe("SettingsPhotosPage", () => {
       loading: false,
       onLibrarySettingsChange: async (input) => ({ ...input, updatedAt: new Date(0).toISOString() }),
       onSettingsChange: async () => undefined,
+      onOpenProxy: () => undefined,
       onRequestCreateFolder: async () => undefined,
       onClose: () => undefined
     }));
@@ -102,6 +107,7 @@ describe("SettingsPhotosPage", () => {
       loading: false,
       onLibrarySettingsChange: async (input) => ({ ...input, updatedAt: new Date(0).toISOString() }),
       onSettingsChange: async () => undefined,
+      onOpenProxy: () => undefined,
       onRequestCreateFolder: async () => undefined,
       onClose: () => undefined
     }));
@@ -123,6 +129,7 @@ function storagePool() {
 
 function processingSettings() {
   return {
+    mapDownloadUseProxy: false,
     processingConcurrency: 1,
     scanIntervalMs: 1_800_000,
     maxAutoRetries: 5,

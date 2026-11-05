@@ -212,7 +212,7 @@
   background: var(--input-deep-bg);
 }
 
-.photo-maplibre,
+.photo-map-canvas > .photo-maplibre,
 .photo-coordinate-canvas {
   position: absolute;
   inset: 0;
