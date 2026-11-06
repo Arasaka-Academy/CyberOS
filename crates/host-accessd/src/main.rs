@@ -2,7 +2,7 @@ mod proxy;
 
 use std::collections::HashSet;
 use std::env;
-use std::os::unix::fs::{FileTypeExt, PermissionsExt};
+use std::os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -320,7 +320,30 @@ async fn write_response(
 
 async fn remove_stale_socket(path: &Path) -> std::io::Result<()> {
     match fs::symlink_metadata(path).await {
-        Ok(metadata) if metadata.file_type().is_socket() => fs::remove_file(path).await,
+        Ok(metadata) if metadata.file_type().is_socket() => {
+            match timeout(CONTROL_TIMEOUT, UnixStream::connect(path)).await {
+                Ok(Ok(_)) => Err(std::io::Error::new(
+                    std::io::ErrorKind::AlreadyExists,
+                    "socket is already accepting connections",
+                )),
+                Ok(Err(error)) if error.kind() == std::io::ErrorKind::ConnectionRefused => {
+                    let current = fs::symlink_metadata(path).await?;
+                    if current.dev() != metadata.dev() || current.ino() != metadata.ino() {
+                        return Err(std::io::Error::new(
+                            std::io::ErrorKind::AlreadyExists,
+                            "socket path changed while checking its owner",
+                        ));
+                    }
+                    fs::remove_file(path).await
+                }
+                Ok(Err(error)) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+                Ok(Err(error)) => Err(error),
+                Err(_) => Err(std::io::Error::new(
+                    std::io::ErrorKind::TimedOut,
+                    "socket connection check timed out",
+                )),
+            }
+        }
         Ok(_) => Err(std::io::Error::other("socket path occupied by non-socket")),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
         Err(error) => Err(error),
@@ -386,6 +409,18 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn preserves_live_sockets_and_removes_abandoned_sockets() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("control.sock");
+        let listener = UnixListener::bind(&path).unwrap();
+        assert!(remove_stale_socket(&path).await.is_err());
+        assert!(UnixStream::connect(&path).await.is_ok());
+        drop(listener);
+        remove_stale_socket(&path).await.unwrap();
+        assert!(!path.exists());
+    }
 
     #[test]
     fn names_and_segments_are_bounded() {

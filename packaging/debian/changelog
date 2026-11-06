@@ -1,3 +1,9 @@
+cyberos (2.3.20) unstable; urgency=medium
+
+  * Preserve active host-access daemon and proxy sockets during startup.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:24:24 +0000
+
 cyberos (2.3.19) unstable; urgency=medium
 
   * Keep hostd responsive while periodic maintenance waits for domain locks.
