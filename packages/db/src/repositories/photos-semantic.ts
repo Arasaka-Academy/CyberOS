@@ -33,6 +33,7 @@ export interface PhotosEmbeddingRuntime {
   last_success_at: string | null;
   total_inference_ms: number;
   completed_images: number;
+  cache_maintenance_json: string | null;
 }
 
 export interface PhotosEmbeddingJob {
@@ -198,7 +199,7 @@ export function getPhotosSemanticStatus(db: CyberOsDatabase, now = new Date()): 
   const failedReason = counts.failed ? db.prepare(`SELECT j.error FROM photos_embedding_jobs j JOIN photos_assets a ON a.id=j.asset_id
     WHERE j.status='failed' AND j.embedding_space_id=? AND a.library_updated_at=? ORDER BY j.created_at DESC LIMIT 1`)
     .pluck().get(profile?.embeddingSpaceId ?? "", library?.updatedAt ?? "") as string | undefined : undefined;
-  const cache = db.prepare("SELECT value_json FROM system_settings WHERE key='photos_embedding_cache_maintenance'").pluck().get() as string | undefined;
+  const cache = runtime.cache_maintenance_json;
   return { state, ...counts, pending, embeddingSpaceId: profile?.embeddingSpaceId ?? null, dimensions: profile?.dimensions ?? null,
     ...(cache ? { cache: JSON.parse(cache) as NonNullable<PhotosSemanticIndexStatus["cache"]> } : {}),
     minSimilarity: profile?.minSimilarity ?? null, epoch: runtime.epoch,
@@ -378,9 +379,8 @@ export function prunePhotosEmbeddingCache(db: CyberOsDatabase, now = new Date(),
     const stats = db.prepare(`SELECT COUNT(*) AS vectors,COALESCE(SUM(p.dimensions*4),0) AS bytes
       FROM photos_embedding_profiles p JOIN photos_embedding_cache c USING(embedding_space_id)`).get() as { vectors: number; bytes: number };
     const retiredSpaces = db.prepare("SELECT COUNT(*) FROM photos_embedding_profiles WHERE retired_at IS NOT NULL").pluck().get() as number;
-    db.prepare(`INSERT INTO system_settings(key,value_json,updated_at) VALUES('photos_embedding_cache_maintenance',?,?)
-      ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json,updated_at=excluded.updated_at`)
-      .run(JSON.stringify({ ...stats, retiredSpaces, lastCleanupAt: timestamp, ...result }), timestamp);
+    db.prepare("UPDATE photos_embedding_runtime SET cache_maintenance_json=? WHERE id=1")
+      .run(JSON.stringify({ ...stats, retiredSpaces, lastCleanupAt: timestamp, ...result }));
     return result;
   }).immediate();
 }

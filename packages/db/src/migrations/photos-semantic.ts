@@ -102,4 +102,15 @@ AFTER ${event} ON ${table} BEGIN
   UPDATE photos_search_state SET revision=revision+1 WHERE id=1;
 END;`)).join("\n")}
 `
+}, {
+  id: "014_photos_embedding_cache_runtime",
+  sql: `
+ALTER TABLE photos_embedding_runtime ADD COLUMN cache_maintenance_json TEXT;
+-- Preserve the former checkpoint row so existing deployment helpers retain
+-- the exact settings digest across this upgrade. Future cleanup updates only
+-- the runtime table, and reopening never copies an older checkpoint again.
+UPDATE photos_embedding_runtime SET cache_maintenance_json=(
+  SELECT value_json FROM system_settings WHERE key='photos_embedding_cache_maintenance'
+) WHERE id=1;
+`
 }];

@@ -1,3 +1,9 @@
+cyberos (2.3.40) unstable; urgency=medium
+
+  * Keep Photos cache maintenance state out of deployment settings snapshots.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 18:12:03 +0000
+
 cyberos (2.3.39) unstable; urgency=medium
 
   * Rebuild Web, mobile, TV and documentation with CyberUI and shared appearance controls.

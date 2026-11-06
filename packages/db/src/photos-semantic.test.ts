@@ -1,11 +1,12 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import * as sqliteVec from "sqlite-vec";
 import { PHOTOS_METADATA_SCHEMA_VERSION } from "@cyberos/shared";
 import {
-  openCyberOsDb, savePhotosLibrarySettings,
+  CYBEROS_DATABASE_FORMAT_VERSION, migrations, openCyberOsDb, savePhotosLibrarySettings,
   getPhotosSemanticSettings, savePhotosSemanticSettings, publicPhotosSemanticSettings,
   activatePhotosEmbeddingModel, getActivePhotosEmbeddingProfile, reconcilePhotosEmbeddingJobs, claimPhotosEmbeddingJob,
   completePhotosEmbeddingJob, getPhotosSemanticStatus, rebuildPhotosSemanticIndex, prunePhotosEmbeddingCache,
@@ -189,5 +190,51 @@ describe("Photos semantic index", () => {
     expect(prunePhotosEmbeddingCache(db, new Date(start.getTime() + 41 * 86400_000), 1).removedVectors).toBe(1);
     expect(getActivePhotosEmbeddingProfile(db)?.embeddingSpaceId).toBe("next-space");
     expect(getPhotosSemanticStatus(db).cache).toMatchObject({ vectors: 0, bytes: 0, retiredSpaces: 1 });
+  });
+
+  it("updates cache maintenance status without changing the deployment settings snapshot", () => {
+    asset("one"); enable(); reconcilePhotosEmbeddingJobs(db);
+    completePhotosEmbeddingJob(db, claimPhotosEmbeddingJob(db, "worker", 30_000)!, [1, 0]);
+    const before = db.prepare("SELECT * FROM system_settings ORDER BY key").all();
+    const first = new Date("2026-11-07T00:00:00.000Z");
+    prunePhotosEmbeddingCache(db, first);
+    expect(db.prepare("SELECT * FROM system_settings ORDER BY key").all()).toEqual(before);
+    expect(getPhotosSemanticStatus(db).cache).toEqual({
+      vectors: 1, bytes: 8, retiredSpaces: 0, lastCleanupAt: first.toISOString(), removedVectors: 0, removedBytes: 0
+    });
+    const next = new Date(first.getTime() + 60_000);
+    prunePhotosEmbeddingCache(db, next);
+    expect(db.prepare("SELECT * FROM system_settings ORDER BY key").all()).toEqual(before);
+    expect(getPhotosSemanticStatus(db).cache?.lastCleanupAt).toBe(next.toISOString());
+  });
+
+  it("preserves the settings snapshot and cache status when upgrading the former checkpoint", () => {
+    db.close();
+    const databasePath = path.join(directory, "before-runtime-checkpoint.sqlite");
+    const previous = new Database(databasePath);
+    previous.pragma(`user_version = ${CYBEROS_DATABASE_FORMAT_VERSION}`);
+    previous.exec("CREATE TABLE schema_migrations (id TEXT PRIMARY KEY, applied_at TEXT NOT NULL)");
+    for (const migration of migrations.filter((entry) => entry.id < "014_photos_embedding_cache_runtime")) {
+      migration.prepare?.(previous);
+      previous.exec(migration.sql);
+      previous.prepare("INSERT INTO schema_migrations VALUES (?, ?)").run(migration.id, "2026-11-06T00:00:00.000Z");
+    }
+    const checkpoint = { vectors: 31, bytes: 248, retiredSpaces: 1, lastCleanupAt: "2026-11-06T00:00:00.000Z", removedVectors: 0, removedBytes: 0 };
+    previous.prepare("INSERT INTO system_settings VALUES (?, ?, ?)")
+      .run("photos_embedding_cache_maintenance", JSON.stringify(checkpoint), checkpoint.lastCleanupAt);
+    previous.prepare("INSERT INTO system_settings VALUES (?, ?, ?)").run("preserved-setting", '{"enabled":true}', checkpoint.lastCleanupAt);
+    const before = previous.prepare("SELECT * FROM system_settings ORDER BY key").all();
+    previous.close();
+    db = openCyberOsDb(databasePath);
+    expect(getPhotosSemanticStatus(db).cache).toEqual(checkpoint);
+    expect(db.prepare("SELECT * FROM system_settings ORDER BY key").all()).toEqual(before);
+    const next = new Date("2026-11-07T00:00:00.000Z");
+    prunePhotosEmbeddingCache(db, next);
+    expect(db.prepare("SELECT * FROM system_settings ORDER BY key").all()).toEqual(before);
+    expect(getPhotosSemanticStatus(db).cache?.lastCleanupAt).toBe(next.toISOString());
+    db.close();
+    db = openCyberOsDb(databasePath);
+    expect(getPhotosSemanticStatus(db).cache?.lastCleanupAt).toBe(next.toISOString());
+    expect(db.prepare("SELECT * FROM system_settings ORDER BY key").all()).toEqual(before);
   });
 });

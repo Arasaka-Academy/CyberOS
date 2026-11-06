@@ -1,6 +1,6 @@
 {
   "name": "@cyberos/ops",
-  "version": "2.3.39",
+  "version": "2.3.40",
   "type": "module",
   "exports": {
     ".": "./src/runner.ts"
@@ -12,8 +12,8 @@
     "build": "cd ../.. && tsup packages/ops/src/index.ts --format esm --platform node --target node22 --external=better-sqlite3 --out-dir packages/ops/dist"
   },
   "dependencies": {
-    "@cyberos/db": "2.3.39",
-    "@cyberos/shared": "2.3.39",
-    "@cyberos/system-health": "2.3.39"
+    "@cyberos/db": "2.3.40",
+    "@cyberos/shared": "2.3.40",
+    "@cyberos/system-health": "2.3.40"
   }
 }

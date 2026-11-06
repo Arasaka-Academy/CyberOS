@@ -189,6 +189,8 @@ CyberOS 2.x 升级会将早期 2.x 数据库中的共享密码转存到权限为
 
 部署前后默认要求完整设置摘要相同。仅上述凭据转存允许通过私有回执校验两份完整摘要，并验证密钥文件内容；其他设置变化仍使验收失败。部署时重新应用共享配置不会改写设置 revision。
 
+照片嵌入缓存的清理统计保存在 `photos_embedding_runtime`，不随例行清理修改设置表。升级会复制原有清理统计到运行状态列，并保留设置表中的原记录不变，使已有部署 helper 的完整设置摘要继续匹配；之后的清理时间和计数从运行状态读取。
+
 ### Tailscale 自动升级 bootstrap
 
 cybermachine 不安装 GitHub self-hosted runner。生产升级由 GitHub-hosted ARM64 runner 构建，再由 Tailscale ephemeral node 通过 SSH 触发 cybermachine 上受限的部署 helper。cybermachine 不需要公网 IP 或端口转发，GitHub workflow 使用 Tailscale MagicDNS hostname 或 `100.x.y.z` 地址。
