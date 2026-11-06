@@ -176,6 +176,9 @@ async function inspectGit(root: ResolvedStoragePool, input: Record<string, JsonV
   const cwd = metadata.isDirectory() ? safe.realPath : path.dirname(safe.realPath);
   const gitArgs = [
     "-c", "core.hooksPath=/dev/null",
+    "-c", "core.fsmonitor=false",
+    "-c", "core.untrackedCache=false",
+    "-c", "submodule.recurse=false",
     "-c", "core.pager=cat",
     "-c", "pager.status=false",
     "-c", "diff.external=",

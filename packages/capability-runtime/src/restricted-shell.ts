@@ -210,6 +210,9 @@ function commandInvocation(command: RestrictedCommand, args: string[]): { comman
       command,
       args: [
         "-c", "core.hooksPath=/dev/null",
+        "-c", "core.fsmonitor=false",
+        "-c", "core.untrackedCache=false",
+        "-c", "submodule.recurse=false",
         "-c", "core.pager=cat",
         "-c", "pager.branch=false",
         "-c", "pager.diff=false",

@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -125,6 +125,18 @@ describe("extended file read capabilities", () => {
     await execFileAsync("git", ["init", "--quiet", tempDir]);
     await expect(run("cyberos.files.git", { storagePoolId: "local" }))
       .rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+  });
+
+  it("does not execute repository-configured filesystem monitors while reading Git status", async () => {
+    await execFileAsync("git", ["init", "--quiet", rootDir]);
+    await execFileAsync("git", ["-C", rootDir, "add", "alpha.txt"]);
+    await writeFile(path.join(rootDir, ".git", "monitor.sh"),
+      "#!/bin/sh\nprintf invoked > .git/monitor-invoked\n", { mode: 0o700 });
+    await execFileAsync("git", ["-C", rootDir, "config", "core.fsmonitor", ".git/monitor.sh"]);
+
+    await run("cyberos.files.git", { storagePoolId: "local" });
+
+    await expect(access(path.join(rootDir, ".git", "monitor-invoked"))).rejects.toMatchObject({ code: "ENOENT" });
   });
 });
 

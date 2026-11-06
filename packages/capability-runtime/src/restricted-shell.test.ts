@@ -1,10 +1,14 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { access, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { openCyberOsDb, type CyberOsDatabase } from "@cyberos/db";
 import { loadCyberOsRuntime, type CyberOsRuntime } from "@cyberos/shared";
 import { createRestrictedShellAdapter } from "./restricted-shell.js";
+
+const execFileAsync = promisify(execFile);
 
 let tempDir: string;
 let rootDir: string;
@@ -55,6 +59,22 @@ describe("restricted shell adapter", () => {
       command,
       args: [...args]
     }, adapterContext())).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+  });
+
+  it("does not execute repository-configured filesystem monitors in read-only Git commands", async () => {
+    await execFileAsync("git", ["init", "--quiet", rootDir]);
+    await execFileAsync("git", ["-C", rootDir, "add", "visible.txt"]);
+    await writeFile(path.join(rootDir, ".git", "monitor.sh"),
+      "#!/bin/sh\nprintf invoked > .git/monitor-invoked\n", { mode: 0o700 });
+    await execFileAsync("git", ["-C", rootDir, "config", "core.fsmonitor", ".git/monitor.sh"]);
+    const adapter = createRestrictedShellAdapter();
+    const context = adapterContext();
+    const prepared = await adapter.prepare({ storagePoolId: "pool-1", command: "git", args: ["status", "--porcelain"] }, context);
+
+    const result = await adapter.execute(prepared, context, {});
+
+    expect(result.data).toMatchObject({ exitCode: 0 });
+    await expect(access(path.join(rootDir, ".git", "monitor-invoked"))).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("stays unavailable when the shell feature flag is disabled", async () => {
