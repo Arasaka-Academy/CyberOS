@@ -1,3 +1,9 @@
+cyberos (2.3.17) unstable; urgency=medium
+
+  * Evaluate file-search regular expressions in a worker with an enforced deadline
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:11:06 +0000
+
 cyberos (2.3.16) unstable; urgency=medium
 
   * Preserve a live hostd socket when another instance starts

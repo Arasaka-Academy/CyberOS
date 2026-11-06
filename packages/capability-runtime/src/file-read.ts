@@ -8,6 +8,7 @@ import type { CyberOsDatabase } from "@cyberos/db";
 import { isPathInside, resolveSafeExistingPath, toRootRelative } from "@cyberos/storage-tools";
 import type { CyberOsRuntime } from "@cyberos/shared";
 import { requireStoragePool, type ResolvedStoragePool } from "./storage-pools.js";
+import { BoundedRegexMatcher, type GrepMatchPage } from "./bounded-regex.js";
 
 const execFileAsync = promisify(execFile);
 const DEFAULT_TIMEOUT_MS = 5_000;
@@ -47,26 +48,15 @@ async function grepFiles(root: ResolvedStoragePool, input: Record<string, JsonVa
   const mode = optionalString(input.mode) ?? "literal";
   if (mode !== "literal" && mode !== "regex") throw new CapabilityError("INVALID_ARGUMENT", "mode must be literal or regex");
   const caseSensitive = input.caseSensitive === true;
-  let matcher: (line: string) => { index: number; length: number } | null;
+  const flags = caseSensitive ? "u" : "iu";
   if (mode === "regex") {
-    let regex: RegExp;
     try {
-      regex = new RegExp(pattern, caseSensitive ? "u" : "iu");
+      new RegExp(pattern, flags);
     } catch {
       throw new CapabilityError("INVALID_ARGUMENT", "pattern is not a valid regular expression");
     }
-    matcher = (line) => {
-      const match = regex.exec(line);
-      return match ? { index: match.index, length: Math.max(1, match[0].length) } : null;
-    };
-  } else {
-    const needle = caseSensitive ? pattern : pattern.toLocaleLowerCase();
-    matcher = (line) => {
-      const candidate = caseSensitive ? line : line.toLocaleLowerCase();
-      const index = candidate.indexOf(needle);
-      return index >= 0 ? { index, length: needle.length } : null;
-    };
   }
+  const needle = caseSensitive ? pattern : pattern.toLocaleLowerCase();
   const limit = boundedInteger(input.limit, 50, 1, 200);
   const maxFiles = boundedInteger(input.maxFiles, 5_000, 1, 20_000);
   const maxBytes = boundedInteger(input.maxBytes, 64 * 1024 * 1024, 1, 256 * 1024 * 1024);
@@ -83,34 +73,37 @@ async function grepFiles(root: ResolvedStoragePool, input: Record<string, JsonVa
   let scannedFiles = 0;
   let matchedOffset = 0;
   let hasMore = false;
-  outer: for (const file of files) {
-    ensureWithinBudget(startedAt, timeoutMs);
-    if (scannedBytes + file.size > maxBytes) break;
-    const content = await readFile(file.absolutePath);
-    scannedFiles += 1;
-    scannedBytes += content.byteLength;
-    if (content.includes(0)) continue;
-    const lines = content.toString("utf8").split(/\r?\n/u);
-    for (let index = 0; index < lines.length; index += 1) {
-      const match = matcher(lines[index]!);
-      if (!match) continue;
-      if (matchedOffset < offset) {
+  let regexMatcher: BoundedRegexMatcher | undefined;
+  try {
+    outer: for (const file of files) {
+      ensureWithinBudget(startedAt, timeoutMs);
+      if (scannedBytes + file.size > maxBytes) break;
+      const content = await readFile(file.absolutePath);
+      scannedFiles += 1;
+      scannedBytes += content.byteLength;
+      if (content.includes(0)) continue;
+      const text = content.toString("utf8");
+      const skip = Math.max(0, offset - matchedOffset);
+      const remaining = limit - matches.length + 1;
+      let page: GrepMatchPage;
+      if (mode === "regex") {
+        regexMatcher ??= new BoundedRegexMatcher(pattern, flags);
+        page = await regexMatcher.match(text, skip, remaining, timeoutMs - (Date.now() - startedAt));
+      } else {
+        page = matchLiteralLines(text, needle, caseSensitive, skip, remaining);
+      }
+      matchedOffset += page.skipped;
+      for (const match of page.matches) {
+        if (matches.length >= limit) {
+          hasMore = true;
+          break outer;
+        }
+        matches.push({ path: file.relativePath, ...match });
         matchedOffset += 1;
-        continue;
       }
-      if (matches.length >= limit) {
-        hasMore = true;
-        break outer;
-      }
-      matches.push({
-        path: file.relativePath,
-        line: index + 1,
-        column: match.index + 1,
-        length: match.length,
-        text: lines[index]!.slice(0, 1000)
-      });
-      matchedOffset += 1;
     }
+  } finally {
+    await regexMatcher?.close();
   }
   const truncated = walked.truncated || scannedFiles < files.length || hasMore;
   return {
@@ -131,6 +124,20 @@ async function grepFiles(root: ResolvedStoragePool, input: Record<string, JsonVa
       nextCursor: hasMore ? encodeCursor(offset + matches.length, signature) : null
     }
   };
+}
+
+function matchLiteralLines(content: string, needle: string, caseSensitive: boolean, skip: number, limit: number): GrepMatchPage {
+  const lines = content.split(/\r?\n/u);
+  const page: GrepMatchPage = { skipped: 0, matches: [] };
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]!;
+    const column = (caseSensitive ? line : line.toLocaleLowerCase()).indexOf(needle);
+    if (column < 0) continue;
+    if (page.skipped < skip) { page.skipped += 1; continue; }
+    page.matches.push({ line: index + 1, column: column + 1, length: needle.length, text: line.slice(0, 1000) });
+    if (page.matches.length >= limit) break;
+  }
+  return page;
 }
 
 async function findFiles(root: ResolvedStoragePool, input: Record<string, JsonValue>): Promise<CapabilityExecution> {
