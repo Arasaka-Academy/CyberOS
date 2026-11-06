@@ -38,6 +38,104 @@ async fn claim_and_run(
 }
 
 #[tokio::test]
+async fn expired_media_scan_cannot_replace_the_catalog() {
+    let directory = tempfile::tempdir().unwrap();
+    let root = directory.path().join("root");
+    std::fs::create_dir_all(root.join("Movies")).unwrap();
+    std::fs::write(root.join("Movies/Arrival.2016.mkv"), b"video").unwrap();
+    let database = directory.path().join("cyberos.sqlite");
+    common::create_schema(&database, &root);
+    queue_scan(&database, "Movies", "original", "generation-1");
+    let db = Db::open(&database).unwrap();
+    claim_and_run(&db, "worker", &root).await.unwrap();
+    queue_scan(&database, "Movies", "expired", "generation-2");
+    let task = db
+        .claim_media_scan("worker", &[common::storage_pool(&root)])
+        .await
+        .unwrap()
+        .unwrap();
+    let connection = Connection::open(&database).unwrap();
+    connection
+        .execute(
+            "UPDATE media_scan_runs SET lease_expires_at='1970-01-01T00:00:00Z' WHERE id='expired'",
+            [],
+        )
+        .unwrap();
+    assert!(db.publish_media_scan(&task, "worker", &[]).await.is_err());
+    assert!(!db.renew_media_scan_lease(&task, "worker").await.unwrap());
+    assert!(
+        !db.update_media_scan_progress(&task, "worker", 0, 0, None)
+            .await
+            .unwrap()
+    );
+    assert_eq!(
+        connection
+            .query_row("SELECT count(*) FROM media_files", [], |row| row
+                .get::<_, i64>(0))
+            .unwrap(),
+        1
+    );
+}
+
+#[tokio::test]
+async fn slow_media_requests_keep_the_scan_lease_alive() {
+    let directory = tempfile::tempdir().unwrap();
+    let root = directory.path().join("root");
+    std::fs::create_dir_all(root.join("Movies")).unwrap();
+    std::fs::write(root.join("Movies/Arrival.2016.mkv"), b"video").unwrap();
+    std::fs::write(
+        root.join("Movies/movie.nfo"),
+        "<movie><tmdbid>329865</tmdbid></movie>",
+    )
+    .unwrap();
+    let database = directory.path().join("cyberos.sqlite");
+    common::create_schema(&database, &root);
+    queue_scan(&database, "Movies", "slow", "generation-1");
+    let proxy = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = proxy.local_addr().unwrap().port();
+    let connection = Connection::open(&database).unwrap();
+    connection.execute("INSERT INTO system_settings(key,value_json,updated_at) VALUES ('media_library_settings',?,'now')", [r#"{"tmdbReadAccessToken":"test-token","tmdbUseProxy":true}"#]).unwrap();
+    connection.execute("INSERT INTO system_settings(key,value_json,updated_at) VALUES ('system_proxy_settings',?,'now')", [format!(r#"{{"protocol":"http","host":"127.0.0.1","port":{port}}}"#)]).unwrap();
+    let db = Db::open(&database).unwrap();
+    let pools = [common::storage_pool(&root)];
+    let task = db
+        .claim_media_scan("worker", &pools)
+        .await
+        .unwrap()
+        .unwrap();
+    let shutdown = CancellationToken::new();
+    let mut scan = {
+        let db = db.clone();
+        let shutdown = shutdown.clone();
+        tokio::spawn(async move { run_media_scan(&db, &task, "worker", &shutdown).await })
+    };
+    let (_stalled_proxy, _) =
+        tokio::time::timeout(std::time::Duration::from_secs(2), proxy.accept())
+            .await
+            .unwrap()
+            .unwrap();
+    let deadline = (time::OffsetDateTime::now_utc() + time::Duration::seconds(6))
+        .format(&time::format_description::well_known::Rfc3339)
+        .unwrap();
+    connection
+        .execute(
+            "UPDATE media_scan_runs SET lease_expires_at=? WHERE id='slow'",
+            [deadline],
+        )
+        .unwrap();
+    tokio::time::sleep(std::time::Duration::from_secs(7)).await;
+    let competing = db.claim_media_scan("competitor", &pools).await.unwrap();
+    shutdown.cancel();
+    let result = tokio::time::timeout(std::time::Duration::from_secs(1), &mut scan).await;
+    if result.is_err() {
+        scan.abort();
+        let _ = scan.await;
+    }
+    assert!(result.is_ok(), "cancelled scan did not stop promptly");
+    assert!(competing.is_none(), "a slow active scan lost its lease");
+}
+
+#[tokio::test]
 async fn scan_captures_proxy_settings_when_claimed() {
     let directory = tempfile::tempdir().unwrap();
     let root = directory.path().join("root");

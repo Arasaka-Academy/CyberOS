@@ -1,3 +1,9 @@
+cyberos (2.3.30) unstable; urgency=medium
+
+  * Keep media scan leases alive and reject expired catalog publication.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:53:15 +0000
+
 cyberos (2.3.29) unstable; urgency=medium
 
   * Match the visible Photos pool mount when systemd stacks bind mounts.

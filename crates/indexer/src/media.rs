@@ -330,6 +330,29 @@ pub async fn run_media_scan(
     worker_id: &str,
     shutdown: &CancellationToken,
 ) -> Result<(), IndexerError> {
+    let scan = scan_media(db, task, worker_id, shutdown);
+    tokio::pin!(scan);
+    let mut interval = tokio::time::interval(Duration::from_secs(5));
+    let entries = loop {
+        tokio::select! {
+            _ = shutdown.cancelled() => return Err(IndexerError::internal("Indexer is stopping")),
+            _ = interval.tick() => {
+                if !db.renew_media_scan_lease(task, worker_id).await? {
+                    return Err(IndexerError::database("Media scan lease was lost"));
+                }
+            }
+            result = &mut scan => break result?,
+        }
+    };
+    db.publish_media_scan(task, worker_id, &entries).await
+}
+
+async fn scan_media(
+    db: &Db,
+    task: &MediaScanTask,
+    worker_id: &str,
+    shutdown: &CancellationToken,
+) -> Result<Vec<MediaCatalogEntry>, IndexerError> {
     let settings = match task.settings_json.as_deref() {
         Some(json) => serde_json::from_str::<MediaSettings>(json)
             .map_err(|_| tmdb_error("Media settings are invalid"))?,
@@ -414,7 +437,7 @@ pub async fn run_media_scan(
         if index % 25 == 0 {
             let leased = db
                 .update_media_scan_progress(
-                    &task.id,
+                    task,
                     worker_id,
                     entries.len() as u64,
                     unmatched,
@@ -446,7 +469,7 @@ pub async fn run_media_scan(
             true,
         ));
     }
-    db.publish_media_scan(task, worker_id, &entries).await
+    Ok(entries)
 }
 
 fn discover_video_files(
