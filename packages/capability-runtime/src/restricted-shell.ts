@@ -141,7 +141,7 @@ function validateArguments(command: RestrictedCommand, args: string[]): void {
 
 function validateGit(args: string[]): void {
   const forbidden = [
-    "-c", "--config-env", "--exec-path", "--git-dir", "--work-tree", "--namespace",
+    "-c", "-C", "--config-env", "--exec-path", "--git-dir", "--work-tree", "--namespace",
     "--global", "--system", "--local", "--file", "--blob", "--ext-diff", "--no-index",
     "--output", "--paginate"
   ];
@@ -189,7 +189,14 @@ function denyFind(args: string[]): void {
 }
 
 function denyOptions(args: string[], denied: string[]): void {
-  if (args.some((argument) => denied.some((option) => argument === option || argument.startsWith(`${option}=`)))) {
+  if (args.some((argument) => denied.some((option) => {
+    if (argument === option || argument.startsWith(`${option}=`)) return true;
+    if (/^-[a-zA-Z]$/u.test(option) && argument.startsWith("-") && !argument.startsWith("--")) {
+      return argument.slice(1).includes(option[1]!);
+    }
+    const name = argument.split("=", 1)[0]!;
+    return option.startsWith("--") && name.startsWith("--") && name.length > 2 && option.startsWith(name);
+  }))) {
     throw new CapabilityError("INVALID_ARGUMENT", "Command option is not allowed by the read-only profile");
   }
 }

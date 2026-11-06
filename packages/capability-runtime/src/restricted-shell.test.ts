@@ -61,6 +61,20 @@ describe("restricted shell adapter", () => {
     }, adapterContext())).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
   });
 
+  it.each([
+    ["ls", ["-RL"]],
+    ["ls", ["--derefer"]],
+    ["du", ["-aL"]],
+    ["stat", ["-Lc", "%s"]],
+    ["file", ["-bL"]],
+    ["git", ["-C../outside", "status"]],
+    ["git", ["-cinclude.path=untrusted", "status"]]
+  ] as const)("rejects attached, combined, and abbreviated unsafe options in %s", async (command, args) => {
+    await expect(createRestrictedShellAdapter().prepare({
+      storagePoolId: "pool-1", command, args: [...args]
+    }, adapterContext())).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+  });
+
   it("does not execute repository-configured filesystem monitors in read-only Git commands", async () => {
     await execFileAsync("git", ["init", "--quiet", rootDir]);
     await execFileAsync("git", ["-C", rootDir, "add", "visible.txt"]);

@@ -1,3 +1,9 @@
+cyberos (2.3.14) unstable; urgency=medium
+
+  * Reject attached and abbreviated unsafe options in restricted shell commands
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:01:58 +0000
+
 cyberos (2.3.13) unstable; urgency=medium
 
   * Report backup targets as unavailable when their required mount is absent
