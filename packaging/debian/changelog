@@ -1,3 +1,9 @@
+cyberos (2.3.29) unstable; urgency=medium
+
+  * Match the visible Photos pool mount when systemd stacks bind mounts.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:47:45 +0000
+
 cyberos (2.3.28) unstable; urgency=medium
 
   * Bound TMDB search response memory before parsing JSON.
