@@ -1,3 +1,9 @@
+cyberos (2.3.10) unstable; urgency=medium
+
+  * Use saved backup settings for scheduled health evaluation
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 15:54:36 +0000
+
 cyberos (2.3.9) unstable; urgency=medium
 
   * Restrict Git branch commands to explicit read-only queries
