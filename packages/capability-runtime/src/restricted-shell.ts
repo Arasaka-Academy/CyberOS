@@ -143,7 +143,7 @@ function validateGit(args: string[]): void {
   const forbidden = [
     "-c", "-C", "--config-env", "--exec-path", "--git-dir", "--work-tree", "--namespace",
     "--global", "--system", "--local", "--file", "--blob", "--ext-diff", "--no-index",
-    "--output", "--paginate"
+    "--output", "--paginate", "--textconv", "--open-files-in-pager"
   ];
   denyOptions(args, forbidden);
   const subcommand = args.find((argument) => !argument.startsWith("-"));
@@ -225,6 +225,12 @@ async function validateExistingPathArguments(root: ResolvedStoragePool, cwd: str
 
 function commandInvocation(command: RestrictedCommand, args: string[]): { command: string; args: string[] } {
   if (command === "git") {
+    const subcommandIndex = args.findIndex((argument) => !argument.startsWith("-"));
+    const safeArgs = [...args];
+    if (["diff", "show", "log", "grep"].includes(args[subcommandIndex] ?? "")) {
+      safeArgs.splice(subcommandIndex + 1, 0, "--no-textconv",
+        ...(args[subcommandIndex] === "grep" ? [] : ["--no-ext-diff"]));
+    }
     return {
       command,
       args: [
@@ -238,7 +244,7 @@ function commandInvocation(command: RestrictedCommand, args: string[]): { comman
         "-c", "pager.log=false",
         "-c", "diff.external=",
         "--no-optional-locks",
-        ...args
+        ...safeArgs
       ]
     };
   }

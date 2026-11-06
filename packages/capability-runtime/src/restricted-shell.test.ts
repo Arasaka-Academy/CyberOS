@@ -104,6 +104,31 @@ describe("restricted shell adapter", () => {
   });
 
   it.each([
+    ["show", "--format=", "HEAD"],
+    ["log", "-p", "--max-count=1"],
+    ["diff", "HEAD"],
+    ["grep", "changed"]
+  ])("does not execute repository text conversion commands: %j", async (...args) => {
+    await execFileAsync("git", ["init", "--quiet", rootDir]);
+    await writeFile(path.join(rootDir, ".gitattributes"), "*.txt diff=unsafe\n");
+    await execFileAsync("git", ["-C", rootDir, "add", "."]);
+    await execFileAsync("git", ["-C", rootDir, "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+      "-c", "core.hooksPath=/dev/null", "commit", "--quiet", "-m", "initial"]);
+    await writeFile(path.join(rootDir, ".git", "textconv.sh"),
+      '#!/bin/sh\nprintf invoked > .git/textconv-invoked\ncat "$1"\n', { mode: 0o700 });
+    await execFileAsync("git", ["-C", rootDir, "config", "diff.unsafe.textconv", ".git/textconv.sh"]);
+    await writeFile(path.join(rootDir, "visible.txt"), "changed\n");
+    const adapter = createRestrictedShellAdapter();
+    const context = adapterContext();
+    const prepared = await adapter.prepare({ storagePoolId: "pool-1", command: "git", args }, context);
+
+    const result = await adapter.execute(prepared, context, {});
+
+    expect(result.data).toMatchObject({ exitCode: 0 });
+    await expect(access(path.join(rootDir, ".git", "textconv-invoked"))).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it.each([
     ["branch", "new-branch"],
     ["branch", "--track", "new-branch", "main"],
     ["branch", "--set-upstream-to=origin/main", "main"],

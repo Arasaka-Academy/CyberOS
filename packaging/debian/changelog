@@ -1,3 +1,9 @@
+cyberos (2.3.15) unstable; urgency=medium
+
+  * Disable repository text conversion and external diff programs in restricted Git queries
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:04:10 +0000
+
 cyberos (2.3.14) unstable; urgency=medium
 
   * Reject attached and abbreviated unsafe options in restricted shell commands
