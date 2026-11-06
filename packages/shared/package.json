@@ -1,6 +1,6 @@
 {
   "name": "@cyberos/shared",
-  "version": "2.3.40",
+  "version": "2.3.41",
   "type": "module",
   "exports": {
     ".": {
@@ -19,6 +19,6 @@
   },
   "types": "./src/index.ts",
   "dependencies": {
-    "undici": "8.10.2"
+    "undici": "8.12.2"
   }
 }

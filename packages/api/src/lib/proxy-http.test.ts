@@ -3,6 +3,8 @@ import { createServer as createHttpsServer } from "node:https";
 import { createServer as createTcpServer, connect, type AddressInfo, type Server, type Socket } from "node:net";
 import { readFileSync } from "node:fs";
 import { once } from "node:events";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
 import { ProxyHttpClient } from "./proxy-http.js";
 import type { SystemProxySettingsRecord } from "@cyberos/shared";
@@ -30,6 +32,35 @@ afterEach(async () => {
 });
 
 describe("explicit outbound proxy", () => {
+  it("survives a truncated response with excessive content encodings", async () => {
+    const source = `
+      import { createServer } from "node:net";
+      import { ProxyHttpClient } from ${JSON.stringify(new URL("./proxy-http.ts", import.meta.url).href)};
+      const server = createServer(socket => socket.once("data", request => {
+        const response = request.toString().startsWith("GET /bad ")
+          ? "HTTP/1.1 200 OK\\r\\nContent-Length: 100\\r\\nContent-Encoding: gzip, gzip, gzip, gzip, gzip, gzip\\r\\n\\r\\n"
+          : "HTTP/1.1 200 OK\\r\\nContent-Length: 2\\r\\nConnection: close\\r\\n\\r\\nok";
+        socket.end(response);
+      }));
+      await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+      const client = new ProxyHttpClient(() => null);
+      const origin = "http://127.0.0.1:" + server.address().port;
+      try {
+        await client.fetch(origin + "/bad").catch(() => undefined);
+        await new Promise(resolve => setTimeout(resolve, 50));
+        const response = await client.fetch(origin + "/healthy");
+        if (await response.text() !== "ok") throw new Error("Subsequent request failed");
+        console.log("survived");
+      } finally {
+        await client.close();
+        await new Promise(resolve => server.close(resolve));
+      }
+    `;
+    const result = await promisify(execFile)(process.execPath,
+      ["--import", "tsx", "--input-type=module", "--eval", source], { timeout: 5_000, maxBuffer: 64 * 1024 });
+    expect(result.stdout.trim()).toBe("survived");
+  });
+
   it.each(["http", "https", "socks5"] as const)("keeps the %s proxy snapshot across HTTPS redirects with proxy-side DNS", async (protocol) => {
     let selectedProxy: SystemProxySettingsRecord | null = null;
     const origin = await listen(createHttpsServer({ key, cert }, (req, res) => {

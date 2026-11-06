@@ -1,3 +1,9 @@
+cyberos (2.3.41) unstable; urgency=medium
+
+  * Patch outbound HTTP client process termination on malformed upstream responses.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 18:24:54 +0000
+
 cyberos (2.3.40) unstable; urgency=medium
 
   * Keep Photos cache maintenance state out of deployment settings snapshots.
