@@ -1,3 +1,9 @@
+cyberos (2.3.21) unstable; urgency=medium
+
+  * Allow the storage pool root as a Bluetooth transfer inbox.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:26:13 +0000
+
 cyberos (2.3.20) unstable; urgency=medium
 
   * Preserve active host-access daemon and proxy sockets during startup.

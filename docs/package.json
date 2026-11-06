@@ -1,6 +1,6 @@
 {
   "name": "@cyberos/docs",
-  "version": "2.3.20",
+  "version": "2.3.21",
   "private": true,
   "type": "module",
   "scripts": {
