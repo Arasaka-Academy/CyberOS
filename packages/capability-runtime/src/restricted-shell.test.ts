@@ -88,6 +88,29 @@ describe("restricted shell adapter", () => {
       command: "ls"
     }, context)).rejects.toMatchObject({ code: "NOT_READY" });
   });
+
+  it.each([
+    ["branch", "new-branch"],
+    ["branch", "--track", "new-branch", "main"],
+    ["branch", "--set-upstream-to=origin/main", "main"],
+    ["branch", "-Dmain"],
+    ["branch", "--del", "main"]
+  ])("rejects branch mutations in the read-only profile: %j", async (...args) => {
+    await expect(createRestrictedShellAdapter().prepare({
+      storagePoolId: "pool-1", command: "git", args
+    }, adapterContext())).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+  });
+
+  it.each([
+    ["branch"],
+    ["branch", "-a", "-vv"],
+    ["branch", "--show-current"],
+    ["branch", "--list", "feature/*", "--sort=-committerdate"]
+  ])("allows read-only branch queries: %j", async (...args) => {
+    await expect(createRestrictedShellAdapter().prepare({
+      storagePoolId: "pool-1", command: "git", args
+    }, adapterContext())).resolves.toMatchObject({ changes: { args } });
+  });
 });
 
 function adapterContext(shellEnabled = true) {

@@ -150,8 +150,20 @@ function validateGit(args: string[]): void {
   if (!subcommand || !new Set(["status", "diff", "log", "show", "branch", "rev-parse", "ls-files", "grep"]).has(subcommand)) {
     throw new CapabilityError("INVALID_ARGUMENT", "Git command is not in the read-only profile");
   }
-  if (subcommand === "branch" && args.some((argument) => ["-d", "-D", "-m", "-M", "-c", "-C", "--delete", "--move", "--copy", "--edit-description", "--set-upstream-to", "--unset-upstream"].includes(argument))) {
-    throw new CapabilityError("INVALID_ARGUMENT", "Git branch mutations are not allowed");
+  if (subcommand === "branch") {
+    const branchArgs = args.slice(args.indexOf(subcommand) + 1);
+    const listOptions = new Set([
+      "--list", "--show-current", "-a", "--all", "-r", "--remotes",
+      "-v", "-vv", "--verbose", "--no-color", "--color", "--column", "--no-column",
+      "--ignore-case", "--omit-empty"
+    ]);
+    if (branchArgs.some((argument) => !(
+      listOptions.has(argument) ||
+      /^(?:--format|--sort|--color|--column|--contains|--no-contains|--merged|--no-merged|--points-at)=/u.test(argument) ||
+      (branchArgs.includes("--list") && !argument.startsWith("-"))
+    ))) {
+      throw new CapabilityError("INVALID_ARGUMENT", "Git branch mutations are not allowed");
+    }
   }
   if (args.some((argument) => (
     argument === "--textconv" ||

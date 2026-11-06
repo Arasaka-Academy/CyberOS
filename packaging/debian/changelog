@@ -1,3 +1,9 @@
+cyberos (2.3.9) unstable; urgency=medium
+
+  * Restrict Git branch commands to explicit read-only queries
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 15:52:47 +0000
+
 cyberos (2.3.8) unstable; urgency=medium
 
   * Disable repository filesystem monitors during capability Git inspection
