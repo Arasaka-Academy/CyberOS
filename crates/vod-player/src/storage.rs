@@ -293,8 +293,13 @@ fn identity(metadata: &std::fs::Metadata) -> FileIdentity {
 
 #[cfg(target_os = "linux")]
 fn find_mountpoint(pool_path: &Path, required: bool) -> Result<MountLocation, VodError> {
+    let directory = OpenOptions::new()
+        .read(true)
+        .custom_flags(nix::libc::O_DIRECTORY | nix::libc::O_NOFOLLOW | nix::libc::O_CLOEXEC)
+        .open(pool_path)?;
+    let visible_mount_id = mount_id_for_fd(&directory)?;
     let mountinfo = std::fs::read_to_string("/proc/self/mountinfo")?;
-    match find_mountpoint_in(&mountinfo, pool_path) {
+    match find_mountpoint_in(&mountinfo, pool_path, visible_mount_id) {
         Some(location) => Ok(location),
         None if required => Err(VodError::unavailable(
             ErrorCode::StorageUnavailable,
@@ -322,7 +327,11 @@ fn find_mountpoint(pool_path: &Path, required: bool) -> Result<MountLocation, Vo
 }
 
 #[cfg(any(target_os = "linux", test))]
-fn find_mountpoint_in(mountinfo: &str, pool_path: &Path) -> Option<MountLocation> {
+fn find_mountpoint_in(
+    mountinfo: &str,
+    pool_path: &Path,
+    visible_mount_id: u64,
+) -> Option<MountLocation> {
     let requested = std::fs::canonicalize(pool_path).ok()?;
     for line in mountinfo.lines() {
         let Some((left, right)) = line.split_once(" - ") else {
@@ -335,7 +344,9 @@ fn find_mountpoint_in(mountinfo: &str, pool_path: &Path) -> Option<MountLocation
                 continue;
             };
             let mountpoint = PathBuf::from(unescape_mount_field(left[4]));
-            if std::fs::canonicalize(&mountpoint).ok().as_ref() == Some(&requested) {
+            if mount_id == visible_mount_id
+                && std::fs::canonicalize(&mountpoint).ok().as_ref() == Some(&requested)
+            {
                 return Some(MountLocation {
                     path: mountpoint,
                     mount_id: Some(mount_id),
@@ -408,12 +419,33 @@ mod tests {
         std::fs::create_dir(&pool).unwrap();
         let mountinfo = format!("36 25 0:31 / {} rw - ext4 /dev/md0 rw\n", pool.display());
         assert_eq!(
-            find_mountpoint_in(&mountinfo, &pool),
+            find_mountpoint_in(&mountinfo, &pool, 36),
             Some(MountLocation {
                 path: pool,
                 mount_id: Some(36)
             })
         );
+    }
+
+    #[test]
+    fn stacked_mounts_use_the_visible_mount_id() {
+        let directory = tempfile::tempdir().unwrap();
+        let pool = directory.path().join("pool-a");
+        std::fs::create_dir(&pool).unwrap();
+        let mountinfo = format!(
+            "35 25 0:31 / {} rw - ext4 /dev/md0 rw\n36 25 0:31 / {} rw - ext4 /dev/md0 rw\n",
+            pool.display(),
+            pool.display()
+        );
+        assert_eq!(
+            find_mountpoint_in(&mountinfo, &pool, 36).unwrap().mount_id,
+            Some(36)
+        );
+        assert_eq!(
+            find_mountpoint_in(&mountinfo, &pool, 35).unwrap().mount_id,
+            Some(35)
+        );
+        assert!(find_mountpoint_in(&mountinfo, &pool, 37).is_none());
     }
 
     #[test]

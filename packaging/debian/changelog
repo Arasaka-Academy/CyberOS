@@ -1,3 +1,9 @@
+cyberos (2.3.32) unstable; urgency=medium
+
+  * Use the visible storage mount identity for media playback.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:58:01 +0000
+
 cyberos (2.3.31) unstable; urgency=medium
 
   * Reject special media files without blocking the playback controller.
