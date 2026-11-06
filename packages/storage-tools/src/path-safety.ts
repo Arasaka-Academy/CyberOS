@@ -79,7 +79,7 @@ export async function assertNoManagedIscsiDescendants(candidatePath: string, wor
 
 export function isPathInside(rootPath: string, candidatePath: string): boolean {
   const relative = path.relative(rootPath, candidatePath);
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  return relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
 }
 
 export function toRootRelative(rootPath: string, candidatePath: string): string {

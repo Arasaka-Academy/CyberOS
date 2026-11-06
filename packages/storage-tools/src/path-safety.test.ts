@@ -26,6 +26,15 @@ describe("resolveSafeExistingPath", () => {
     expect(safe.relativePath).toBe("文档.txt");
   });
 
+  it("allows names beginning with two dots within the root", async () => {
+    await mkdir(path.join(rootDir, "..notes"));
+    await writeFile(path.join(rootDir, "..notes", "draft.txt"), "draft");
+
+    const safe = await resolveSafeExistingPath(rootDir, "..notes/draft.txt");
+
+    expect(safe.relativePath).toBe(path.join("..notes", "draft.txt"));
+  });
+
   it("rejects absolute paths", async () => {
     await expect(resolveSafeExistingPath(rootDir, "/etc/passwd")).rejects.toBeInstanceOf(
       PathSafetyError
