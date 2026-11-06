@@ -1,3 +1,9 @@
+cyberos (2.3.35) unstable; urgency=medium
+
+  * Preserve literal replacement text in approved file edits.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 17:09:04 +0000
+
 cyberos (2.3.34) unstable; urgency=medium
 
   * Map read-only NFS clients to the identity granted share access.

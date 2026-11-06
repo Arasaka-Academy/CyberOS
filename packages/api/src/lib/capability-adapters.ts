@@ -464,7 +464,7 @@ async function executeFileEdit(server: FastifyInstance, request: Record<string, 
   const occurrences = current.content.split(find).length - 1;
   if (occurrences === 0) throw new CapabilityError("CONFLICT", "Edit text no longer exists in the file");
   if (request.replaceAll !== true && occurrences !== 1) throw new CapabilityError("CONFLICT", "Edit text is not unique; set replaceAll to replace every match");
-  const content = request.replaceAll === true ? current.content.split(find).join(replacement) : current.content.replace(find, replacement);
+  const content = request.replaceAll === true ? current.content.split(find).join(replacement) : current.content.replace(find, () => replacement);
   return injectJson(server, { method: "PUT", url: "/api/files/edit-text", payload: { storagePoolId, path: filePath, content, expectedModifiedAt: current.modifiedAt ?? null } });
 }
 
