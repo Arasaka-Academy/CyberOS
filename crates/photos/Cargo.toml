@@ -1,6 +1,6 @@
 [package]
 name = "cyberos-photos"
-version = "2.3.41"
+version = "2.3.42"
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true

@@ -1,3 +1,9 @@
+cyberos (2.3.42) unstable; urgency=medium
+
+  * Upgrade Tokio past the multi-threaded interval race in withdrawn 1.54.0.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 22:57:36 +0000
+
 cyberos (2.3.41) unstable; urgency=medium
 
   * Patch outbound HTTP client process termination on malformed upstream responses.

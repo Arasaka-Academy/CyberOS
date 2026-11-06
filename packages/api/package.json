@@ -1,6 +1,6 @@
 {
   "name": "@cyberos/api",
-  "version": "2.3.41",
+  "version": "2.3.42",
   "type": "module",
   "exports": {
     ".": "./src/server.ts"
@@ -12,15 +12,15 @@
     "build": "cd ../.. && tsup packages/api/src/index.ts packages/api/src/state-init.ts packages/api/src/photos-search-benchmark.ts packages/api/src/lib/photos-metadata-fields-worker.ts packages/api/src/lib/photos-search-worker.ts --format esm --platform node --target node22 --external=sqlite-vec --external=better-sqlite3 --external=@fastify/cors --external=@fastify/multipart --external=@fastify/rate-limit --external=@fastify/static --external=@fastify/websocket --external=archiver --external=fastify --external=undici --external=yaml --out-dir packages/api/dist"
   },
   "dependencies": {
-    "@cyberos/backup": "2.3.41",
-    "@cyberos/capabilities": "2.3.41",
-    "@cyberos/capability-runtime": "2.3.41",
-    "@cyberos/db": "2.3.41",
-    "@cyberos/mcp": "2.3.41",
-    "@cyberos/monitoring": "2.3.41",
-    "@cyberos/shared": "2.3.41",
-    "@cyberos/storage-tools": "2.3.41",
-    "@cyberos/system-health": "2.3.41",
+    "@cyberos/backup": "2.3.42",
+    "@cyberos/capabilities": "2.3.42",
+    "@cyberos/capability-runtime": "2.3.42",
+    "@cyberos/db": "2.3.42",
+    "@cyberos/mcp": "2.3.42",
+    "@cyberos/monitoring": "2.3.42",
+    "@cyberos/shared": "2.3.42",
+    "@cyberos/storage-tools": "2.3.42",
+    "@cyberos/system-health": "2.3.42",
     "@earendil-works/pi-mcp": "1.4.0",
     "@fastify/cors": "^11.1.0",
     "@fastify/multipart": "^9.4.0",
