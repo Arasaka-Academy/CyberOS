@@ -2,7 +2,6 @@ use std::fs::{File, OpenOptions};
 #[cfg(target_os = "linux")]
 use std::os::fd::AsRawFd;
 use std::os::unix::fs::MetadataExt;
-#[cfg(target_os = "linux")]
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Component, Path, PathBuf};
 
@@ -222,7 +221,7 @@ fn open_beneath(
         ));
     }
     let how = OpenHow::new()
-        .flags(OFlag::O_RDONLY | OFlag::O_CLOEXEC)
+        .flags(OFlag::O_RDONLY | OFlag::O_CLOEXEC | OFlag::O_NONBLOCK)
         .resolve(
             ResolveFlag::RESOLVE_BENEATH
                 | ResolveFlag::RESOLVE_NO_MAGICLINKS
@@ -264,7 +263,10 @@ fn open_beneath(
             "Media path escapes the selected storage pool",
         ));
     }
-    Ok(OpenOptions::new().read(true).open(resolved)?)
+    Ok(OpenOptions::new()
+        .read(true)
+        .custom_flags(nix::libc::O_NONBLOCK | nix::libc::O_CLOEXEC)
+        .open(resolved)?)
 }
 
 #[cfg(target_os = "linux")]
@@ -356,6 +358,34 @@ fn unescape_mount_field(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fifo_open_does_not_block_before_media_type_check() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("movie.mp4");
+        nix::unistd::mkfifo(
+            &path,
+            nix::sys::stat::Mode::S_IRUSR | nix::sys::stat::Mode::S_IWUSR,
+        )
+        .unwrap();
+        let root = directory.path().to_owned();
+        let (send, receive) = std::sync::mpsc::channel();
+        let worker = std::thread::spawn(move || {
+            let file = open_beneath(&root, Path::new("movie.mp4"), None).unwrap();
+            send.send(!file.metadata().unwrap().is_file()).unwrap();
+        });
+        let result = receive.recv_timeout(std::time::Duration::from_secs(1));
+        let writer = result.is_err().then(|| {
+            OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(&path)
+                .unwrap()
+        });
+        worker.join().unwrap();
+        drop(writer);
+        assert!(result.expect("special file blocked the player"));
+    }
 
     #[test]
     fn validates_media_paths_and_extensions() {

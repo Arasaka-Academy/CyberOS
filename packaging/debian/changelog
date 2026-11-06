@@ -1,3 +1,9 @@
+cyberos (2.3.31) unstable; urgency=medium
+
+  * Reject special media files without blocking the playback controller.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:56:14 +0000
+
 cyberos (2.3.30) unstable; urgency=medium
 
   * Keep media scan leases alive and reject expired catalog publication.
