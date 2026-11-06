@@ -1,3 +1,9 @@
+cyberos (2.3.22) unstable; urgency=medium
+
+  * Avoid counting Linux guest CPU time twice in host utilization.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:28:55 +0000
+
 cyberos (2.3.21) unstable; urgency=medium
 
   * Allow the storage pool root as a Bluetooth transfer inbox.
