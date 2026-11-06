@@ -1,3 +1,9 @@
+cyberos (2.3.38) unstable; urgency=medium
+
+  * Bound HTTP tracker response bodies before parsing.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 17:22:30 +0000
+
 cyberos (2.3.37) unstable; urgency=medium
 
   * Enforce public network restrictions in tracker DNS and HTTP connections.

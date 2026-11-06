@@ -11,6 +11,9 @@ targets, disable environment proxies and HTTPS downgrades, and enforce connectio
 and request timeouts. UDP announcements validate the actual resolved addresses
 on every lookup. Upstream defaults remain available without this feature.
 
+HTTP tracker responses have a 2 MiB limit, enforced while streaming even if the
+server omits Content-Length. This bounds memory before parsing tracker data.
+
 Local regression tests use real TCP listeners for unsafe and valid redirects,
 HTTP resolver checks, and UDP resolver checks. The default ignored upstream UDP
 test requires an external tracker and remains ignored.

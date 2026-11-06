@@ -312,11 +312,24 @@ impl TrackerComms {
         }
         url.set_query(Some(&queries));
 
-        let response: reqwest::Response = self.reqwest_client.get(url).send().await?;
+        let mut response: reqwest::Response = self.reqwest_client.get(url).send().await?;
         if !response.status().is_success() {
             anyhow::bail!("tracker responded with {:?}", response.status());
         }
-        let bytes = response.bytes().await?;
+        const MAX_TRACKER_RESPONSE_BYTES: usize = 2 * 1024 * 1024;
+        if response
+            .content_length()
+            .is_some_and(|length| length > MAX_TRACKER_RESPONSE_BYTES as u64)
+        {
+            bail!("tracker response exceeds the size limit");
+        }
+        let mut bytes = Vec::new();
+        while let Some(chunk) = response.chunk().await? {
+            if chunk.len() > MAX_TRACKER_RESPONSE_BYTES - bytes.len() {
+                bail!("tracker response exceeds the size limit");
+            }
+            bytes.extend_from_slice(&chunk);
+        }
         if let Ok((error, _)) =
             bencode::from_bytes_with_rest::<tracker_comms_http::TrackerError>(&bytes)
         {
@@ -557,6 +570,48 @@ mod public_network_tests {
             .await
             .unwrap();
         assert_eq!(response.text().await.unwrap(), "ok");
+        server.await.unwrap();
+    }
+    #[tokio::test]
+    async fn rejects_an_oversized_tracker_body_without_a_content_length() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut request = [0; 4096];
+            assert!(socket.read(&mut request).await.unwrap() > 0);
+            // A valid compact tracker response with a large unknown string.
+            let padding = 2 * 1024 * 1024;
+            let mut response = format!(
+                "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\nd8:intervali60e7:padding{padding}:"
+            )
+            .into_bytes();
+            response.resize(response.len() + padding, b'x');
+            response.extend_from_slice(b"5:peers0:e");
+            let _ = socket.write_all(&response).await;
+        });
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
+        let comms = TrackerComms {
+            info_hash: Id20::default(),
+            peer_id: Id20::default(),
+            stats: Box::new(()),
+            force_tracker_interval: None,
+            tx,
+            announce_port: 6881,
+            reqwest_client: public_http_client(
+                reqwest::Client::builder().resolve("public.test", address),
+            )
+            .build()
+            .unwrap(),
+            key: 0,
+        };
+        let url = Url::parse(&format!("http://public.test:{}/announce", address.port())).unwrap();
+        let result = comms.tracker_one_request_http(&url, None).await;
+        assert!(
+            result.is_err(),
+            "oversized tracker response was accepted: {result:?}"
+        );
+        assert!(result.unwrap_err().to_string().contains("size limit"));
         server.await.unwrap();
     }
 }
