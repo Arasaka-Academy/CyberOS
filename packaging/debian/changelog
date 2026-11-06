@@ -1,3 +1,9 @@
+cyberos (2.3.34) unstable; urgency=medium
+
+  * Map read-only NFS clients to the identity granted share access.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 17:02:04 +0000
+
 cyberos (2.3.33) unstable; urgency=medium
 
   * Reject symlinked storage pool mountpoints before root mount operations.

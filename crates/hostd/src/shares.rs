@@ -75,7 +75,12 @@ async fn apply_with_options(
         ),
         (
             options.paths.nfs_exports.clone(),
-            render_nfs(&request.settings, &resolved)?,
+            match options.nfs_identity {
+                Some(identity) => {
+                    render::render_nfs_with_identity(&request.settings, &resolved, Some(identity))?
+                }
+                None => render_nfs(&request.settings, &resolved)?,
+            },
         ),
         (
             options.paths.dlna_config.clone(),
@@ -320,6 +325,10 @@ mod tests {
             managed_roots: vec![etc],
             acl_script: temp.path().join("share-acl.mjs"),
             acl_state: temp.path().join("share-acl.json"),
+            nfs_identity: Some((
+                nix::unistd::Uid::current().as_raw(),
+                nix::unistd::Gid::current().as_raw(),
+            )),
         }
     }
 
@@ -415,7 +424,9 @@ mod tests {
         let nfs = fs::read_to_string(&options.paths.nfs_exports)
             .await
             .unwrap();
-        assert!(nfs.contains("192.168.1.0/24(ro,sync,subtree_check,root_squash)"));
+        assert!(
+            nfs.contains("192.168.1.0/24(ro,sync,subtree_check,root_squash,all_squash,anonuid=")
+        );
         let dlna = fs::read_to_string(&options.paths.dlna_config)
             .await
             .unwrap();
@@ -842,6 +853,31 @@ mod tests {
         assert!(
             exports
                 .contains("rw,sync,subtree_check,root_squash,all_squash,anonuid=801,anongid=802")
+        );
+    }
+
+    #[tokio::test]
+    async fn maps_read_only_nfs_clients_to_the_identity_granted_read_access() {
+        let temp = TempDir::new().unwrap();
+        fs::create_dir_all(temp.path().join("data/pool-1/media"))
+            .await
+            .unwrap();
+        let request = fixture(&temp.path().join("data"));
+        let resolved = resolve_shares(&request.settings, &request.data_root)
+            .await
+            .unwrap();
+        let grants = acl::grants_for(&request.settings, &resolved).unwrap();
+        assert!(
+            grants
+                .iter()
+                .any(|grant| grant.principal == "cyberos-nfs" && grant.access == "read")
+        );
+        let exports =
+            render::render_nfs_with_identity(&request.settings, &resolved, Some((801, 802)))
+                .unwrap();
+        assert!(
+            exports
+                .contains("ro,sync,subtree_check,root_squash,all_squash,anonuid=801,anongid=802")
         );
     }
 
