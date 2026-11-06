@@ -1,15 +1,15 @@
 {
   "name": "@cyberos/system-health",
-  "version": "2.3.36",
+  "version": "2.3.37",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "types": "./src/index.ts",
   "dependencies": {
-    "@cyberos/db": "2.3.36",
-    "@cyberos/monitoring": "2.3.36",
-    "@cyberos/storage-tools": "2.3.36",
-    "@cyberos/shared": "2.3.36"
+    "@cyberos/db": "2.3.37",
+    "@cyberos/monitoring": "2.3.37",
+    "@cyberos/storage-tools": "2.3.37",
+    "@cyberos/shared": "2.3.37"
   }
 }

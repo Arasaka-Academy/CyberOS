@@ -44,3 +44,6 @@ url = "2.5.7"
 [profile.release]
 lto = "thin"
 strip = true
+
+[patch.crates-io]
+librqbit-tracker-comms = { path = "crates/rqbit-tracker-comms" }

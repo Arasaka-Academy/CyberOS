@@ -1,3 +1,9 @@
+cyberos (2.3.37) unstable; urgency=medium
+
+  * Enforce public network restrictions in tracker DNS and HTTP connections.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 17:19:38 +0000
+
 cyberos (2.3.36) unstable; urgency=medium
 
   * Stream checksum validation for large file write targets.
