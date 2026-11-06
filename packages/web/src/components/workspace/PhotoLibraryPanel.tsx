@@ -1222,17 +1222,19 @@ export function groupPhotosByDate<T extends PhotoAsset & {
   metadata?: { capturedAtLocal?: string | null } | null;
 }>(assets: T[], locale: SupportedLocale) {
   const formatter = new Intl.DateTimeFormat(locale, { dateStyle: "full" });
-  const groups: Array<{ key: string; label: string; photos: T[] }> = [];
+  const groups: Array<{ key: string; dateKey: string; label: string; photos: T[] }> = [];
   for (const asset of assets) {
     const localCaptureDate = localCalendarDate(asset.metadata?.capturedAtLocal);
     const takenAt = new Date(asset.takenAt);
     const validDate = localCaptureDate ?? (Number.isFinite(takenAt.getTime()) ? takenAt : new Date(asset.mtimeMs));
-    const key = localCaptureDate
+    const dateKey = localCaptureDate
       ? asset.metadata!.capturedAtLocal!.slice(0, 10)
       : [validDate.getFullYear(), String(validDate.getMonth() + 1).padStart(2, "0"), String(validDate.getDate()).padStart(2, "0")].join("-");
     const previous = groups.at(-1);
-    if (previous?.key === key) previous.photos.push(asset);
-    else groups.push({ key, label: formatter.format(validDate), photos: [asset] });
+    if (previous?.dateKey === dateKey) previous.photos.push(asset);
+    // Relevance order can revisit a date; the first photo keeps each group unique
+    // and its identity stable when another page extends the group.
+    else groups.push({ key: `${dateKey}-${asset.id}`, dateKey, label: formatter.format(validDate), photos: [asset] });
   }
   return groups;
 }

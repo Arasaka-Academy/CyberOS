@@ -267,7 +267,7 @@ describe("photo timeline grouping", () => {
     const asset = photo("fallback", "invalid");
     asset.mtimeMs = Date.parse("2026-06-15T12:00:00.000Z");
 
-    expect(groupPhotosByDate([asset], "en")[0]?.key).toMatch(/^2026-06-1[45]$/u);
+    expect(groupPhotosByDate([asset], "en")[0]?.dateKey).toMatch(/^2026-06-1[45]$/u);
   });
 
   it("groups indexed photos by their original wall-clock date", () => {
@@ -276,7 +276,20 @@ describe("photo timeline grouping", () => {
       metadata: { capturedAtLocal: "2026-06-16T07:00:00" }
     };
 
-    expect(groupPhotosByDate([asset], "en")[0]?.key).toBe("2026-06-16");
+    expect(groupPhotosByDate([asset], "en")[0]?.dateKey).toBe("2026-06-16");
+  });
+
+  it("uses distinct stable groups for repeated dates in relevance order", () => {
+    const assets = [
+      photo("first", "2026-09-22T12:00:00.000Z"),
+      photo("second", "2026-09-20T12:00:00.000Z"),
+      photo("third", "2026-09-22T08:00:00.000Z")
+    ];
+    const groups = groupPhotosByDate(assets, "en");
+    expect(new Set(groups.map((group) => group.key)).size).toBe(3);
+    expect(groups.flatMap((group) => group.photos.map((asset) => asset.id))).toEqual(["first", "second", "third"]);
+    expect(groupPhotosByDate([...assets, photo("more", "2026-09-22T07:00:00.000Z")], "en").map((group) => group.key))
+      .toEqual(groups.map((group) => group.key));
   });
 
   it("keeps incomplete advanced conditions editable without sending invalid queries", () => {

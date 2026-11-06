@@ -74,10 +74,11 @@ async function open(t, { width = 1440, zh = false, failInitial = false, library 
       const query = request.postDataJSON(); queries.push(query);
       const text = query.filters?.text ?? "browse";
       if (text === "slow") await slow.promise;
-      const count = text === "none" ? 0 : text === "pages" ? 60 : 2;
+      const count = text === "none" ? 0 : text === "pages" ? 60 : text === "repeated-dates" ? 3 : 2;
       const photos = Array.from({ length: count }, (_, index) => ({
         id: `${text}-${query.cursor ? 60 + index : index}`, name: `${text}-${query.cursor ? 60 + index : index}.jpg`,
-        storagePoolId: "pool", path: "Photos/test.jpg", mimeType: "image/jpeg", sizeBytes: 100, takenAt: "2026-01-01",
+        storagePoolId: "pool", path: "Photos/test.jpg", mimeType: "image/jpeg", sizeBytes: 100,
+        takenAt: text === "repeated-dates" && index === 1 ? "2025-12-01" : "2026-01-01",
         takenAtSource: "file_mtime", width: 100, height: 100, status: "ready", metadata: null, keywords: []
       }));
       return route.fulfill({ json: { photos, total: text === "pages" ? 120 : count,
@@ -148,6 +149,24 @@ test("a background index update preserves a paginated result and selection", asy
   assert.equal(queries.filter(query => query.filters?.text === "pages" && !query.cursor).length, count);
   await expect(page.locator(".photo-tile")).toHaveCount(120);
   await expect(page.locator(".photo-select").first()).toHaveAttribute("aria-pressed", "true");
+});
+
+test("relevance results with repeated dates leave no old tiles after changing keywords", async t => {
+  const { page } = await open(t, { library: true });
+  const input = page.locator('input[type="search"]');
+  await expect(page.locator(".photo-tile")).toHaveCount(2);
+  await input.fill("repeated-dates"); await input.press("Enter");
+  await expect(page.locator(".photo-name")).toHaveText([
+    "repeated-dates-0.jpg", "repeated-dates-1.jpg", "repeated-dates-2.jpg"
+  ]);
+  const headingIds = await page.locator(".photo-day h3").evaluateAll(headings => headings.map(heading => heading.id));
+  assert.equal(headingIds.length, 3);
+  assert.equal(new Set(headingIds).size, headingIds.length);
+  await input.fill("next"); await input.press("Enter");
+  await expect(page.locator(".photo-tile")).toHaveCount(2);
+  await expect(page.locator(".photo-name")).toHaveText(["next-0.jpg", "next-1.jpg"]);
+  await input.fill("none"); await input.press("Enter");
+  await expect(page.locator(".photo-tile")).toHaveCount(0);
 });
 
 test("recovers an initial failed load and preserves a draft through polling, testing and saving", async t => {

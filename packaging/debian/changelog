@@ -2,6 +2,7 @@ cyberos (2.3.4) unstable; urgency=medium
 
   * Keep photo browsing local when semantic search is enabled; verify indexing fault recovery and document the 2B production rollout.
   * Normalize ExifTool XMP namespace groups and refresh searchable metadata while reusing image vectors.
+  * Keep relevance-ordered photo groups distinct when dates repeat, preventing stale tiles after keyword changes.
 
  -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 06:07:07 +0000
 
