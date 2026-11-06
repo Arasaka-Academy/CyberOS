@@ -38,7 +38,7 @@
 .transcript-skeleton-line::after {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 7%), transparent);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--cyberos-color-text) 7%, transparent), transparent);
   content: "";
   transform: translateX(-100%);
   animation: transcript-skeleton-shimmer 1.4s ease-in-out infinite;

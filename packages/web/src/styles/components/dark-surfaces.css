@@ -11,7 +11,7 @@
   border-color: var(--cyberos-hud-line);
   color: var(--text);
   background: var(--dialog-bg);
-  box-shadow: 8px 8px 0 rgb(255 0 60 / 28%);
+  box-shadow: 8px 8px 0 color-mix(in srgb, var(--cyberos-color-danger) 28%, transparent);
 }
 
 .settings-nav button {
@@ -19,14 +19,14 @@
 }
 
 .settings-nav button:hover {
-  color: var(--cyber-cyan);
+  color: var(--hud-cyan);
   background: var(--cyberos-hud-cyan-wash);
 }
 
 .settings-nav button.is-active {
-  color: var(--cyber-ink);
-  background: var(--cyber-yellow);
-  box-shadow: inset 5px 0 0 var(--cyber-red);
+  color: var(--hud-ink);
+  background: var(--hud-yellow);
+  box-shadow: inset 5px 0 0 var(--hud-red);
 }
 
 .settings-search input,
@@ -56,14 +56,14 @@
   border-color: var(--line);
   color: var(--text);
   background: var(--surface);
-  box-shadow: inset 3px 0 0 rgb(255 0 60 / 22%);
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--cyberos-color-danger) 22%, transparent);
 }
 
 .management-dashboard-widget:hover,
 .download-task:hover,
 .monitoring-incident-list article:hover,
 .notification-item:hover {
-  border-color: var(--cyber-cyan);
+  border-color: var(--hud-cyan);
   background: var(--surface-hover);
 }
 
@@ -86,10 +86,10 @@
 
 .management-emblem {
   border-radius: 0;
-  border-color: var(--cyber-red);
-  color: var(--cyber-yellow);
-  background: var(--cyber-ink);
-  box-shadow: 3px 3px 0 var(--cyber-red);
+  border-color: var(--hud-red);
+  color: var(--hud-yellow);
+  background: var(--hud-ink);
+  box-shadow: 3px 3px 0 var(--hud-red);
 }
 
 .management-fact-list div {

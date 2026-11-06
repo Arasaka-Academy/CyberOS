@@ -1,3 +1,4 @@
+import { Button as UiButton, DialogActions, DialogHeader } from "@cyberos/ui";
 import { ModalPortal } from "../common/ModalPortal.js";
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactElement } from "react";
 import { AlertTriangle, CheckCircle2, FilePenLine, LoaderCircle, RotateCcw, X } from "lucide-react";
@@ -171,17 +172,10 @@ export function FileEditorModal({
   return (
     <ModalPortal className="editor-backdrop" onRequestClose={() => void closeEditor()} closeDisabled={saveStatus === "saving"}>
       <section className="editor-modal" role="dialog" aria-modal="true" aria-labelledby="file-editor-title">
-        <header className="editor-header">
-          <div>
-            <span className="eyebrow">{t("editor.eyebrow")}</span>
-            <h2 id="file-editor-title">{meta.name}</h2>
-            <small>{meta.path}</small>
-          </div>
-          <span className="editor-status" data-state={status.state}>
+        <DialogHeader className="editor-header" title={meta.name} eyebrow={<>{t("editor.eyebrow")}</>} headingId="file-editor-title" actions={<><small>{meta.path}</small><span className="editor-status" data-state={status.state}>
             {status.icon}
             {status.label}
-          </span>
-          <button
+          </span><UiButton variant="ghost" iconOnly
             type="button"
             className="icon-button"
             onClick={() => void closeEditor()}
@@ -190,8 +184,7 @@ export function FileEditorModal({
             data-tooltip={t("editor.close")}
           >
             <X aria-hidden="true" size={18} />
-          </button>
-        </header>
+          </UiButton></>} />
 
         <div className={`editor-code-surface${loading ? " is-loading" : ""}`}>
           <pre ref={highlightRef} className={`editor-highlight language-${highlighted.language}`} aria-hidden="true">
@@ -210,17 +203,17 @@ export function FileEditorModal({
           />
         </div>
 
-        <footer className="editor-footer">
+        <DialogActions className="editor-footer">
           <span>{descriptor.languageLabel}</span>
           <span>{formatBytes(contentBytes, locale)}</span>
           <span>{lastSavedAt ? t("editor.savedAt", { time: formatTime(lastSavedAt, locale) }) : t("editor.notSaved")}</span>
           {blocked ? (
-            <button type="button" className="editor-footer-action" onClick={() => void loadEditor()}>
+            <UiButton variant="ghost" type="button" className="editor-footer-action" onClick={() => void loadEditor()}>
               <RotateCcw aria-hidden="true" size={14} />
               {t("editor.reload")}
-            </button>
+            </UiButton>
           ) : null}
-        </footer>
+        </DialogActions>
       </section>
     </ModalPortal>
   );

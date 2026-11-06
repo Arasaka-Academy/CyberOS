@@ -211,7 +211,7 @@ function renderDownloadButton({
   pools: HttpDownloaderPool[];
 }): string {
   const html = renderDownloader({ storagePoolsLoading, pools });
-  const button = html.match(/<button[^>]*class="panel-header-action download-create-button"[^>]*>[\s\S]*?<\/button>/)?.[0];
+  const button = html.match(/<button[^>]*class="[^"]*\bpanel-header-action download-create-button\b[^"]*"[^>]*>[\s\S]*?<\/button>/u)?.[0];
   expect(button).toBeDefined();
   return button ?? "";
 }

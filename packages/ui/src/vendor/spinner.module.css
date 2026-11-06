@@ -1,0 +1,7 @@
+/* Generated from packages/react/src/spinner.module.css. Regenerate in CyberUI with pnpm registry:build; after installation, edit this file freely. */
+@layer theme, base, components, utilities;
+@reference './tailwind-theme.css';
+
+@layer components {
+.spinner { @apply tw:inline-block tw:w-[20px] tw:h-[20px]; border: 2px solid var(--cyber-line); @apply tw:border-t-cyber-ink tw:animate-cyber-spin; }
+}

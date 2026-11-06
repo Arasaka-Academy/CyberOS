@@ -1,0 +1,7 @@
+/* Generated from packages/react/src/toolbar.module.css. Regenerate in CyberUI with pnpm registry:build; after installation, edit this file freely. */
+@layer theme, base, components, utilities;
+@reference './tailwind-theme.css';
+
+@layer components {
+.toolbar { @apply tw:flex tw:flex-wrap tw:items-center tw:gap-[8px]; }
+}

@@ -20,7 +20,7 @@ beforeAll(async () => {
 describe("SettingsModal", () => {
   it("renders a title-only navigation and a header without persistent status labels", () => {
     const html = renderSettings();
-    const header = html.match(/<header class="settings-content-header">[\s\S]*?<\/header>/u)?.[0] ?? "";
+    const header = html.match(/<header\b[^>]*class="[^"]*\bsettings-content-header\b[^"]*"[^>]*>[\s\S]*?<\/header>/u)?.[0] ?? "";
     const navigation = html.match(/<nav class="settings-nav">[\s\S]*?<\/nav>/u)?.[0] ?? "";
 
     expect(header).toContain("Overview");

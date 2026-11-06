@@ -11,12 +11,12 @@
   bottom: 4px;
   width: 5px;
   height: 2px;
-  background: rgb(252 238 10 / 30%);
+  background: color-mix(in srgb, var(--cyberos-color-command) 30%, transparent);
   content: "";
 }
 
 .workspace-panel-tab.is-active::after {
-  background: var(--cyber-red);
+  background: var(--hud-red);
 }
 
 .file-browser,
@@ -27,31 +27,31 @@
 .approval-card,
 .settings-section-card,
 .settings-policy-row {
-  border: 1px solid var(--cyber-ink);
+  border: 1px solid var(--hud-ink);
   border-radius: 0;
-  background: rgb(252 238 10 / 86%);
-  box-shadow: 4px 4px 0 rgb(5 10 14 / 88%);
+  background: color-mix(in srgb, var(--cyberos-color-command) 86%, transparent);
+  box-shadow: 4px 4px 0 color-mix(in srgb, var(--cyberos-color-surface-raised) 88%, transparent);
 }
 
 .file-browser {
   border-width: 2px;
-  box-shadow: 5px 5px 0 var(--cyber-ink);
+  box-shadow: 5px 5px 0 var(--hud-ink);
 }
 
 .file-row {
   position: relative;
-  border-bottom: 1px solid rgb(5 10 14 / 38%);
+  border-bottom: 1px solid color-mix(in srgb, var(--cyberos-color-surface-raised) 38%, transparent);
   background: transparent;
 }
 
 .file-row-head {
-  border-bottom: 2px solid var(--cyber-ink);
+  border-bottom: 2px solid var(--hud-ink);
   font-size: 9px;
 }
 
 .file-row:not(.file-row-head):hover {
-  color: var(--cyber-yellow);
-  background: var(--cyber-ink);
+  color: var(--hud-yellow);
+  background: var(--hud-ink);
 }
 
 .file-row:not(.file-row-head):hover :where(button, span, time, code) {
@@ -60,7 +60,7 @@
 
 .file-row.is-selected,
 .file-row[aria-selected="true"] {
-  box-shadow: inset 5px 0 0 var(--cyber-red);
+  box-shadow: inset 5px 0 0 var(--hud-red);
 }
 
 .file-row.is-selected::before,
@@ -70,7 +70,7 @@
   bottom: 0;
   left: 0;
   width: 5px;
-  background: var(--cyber-red);
+  background: var(--hud-red);
   content: "";
 }
 
@@ -78,25 +78,25 @@
 .preview-tool-button,
 .management-row-action {
   border-color: currentColor;
-  color: var(--cyber-ink);
+  color: var(--hud-ink);
   background: transparent;
 }
 
 .file-action-button:hover:not(:disabled),
 .preview-tool-button:hover:not(:disabled),
 .management-row-action:hover:not(:disabled) {
-  border-color: var(--cyber-cyan);
-  color: var(--cyber-ink);
-  background: var(--cyber-cyan);
+  border-color: var(--hud-cyan);
+  color: var(--hud-ink);
+  background: var(--hud-cyan);
 }
 
 .file-action-button-send {
-  border-color: var(--cyber-red);
-  color: var(--cyber-red);
+  border-color: var(--hud-red);
+  color: var(--hud-red);
   background: transparent;
 }
 
 .file-action-button-send:hover:not(:disabled) {
-  color: #fff;
-  background: var(--cyber-red);
+  color: var(--cyberos-color-text);
+  background: var(--hud-red);
 }

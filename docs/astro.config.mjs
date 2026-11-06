@@ -16,8 +16,8 @@ export default defineConfig({
       components: {
         Head: "./src/components/Head.astro",
         PageTitle: "./src/components/PageTitle.astro",
-        ThemeProvider: "./src/components/FixedThemeProvider.astro",
-        ThemeSelect: "./src/components/NoThemeSelect.astro"
+        ThemeProvider: "./src/components/AppearanceThemeProvider.astro",
+        ThemeSelect: "./src/components/AppearanceSelect.astro"
       },
       logo: {
         src: "./src/assets/cyberos-icon.svg",

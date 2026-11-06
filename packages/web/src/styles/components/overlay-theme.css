@@ -1,63 +1,63 @@
 /* Dialogs, menus, and notifications */
 
 .activity-popover {
-  border: 2px solid var(--cyber-ink);
+  border: 2px solid var(--hud-ink);
 }
 
 .activity-popover li,
 .file-row-action-menu button {
-  border-bottom: 1px solid rgb(5 10 14 / 24%);
-  color: var(--cyber-ink);
+  border-bottom: 1px solid color-mix(in srgb, var(--cyberos-color-surface-raised) 24%, transparent);
+  color: var(--hud-ink);
   background: transparent;
 }
 
 .activity-popover li:hover,
 .file-row-action-menu button:hover {
-  color: var(--cyber-yellow);
-  background: var(--cyber-ink);
+  color: var(--hud-yellow);
+  background: var(--hud-ink);
 }
 
 .notification-drawer {
-  border-left: 2px solid var(--cyber-red);
+  border-left: 2px solid var(--hud-red);
 }
 
 .notification-drawer-header,
 .notification-tabs,
 .notification-drawer-summary {
-  border-bottom-color: rgb(252 238 10 / 34%);
-  color: var(--cyber-yellow);
-  background: var(--cyber-ink);
+  border-bottom-color: color-mix(in srgb, var(--cyberos-color-command) 34%, transparent);
+  color: var(--hud-yellow);
+  background: var(--hud-ink);
 }
 
 .notification-drawer-header h2::before {
-  color: var(--cyber-cyan);
+  color: var(--hud-cyan);
 }
 
 .notification-drawer-actions button {
-  border: 1px solid rgb(252 238 10 / 45%);
+  border: 1px solid color-mix(in srgb, var(--cyberos-color-command) 45%, transparent);
 }
 
 .notification-item {
-  border-bottom-color: rgb(252 238 10 / 24%);
+  border-bottom-color: color-mix(in srgb, var(--cyberos-color-command) 24%, transparent);
 }
 
 .notification-item:hover {
-  color: var(--cyber-ink);
+  color: var(--hud-ink);
 }
 
 .notification-item[data-unread="true"] {
-  color: var(--cyber-yellow);
+  color: var(--hud-yellow);
 }
 
 .notification-item[data-unread="true"]:hover {
-  color: var(--cyber-ink);
-  background: var(--cyber-yellow);
+  color: var(--hud-ink);
+  background: var(--hud-yellow);
 }
 
 .notification-status-icon {
   border: 1px solid currentColor;
   border-radius: 0;
-  color: var(--cyber-cyan);
+  color: var(--hud-cyan);
   background: transparent;
 }
 
@@ -66,14 +66,14 @@
 }
 
 .app-notification {
-  border: 2px solid var(--cyber-ink);
-  border-left: 6px solid var(--cyber-red);
+  border: 2px solid var(--hud-ink);
+  border-left: 6px solid var(--hud-red);
 }
 
 .app-notification[data-tone="success"] {
-  border-left-color: #087f52;
+  border-left-color: var(--cyberos-color-success);
 }
 
 .app-notification[data-tone="warning"] {
-  border-left-color: #7a5100;
+  border-left-color: var(--cyberos-color-warning);
 }

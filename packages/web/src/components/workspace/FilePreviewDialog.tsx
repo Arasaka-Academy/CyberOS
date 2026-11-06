@@ -1,3 +1,4 @@
+import { Button as UiButton, DialogHeader } from "@cyberos/ui";
 import { ModalPortal } from "../common/ModalPortal.js";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
@@ -78,12 +79,7 @@ export function FilePreviewDialog({
         aria-busy={loading || undefined}
         tabIndex={-1}
       >
-        <header className="file-preview-header">
-          <div className="file-preview-title">
-            <span className="eyebrow">{t("workspace.preview")}</span>
-            <h2 id="file-preview-title" data-tooltip={title}>{title || t("workspace.selectFile")}</h2>
-          </div>
-          <div className="file-preview-actions">
+        <DialogHeader headingTooltip={title} className="file-preview-header" title={title || t("workspace.selectFile")} eyebrow={<>{t("workspace.preview")}</>} headingId="file-preview-title" actions={<><div className="file-preview-actions">
             {meta ? (
               <span className="preview-kind">
                 {previewIcon(meta.previewKind)}
@@ -91,7 +87,7 @@ export function FilePreviewDialog({
               </span>
             ) : null}
             {actions}
-            <button
+            <UiButton iconOnly variant="ghost"
               type="button"
               className="preview-tool-button"
               onClick={requestClose}
@@ -100,9 +96,8 @@ export function FilePreviewDialog({
               aria-label={t("common.actions.close")}
             >
               <X aria-hidden="true" size={15} />
-            </button>
-          </div>
-        </header>
+            </UiButton>
+          </div></>} />
         <div className="file-preview-content">
           <PreviewContent
             blobUrl={blobUrl}

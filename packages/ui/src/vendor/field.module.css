@@ -1,0 +1,13 @@
+/* Generated from packages/react/src/field.module.css. Regenerate in CyberUI with pnpm registry:build; after installation, edit this file freely. */
+@layer theme, base, components, utilities;
+@reference './tailwind-theme.css';
+
+@layer components {
+.field { @apply tw:flex tw:flex-col tw:gap-[8px] tw:min-w-[0]; }
+.label { @apply tw:block tw:text-cyber-ink; font: 500 13px/1.5 var(--cyber-font-display); @apply tw:tracking-[.06em] tw:uppercase; }
+.helper { @apply tw:text-cyber-muted tw:text-[length:12px]; }
+.error { @apply tw:text-cyber-danger tw:text-[length:13px]; }
+.inputRow { @apply tw:flex tw:items-stretch tw:gap-[8px] tw:min-w-[0]; }
+.inputRow > input:not([type='color']) { @apply tw:flex-[1] tw:w-[0]; }
+.inputRow > button { @apply tw:shrink-[0]; }
+}

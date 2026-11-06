@@ -1,0 +1,28 @@
+/* Generated from packages/react/src/panel.module.css. Regenerate in CyberUI with pnpm registry:build; after installation, edit this file freely. */
+@layer theme, base, components, utilities;
+@reference './tailwind-theme.css';
+
+@layer components {
+.shape { @apply tw:absolute tw:inset-[0] tw:z-[-1] tw:pointer-events-none; background: var(--edge); }
+.shape::after { content: ''; @apply tw:absolute tw:inset-[2px]; background: var(--face); }
+.shape, .shape::after {
+  clip-path: polygon(0 0,calc(100% - var(--cut)) 0,100% var(--cut),100% 100%,var(--cut) 100%,0 calc(100% - var(--cut)));
+}
+.shape::after { --cut: max(0px, calc(var(--cyber-cut) - 1.17px)); }
+.panel { @apply tw:relative tw:min-w-[0] tw:p-[22px]; border: 2px solid var(--cyber-ink); }
+.panel[data-shape='none'] { border: 0; }
+.panel[data-shape='rail'] { border: 0; border-left: 5px solid var(--cyber-accent); }
+.panel[data-shape='brackets'] { border: 0; background:
+ linear-gradient(var(--cyber-ink),var(--cyber-ink)) left top/16px 2px no-repeat,
+ linear-gradient(var(--cyber-ink),var(--cyber-ink)) left top/2px 16px no-repeat,
+ linear-gradient(var(--cyber-ink),var(--cyber-ink)) right top/16px 2px no-repeat,
+ linear-gradient(var(--cyber-ink),var(--cyber-ink)) right top/2px 16px no-repeat,
+ linear-gradient(var(--cyber-ink),var(--cyber-ink)) left bottom/16px 2px no-repeat,
+ linear-gradient(var(--cyber-ink),var(--cyber-ink)) left bottom/2px 16px no-repeat,
+ linear-gradient(var(--cyber-ink),var(--cyber-ink)) right bottom/16px 2px no-repeat,
+ linear-gradient(var(--cyber-ink),var(--cyber-ink)) right bottom/2px 16px no-repeat; }
+.panel[data-shape='chamfer'] { border: 0; @apply tw:isolate; --cut: 12px; --edge: var(--cyber-ink); --face: var(--cyber-bg); @apply tw:p-cyber-2xl; }
+.panelTitle { @apply tw:m-[-23px_-23px_var(--cyber-space-xl)] tw:p-[9px_16px] tw:text-cyber-on-ink; background: var(--cyber-ink); @apply tw:flex tw:items-center tw:justify-between tw:gap-[12px]; font: 600 14px/1.5 var(--cyber-font-display); @apply tw:uppercase tw:tracking-[.08em]; }
+.panelLabel { @apply tw:absolute tw:top-[-11px]; @apply tw:left-[16px] tw:p-[0_7px]; background: var(--cyber-bg); @apply tw:text-cyber-muted; font: 12px/20px var(--cyber-font-mono); @apply tw:uppercase tw:tracking-[.08em]; }
+@media(max-width:600px) { .panel { @apply tw:p-cyber-xl; } .panelTitle { @apply tw:m-[-19px_-19px_16px]; } }
+}

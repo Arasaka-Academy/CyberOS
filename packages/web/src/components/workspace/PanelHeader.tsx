@@ -1,3 +1,4 @@
+import { Button as UiButton } from "@cyberos/ui";
 import { Children, isValidElement, useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { Ellipsis } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -76,7 +77,7 @@ export function PanelHeaderActions({
   }, [open]);
   if (navigation?.compact) return <div ref={rootRef} className={["management-actions panel-header-actions mobile-header-actions", className].filter(Boolean).join(" ")} role="group" aria-label={label}>
     {primary}
-    {secondary.length ? <button ref={triggerRef} type="button" className="mobile-more-button" aria-label={t("mobile.more")} data-tooltip={t("mobile.more")} aria-expanded={open} aria-controls={id} onClick={() => setOpen((value) => !value)}><Ellipsis size={21} aria-hidden="true" /></button> : null}
+    {secondary.length ? <UiButton iconOnly variant="ghost" ref={triggerRef} type="button" className="mobile-more-button" aria-label={t("mobile.more")} data-tooltip={t("mobile.more")} aria-expanded={open} aria-controls={id} onClick={() => setOpen((value) => !value)}><Ellipsis size={21} aria-hidden="true" /></UiButton> : null}
     {open ? <div id={id} className="mobile-action-menu" data-focus-return={id} onClick={(event) => {
       const button = event.target instanceof Element ? event.target.closest("button") : null;
       if (button && button.getAttribute("aria-haspopup") !== "menu" && button.getAttribute("aria-haspopup") !== "dialog") setOpen(false);
@@ -107,7 +108,7 @@ export function PanelHeaderAction({
 }) {
   const compact = useMobileNavigation()?.compact ?? false;
   return (
-    <button
+    <UiButton variant="ghost"
       {...buttonProps}
       className={["panel-header-action", className].filter(Boolean).join(" ")}
       data-tooltip={tooltip}
@@ -115,6 +116,6 @@ export function PanelHeaderAction({
     >
       {children}
       {compact ? <span className="mobile-action-label">{label}</span> : null}
-    </button>
+    </UiButton>
   );
 }

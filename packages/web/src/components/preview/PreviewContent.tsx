@@ -1,3 +1,4 @@
+import { Button as UiButton, EmptyState } from "@cyberos/ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import {
@@ -62,36 +63,36 @@ export function PreviewContent({
   const { t } = useTranslation();
 
   if (loading) {
-    return <div className="preview-empty">{t("preview.loading")}</div>;
+    return <EmptyState className="preview-empty">{t("preview.loading")}</EmptyState>;
   }
   if (error) {
     return (
-      <div className="preview-empty preview-error">
-        <AlertTriangle aria-hidden="true" size={20} />
+      <EmptyState className="preview-empty preview-error" icon={<AlertTriangle aria-hidden="true" size={20} />}>
+
         <span>{error}</span>
-      </div>
+      </EmptyState>
     );
   }
   if (!meta) {
     return (
-      <div className="preview-empty">
-        <PanelRight aria-hidden="true" size={24} />
+      <EmptyState className="preview-empty" icon={<PanelRight aria-hidden="true" size={24} />}>
+
         <span>{t("preview.chooseFile")}</span>
-      </div>
+      </EmptyState>
     );
   }
   if (isPreviewOverFileSizeLimit(meta, previewFileSizeLimitBytes)) {
     return (
-      <div className="preview-empty">
-        <AlertTriangle aria-hidden="true" size={24} />
-        <strong>{meta.mimeType}</strong>
+      <EmptyState className="preview-empty" icon={<AlertTriangle aria-hidden="true" size={24} />} title={meta.mimeType}>
+
+
         <span>
           {t("preview.tooLarge", {
             size: formatBytes(meta.sizeBytes, locale),
             limit: formatBytes(previewFileSizeLimitBytes, locale)
           })}
         </span>
-      </div>
+      </EmptyState>
     );
   }
   if (meta.previewKind === "text") {
@@ -122,11 +123,11 @@ export function PreviewContent({
     return <OfficePreview blobUrl={blobUrl} meta={meta} />;
   }
   return (
-    <div className="preview-empty">
-      <File aria-hidden="true" size={24} />
-      <strong>{meta.mimeType}</strong>
+    <EmptyState className="preview-empty" icon={<File aria-hidden="true" size={24} />} title={meta.mimeType}>
+
+
       <span>{t("preview.cannotPreview", { size: formatBytes(meta.sizeBytes, locale) })}</span>
-    </div>
+    </EmptyState>
   );
 }
 
@@ -221,10 +222,7 @@ function VideoPreview({ src, identity }: { src: string; identity: VideoProgressI
 
   if (status === "error") {
     return (
-      <div className="preview-empty preview-error">
-        <AlertTriangle aria-hidden="true" size={20} />
-        <span>{t("preview.videoPlaybackError")}</span>
-        <button
+      <EmptyState className="preview-empty preview-error" icon={<AlertTriangle aria-hidden="true" size={20} />} actions={<><UiButton iconOnly variant="ghost"
           type="button"
           className="preview-tool-button"
           onClick={() => {
@@ -235,8 +233,11 @@ function VideoPreview({ src, identity }: { src: string; identity: VideoProgressI
           aria-label={t("preview.retry")}
         >
           <RefreshCw aria-hidden="true" size={14} />
-        </button>
-      </div>
+        </UiButton></>}>
+
+        <span>{t("preview.videoPlaybackError")}</span>
+
+      </EmptyState>
     );
   }
 
@@ -356,7 +357,7 @@ function TextPreviewPanel({
         {availableModes.length > 1 ? (
           <div className="preview-mode-switch" aria-label={t("preview.modeAria")}>
             {availableModes.map((nextMode) => (
-              <button
+              <UiButton variant="ghost"
                 key={nextMode}
                 type="button"
                 className={nextMode === activeMode ? "is-active" : ""}
@@ -364,7 +365,7 @@ function TextPreviewPanel({
                 onClick={() => setMode(nextMode)}
               >
                 {textPreviewModeLabel(nextMode, t)}
-              </button>
+              </UiButton>
             ))}
           </div>
         ) : null}

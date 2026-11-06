@@ -1,0 +1,7 @@
+/* Generated from packages/react/src/skeleton.module.css. Regenerate in CyberUI with pnpm registry:build; after installation, edit this file freely. */
+@layer theme, base, components, utilities;
+@reference './tailwind-theme.css';
+
+@layer components {
+.skeleton { @apply tw:h-[18px] tw:w-full; background: var(--cyber-soft); @apply tw:animate-cyber-pulse; }
+}

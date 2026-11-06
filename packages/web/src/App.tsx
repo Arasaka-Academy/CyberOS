@@ -1,3 +1,4 @@
+import { AppearanceProvider, Button as UiButton } from "@cyberos/ui";
 import { getMusicPlayer } from "./lib/music-api.js";
 import { MusicTakeoverDialog, MusicProvider } from "./components/music/MusicProvider.js";
 import { PlaybackBar } from "./components/playback/PlaybackBar.js";
@@ -216,7 +217,8 @@ function vodPlayerErrorCode(error: unknown): NonNullable<VodPlayerStatus["errorC
 }
 
 export function App() {
-  return <MobileNavigationProvider><PlaybackProvider><MusicProvider><AppContent /></MusicProvider></PlaybackProvider></MobileNavigationProvider>;
+  const { i18n: language } = useTranslation();
+  return <AppearanceProvider locale={language.resolvedLanguage === "en" ? "en" : "zh-CN"}><MobileNavigationProvider><PlaybackProvider><MusicProvider><AppContent /></MusicProvider></PlaybackProvider></MobileNavigationProvider></AppearanceProvider>;
 }
 
 function AppContent() {
@@ -2672,14 +2674,14 @@ function AppContent() {
                 <strong>{t("notifications.errorTitle")}</strong>
                 <span>{error}</span>
               </div>
-              <button
+              <UiButton iconOnly variant="ghost"
                 type="button"
                 onClick={() => setError(null)}
                 aria-label={t("common.actions.dismissNotification")}
                 data-tooltip={t("common.actions.dismissNotification")}
               >
                 <X aria-hidden="true" size={15} />
-              </button>
+              </UiButton>
             </section>
           ) : null}
           {successNotice ? (
@@ -2689,14 +2691,14 @@ function AppContent() {
                 <strong>{t("notifications.successTitle")}</strong>
                 <span>{successNotice}</span>
               </div>
-              <button
+              <UiButton iconOnly variant="ghost"
                 type="button"
                 onClick={() => setSuccessNotice(null)}
                 aria-label={t("common.actions.dismissNotification")}
                 data-tooltip={t("common.actions.dismissNotification")}
               >
                 <X aria-hidden="true" size={15} />
-              </button>
+              </UiButton>
             </section>
           ) : null}
           {warningNotice ? (
@@ -2706,20 +2708,20 @@ function AppContent() {
                 <strong>{t("notifications.warningTitle")}</strong>
                 <span>{warningNotice}</span>
               </div>
-              <button
+              <UiButton iconOnly variant="ghost"
                 type="button"
                 onClick={() => setWarningNotice(null)}
                 aria-label={t("common.actions.dismissNotification")}
                 data-tooltip={t("common.actions.dismissNotification")}
               >
                 <X aria-hidden="true" size={15} />
-              </button>
+              </UiButton>
             </section>
           ) : null}
         </div>
       ) : null}
 
-      <button
+      <UiButton variant="ghost"
         className="split-handle"
         type="button"
         role="separator"

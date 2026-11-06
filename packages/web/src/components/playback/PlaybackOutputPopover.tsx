@@ -1,3 +1,4 @@
+import { Button as UiButton } from "@cyberos/ui";
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Volume2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -66,7 +67,7 @@ export function PlaybackOutputPopover({ children, busy }: { children: ReactNode;
       }}
       onFocusCapture={(event) => { lastFocusedRef.current = event.target; }}
     >
-      <button
+      <UiButton iconOnly variant="plain"
         ref={triggerRef}
         type="button"
         className="plain-button"
@@ -79,7 +80,7 @@ export function PlaybackOutputPopover({ children, busy }: { children: ReactNode;
         onClick={() => setOpen((current) => !current)}
       >
         <Volume2 size={18} aria-hidden="true" />
-      </button>
+      </UiButton>
       {open ? (
         <div ref={menuRef} id={id} className="playback-output-menu" role="dialog" aria-label={t("music.output")} style={layout}>
           {children}

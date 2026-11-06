@@ -29,14 +29,14 @@
   display: block;
   width: 36px;
   height: 36px;
-  filter: drop-shadow(0 7px 14px rgb(88 101 242 / 18%));
+  filter: drop-shadow(0 7px 14px color-mix(in srgb, var(--cyberos-color-focus) 18%, transparent));
   transition:
     filter 140ms ease,
     transform 140ms ease;
 }
 
 .brand:hover .agent-brand-logo {
-  filter: drop-shadow(0 8px 16px rgb(33 214 194 / 22%));
+  filter: drop-shadow(0 8px 16px color-mix(in srgb, var(--cyberos-color-focus) 22%, transparent));
   transform: translateY(-1px);
 }
 
@@ -90,7 +90,7 @@
 }
 
 .session-item.is-active {
-  border-color: rgb(142 161 255 / 28%);
+  border-color: color-mix(in srgb, var(--cyberos-color-focus) 28%, transparent);
   color: var(--accent-soft-text);
   background: var(--accent-soft-bg);
   box-shadow: none;

@@ -17,7 +17,7 @@ textarea {
 }
 
 ::selection {
-  color: var(--cyber-ink);
+  color: var(--hud-ink);
   background: var(--selection-bg);
 }
 

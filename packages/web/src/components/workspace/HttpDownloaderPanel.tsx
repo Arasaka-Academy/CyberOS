@@ -1,3 +1,4 @@
+import { Button as UiButton, Checkbox, DialogActions, DialogHeader, Field, Input } from "@cyberos/ui";
 import { ModalPortal } from "../common/ModalPortal.js";
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import {
@@ -484,7 +485,7 @@ export function HttpDownloaderPanel({
           <div className="downloads-toolbar">
             <div className="downloads-filters" role="tablist" aria-label={t("workspace.downloads.filters")}>
               {(["all", "active", "completed", "failed"] as DownloadFilter[]).map((value) => (
-                <button
+                <UiButton variant="ghost"
                   key={value}
                   type="button"
                   role="tab"
@@ -493,7 +494,7 @@ export function HttpDownloaderPanel({
                   onClick={() => setFilter(value)}
                 >
                   {t(`workspace.downloads.filter.${value}`)}
-                </button>
+                </UiButton>
               ))}
             </div>
             <div className="downloads-toolbar-meta">
@@ -553,19 +554,9 @@ export function HttpDownloaderPanel({
             onKeyDown={handleCreateDialogKeyDown}
             onSubmit={(event) => void submitCreate(event)}
           >
-            <header className="download-create-dialog-header">
-              <div className="download-create-dialog-heading">
-                <span className="download-create-dialog-icon" aria-hidden="true"><Download size={19} /></span>
-                <div>
-                  <span className="eyebrow">{t("workspace.downloads.eyebrow")}</span>
-                  <h3 id="download-create-title">{t("workspace.downloads.newDownload")}</h3>
-                  <p>{t("workspace.downloads.createDescription")}</p>
-                </div>
-              </div>
-              <button type="button" className="management-icon-action" onClick={closeCreateDialog} disabled={submitting} aria-label={t("common.actions.close")} data-tooltip={t("common.actions.close")}>
+            <DialogHeader className="download-create-dialog-header" title={t("workspace.downloads.newDownload")} description={t("workspace.downloads.createDescription")} headingLevel={3} headingId="download-create-title" actions={<><span className="download-create-dialog-icon" aria-hidden="true"><Download size={19} /></span><span className="eyebrow">{t("workspace.downloads.eyebrow")}</span><UiButton variant="ghost" iconOnly type="button" className="management-icon-action" onClick={closeCreateDialog} disabled={submitting} aria-label={t("common.actions.close")} data-tooltip={t("common.actions.close")}>
                 <X aria-hidden="true" size={16} />
-              </button>
-            </header>
+              </UiButton></>} />
             <div className="download-create-form">
               <section className="download-form-section">
                 <div className="download-form-section-heading">
@@ -576,20 +567,20 @@ export function HttpDownloaderPanel({
                   </div>
                 </div>
                 <div className="download-source-modes" role="tablist" aria-label={t("workspace.downloads.sourceModeLabel")}>
-                  <button type="button" role="tab" aria-selected={sourceMode === "link"} className={sourceMode === "link" ? "is-active" : ""} onClick={() => selectSourceMode("link")}>
+                  <UiButton variant="ghost" type="button" role="tab" aria-selected={sourceMode === "link"} className={sourceMode === "link" ? "is-active" : ""} onClick={() => selectSourceMode("link")}>
                     <Link2 aria-hidden="true" size={14} />
                     <span>{t("workspace.downloads.sourceMode.link")}</span>
-                  </button>
-                  <button type="button" role="tab" aria-selected={sourceMode === "torrent-file"} className={sourceMode === "torrent-file" ? "is-active" : ""} onClick={() => selectSourceMode("torrent-file")}>
+                  </UiButton>
+                  <UiButton variant="ghost" type="button" role="tab" aria-selected={sourceMode === "torrent-file"} className={sourceMode === "torrent-file" ? "is-active" : ""} onClick={() => selectSourceMode("torrent-file")}>
                     <FileUp aria-hidden="true" size={14} />
                     <span>{t("workspace.downloads.sourceMode.torrentFile")}</span>
-                  </button>
+                  </UiButton>
                 </div>
                 {sourceMode === "link" ? (
                   <div className="download-source-input-row">
-                    <label className="download-form-field download-form-field-wide">
-                      <span>{t("workspace.downloads.link")}</span>
-                      <input
+                    <Field className="download-form-field download-form-field-wide" label={t("workspace.downloads.link")}>
+
+                      <Input
                         ref={createUrlInputRef}
                         type="text"
                         inputMode="url"
@@ -600,12 +591,12 @@ export function HttpDownloaderPanel({
                         autoCorrect="off"
                         spellCheck={false}
                       />
-                    </label>
+                    </Field>
                     {isMagnetLink(url) ? (
-                      <button type="button" className="secondary-button download-resolve-button" disabled={resolvingTorrent || torrentReady} aria-busy={resolvingTorrent || undefined} onClick={resolveMagnet}>
+                      <UiButton variant="secondary" type="button" className="secondary-button download-resolve-button" disabled={resolvingTorrent || torrentReady} aria-busy={resolvingTorrent || undefined} onClick={resolveMagnet}>
                         {resolvingTorrent ? <LoaderCircle className="is-spinning" aria-hidden="true" size={14} /> : <Magnet aria-hidden="true" size={14} />}
                         <span>{t(torrentReady ? "workspace.downloads.metadataReady" : "workspace.downloads.resolveMetadata")}</span>
-                      </button>
+                      </UiButton>
                     ) : null}
                   </div>
                 ) : (
@@ -620,10 +611,10 @@ export function HttpDownloaderPanel({
                         event.target.value = "";
                       }}
                     />
-                    <button type="button" className="download-torrent-pick" disabled={resolvingTorrent} aria-busy={resolvingTorrent || undefined} onClick={() => torrentFileInputRef.current?.click()}>
+                    <UiButton variant="ghost" type="button" className="download-torrent-pick" disabled={resolvingTorrent} aria-busy={resolvingTorrent || undefined} onClick={() => torrentFileInputRef.current?.click()}>
                       {resolvingTorrent ? <LoaderCircle className="is-spinning" aria-hidden="true" size={16} /> : <FileArchive aria-hidden="true" size={16} />}
                       <span>{torrentFileName || t("workspace.downloads.chooseTorrentFile")}</span>
-                    </button>
+                    </UiButton>
                     <small>{t("workspace.downloads.torrentFileHint")}</small>
                   </div>
                 )}
@@ -647,14 +638,14 @@ export function HttpDownloaderPanel({
                     onChange={setSelectedFileIndices}
                   />
                 ) : null}
-                <label className="download-form-field">
-                  <span>{t(torrentSource ? "workspace.downloads.outputFolderName" : "workspace.downloads.fileName")}</span>
-                  <input value={fileName} onChange={(event) => { setFileNameEdited(true); setFileName(event.target.value); }} />
-                  <small>{t(torrentSource ? "workspace.downloads.outputFolderHint" : "workspace.downloads.fileNameHint")}</small>
-                </label>
-                {!torrentSource ? <label className="download-form-field download-form-field-wide">
-                  <span>{t("workspace.downloads.sha256")}</span>
-                  <input
+                <Field className="download-form-field" label={t(torrentSource ? "workspace.downloads.outputFolderName" : "workspace.downloads.fileName")} hint={t(torrentSource ? "workspace.downloads.outputFolderHint" : "workspace.downloads.fileNameHint")}>
+
+                  <Input value={fileName} onChange={(event) => { setFileNameEdited(true); setFileName(event.target.value); }} />
+
+                </Field>
+                {!torrentSource ? <Field className="download-form-field download-form-field-wide" label={t("workspace.downloads.sha256")} hint={t("workspace.downloads.sha256Hint")}>
+
+                  <Input
                     value={sha256}
                     onChange={(event) => setSha256(event.target.value)}
                     placeholder={t("workspace.downloads.sha256Placeholder")}
@@ -662,8 +653,8 @@ export function HttpDownloaderPanel({
                     autoCorrect="off"
                     spellCheck={false}
                   />
-                  <small>{t("workspace.downloads.sha256Hint")}</small>
-                </label> : null}
+
+                </Field> : null}
                 {torrentReady ? <p className="download-seeding-policy">{t("workspace.downloads.seedingPolicy")}</p> : null}
               </section>
 
@@ -682,23 +673,23 @@ export function HttpDownloaderPanel({
                       <FolderOpen aria-hidden="true" size={15} />
                       <span>{targetLoading ? t("common.states.loading") : target?.path ?? t("workspace.downloads.chooseDirectory")}</span>
                     </div>
-                    <button ref={targetButtonRef} type="button" onClick={() => setPickerOpen(true)} disabled={!mountedPools.length}>
+                    <UiButton variant="ghost" ref={targetButtonRef} type="button" onClick={() => setPickerOpen(true)} disabled={!mountedPools.length}>
                       <FolderOpen aria-hidden="true" size={15} />
                       <span>{t("workspace.downloads.chooseDirectory")}</span>
-                    </button>
+                    </UiButton>
                   </div>
                   <small>{selectedPool?.name ?? t("workspace.downloads.noStoragePool")}</small>
                   {targetError ? <p role="alert">{targetError}</p> : null}
                 </div>
               </section>
             </div>
-            <footer className="download-create-dialog-footer">
-              <button type="button" className="secondary-button" onClick={closeCreateDialog} disabled={submitting}>{t("common.actions.cancel")}</button>
-              <button type="submit" className="primary-button" disabled={submitting || targetLoading || !target || !sourceReady || !fileName.trim()} aria-busy={submitting || undefined}>
+            <DialogActions className="download-create-dialog-footer">
+              <UiButton variant="secondary" type="button" className="secondary-button" onClick={closeCreateDialog} disabled={submitting}>{t("common.actions.cancel")}</UiButton>
+              <UiButton variant="primary" type="submit" className="primary-button" disabled={submitting || targetLoading || !target || !sourceReady || !fileName.trim()} aria-busy={submitting || undefined}>
                 {submitting ? <LoaderCircle className="is-spinning" aria-hidden="true" size={15} /> : <Download aria-hidden="true" size={15} />}
                 <span>{t("workspace.downloads.startDownload")}</span>
-              </button>
-            </footer>
+              </UiButton>
+            </DialogActions>
           </form>
         </ModalPortal>
       ) : null}
@@ -802,8 +793,8 @@ export function TorrentFileSelector({
     <div className="torrent-file-selector" aria-label={t("workspace.downloads.torrentFiles")}>
       <div className="torrent-file-selector-toolbar">
         <label>
-          <input
-            type="checkbox"
+          <Checkbox
+
             checked={allSelected}
             disabled={disabled || files.length === 0}
             onChange={(event) => onChange(event.target.checked ? files.map((file) => file.fileIndex) : [])}
@@ -819,8 +810,8 @@ export function TorrentFileSelector({
       <div className="torrent-file-list">
         {files.map((file) => (
           <label key={file.fileIndex} data-tooltip={file.path}>
-            <input
-              type="checkbox"
+            <Checkbox
+
               checked={selected.has(file.fileIndex)}
               disabled={disabled}
               onChange={(event) => {
@@ -965,9 +956,9 @@ export function DownloadTaskRow({
 
 function IconAction({ icon, label, disabled, busy, onClick }: { icon: ReactNode; label: string; disabled?: boolean; busy?: boolean; onClick: () => void }) {
   return (
-    <button type="button" className="download-task-action" data-tooltip={label} aria-label={label} aria-busy={busy || undefined} disabled={disabled} onClick={onClick}>
+    <UiButton variant="ghost" type="button" className="download-task-action" data-tooltip={label} aria-label={label} aria-busy={busy || undefined} disabled={disabled} onClick={onClick}>
       {icon}
-    </button>
+    </UiButton>
   );
 }
 

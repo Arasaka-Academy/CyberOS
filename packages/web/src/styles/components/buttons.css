@@ -50,7 +50,7 @@
   border-color: var(--accent);
   color: var(--accent-contrast);
   background: var(--accent);
-  box-shadow: 3px 3px 0 rgb(255 0 60 / 55%);
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--cyberos-color-danger) 55%, transparent);
 }
 
 .primary-button::after {

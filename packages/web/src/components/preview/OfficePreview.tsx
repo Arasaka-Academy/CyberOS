@@ -1,3 +1,4 @@
+import { Button as UiButton, EmptyState } from "@cyberos/ui";
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -85,10 +86,7 @@ export function OfficePreview({ blobUrl, meta }: { blobUrl: string; meta: FileMe
     <div className={`office-preview office-${meta.previewKind}-preview`} aria-busy={status === "loading"}>
       {status === "loading" ? <div className="office-preview-status">{t("preview.officeLoading")}</div> : null}
       {status === "error" ? (
-        <div className="preview-empty preview-error">
-          <AlertTriangle aria-hidden="true" size={20} />
-          <span>{t("preview.officeRenderError")}</span>
-          <button
+        <EmptyState className="preview-empty preview-error" icon={<AlertTriangle aria-hidden="true" size={20} />} actions={<><UiButton iconOnly variant="ghost"
             type="button"
             className="preview-tool-button"
             onClick={() => setRevision((current) => current + 1)}
@@ -96,8 +94,11 @@ export function OfficePreview({ blobUrl, meta }: { blobUrl: string; meta: FileMe
             aria-label={t("preview.retry")}
           >
             <RefreshCw aria-hidden="true" size={14} />
-          </button>
-        </div>
+          </UiButton></>}>
+
+          <span>{t("preview.officeRenderError")}</span>
+
+        </EmptyState>
       ) : null}
       <div ref={hostRef} className="office-preview-host" hidden={status === "error"} />
     </div>

@@ -12,7 +12,10 @@
     "./docker-resources": "./src/docker-resources.ts",
     "./photos-config": "./src/photos-config.ts",
     "./mcp-network": "./src/mcp-network.ts",
-    "./hud-tokens.css": "./src/hud-tokens.css"
+    "./hud-tokens.css": "./src/hud-tokens.css",
+    "./appearance": "./src/appearance.ts",
+    "./cyberui-tokens": "./src/cyberui-tokens.ts",
+    "./appearance.css": "./src/appearance.css"
   },
   "types": "./src/index.ts",
   "dependencies": {

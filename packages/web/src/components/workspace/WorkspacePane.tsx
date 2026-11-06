@@ -1,3 +1,4 @@
+import { Button as UiButton, Checkbox, DialogActions, DialogHeader, EmptyState, Field, Input, InputGroup, StatusBadge } from "@cyberos/ui";
 import { ModalPortal, usePopoverBack } from "../common/ModalPortal.js";
 import { useModalDialog } from "./useModalDialog.js";
 import { ChangeEvent, DragEvent, FormEvent, KeyboardEvent, MouseEvent, PointerEvent as ReactPointerEvent, lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -155,7 +156,7 @@ function SearchFilterMenu({ options, disabled, onChange, onApply }: {
 
   return (
     <div ref={containerRef} className="workspace-search-filter">
-      <button
+      <UiButton iconOnly variant="ghost"
         ref={triggerRef}
         type="button"
         className={`workspace-search-filter-trigger${active ? " is-active" : ""}`}
@@ -167,11 +168,11 @@ function SearchFilterMenu({ options, disabled, onChange, onApply }: {
         onClick={() => setOpen((value) => !value)}
       >
         <SlidersHorizontal aria-hidden="true" size={16} />
-      </button>
+      </UiButton>
       {open ? (
         <div className="workspace-search-filter-menu" role="dialog" aria-label={t("workspace.search.filters")}>
-          <div className="workspace-search-field">
-            <label htmlFor="workspace-search-file-type">{t("workspace.search.fileType")}</label>
+          <Field className="workspace-search-field" label={t("workspace.search.fileType")} htmlFor="workspace-search-file-type">
+
             <CustomSelect
               id="workspace-search-file-type"
               value={options.fileType}
@@ -179,14 +180,14 @@ function SearchFilterMenu({ options, disabled, onChange, onApply }: {
               onChange={(fileType) => onChange({ ...options, fileType })}
               ariaLabel={t("workspace.search.fileType")}
             />
-          </div>
+          </Field>
           <div className="workspace-search-field-grid">
-            <label className="workspace-search-field"><span>{t("workspace.search.modifiedFrom")}</span><input type="date" value={options.modifiedFrom} onChange={(event) => onChange({ ...options, modifiedFrom: event.target.value })} /></label>
-            <label className="workspace-search-field"><span>{t("workspace.search.modifiedTo")}</span><input type="date" value={options.modifiedTo} onChange={(event) => onChange({ ...options, modifiedTo: event.target.value })} /></label>
-            <label className="workspace-search-field"><span>{t("workspace.search.sizeMin")}</span><input type="number" min="0" value={options.sizeMin} onChange={(event) => onChange({ ...options, sizeMin: event.target.value })} /></label>
-            <label className="workspace-search-field"><span>{t("workspace.search.sizeMax")}</span><input type="number" min="0" value={options.sizeMax} onChange={(event) => onChange({ ...options, sizeMax: event.target.value })} /></label>
-            <div className="workspace-search-field">
-              <label htmlFor="workspace-search-sort-field">{t("workspace.search.sortField")}</label>
+            <Field className="workspace-search-field" label={t("workspace.search.modifiedFrom")}><Input type="date" value={options.modifiedFrom} onChange={(event) => onChange({ ...options, modifiedFrom: event.target.value })} /></Field>
+            <Field className="workspace-search-field" label={t("workspace.search.modifiedTo")}><Input type="date" value={options.modifiedTo} onChange={(event) => onChange({ ...options, modifiedTo: event.target.value })} /></Field>
+            <Field className="workspace-search-field" label={t("workspace.search.sizeMin")}><Input type="number" min="0" value={options.sizeMin} onChange={(event) => onChange({ ...options, sizeMin: event.target.value })} /></Field>
+            <Field className="workspace-search-field" label={t("workspace.search.sizeMax")}><Input type="number" min="0" value={options.sizeMax} onChange={(event) => onChange({ ...options, sizeMax: event.target.value })} /></Field>
+            <Field className="workspace-search-field" label={t("workspace.search.sortField")} htmlFor="workspace-search-sort-field">
+
               <CustomSelect
                 id="workspace-search-sort-field"
                 value={options.sort.field}
@@ -194,9 +195,9 @@ function SearchFilterMenu({ options, disabled, onChange, onApply }: {
                 onChange={(field) => onChange({ ...options, sort: { ...options.sort, field } })}
                 ariaLabel={t("workspace.search.sortField")}
               />
-            </div>
-            <div className="workspace-search-field">
-              <label htmlFor="workspace-search-sort-direction">{t("workspace.search.sortDirection")}</label>
+            </Field>
+            <Field className="workspace-search-field" label={t("workspace.search.sortDirection")} htmlFor="workspace-search-sort-direction">
+
               <CustomSelect
                 id="workspace-search-sort-direction"
                 value={options.sort.direction}
@@ -204,11 +205,11 @@ function SearchFilterMenu({ options, disabled, onChange, onApply }: {
                 onChange={(direction) => onChange({ ...options, sort: { ...options.sort, direction } })}
                 ariaLabel={t("workspace.search.sortDirection")}
               />
-            </div>
+            </Field>
           </div>
           <div className="workspace-search-filter-actions">
-            <button type="button" className="secondary-button" onClick={() => { const reset = defaultWorkspaceSearchOptions(); onChange(reset); onApply(reset); setOpen(false); }}>{t("workspace.search.reset")}</button>
-            <button type="button" className="primary-button" onClick={() => { onApply(); setOpen(false); }}>{t("workspace.search.apply")}</button>
+            <UiButton variant="secondary" type="button" className="secondary-button" onClick={() => { const reset = defaultWorkspaceSearchOptions(); onChange(reset); onApply(reset); setOpen(false); }}>{t("workspace.search.reset")}</UiButton>
+            <UiButton variant="primary" type="button" className="primary-button" onClick={() => { onApply(); setOpen(false); }}>{t("workspace.search.apply")}</UiButton>
           </div>
         </div>
       ) : null}
@@ -307,7 +308,7 @@ function StoragePoolSwitcher({
 
   return (
     <div ref={containerRef} className={`storage-pool-switcher${open ? " is-open" : ""}`}>
-      <button
+      <UiButton variant="ghost"
         id="storage-pool-switcher"
         className="storage-pool-switcher-trigger"
         type="button"
@@ -324,7 +325,7 @@ function StoragePoolSwitcher({
           <strong>{selectedPool?.name ?? t("workspace.storagePoolPlaceholder")}</strong>
         </span>
         <ChevronDown aria-hidden="true" size={15} />
-      </button>
+      </UiButton>
 
       {open ? (
         <div id="storage-pool-menu" className="storage-pool-menu" role="menu" aria-labelledby="storage-pool-switcher">
@@ -332,7 +333,7 @@ function StoragePoolSwitcher({
           {pools.map((pool) => {
             const selected = pool.id === selectedPoolId;
             return (
-              <button
+              <UiButton variant="ghost"
                 key={pool.id}
                 className={`storage-pool-menu-option${selected ? " is-selected" : ""}`}
                 type="button"
@@ -348,7 +349,7 @@ function StoragePoolSwitcher({
                   <strong>{pool.name}</strong>
                 </span>
                 {selected ? <Check aria-hidden="true" size={15} /> : null}
-              </button>
+              </UiButton>
             );
           })}
         </div>
@@ -1283,9 +1284,9 @@ export function WorkspacePane({
                   </div>
 
                   <div className="workspace-search-controls">
-                    <form className="search" onSubmit={onSubmitSearch}>
-                      <Search aria-hidden="true" size={17} />
-                      <input
+                    <form className="search" onSubmit={onSubmitSearch}><InputGroup leading={<Search aria-hidden="true" size={17} />}>
+
+                      <Input
                         value={searchQuery}
                         onChange={(event) => onSearchQueryChange(event.target.value)}
                         placeholder={t("workspace.searchPlaceholder")}
@@ -1293,7 +1294,7 @@ export function WorkspacePane({
                         disabled={!hasStoragePool}
                         maxLength={256}
                       />
-                    </form>
+                    </InputGroup></form>
                     <SearchFilterMenu
                       options={searchOptions}
                       disabled={!hasStoragePool}
@@ -1306,7 +1307,7 @@ export function WorkspacePane({
                       <span className="file-batch-count" role="status" aria-live="polite">
                         {t("workspace.batch.selected", { count: selectedPaths.size })}
                       </span>
-                      <button
+                      <UiButton iconOnly variant="ghost"
                         type="button"
                         className="file-batch-action"
                         onClick={() => void downloadEntries(selectedEntries)}
@@ -1316,8 +1317,8 @@ export function WorkspacePane({
                         aria-label={downloadKey ? t("workspace.batch.preparingDownload") : t("workspace.batch.download")}
                       >
                         {downloadKey ? <LoaderCircle className="spin" aria-hidden="true" size={16} /> : <Download aria-hidden="true" size={16} />}
-                      </button>
-                      <button
+                      </UiButton>
+                      <UiButton iconOnly variant="ghost"
                         type="button"
                         className="file-batch-action"
                         onClick={openBatchMoveDialog}
@@ -1326,8 +1327,8 @@ export function WorkspacePane({
                         aria-label={t("workspace.batch.move")}
                       >
                         <FolderInput aria-hidden="true" size={16} />
-                      </button>
-                      <button
+                      </UiButton>
+                      <UiButton iconOnly variant="danger"
                         type="button"
                         className="file-batch-action is-danger"
                         onClick={openBatchDeleteDialog}
@@ -1336,7 +1337,7 @@ export function WorkspacePane({
                         aria-label={t("workspace.batch.delete")}
                       >
                         <Trash2 aria-hidden="true" size={16} />
-                      </button>
+                      </UiButton>
                     </div>
                   ) : null}
               </div>
@@ -1359,10 +1360,10 @@ export function WorkspacePane({
                 ) : null}
                 <section className="file-browser" aria-label={t("workspace.fileBrowser")}>
                   <header className="management-section-header files-list-header">
-                    {compactLayout ? <button className="mobile-file-select secondary-button" type="button" aria-pressed={mobileSelecting} onClick={() => { setMobileSelecting((value) => !value); clearBatchSelection(); }}>{t(mobileSelecting ? "mobile.done" : "mobile.select")}</button> : null}
+                    {compactLayout ? <UiButton variant="secondary" className="mobile-file-select secondary-button" type="button" aria-pressed={mobileSelecting} onClick={() => { setMobileSelecting((value) => !value); clearBatchSelection(); }}>{t(mobileSelecting ? "mobile.done" : "mobile.select")}</UiButton> : null}
                     <div className="files-list-title-block">
                       <nav className="breadcrumbs files-content-breadcrumbs" aria-label={t("workspace.breadcrumbs")}>
-                        <button
+                        <UiButton variant="ghost"
                           type="button"
                           onClick={onGoToStoragePool}
                           disabled={!selectedStoragePool || visibleBreadcrumbs.length === 0}
@@ -1370,9 +1371,9 @@ export function WorkspacePane({
                         >
                           <HardDrive aria-hidden="true" size={14} />
                           <span>{selectedStoragePool?.name ?? t("workspace.storagePoolPlaceholder")}</span>
-                        </button>
+                        </UiButton>
                         {visibleBreadcrumbs.map((crumb, index) => (
-                          <button
+                          <UiButton variant="ghost"
                             key={`${crumb}-${index}`}
                             type="button"
                             onClick={() => onGoToBreadcrumb(selectedStoragePool ? storagePoolPathDepth + index : index)}
@@ -1380,7 +1381,7 @@ export function WorkspacePane({
                             aria-current={index === visibleBreadcrumbs.length - 1 ? "page" : undefined}
                           >
                             <span>{crumb}</span>
-                          </button>
+                          </UiButton>
                         ))}
                       </nav>
                       <p className="files-list-summary">
@@ -1388,10 +1389,10 @@ export function WorkspacePane({
                       </p>
                     </div>
                     {gitStatus ? (
-                      <span className="management-status-pill files-git-status" data-state={gitStatusState} data-tooltip={gitTooltip} aria-label={gitTooltip}>
+                      <StatusBadge className="management-status-pill files-git-status" data-state={gitStatusState} data-tooltip={gitTooltip} aria-label={gitTooltip}>
                         <GitBranch aria-hidden="true" size={13} />
                         <span>{gitSummaryText}</span>
-                      </span>
+                      </StatusBadge>
                     ) : null}
                   </header>
 
@@ -1414,7 +1415,7 @@ export function WorkspacePane({
                       </span>
                       <span className="file-actions-column" role="columnheader" aria-label={t("workspace.table.actions")} />
                       <span className="file-column-sort" role="columnheader" aria-sort={fileSortAria(fileSort, "sizeBytes")}>
-                        <button
+                        <UiButton variant="ghost"
                           type="button"
                           className="file-sort-button"
                           onClick={() => setFileSort((current) => nextFileSort(current, "sizeBytes"))}
@@ -1423,10 +1424,10 @@ export function WorkspacePane({
                         >
                           <span>{t("workspace.table.size")}</span>
                           {fileSort.key === "sizeBytes" ? <SortDirectionIcon direction={fileSort.direction} /> : null}
-                        </button>
+                        </UiButton>
                       </span>
                       <span className="file-column-sort" role="columnheader" aria-sort={fileSortAria(fileSort, "modifiedAt")}>
-                        <button
+                        <UiButton variant="ghost"
                           type="button"
                           className="file-sort-button"
                           onClick={() => setFileSort((current) => nextFileSort(current, "modifiedAt"))}
@@ -1435,7 +1436,7 @@ export function WorkspacePane({
                         >
                           <span>{t("workspace.table.modified")}</span>
                           {fileSort.key === "modifiedAt" ? <SortDirectionIcon direction={fileSort.direction} /> : null}
-                        </button>
+                        </UiButton>
                       </span>
                     </div>
                     <div
@@ -1476,7 +1477,7 @@ export function WorkspacePane({
                           role="row"
                         >
                           <span className={`file-name${searchResult ? " is-search-result" : ""}`} role="cell">
-                            {compactLayout && mobileSelecting ? <input className="mobile-file-checkbox" type="checkbox" checked={selectedPaths.has(entry.path)} disabled={!entry.isSafe} aria-label={entry.name} onClick={(event) => event.stopPropagation()} onChange={() => updateBatchSelection(entry, "toggle")} /> : null}
+                            {compactLayout && mobileSelecting ? <Checkbox className="mobile-file-checkbox"  checked={selectedPaths.has(entry.path)} disabled={!entry.isSafe} aria-label={entry.name} onClick={(event) => event.stopPropagation()} onChange={() => updateBatchSelection(entry, "toggle")} /> : null}
                             <FileTypeIcon kind={fileVisual.kind} />
                             <span className="file-search-copy">
                               <span className="file-name-text">{entry.name}</span>
@@ -1499,7 +1500,7 @@ export function WorkspacePane({
                             ) : null}
                           </span>
                           <span className="file-row-actions" role="cell" aria-label={t("workspace.table.actions")}>
-                            <button
+                            <UiButton iconOnly variant="ghost"
                               type="button"
                               className="file-action-button file-action-button-download"
                               onClick={(event) => {
@@ -1520,9 +1521,9 @@ export function WorkspacePane({
                               {downloadKey === entry.path
                                 ? <LoaderCircle className="spin" aria-hidden="true" size={14} />
                                 : <Download aria-hidden="true" size={14} />}
-                            </button>
+                            </UiButton>
                             <span className="file-row-expanded-actions">
-                              <button
+                              <UiButton iconOnly variant="ghost"
                                 type="button"
                                 className="file-action-button file-action-button-send"
                                 onClick={(event) => {
@@ -1534,8 +1535,8 @@ export function WorkspacePane({
                                 aria-label={t("workspace.actions.sendPathToAgentEntry", { name: entry.name })}
                               >
                                 <MessageSquarePlus aria-hidden="true" size={14} />
-                              </button>
-                              <button
+                              </UiButton>
+                              <UiButton iconOnly variant="ghost"
                                 type="button"
                                 className="file-action-button"
                                 onClick={(event) => openTransferDialog(event, entry, "move")}
@@ -1544,8 +1545,8 @@ export function WorkspacePane({
                                 aria-label={t("workspace.actions.moveEntry", { name: entry.name })}
                               >
                                 <FolderInput aria-hidden="true" size={14} />
-                              </button>
-                              <button
+                              </UiButton>
+                              <UiButton iconOnly variant="ghost"
                                 type="button"
                                 className="file-action-button"
                                 onClick={(event) => openTransferDialog(event, entry, "copy")}
@@ -1554,8 +1555,8 @@ export function WorkspacePane({
                                 aria-label={t("workspace.actions.copyEntry", { name: entry.name })}
                               >
                                 <Copy aria-hidden="true" size={14} />
-                              </button>
-                              <button
+                              </UiButton>
+                              <UiButton iconOnly variant="ghost"
                                 type="button"
                                 className="file-action-button"
                                 onClick={(event) => openRenameDialog(event, entry)}
@@ -1564,8 +1565,8 @@ export function WorkspacePane({
                                 aria-label={t("workspace.actions.renameEntry", { name: entry.name })}
                               >
                                 <PencilLine aria-hidden="true" size={14} />
-                              </button>
-                              <button
+                              </UiButton>
+                              <UiButton iconOnly variant="danger"
                                 type="button"
                                 className="file-action-button is-danger"
                                 onClick={(event) => openDeleteDialog(event, entry)}
@@ -1574,9 +1575,9 @@ export function WorkspacePane({
                                 aria-label={t("workspace.actions.deleteEntry", { name: entry.name })}
                               >
                                 <Trash2 aria-hidden="true" size={14} />
-                              </button>
+                              </UiButton>
                             </span>
-                            <button
+                            <UiButton iconOnly variant="ghost"
                               type="button"
                               className="file-action-button file-action-button-more"
                               onClick={(event) => openRowActionMenu(event, entry)}
@@ -1587,7 +1588,7 @@ export function WorkspacePane({
                               aria-expanded={rowActionMenu?.entry.path === entry.path}
                             >
                               <Ellipsis aria-hidden="true" size={15} />
-                            </button>
+                            </UiButton>
                           </span>
                           <span role="cell">{displaySize}</span>
                           <span role="cell">
@@ -1598,9 +1599,9 @@ export function WorkspacePane({
                     })}
                     {searchResults && searchNextCursor ? (
                       <div className="workspace-search-more">
-                        <button type="button" className="secondary-button" disabled={fileListingLoading} onClick={onLoadMoreSearchResults}>
+                        <UiButton variant="secondary" type="button" className="secondary-button" disabled={fileListingLoading} onClick={onLoadMoreSearchResults}>
                           {t("workspace.search.loadMore")}
-                        </button>
+                        </UiButton>
                       </div>
                     ) : null}
                     </div>
@@ -1613,14 +1614,14 @@ export function WorkspacePane({
                     ) : null}
                     </div>
                   ) : (
-                    <div className="workspace-empty-state" role="status">
-                      <HardDrive aria-hidden="true" size={28} />
-                      <strong>{t("workspace.selectStoragePoolTitle")}</strong>
-                      <p>{t("workspace.selectStoragePoolBody")}</p>
-                      <button type="button" className="secondary-button" onClick={() => selectPanel("storage")}>
+                    <EmptyState className="workspace-empty-state" role="status" icon={<HardDrive aria-hidden="true" size={28} />} title={t("workspace.selectStoragePoolTitle")} description={t("workspace.selectStoragePoolBody")} actions={<><UiButton variant="secondary" type="button" className="secondary-button" onClick={() => selectPanel("storage")}>
                         {t("workspace.openStorageManagement")}
-                      </button>
-                    </div>
+                      </UiButton></>}>
+
+
+
+
+                    </EmptyState>
                   )}
                 </section>
 
@@ -1641,7 +1642,7 @@ export function WorkspacePane({
                   onClose={onClosePreview}
                   actions={<>
                     {previewMeta?.previewKind === "video" ? (
-                      <button
+                      <UiButton iconOnly variant="ghost"
                         type="button"
                         className="preview-tool-button"
                         onClick={onPlayToVodPlayer}
@@ -1651,10 +1652,10 @@ export function WorkspacePane({
                         aria-label={t("preview.vodPlayer.play")}
                       >
                         <MonitorPlay aria-hidden="true" size={14} />
-                      </button>
+                      </UiButton>
                     ) : null}
                     {canEditPreview && previewMeta ? (
-                      <button
+                      <UiButton iconOnly variant="ghost"
                         type="button"
                         className="preview-tool-button"
                         onClick={() => onOpenEditor(previewMeta)}
@@ -1662,10 +1663,10 @@ export function WorkspacePane({
                         aria-label={t("editor.open")}
                       >
                         <PencilLine aria-hidden="true" size={14} />
-                      </button>
+                      </UiButton>
                     ) : null}
                     {canExtractPreview && previewMeta ? (
-                      <button
+                      <UiButton iconOnly variant="ghost"
                         type="button"
                         className="preview-tool-button"
                         onClick={() => void submitExtract(previewMeta)}
@@ -1674,7 +1675,7 @@ export function WorkspacePane({
                         aria-label={t("workspace.actions.extractEntry", { name: previewMeta.name })}
                       >
                         <ArchiveRestore aria-hidden="true" size={14} />
-                      </button>
+                      </UiButton>
                     ) : null}
                   </>}
                   footer={previewVodPlayerStatus ? (
@@ -1745,7 +1746,7 @@ export function WorkspacePane({
             const PanelIcon = panel.Icon;
             const isActive = activePanel === panel.id;
             return (
-              <button
+              <UiButton variant="ghost"
                 key={panel.id}
                 type="button"
                 className={isActive ? "workspace-panel-tab is-active" : "workspace-panel-tab"}
@@ -1756,7 +1757,7 @@ export function WorkspacePane({
               >
                 <PanelIcon aria-hidden="true" size={19} />
                 <span>{t(panel.shortLabelKey)}</span>
-              </button>
+              </UiButton>
             );
           })}
         </nav>
@@ -1771,8 +1772,8 @@ export function WorkspacePane({
           style={{ top: rowActionMenu.top, right: rowActionMenu.right }}
           onKeyDown={handleRowActionMenuKeyDown}
         >
-          <button type="button" role="menuitem" disabled={Boolean(downloadKey)} onClick={() => { void downloadEntries([rowActionMenu.entry]); closeRowActionMenu(true); }}><Download size={15} aria-hidden="true" /><span>{t("workspace.downloadFile")}</span></button>
-          <button
+          <UiButton variant="ghost" type="button" role="menuitem" disabled={Boolean(downloadKey)} onClick={() => { void downloadEntries([rowActionMenu.entry]); closeRowActionMenu(true); }}><Download size={15} aria-hidden="true" /><span>{t("workspace.downloadFile")}</span></UiButton>
+          <UiButton variant="ghost"
             type="button"
             role="menuitem"
             onClick={(event) => {
@@ -1783,8 +1784,8 @@ export function WorkspacePane({
           >
             <MessageSquarePlus aria-hidden="true" size={15} />
             <span>{t("workspace.actions.sendPathToAgent")}</span>
-          </button>
-          <button
+          </UiButton>
+          <UiButton variant="ghost"
             type="button"
             role="menuitem"
             onClick={(event) => {
@@ -1794,8 +1795,8 @@ export function WorkspacePane({
           >
             <FolderInput aria-hidden="true" size={15} />
             <span>{t("workspace.actions.move")}</span>
-          </button>
-          <button
+          </UiButton>
+          <UiButton variant="ghost"
             type="button"
             role="menuitem"
             onClick={(event) => {
@@ -1805,8 +1806,8 @@ export function WorkspacePane({
           >
             <Copy aria-hidden="true" size={15} />
             <span>{t("workspace.actions.copy")}</span>
-          </button>
-          <button
+          </UiButton>
+          <UiButton variant="ghost"
             type="button"
             role="menuitem"
             onClick={(event) => {
@@ -1816,8 +1817,8 @@ export function WorkspacePane({
           >
             <PencilLine aria-hidden="true" size={15} />
             <span>{t("workspace.actions.rename")}</span>
-          </button>
-          <button
+          </UiButton>
+          <UiButton variant="danger"
             type="button"
             role="menuitem"
             className="is-danger"
@@ -1828,7 +1829,7 @@ export function WorkspacePane({
           >
             <Trash2 aria-hidden="true" size={15} />
             <span>{t("workspace.actions.delete")}</span>
-          </button>
+          </UiButton>
         </div>
       ) : null}
 
@@ -1843,32 +1844,29 @@ export function WorkspacePane({
             aria-labelledby="file-create-folder-title"
             onSubmit={(event) => void submitCreateFolder(event)}
           >
-            <header>
-              <span className="eyebrow">{t("workspace.actions.newFolder")}</span>
-              <h2 id="file-create-folder-title">{createFolderLocation}</h2>
-            </header>
+            <DialogHeader title={createFolderLocation} eyebrow={<>{t("workspace.actions.newFolder")}</>} headingId="file-create-folder-title" />
 
-            <label className="file-action-field">
-              <span>{t("workspace.actions.folderName")}</span>
-              <input
+            <Field className="file-action-field" label={t("workspace.actions.folderName")}>
+
+              <Input
                 autoFocus
                 value={folderName}
                 onChange={(event) => setFolderName(event.target.value)}
                 aria-describedby="file-create-folder-hint"
               />
-            </label>
+            </Field>
 
             <p id="file-create-folder-hint" className="file-action-hint">
               {t("workspace.actions.createFolderHint")}
             </p>
-            <footer>
-              <button type="button" className="secondary-button" onClick={closeActionDialog} disabled={operationSubmitting}>
+            <DialogActions>
+              <UiButton variant="secondary" type="button" className="secondary-button" onClick={closeActionDialog} disabled={operationSubmitting}>
                 {t("common.actions.cancel")}
-              </button>
-              <button type="submit" className="primary-button" disabled={operationSubmitting || folderNameInvalid} aria-busy={operationSubmitting || undefined}>
+              </UiButton>
+              <UiButton variant="primary" type="submit" className="primary-button" disabled={operationSubmitting || folderNameInvalid} aria-busy={operationSubmitting || undefined}>
                 {operationSubmitting ? t("common.actions.saving") : t("workspace.actions.requestCreateFolder")}
-              </button>
-            </footer>
+              </UiButton>
+            </DialogActions>
           </form>
         </ModalPortal>
       ) : null}
@@ -1876,36 +1874,33 @@ export function WorkspacePane({
       {renameEntry ? (
         <ModalPortal className="file-action-backdrop" role="presentation">
           <form ref={(element) => { actionDialogRef.current = element; }} className="file-action-dialog" role="dialog" tabIndex={-1} aria-modal="true" aria-labelledby="file-rename-title" onSubmit={submitRename}>
-            <header>
-              <span className="eyebrow">{t("workspace.actions.rename")}</span>
-              <h2 id="file-rename-title">{renameEntry.name}</h2>
-            </header>
+            <DialogHeader title={renameEntry.name} eyebrow={<>{t("workspace.actions.rename")}</>} headingId="file-rename-title" />
 
-            <label className="file-action-field">
-              <span>{t("workspace.actions.newName")}</span>
-              <input
+            <Field className="file-action-field" label={t("workspace.actions.newName")}>
+
+              <Input
                 autoFocus
                 value={renameName}
                 onChange={(event) => setRenameName(event.target.value)}
                 aria-describedby="file-rename-hint"
               />
-            </label>
+            </Field>
 
             <p id="file-rename-hint" className="file-action-hint">{t("workspace.actions.renameHint")}</p>
 
-            <footer>
-              <button type="button" className="secondary-button" onClick={closeActionDialog} disabled={operationSubmitting}>
+            <DialogActions>
+              <UiButton variant="secondary" type="button" className="secondary-button" onClick={closeActionDialog} disabled={operationSubmitting}>
                 {t("common.actions.cancel")}
-              </button>
-              <button
+              </UiButton>
+              <UiButton variant="primary"
                 type="submit"
                 className="primary-button"
                 disabled={operationSubmitting || renameNameInvalid || renameNameUnchanged}
                 aria-busy={operationSubmitting || undefined}
               >
                 {operationSubmitting ? t("common.actions.saving") : t("workspace.actions.requestRename")}
-              </button>
-            </footer>
+              </UiButton>
+            </DialogActions>
           </form>
         </ModalPortal>
       ) : null}
@@ -1913,22 +1908,19 @@ export function WorkspacePane({
       {deleteState ? (
         <ModalPortal className="file-action-backdrop" role="presentation">
           <section ref={(element) => { actionDialogRef.current = element; }} className="file-action-dialog" role="dialog" tabIndex={-1} aria-modal="true" aria-labelledby="file-delete-title">
-            <header>
-              <span className="eyebrow">{t("workspace.actions.delete")}</span>
-              <h2 id="file-delete-title">{deleteTitle}</h2>
-            </header>
+            <DialogHeader title={deleteTitle} eyebrow={<>{t("workspace.actions.delete")}</>} headingId="file-delete-title" />
 
             <p className="file-action-copy">{deleteBody}</p>
-            <footer>
-              <button type="button" className="secondary-button" onClick={closeActionDialog} disabled={operationSubmitting}>
+            <DialogActions>
+              <UiButton variant="secondary" type="button" className="secondary-button" onClick={closeActionDialog} disabled={operationSubmitting}>
                 {t("common.actions.cancel")}
-              </button>
-              <button type="button" className="danger-button" onClick={() => void submitDelete()} disabled={operationSubmitting} aria-busy={operationSubmitting || undefined}>
+              </UiButton>
+              <UiButton variant="danger" type="button" className="danger-button" onClick={() => void submitDelete()} disabled={operationSubmitting} aria-busy={operationSubmitting || undefined}>
                 {operationSubmitting
                   ? t("common.actions.saving")
                   : t("workspace.batch.confirmDelete")}
-              </button>
-            </footer>
+              </UiButton>
+            </DialogActions>
           </section>
         </ModalPortal>
       ) : null}
@@ -1944,12 +1936,9 @@ export function WorkspacePane({
             aria-labelledby="file-transfer-title"
             onSubmit={(event) => void submitTransfer(event)}
           >
-            <header>
-              <span className="eyebrow">
+            <DialogHeader title={transferState.entry.name} eyebrow={<>
                 {transferState.operation === "move" ? t("workspace.actions.move") : t("workspace.actions.copy")}
-              </span>
-              <h2 id="file-transfer-title">{transferState.entry.name}</h2>
-            </header>
+              </>} headingId="file-transfer-title" />
 
             <div className="file-transfer-route" aria-label={t("workspace.actions.transferPreview")}>
               <span>{selectedStoragePool ? poolRelativePath(transferState.entry.path, selectedStoragePool.path) : transferState.entry.path}</span>
@@ -1957,32 +1946,32 @@ export function WorkspacePane({
               <strong>{transferTargetPath || t("workspace.actions.chooseFolder")}</strong>
             </div>
 
-            <label className="file-action-field">
-              <span>{t("workspace.actions.destinationFolder")}</span>
-              <input
+            <Field className="file-action-field" label={t("workspace.actions.destinationFolder")}>
+
+              <Input
                 autoFocus
                 value={transferTargetDirectory}
                 onChange={(event) => setTransferTargetDirectory(event.target.value)}
                 placeholder="."
                 aria-describedby="file-transfer-hint"
               />
-            </label>
+            </Field>
 
             <p id="file-transfer-hint" className="file-action-hint">
               {t("workspace.actions.transferHint")}
             </p>
-            <footer>
-              <button type="button" className="secondary-button" onClick={closeActionDialog} disabled={operationSubmitting}>
+            <DialogActions>
+              <UiButton variant="secondary" type="button" className="secondary-button" onClick={closeActionDialog} disabled={operationSubmitting}>
                 {t("common.actions.cancel")}
-              </button>
-              <button type="submit" className="primary-button" disabled={operationSubmitting || transferTargetInvalid} aria-busy={operationSubmitting || undefined}>
+              </UiButton>
+              <UiButton variant="primary" type="submit" className="primary-button" disabled={operationSubmitting || transferTargetInvalid} aria-busy={operationSubmitting || undefined}>
                 {operationSubmitting
                   ? t("common.actions.saving")
                   : transferState.operation === "move"
                     ? t("workspace.actions.requestMove")
                     : t("workspace.actions.requestCopy")}
-              </button>
-            </footer>
+              </UiButton>
+            </DialogActions>
           </form>
         </ModalPortal>
       ) : null}

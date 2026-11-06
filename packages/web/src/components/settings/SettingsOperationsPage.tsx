@@ -1,3 +1,4 @@
+import { Button as UiButton, DialogActions, DialogHeader, Section } from "@cyberos/ui";
 import { ModalPortal } from "../common/ModalPortal.js";
 import {
   useCallback,
@@ -143,14 +144,8 @@ export function SettingsOperationsPage({
     <div className="settings-form settings-operations-page">
       <div className="settings-content-body">
         <div className="settings-page-grid settings-operations-grid">
-          <section className="settings-section-card settings-operations-tasks">
-            <header>
-              <div>
-                <h3>{t("settings.operations.tasksTitle")}</h3>
-                <p>{t("settings.operations.tasksDescription")}</p>
-              </div>
-              <Activity aria-hidden="true" size={17} />
-            </header>
+          <Section className="settings-section-card settings-operations-tasks" title={t("settings.operations.tasksTitle")} description={t("settings.operations.tasksDescription")} icon={<Activity aria-hidden="true" size={17} />}>
+
             <div className="settings-operations-task-list">
               <TaskRow
                 icon={<Activity aria-hidden="true" size={16} />}
@@ -174,19 +169,13 @@ export function SettingsOperationsPage({
                 onRun={() => setConfirmOpen(true)}
               />
             </div>
-          </section>
+          </Section>
 
-          <section className="settings-section-card settings-operations-history">
-            <header>
-              <div>
-                <h3>{t("settings.operations.historyTitle")}</h3>
-                <p>{t("settings.operations.historyDescription")}</p>
-              </div>
-              <Clock3 aria-hidden="true" size={17} />
-            </header>
+          <Section className="settings-section-card settings-operations-history" title={t("settings.operations.historyTitle")} description={t("settings.operations.historyDescription")} icon={<Clock3 aria-hidden="true" size={17} />}>
+
             <div className="settings-operations-tabs" role="tablist" aria-label={t("settings.operations.historyTitle")}>
               {(["all", "health", "maintenance"] as const).map((value) => (
-                <button
+                <UiButton variant="ghost"
                   key={value}
                   type="button"
                   role="tab"
@@ -195,16 +184,16 @@ export function SettingsOperationsPage({
                   onClick={() => setFilter(value)}
                 >
                   {t(`settings.operations.tabs.${value}`)}
-                </button>
+                </UiButton>
               ))}
             </div>
             {error ? (
               <div className="settings-operations-error" role="alert">
                 <AlertTriangle aria-hidden="true" size={15} />
                 <span>{error}</span>
-                <button type="button" className="secondary-button" onClick={() => void refresh(true)}>
+                <UiButton variant="secondary" type="button" className="secondary-button" onClick={() => void refresh(true)}>
                   {t("common.actions.refresh")}
-                </button>
+                </UiButton>
               </div>
             ) : null}
             {loading && !data ? (
@@ -216,14 +205,14 @@ export function SettingsOperationsPage({
                 {runs.map((run) => <RunRow key={run.id} run={run} locale={locale} />)}
               </div>
             )}
-          </section>
+          </Section>
         </div>
       </div>
 
       <footer className="settings-actions">
         <span>{error ? t("settings.operations.refreshFailed") : t("settings.operations.polling")}</span>
         <div>
-          <button className="secondary-button" type="button" onClick={onClose}>{t("common.actions.close")}</button>
+          <UiButton variant="secondary" className="secondary-button" type="button" onClick={onClose}>{t("common.actions.close")}</UiButton>
         </div>
       </footer>
 
@@ -238,18 +227,12 @@ export function SettingsOperationsPage({
             onKeyDown={handleConfirmKeyDown}
             onMouseDown={(event) => event.stopPropagation()}
           >
-            <header>
-              <AlertTriangle aria-hidden="true" size={18} />
-              <div>
-                <h3 id="settings-ops-confirm-title">{t("settings.operations.confirmTitle")}</h3>
-                <p id="settings-ops-confirm-description">{t("settings.operations.confirmDescription")}</p>
-              </div>
-            </header>
-            <footer>
-              <button ref={cancelConfirmRef} className="secondary-button" type="button" onClick={closeConfirmation}>
+            <DialogHeader title={t("settings.operations.confirmTitle")} description={t("settings.operations.confirmDescription")} headingLevel={3} headingId="settings-ops-confirm-title" descriptionId="settings-ops-confirm-description" actions={<><AlertTriangle aria-hidden="true" size={18} /></>} />
+            <DialogActions>
+              <UiButton variant="secondary" ref={cancelConfirmRef} className="secondary-button" type="button" onClick={closeConfirmation}>
                 {t("common.actions.cancel")}
-              </button>
-              <button
+              </UiButton>
+              <UiButton variant="danger"
                 ref={confirmButtonRef}
                 className="danger-button"
                 type="button"
@@ -258,8 +241,8 @@ export function SettingsOperationsPage({
               >
                 {runningTask === "maintenance" ? <LoaderCircle aria-hidden="true" size={14} className="is-spinning" /> : <Play aria-hidden="true" size={14} />}
                 {t("settings.operations.confirmRun")}
-              </button>
-            </footer>
+              </UiButton>
+            </DialogActions>
           </section>
         </ModalPortal>
       ) : null}
@@ -295,7 +278,7 @@ function TaskRow({ icon, task, overview, schedule, locale, busy, disabled, butto
         </dl>
         {overview?.error ? <p className="settings-operations-task-error">{overview.error}</p> : null}
       </div>
-      <button
+      <UiButton variant="ghost" iconOnly
         ref={buttonRef}
         type="button"
         className="settings-icon-button settings-operations-run-button"
@@ -306,7 +289,7 @@ function TaskRow({ icon, task, overview, schedule, locale, busy, disabled, butto
         onClick={onRun}
       >
         {busy ? <LoaderCircle aria-hidden="true" size={14} className="is-spinning" /> : <Play aria-hidden="true" size={14} />}
-      </button>
+      </UiButton>
     </article>
   );
 }

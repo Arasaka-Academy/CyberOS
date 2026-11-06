@@ -64,7 +64,7 @@
 }
 
 .settings-resource-row[data-state="ready"] {
-  border-left: 2px solid rgb(0 240 255 / 45%);
+  border-left: 2px solid color-mix(in srgb, var(--cyberos-color-focus) 45%, transparent);
   padding-left: 9px;
 }
 

@@ -1,3 +1,4 @@
+import { Button as UiButton, DescriptionList, EmptyState, Field, Input, Section, StatusBadge } from "@cyberos/ui";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   Check,
@@ -410,93 +411,73 @@ export function SettingsMediaContent({
                 onClearTmdbTokenChange(clearSaved);
               }}
             />
-            <label>
-              <span>{t("settings.media.language")}</span>
-              <input required value={language} onChange={(event) => onLanguageChange(event.target.value)} />
-            </label>
-            <label>
-              <span>{t("settings.media.region")}</span>
-              <input value={region} onChange={(event) => onRegionChange(event.target.value)} />
-            </label>
+            <Field label={t("settings.media.language")}>
+
+              <Input required value={language} onChange={(event) => onLanguageChange(event.target.value)} />
+            </Field>
+            <Field label={t("settings.media.region")}>
+
+              <Input value={region} onChange={(event) => onRegionChange(event.target.value)} />
+            </Field>
             <div className="settings-field-wide settings-switch-row">
               <div className="settings-proxy-summary"><strong>{t("settings.media.tmdbUseProxy")}</strong><span>{proxy?.host && proxy.port !== null ? systemProxyUrl(proxy) : t("settings.media.proxyMissing")}</span></div>
               <Switch checked={tmdbUseProxy} disabled={busy === "settings" || (!proxy?.host && !tmdbUseProxy)} ariaLabel={t("settings.media.tmdbUseProxy")} onCheckedChange={onTmdbUseProxyChange} />
             </div>
           </fieldset>
           <div className="settings-card-actions">
-            <button className="secondary-button" type="button" disabled={busy === "settings"} onClick={onOpenProxy}>{t("settings.media.configureProxy")}</button>
-            <button className="primary-button" type="submit" disabled={busy === "settings"} aria-busy={busy === "settings" || undefined}>
+            <UiButton variant="secondary" className="secondary-button" type="button" disabled={busy === "settings"} onClick={onOpenProxy}>{t("settings.media.configureProxy")}</UiButton>
+            <UiButton variant="primary" className="primary-button" type="submit" disabled={busy === "settings"} aria-busy={busy === "settings" || undefined}>
               {busy === "settings" ? t("common.actions.saving") : t("common.actions.saveChanges")}
-            </button>
+            </UiButton>
           </div>
         </form>
 
-        <section className="settings-section-card settings-media-status">
-          <header>
-            <div>
-              <h3>{t("settings.media.statusTitle")}</h3>
-              <p>{t("settings.media.statusDescription")}</p>
-            </div>
-          </header>
-          <dl className="settings-metric-grid">
-            <div><strong>{data.status.movies}</strong><span>{t("settings.media.movies")}</span></div>
-            <div><strong>{data.status.series}</strong><span>{t("settings.media.series")}</span></div>
-            <div><strong>{data.status.unmatched}</strong><span>{t("settings.media.unmatched")}</span></div>
-            <div><strong>{t(`settings.media.states.${data.status.state}`)}</strong><span>{t("settings.media.library")}</span></div>
-          </dl>
-        </section>
+        <Section className="settings-section-card settings-media-status" title={t("settings.media.statusTitle")} description={t("settings.media.statusDescription")}>
 
-        <section className="settings-section-card settings-field-wide settings-tv-status">
-          <header>
-            <div>
-              <h3>{t("settings.media.tvStatusTitle")}</h3>
-              <p>{t("settings.media.tvStatusDescription")}</p>
-            </div>
-            <Switch checked={data.tvSettings.enabled} disabled={busy !== null} label={t("settings.media.tvMode")} onCheckedChange={onToggleTv} />
-          </header>
+          <DescriptionList items={[
+            { label: t("settings.media.movies"), value: data.status.movies },
+            { label: t("settings.media.series"), value: data.status.series },
+            { label: t("settings.media.unmatched"), value: data.status.unmatched },
+            { label: t("settings.media.library"), value: t(`settings.media.states.${data.status.state}`) }
+          ]} />
+        </Section>
+
+        <Section className="settings-section-card settings-field-wide settings-tv-status" title={t("settings.media.tvStatusTitle")} description={t("settings.media.tvStatusDescription")} actions={<><Switch checked={data.tvSettings.enabled} disabled={busy !== null} label={t("settings.media.tvMode")} onCheckedChange={onToggleTv} /></>}>
+
           <div className="settings-tv-control-grid">
-            <label><span>{t("settings.media.audioDevice")}</span><input value={data.tvSettings.audioDevice ?? ""} onChange={(event) => onTvSettingsChange({ audioDevice: event.target.value || null })} placeholder="default" /></label>
-            <label><span>{t("settings.media.drmConnector")}</span><input value={data.tvSettings.drmConnector ?? ""} onChange={(event) => onTvSettingsChange({ drmConnector: event.target.value || null })} placeholder="HDMI-A-1" /></label>
-            <div className="settings-preference-field"><span>{t("settings.media.hardwareDecoding")}</span><CustomSelect value={data.tvSettings.hardwareDecoding} ariaLabel={t("settings.media.hardwareDecoding")} options={[
+            <Field label={t("settings.media.audioDevice")}><Input value={data.tvSettings.audioDevice ?? ""} onChange={(event) => onTvSettingsChange({ audioDevice: event.target.value || null })} placeholder="default" /></Field>
+            <Field label={t("settings.media.drmConnector")}><Input value={data.tvSettings.drmConnector ?? ""} onChange={(event) => onTvSettingsChange({ drmConnector: event.target.value || null })} placeholder="HDMI-A-1" /></Field>
+            <Field className="settings-preference-field" label={t("settings.media.hardwareDecoding")}><CustomSelect value={data.tvSettings.hardwareDecoding} ariaLabel={t("settings.media.hardwareDecoding")} options={[
               { value: "auto-safe", label: t("settings.media.hwdec.autoSafe") },
               { value: "auto", label: t("settings.media.hwdec.auto") },
               { value: "no", label: t("settings.media.hwdec.no") }
-            ]} onChange={(hardwareDecoding) => onTvSettingsChange({ hardwareDecoding })} /></div>
-            <button className="secondary-button" type="button" disabled={busy !== null} aria-busy={busy === "tv-settings" || undefined} onClick={onSaveTvSettings}>{busy === "tv-settings" ? <LoaderCircle className="is-spinning" size={15} /> : <Check size={15} />}{t("common.actions.save")}</button>
+            ]} onChange={(hardwareDecoding) => onTvSettingsChange({ hardwareDecoding })} /></Field>
+            <UiButton variant="secondary" className="secondary-button" type="button" disabled={busy !== null} aria-busy={busy === "tv-settings" || undefined} onClick={onSaveTvSettings}>{busy === "tv-settings" ? <LoaderCircle className="is-spinning" size={15} /> : <Check size={15} />}{t("common.actions.save")}</UiButton>
           </div>
           <strong className={`settings-tv-overall is-${data.tvStatus.state}`}>
             {t(`settings.media.tvStates.${data.tvStatus.state}`)}
           </strong>
-          <dl className="settings-tv-components">
-            {(["weston", "chromium", "vodPlayer", "cec", "gamepad"] as const).map((component) => {
+          <DescriptionList items={(["weston", "chromium", "vodPlayer", "cec", "gamepad"] as const).map((component) => {
               const health = data.tvStatus[component];
-              return (
-                <div key={component}>
-                  <dt>{t(`settings.media.tvComponents.${component}`)}</dt>
-                  <dd className={`is-${health.state}`}>{t(`settings.media.componentStates.${health.state}`)}</dd>
-                  <small data-tooltip={health.detail ?? undefined}>{health.detail ?? t("settings.media.noStatusDetail")}</small>
-                </div>
-              );
-            })}
-          </dl>
-        </section>
+              return {
+                id: component,
+                label: t(`settings.media.tvComponents.${component}`),
+                value: <StatusBadge state={health.state === "ready" ? "ready" : health.state === "degraded" ? "warning" : health.state === "unavailable" ? "offline" : health.state}>{t(`settings.media.componentStates.${health.state}`)}</StatusBadge>,
+                detail: health.detail ?? t("settings.media.noStatusDetail")
+              };
+            })} />
+        </Section>
 
-        <section className="settings-section-card settings-field-wide">
-          <header>
-            <div>
-              <h3>{t("settings.media.sourcesTitle")}</h3>
-              <p>{t("settings.media.sourcesDescription")}</p>
-            </div>
-            <div className="settings-media-header-actions">
-              <button type="button" className="secondary-button" onClick={() => onAddSource("movie")}>
+        <Section className="settings-section-card settings-field-wide" title={t("settings.media.sourcesTitle")} description={t("settings.media.sourcesDescription")} actions={<><div className="settings-media-header-actions">
+              <UiButton variant="secondary" type="button" className="secondary-button" onClick={() => onAddSource("movie")}>
                 <Film aria-hidden="true" size={15} />{t("settings.media.addMovies")}
-              </button>
-              <button type="button" className="secondary-button" onClick={() => onAddSource("series")}>
+              </UiButton>
+              <UiButton variant="secondary" type="button" className="secondary-button" onClick={() => onAddSource("series")}>
                 <Tv aria-hidden="true" size={15} />{t("settings.media.addSeries")}
-              </button>
-            </div>
-          </header>
-          {data.sources.length === 0 ? <p className="settings-media-empty">{t("settings.media.noSources")}</p> : (
+              </UiButton>
+            </div></>}>
+
+          {data.sources.length === 0 ? <EmptyState className="settings-media-empty" title={t("settings.media.noSources")} /> : (
             <div className="settings-media-list">
               {data.sources.map((source) => {
                 const scan = scansBySource.get(source.id);
@@ -523,16 +504,16 @@ export function SettingsMediaContent({
                       onCheckedChange={() => onToggleSource(source)}
                     />
                     <div className="settings-media-row-actions">
-                      <button type="button" data-tooltip={t("settings.media.scan")} aria-label={t("settings.media.scan")} disabled={sourceBusy} onClick={() => onScanSource(source)}>
+                      <UiButton iconOnly variant="ghost" type="button" data-tooltip={t("settings.media.scan")} aria-label={t("settings.media.scan")} disabled={sourceBusy} onClick={() => onScanSource(source)}>
                         <RefreshCw className={busy === `scan-${source.id}` ? "is-spinning" : undefined} aria-hidden="true" size={15} />
-                      </button>
-                      <button className={deleteId === source.id ? "danger-button" : ""} type="button" data-tooltip={t("common.actions.delete")} aria-label={t("common.actions.delete")} disabled={sourceBusy} onClick={() => onDeleteSource(source)}>
+                      </UiButton>
+                      <UiButton iconOnly variant={deleteId === source.id ? "danger" : "ghost"} className={deleteId === source.id ? "danger-button" : ""} type="button" data-tooltip={t("common.actions.delete")} aria-label={t("common.actions.delete")} disabled={sourceBusy} onClick={() => onDeleteSource(source)}>
                         {deleteId === source.id ? <Check aria-hidden="true" size={15} /> : <Trash2 aria-hidden="true" size={15} />}
-                      </button>
+                      </UiButton>
                       {deleteId === source.id ? (
-                        <button type="button" data-tooltip={t("common.actions.cancel")} aria-label={t("common.actions.cancel")} onClick={onCancelDelete}>
+                        <UiButton iconOnly variant="ghost" type="button" data-tooltip={t("common.actions.cancel")} aria-label={t("common.actions.cancel")} onClick={onCancelDelete}>
                           <X aria-hidden="true" size={15} />
-                        </button>
+                        </UiButton>
                       ) : null}
                     </div>
                   </article>
@@ -540,42 +521,37 @@ export function SettingsMediaContent({
               })}
             </div>
           )}
-        </section>
+        </Section>
 
-        <section className="settings-section-card settings-field-wide">
-          <header>
-            <div>
-              <h3>{t("settings.media.matchingTitle")}</h3>
-              <p>{t("settings.media.matchingDescription")}</p>
-            </div>
-          </header>
-          {data.unmatched.length === 0 ? <p className="settings-media-empty">{t("settings.media.noUnmatched")}</p> : (
+        <Section className="settings-section-card settings-field-wide" title={t("settings.media.matchingTitle")} description={t("settings.media.matchingDescription")}>
+
+          {data.unmatched.length === 0 ? <EmptyState className="settings-media-empty" title={t("settings.media.noUnmatched")} /> : (
             <div className="settings-media-match-list">
               {data.unmatched.map((title) => (
                 <article className="settings-media-match" key={title.id}>
-                  <button type="button" className="settings-media-match-title" aria-expanded={selectedTitleId === title.id} onClick={() => onSelectTitle(title)}>
+                  <UiButton variant="ghost" type="button" className="settings-media-match-title" aria-expanded={selectedTitleId === title.id} onClick={() => onSelectTitle(title)}>
                     <span>{title.title}</span>
                     <small>{[title.year, t(`settings.media.kinds.${title.kind}`)].filter(Boolean).join(" · ")}</small>
-                  </button>
-                  <button type="button" className="secondary-button" onClick={() => onApplyMatch(title, null)}>{t("settings.media.exclude")}</button>
+                  </UiButton>
+                  <UiButton variant="secondary" type="button" className="secondary-button" onClick={() => onApplyMatch(title, null)}>{t("settings.media.exclude")}</UiButton>
                   {selectedTitleId === title.id ? (
                     <div className="settings-media-candidates">
                       <form onSubmit={(event) => { event.preventDefault(); onSearchCandidates(title); }}>
                         <label>
                           <Search aria-hidden="true" size={15} />
-                          <input value={candidateQuery} onChange={(event) => onCandidateQueryChange(event.target.value)} aria-label={t("settings.media.searchCandidates")} />
+                          <Input value={candidateQuery} onChange={(event) => onCandidateQueryChange(event.target.value)} aria-label={t("settings.media.searchCandidates")} />
                         </label>
-                        <button className="secondary-button" type="submit" disabled={busy === `candidates-${title.id}`}>
+                        <UiButton variant="secondary" className="secondary-button" type="submit" disabled={busy === `candidates-${title.id}`}>
                           {t("settings.media.search")}
-                        </button>
+                        </UiButton>
                       </form>
                       {busy === `candidates-${title.id}` ? <p role="status">{t("settings.media.searching")}</p> : null}
                       {busy !== `candidates-${title.id}` && candidates.length === 0 ? <p>{t("settings.media.noCandidates")}</p> : null}
                       {candidates.map((candidate) => (
-                        <button className="settings-media-candidate" type="button" key={candidate.tmdbId} onClick={() => onApplyMatch(title, candidate)}>
+                        <UiButton variant="ghost" className="settings-media-candidate" type="button" key={candidate.tmdbId} onClick={() => onApplyMatch(title, candidate)}>
                           {candidate.posterUrl ? <img src={candidate.posterUrl} alt="" /> : <span className="settings-media-poster-placeholder"><Film aria-hidden="true" size={18} /></span>}
                           <span><strong>{candidate.title}</strong><small>{candidate.year ?? t("common.states.unknown")}</small><em>{candidate.overview || t("settings.media.noOverview")}</em></span>
-                        </button>
+                        </UiButton>
                       ))}
                     </div>
                   ) : null}
@@ -583,7 +559,7 @@ export function SettingsMediaContent({
               ))}
             </div>
           )}
-        </section>
+        </Section>
     </>
   );
 }

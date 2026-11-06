@@ -42,7 +42,7 @@
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--channel-bg);
-  box-shadow: 0 2px 8px rgb(15 23 42 / 5%);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--cyberos-color-surface-raised) 5%, transparent);
   overflow: visible;
 }
 

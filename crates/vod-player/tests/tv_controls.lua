@@ -14,7 +14,7 @@ local function fixture(overrides)
         },
     }
     for name, value in pairs(overrides or {}) do properties[name] = value end
-    local keys, events, observers, commands, timers = {}, {}, {}, {}, {}
+    local keys, events, observers, commands, timers, messages = {}, {}, {}, {}, {}, {}
     local now = 0
     local overlay = { data = "" }
     function overlay:update() end
@@ -31,6 +31,7 @@ local function fixture(overrides)
         create_osd_overlay = function() return overlay end,
         add_forced_key_binding = function(key, _, callback) keys[key] = callback end,
         register_event = function(name, callback) events[name] = callback end,
+        register_script_message = function(name, callback) messages[name] = callback end,
         observe_property = function(name, _, callback) observers[name] = callback end,
         add_periodic_timer = function(_, callback)
             local timer = { enabled = true, callback = callback }
@@ -53,6 +54,7 @@ local function fixture(overrides)
             if observers[name] then observers[name](name, value) end
         end,
     }
+    package.loaded["mp.utils"] = { parse_json = function(raw) return raw end }
     package.loaded.mp = mp
     package.loaded["mp.assdraw"] = {
         ass_new = function()
@@ -72,6 +74,7 @@ local function fixture(overrides)
         properties = properties,
         overlay = overlay,
         commands = commands,
+        messages = messages,
         press = function(key) assert(keys[key], "Missing binding: " .. key)() end,
         advance = function(seconds)
             now = now + seconds
@@ -166,3 +169,16 @@ player.event("end-file")
 assert(player.overlay.data == "", "End of playback must remove the overlay")
 
 print("TV controls: remote exit, HUD, seeking, track selection and timers passed")
+
+-- Native theme changes redraw immediately and retain playback/navigation state.
+do
+    local player = fixture()
+    local before = #player.commands
+    player.messages["cyberos-ui-theme"]({ bg = "#FFFFFF", soft = "#EFE1DE", ink = "#1E1517", muted = "#6B4A47", accent = "#C2362B", accent2 = "#0E7C86" })
+    assert(player.overlay.data:find("FFFFFF", 1, true), "light background must redraw")
+    assert(player.overlay.data:find("17151E", 1, true), "ASS uses BGR text colors")
+    assert(#player.commands == before, "theme must not issue playback commands")
+    local valid = player.overlay.data
+    player.messages["cyberos-ui-theme"]({ bg = "not-a-color" })
+    assert(player.overlay.data == valid, "invalid palette must be ignored atomically")
+end

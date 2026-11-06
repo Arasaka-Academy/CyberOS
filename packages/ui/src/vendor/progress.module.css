@@ -1,0 +1,12 @@
+/* Generated from packages/react/src/progress.module.css. Regenerate in CyberUI with pnpm registry:build; after installation, edit this file freely. */
+@layer theme, base, components, utilities;
+@reference './tailwind-theme.css';
+
+@layer components {
+.progress { @apply tw:flex tw:gap-[3px] tw:h-[12px] tw:w-full; }
+.progressCell { @apply tw:flex-[1]; border: 1px solid var(--cyber-ink); @apply tw:min-w-[1px]; }
+.progressCell[data-filled='true'] { background: var(--cyber-ink); }
+.progressAscii { font: 16px var(--cyber-font-mono); @apply tw:whitespace-nowrap tw:overflow-hidden; }
+.progressAscii span:first-child { @apply tw:text-cyber-accent; }
+.progressWave { @apply tw:w-full tw:h-[44px] tw:block tw:overflow-visible; }
+}

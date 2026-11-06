@@ -64,6 +64,7 @@ struct Controller {
     resolved_audio_device: Option<Option<String>>,
     resolved_tv_config: Option<VodPlayerConfig>,
     mpv: Option<MpvHandle>,
+    ui_theme: (String, String),
     retry_at: Option<Instant>,
     stable_since: Option<Instant>,
     last_checkpoint: Instant,
@@ -174,6 +175,7 @@ impl ControllerHandle {
             resolved_audio_device: None,
             resolved_tv_config: None,
             mpv: None,
+            ui_theme: ("neon".to_owned(), "dark".to_owned()),
             retry_at: None,
             stable_since: None,
             last_checkpoint: Instant::now(),
@@ -271,12 +273,28 @@ impl Controller {
     async fn handle_command(&mut self, command: Command) -> Result<Status, VodError> {
         if !matches!(
             &command,
-            Command::Status | Command::Guarded { .. } | Command::AudioFocus { .. }
+            Command::Status
+                | Command::Guarded { .. }
+                | Command::AudioFocus { .. }
+                | Command::SetUiTheme { .. }
         ) {
             self.audio_focus = None;
         }
         match command {
             Command::Status => {}
+            Command::SetUiTheme { scheme, mode } => {
+                let palette = crate::tv_controls::theme_palette(&scheme, &mode)
+                    .ok_or_else(|| VodError::protocol("Invalid native player theme"))?;
+                if self.mpv.is_some() {
+                    self.execute_mpv_command(json!([
+                        "script-message",
+                        "cyberos-ui-theme",
+                        palette.to_string()
+                    ]))
+                    .await?;
+                }
+                self.ui_theme = (scheme, mode);
+            }
             Command::AudioFocus { lease_id, action } => {
                 self.handle_audio_focus(lease_id, &action).await?;
             }
@@ -737,6 +755,18 @@ impl Controller {
             .await?
         };
         self.mpv = Some(mpv);
+        if !is_music
+            && playback_config.video_output == "wayland"
+            && let Some(palette) =
+                crate::tv_controls::theme_palette(&self.ui_theme.0, &self.ui_theme.1)
+        {
+            self.execute_mpv_command(json!([
+                "script-message",
+                "cyberos-ui-theme",
+                palette.to_string()
+            ]))
+            .await?;
+        }
         let muted = if is_music {
             self.status.preferences.music_muted
         } else {
@@ -1537,6 +1567,7 @@ mod tests {
                 resolved_audio_device: None,
                 resolved_tv_config: None,
                 mpv: None,
+                ui_theme: ("neon".to_owned(), "dark".to_owned()),
                 retry_at: None,
                 stable_since: None,
                 last_checkpoint: Instant::now(),
@@ -1550,6 +1581,50 @@ mod tests {
             sender,
             done_receiver,
         )
+    }
+
+    #[tokio::test]
+    async fn changing_ui_theme_preserves_music_session_and_voice_audio_focus() {
+        let directory = tempfile::tempdir().unwrap();
+        let (mut controller, _sender, _done) = test_controller(directory.path());
+        prepare_music_process(&mut controller, directory.path());
+        start_test_music(&mut controller).await;
+        controller
+            .handle_audio_focus("voice".into(), "acquire")
+            .await
+            .unwrap();
+        let before = serde_json::to_value(&controller.status).unwrap();
+        for scheme in [
+            "neon",
+            "mono",
+            "graphite",
+            "synthwave",
+            "bloodline",
+            "terminal",
+            "amber",
+        ] {
+            for mode in ["dark", "light"] {
+                controller
+                    .handle_command(Command::SetUiTheme {
+                        scheme: scheme.into(),
+                        mode: mode.into(),
+                    })
+                    .await
+                    .unwrap();
+                assert_eq!(controller.ui_theme, (scheme.into(), mode.into()));
+                assert_eq!(serde_json::to_value(&controller.status).unwrap(), before);
+                assert_eq!(controller.audio_focus.as_ref().unwrap().lease_id, "voice");
+                assert!(controller.desired.is_some());
+                assert!(controller.mpv.is_none());
+            }
+        }
+        controller
+            .handle_audio_focus("voice".into(), "release")
+            .await
+            .unwrap();
+        assert_eq!(controller.status.state, PlayerState::Playing);
+        assert!(controller.mpv.is_some());
+        controller.stop_mpv().await;
     }
 
     #[tokio::test]

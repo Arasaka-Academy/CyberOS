@@ -37,6 +37,9 @@ async function library(t, options = {}) {
   await page.route("**/api/**", async route => {
     const request = route.request();
     const url = new URL(request.url());
+    if (url.pathname === "/api/vod-player/command" && request.postDataJSON()?.type === "set-ui-theme") {
+      return route.fulfill({ json: { status: playback.video } });
+    }
     if (request.method() !== "GET") {
       const write = { path: url.pathname, body: request.postDataJSON() };
       writes.push(write);
@@ -127,10 +130,13 @@ for (const locale of ["en-US", "zh-CN"]) test(`${locale}: shared playback action
   const output = page.locator(".playback-output > button");
   await page.keyboard.press("Shift");
   await output.focus();
-  assert.deepEqual(await output.evaluate(element => {
+  const focus = await output.evaluate(element => {
     const s = globalThis.getComputedStyle(element);
-    return [s.backgroundColor, s.outlineWidth, s.outlineColor, s.outlineOffset];
-  }), ["rgba(0, 0, 0, 0)", "3px", "rgb(0, 240, 255)", "4px"]);
+    const probe = globalThis.document.createElement("span"); probe.style.color = "var(--cyber-accent2)";
+    globalThis.document.body.append(probe); const expected = globalThis.getComputedStyle(probe).color; probe.remove();
+    return { actual: [s.backgroundColor, s.outlineWidth, s.outlineColor, s.outlineOffset], expected };
+  });
+  assert.deepEqual(focus.actual, ["rgba(0, 0, 0, 0)", "3px", focus.expected, "4px"]);
 });
 
 for (const name of ["BrowserHome", "Home", "BrowserBack", "GoBack"]) test(`${name} returns a category to home`, async t => {
@@ -195,7 +201,7 @@ test("OK on an episode opens the existing takeover confirmation for that episode
 
 test("English virtual typing and delete retain keyboard focus", async t => {
   const { page } = await library(t);
-  await page.locator(".tv-header-actions button").click();
+  await page.locator(".tv-search-button").click();
   await page.locator(".tv-keyboard-tools button").first().click();
   for (const letter of ["Q", "W"]) {
     await page.getByRole("button", { name: letter, exact: true }).focus();
@@ -210,7 +216,7 @@ test("English virtual typing and delete retain keyboard focus", async t => {
 
 test("English virtual editing preserves the caret between keyboard activations", async t => {
   const { page } = await library(t);
-  await page.locator(".tv-header-actions button").click();
+  await page.locator(".tv-search-button").click();
   await page.locator(".tv-keyboard-tools button").first().click();
   const input = page.locator(".tv-search-input");
   const frame = () => page.evaluate(() => new Promise(resolve => globalThis.requestAnimationFrame(() => globalThis.requestAnimationFrame(resolve))));
@@ -234,7 +240,7 @@ test("English virtual editing preserves the caret between keyboard activations",
 
 test("Chinese letters keep key focus and candidates can be selected with the remote", async t => {
   const { page } = await library(t);
-  await page.locator(".tv-header-actions button").click();
+  await page.locator(".tv-search-button").click();
   const q = page.getByRole("button", { name: "Q", exact: true });
   await q.focus();
   await page.keyboard.press("Enter");
@@ -250,7 +256,7 @@ test("Chinese letters keep key focus and candidates can be selected with the rem
 test("search failures support retry and detail Back restores search context", async t => {
   let fail = true;
   const { page } = await library(t, { searchFailure: () => fail });
-  await page.locator(".tv-header-actions button").click();
+  await page.locator(".tv-search-button").click();
   await page.locator(".tv-keyboard-tools button").first().click();
   const input = page.locator(".tv-search-input, pinyin-ime-editor input").first();
   await input.fill("Test");
@@ -523,7 +529,7 @@ for (const [locale, width, height] of [["en-US", 1920, 1080], ["zh-CN", 1280, 72
   assert.equal(await page.locator(".video-episode strong").first().evaluate(element => globalThis.getComputedStyle(element).fontSize), "22px");
   await page.screenshot({ path: `${output}/detail-${locale}-${width}.png` });
   await key(page, "BrowserBack");
-  await page.locator(".tv-header-actions button").click();
+  await page.locator(".tv-search-button").click();
   const q = page.getByRole("button", { name: "Q", exact: true });
   await q.focus();
   await page.keyboard.press("Enter");

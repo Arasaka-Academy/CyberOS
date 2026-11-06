@@ -1,3 +1,4 @@
+import { Button as UiButton, Checkbox, EmptyState, Field, Input, InputGroup, Notice, Section } from "@cyberos/ui";
 import {
   useCallback,
   useEffect,
@@ -590,7 +591,7 @@ export function MusicLibraryPanel({
     <div className="music-album-grid">
       {albums.map((album) => (
         <article className="music-album" key={album.id}>
-          <button
+          <UiButton variant="ghost"
             type="button"
             className="plain-button music-album-open"
             onClick={() => openDetail("album", album.id, album.title)}
@@ -600,10 +601,10 @@ export function MusicLibraryPanel({
             <small data-tooltip={album.artists.join(" · ")}>
               {album.artists.join(" · ") || t("music.unknownArtist")}
             </small>
-          </button>
+          </UiButton>
           <div className="music-album-meta metadata">
             <span>{album.year ?? "—"}</span>
-            <button
+            <UiButton iconOnly variant="plain"
               type="button"
               aria-label={t("music.favorite")}
               data-tooltip={t("music.favorite")}
@@ -615,7 +616,7 @@ export function MusicLibraryPanel({
                 size={14}
                 fill={album.favorite ? "currentColor" : "none"}
               />
-            </button>
+            </UiButton>
           </div>
         </article>
       ))}
@@ -625,7 +626,7 @@ export function MusicLibraryPanel({
     <div className="music-artist-list">
       {artists.map((artist) => (
         <div className="music-artist" key={artist.id}>
-          <button
+          <UiButton variant="ghost"
             type="button"
             onClick={() => openDetail("artist", artist.id, artist.name)} className="plain-button"
           >
@@ -639,8 +640,8 @@ export function MusicLibraryPanel({
                 })}
               </small>
             </span>
-          </button>
-          <button
+          </UiButton>
+          <UiButton iconOnly variant="plain"
             type="button"
             disabled={busy}
             onClick={() => favorite("artist", artist)}
@@ -649,7 +650,7 @@ export function MusicLibraryPanel({
             aria-pressed={artist.favorite} className="plain-button"
           >
             <Heart size={16} fill={artist.favorite ? "currentColor" : "none"} />
-          </button>
+          </UiButton>
         </div>
       ))}
     </div>
@@ -671,7 +672,7 @@ export function MusicLibraryPanel({
             data-music-item-id={itemId}
             data-music-track-id={track.id}
           >
-            <button
+            <UiButton iconOnly variant="plain"
               type="button"
               className="plain-button music-track-play"
               disabled={track.missing || remote.busy || loading}
@@ -680,7 +681,7 @@ export function MusicLibraryPanel({
               onClick={() => play(tracks.slice(index))}
             >
               <Play size={15} />
-            </button>
+            </UiButton>
             <div
               className="music-track-copy"
               tabIndex={detail?.kind === "playlist" ? -1 : undefined}
@@ -692,18 +693,18 @@ export function MusicLibraryPanel({
                 {track.missing ? ` · ${t("music.missing")}` : ""}
               </span>
             </div>
-            <button
+            <UiButton variant="ghost"
               type="button"
               className="plain-button music-track-album"
               data-tooltip={track.album}
               onClick={() => openDetail("album", track.albumId, track.album)}
             >
               {track.album}
-            </button>
+            </UiButton>
             <span className="music-track-duration">
               {musicTime(track.durationSeconds)}
             </span>
-            <button
+            <UiButton iconOnly variant="plain"
               type="button"
               disabled={busy}
               className="plain-button music-track-favorite"
@@ -716,10 +717,10 @@ export function MusicLibraryPanel({
                 size={15}
                 fill={track.favorite ? "currentColor" : "none"}
               />
-            </button>
+            </UiButton>
             {detail?.kind === "playlist" ? (
               <>
-                <button
+                <UiButton iconOnly variant="plain"
                   type="button"
                   disabled={loading || busy || index === 0}
                   onClick={() => playlistReorder(index, -1)}
@@ -729,8 +730,8 @@ export function MusicLibraryPanel({
                   data-music-reorder="up"
                 >
                   <ArrowUp size={14} />
-                </button>
-                <button
+                </UiButton>
+                <UiButton iconOnly variant="plain"
                   type="button"
                   disabled={loading || busy || index === tracks.length - 1}
                   onClick={() => playlistReorder(index, 1)}
@@ -740,14 +741,14 @@ export function MusicLibraryPanel({
                   data-music-reorder="down"
                 >
                   <ArrowDown size={14} />
-                </button>
+                </UiButton>
               </>
             ) : null}
             <div
               className="music-row-menu"
               ref={rowMenu === rowKey ? menuRoot : null}
             >
-              <button
+              <UiButton iconOnly variant="plain"
                 ref={(button) => {
                   if (button) rowActionButtons.current.set(rowKey, button);
                   else rowActionButtons.current.delete(rowKey);
@@ -759,10 +760,10 @@ export function MusicLibraryPanel({
                 onClick={() => setRowMenu(rowMenu === rowKey ? null : rowKey)} className="plain-button"
               >
                 <Plus size={17} />
-              </button>
+              </UiButton>
               {rowMenu === rowKey ? (
                 <div className="music-track-actions">
-                  <button
+                  <UiButton variant="plain"
                     type="button"
                     disabled={track.missing || remote.busy || loading}
                     onClick={() => {
@@ -772,8 +773,8 @@ export function MusicLibraryPanel({
                   >
                     <SkipForward size={14} />
                     {t("music.playNext")}
-                  </button>
-                  <button
+                  </UiButton>
+                  <UiButton variant="plain"
                     type="button"
                     disabled={track.missing || remote.busy || loading}
                     onClick={() => {
@@ -783,13 +784,13 @@ export function MusicLibraryPanel({
                   >
                     <ListMusic size={14} />
                     {t("music.append")}
-                  </button>
-                  <button type="button" onClick={() => openAdd(track, rowKey)} className="plain-button">
+                  </UiButton>
+                  <UiButton variant="plain" type="button" onClick={() => openAdd(track, rowKey)} className="plain-button">
                     <Plus size={14} />
                     {t("music.addToPlaylist")}
-                  </button>
+                  </UiButton>
                   {detail?.kind === "playlist" ? (
-                    <button
+                    <UiButton variant="plain"
                       type="button"
                       onClick={() => {
                         const id = detail.id;
@@ -809,7 +810,7 @@ export function MusicLibraryPanel({
                     >
                       <Trash2 size={14} />
                       {t("music.remove")}
-                    </button>
+                    </UiButton>
                   ) : null}
                 </div>
               ) : null}
@@ -849,16 +850,16 @@ export function MusicLibraryPanel({
         }
       />
       <div className="library-search-toolbar">
-        <form className="search" onSubmit={submitSearch}>
-          <Search size={17} aria-hidden="true" />
-          <input
+        <form className="search" onSubmit={submitSearch}><InputGroup leading={<Search size={17} aria-hidden="true" />}>
+
+          <Input
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={t("music.searchPlaceholder")}
             aria-label={t("music.searchPlaceholder")}
           />
-        </form>
+        </InputGroup></form>
         <SearchFilterPopover
           label={t("music.filters")}
           active={Boolean(filters.sourceId || filters.year || filters.genre || filters.favorite || filters.sort !== "added")}
@@ -900,8 +901,8 @@ export function MusicLibraryPanel({
             />
           </div>
           <label className="workspace-search-filter-check">
-            <input
-              type="checkbox"
+            <Checkbox
+
               checked={draftFilters.favorite}
               onChange={(event) => setDraftFilters((current) => ({ ...current, favorite: event.target.checked }))}
             />
@@ -912,7 +913,7 @@ export function MusicLibraryPanel({
       <nav className="music-tabs view-tabs" aria-label={t("music.navigation")}>
         {(["home", "albums", "artists", "tracks", "playlists"] as const).map(
           (tab) => (
-            <button
+            <UiButton variant="ghost"
               key={tab}
               type="button"
               aria-current={view === tab && !detail ? "page" : undefined}
@@ -928,18 +929,18 @@ export function MusicLibraryPanel({
               }}
             >
               {t(`music.views.${tab}`)}
-            </button>
+            </UiButton>
           ),
         )}
       </nav>
       <div ref={contentRef} className="music-content" aria-busy={loading}>
         {error ? (
-          <div className="music-error" role="alert">
-            {error}
-            <button type="button" onClick={reload} className="plain-button">
+          <Notice className="music-error" role="alert" tone="danger" actions={<><UiButton variant="plain" type="button" onClick={reload} className="plain-button">
               {t("common.actions.refresh")}
-            </button>
-          </div>
+            </UiButton></>}>
+            {error}
+
+          </Notice>
         ) : null}
         {remote.error ? (
           <div className="music-inline-state" role="status">
@@ -948,17 +949,17 @@ export function MusicLibraryPanel({
           </div>
         ) : null}
         {library?.scans.some((scan) => scan.status === "failed") ? (
-          <button
+          <UiButton variant="plain"
             className="plain-button music-scan-warning"
             type="button"
             onClick={onOpenSettings}
           >
             {t("music.scanNeedsAttention")}
-          </button>
+          </UiButton>
         ) : null}
         {detail ? (
           <>
-            <button
+            <UiButton variant="plain"
               className="plain-button music-back"
               type="button"
               onClick={() => {
@@ -969,7 +970,7 @@ export function MusicLibraryPanel({
             >
               <ArrowLeft size={16} />
               {t("music.back")}
-            </button>
+            </UiButton>
             <header className="music-detail-header">
               <MusicCover
                 coverKey={
@@ -987,7 +988,7 @@ export function MusicLibraryPanel({
                     : t("music.trackCount", { count: content.tracks.length })}
                 </p>
                 <div className="music-detail-actions">
-                  <button
+                  <UiButton variant="primary"
                     className="primary-button"
                     type="button"
                     disabled={loading || remote.busy || !content.tracks.length}
@@ -995,8 +996,8 @@ export function MusicLibraryPanel({
                   >
                     <Play size={15} />
                     {t("music.play")}
-                  </button>
-                  <button
+                  </UiButton>
+                  <UiButton variant="plain"
                     type="button"
                     disabled={loading || remote.busy || !content.tracks.length}
                     onClick={() =>
@@ -1017,24 +1018,24 @@ export function MusicLibraryPanel({
                   >
                     <Shuffle size={15} />
                     {t("music.shuffle")}
-                  </button>
-                  <button
+                  </UiButton>
+                  <UiButton variant="plain"
                     type="button"
                     disabled={loading || remote.busy || !content.tracks.length}
                     onClick={() => play(content.tracks, "append")} className="plain-button"
                   >
                     <Plus size={15} />
                     {t("music.append")}
-                  </button>
+                  </UiButton>
                   {detail.kind === "playlist" ? (
                     <>
-                      <button
+                      <UiButton variant="plain"
                         type="button"
                         onClick={() => setNameDialog("rename")} className="plain-button"
                       >
                         {t("music.rename")}
-                      </button>
-                      <button
+                      </UiButton>
+                      <UiButton variant="plain"
                         type="button"
                         onClick={() =>
                           setConfirmDelete(detail.id)
@@ -1042,7 +1043,7 @@ export function MusicLibraryPanel({
                       >
                         <Trash2 size={15} />
                         {t("common.actions.delete")}
-                      </button>
+                      </UiButton>
                     </>
                   ) : null}
                 </div>
@@ -1052,14 +1053,14 @@ export function MusicLibraryPanel({
               <>
                 {albumGrid(content.albums)}
                 {content.albumsNextCursor ? (
-                  <button
+                  <UiButton variant="plain"
                     type="button"
                     className="plain-button music-load-more"
                     disabled={loading}
                     onClick={() => void loadCollectionMore("albums")}
                   >
                     {t("music.loadMoreAlbums")}
-                  </button>
+                  </UiButton>
                 ) : null}
               </>
             ) : null}
@@ -1087,14 +1088,14 @@ export function MusicLibraryPanel({
                   ))
               : trackList(content.tracks, `${detail.kind}:${detail.id}`)}
             {detail.kind === "artist" && content.tracksNextCursor ? (
-              <button
+              <UiButton variant="plain"
                 type="button"
                 className="plain-button music-load-more"
                 disabled={loading}
                 onClick={() => void loadCollectionMore("tracks")}
               >
                 {t("music.loadMoreTracks")}
-              </button>
+              </UiButton>
             ) : null}
           </>
         ) : null}
@@ -1112,7 +1113,7 @@ export function MusicLibraryPanel({
             <MusicSection
               title={t("music.favorites")}
               action={
-                <button
+                <UiButton variant="plain"
                   type="button"
                   onClick={() => {
                     setView("tracks");
@@ -1120,7 +1121,7 @@ export function MusicLibraryPanel({
                   }} className="plain-button"
                 >
                   {t("music.showAll")}
-                </button>
+                </UiButton>
               }
             >
               {trackList(content.home.favorites, "home:favorites")}
@@ -1132,13 +1133,13 @@ export function MusicLibraryPanel({
             title={view === "search" ? t("music.views.albums") : ""}
             action={
               view === "search" && content.albumsNextCursor ? (
-                <button
+                <UiButton variant="plain"
                   type="button"
                   disabled={loading}
                   onClick={() => void loadCollectionMore("albums")} className="plain-button"
                 >
                   {t("music.loadMoreAlbums")}
-                </button>
+                </UiButton>
               ) : null
             }
           >
@@ -1150,13 +1151,13 @@ export function MusicLibraryPanel({
             title={view === "search" ? t("music.views.artists") : ""}
             action={
               view === "search" && content.artistsNextCursor ? (
-                <button
+                <UiButton variant="plain"
                   type="button"
                   disabled={loading}
                   onClick={() => void loadCollectionMore("artists")} className="plain-button"
                 >
                   {t("music.loadMoreArtists")}
-                </button>
+                </UiButton>
               ) : null
             }
           >
@@ -1168,13 +1169,13 @@ export function MusicLibraryPanel({
             title={view === "search" ? t("music.views.tracks") : ""}
             action={
               view === "search" && content.tracksNextCursor ? (
-                <button
+                <UiButton variant="plain"
                   type="button"
                   disabled={loading}
                   onClick={() => void loadCollectionMore("tracks")} className="plain-button"
                 >
                   {t("music.loadMoreTracks")}
-                </button>
+                </UiButton>
               ) : null
             }
           >
@@ -1185,14 +1186,14 @@ export function MusicLibraryPanel({
           <>
             <div className="music-section-heading">
               <h3>{t("music.views.playlists")}</h3>
-              <button type="button" onClick={() => setNameDialog("create")} className="plain-button">
+              <UiButton variant="plain" type="button" onClick={() => setNameDialog("create")} className="plain-button">
                 <Plus size={16} />
                 {t("music.newPlaylist")}
-              </button>
+              </UiButton>
             </div>
             <div className="music-playlist-list">
               {content.playlists.map((playlist) => (
-                <button
+                <UiButton variant="ghost"
                   type="button"
                   key={playlist.id}
                   onClick={() =>
@@ -1208,24 +1209,24 @@ export function MusicLibraryPanel({
                     </small>
                   </span>
                   <Play size={15} />
-                </button>
+                </UiButton>
               ))}
             </div>
           </>
         ) : null}
         {!loading && sources.length === 0 ? (
-          <div className="music-empty">
-            <Disc3 size={42} aria-hidden="true" />
-            <h3>{t("music.emptyTitle")}</h3>
-            <p>{t("music.emptyBody")}</p>
-            <button
+          <EmptyState className="music-empty" icon={<Disc3 size={42} aria-hidden="true" />} title={t("music.emptyTitle")} description={t("music.emptyBody")} actions={<><UiButton variant="primary"
               className="primary-button"
               type="button"
               onClick={onOpenSettings}
             >
               {t("music.manageLibrary")}
-            </button>
-          </div>
+            </UiButton></>}>
+
+
+
+
+          </EmptyState>
         ) : !loading &&
           (empty ||
             (content.home !== null &&
@@ -1233,18 +1234,18 @@ export function MusicLibraryPanel({
               !content.home.recentlyPlayed.length &&
               !content.home.mostPlayed.length &&
               !content.home.favorites.length)) ? (
-          <p className="music-empty">{t("music.noResults")}</p>
+          <EmptyState className="music-empty">{t("music.noResults")}</EmptyState>
         ) : null}
         {loading && empty ? <PanelContentSkeleton /> : null}
         {content.nextCursor && !detail ? (
-          <button
+          <UiButton variant="plain"
             className="plain-button music-load-more"
             type="button"
             disabled={loading}
             onClick={() => void load(content.nextCursor!)}
           >
             {t("music.loadMore")}
-          </button>
+          </UiButton>
         ) : null}
       </div>
       {confirmDelete ? (
@@ -1256,14 +1257,14 @@ export function MusicLibraryPanel({
             {t("music.deletePlaylistConfirm")}
           </p>
           <footer>
-            <button
+            <UiButton variant="secondary"
               type="button"
               disabled={busy}
               onClick={() => setConfirmDelete(null)} className="secondary-button"
             >
               {t("common.actions.cancel")}
-            </button>
-            <button
+            </UiButton>
+            <UiButton variant="danger"
               type="button"
               disabled={busy}
               className="danger-button"
@@ -1276,7 +1277,7 @@ export function MusicLibraryPanel({
               }
             >
               {t("common.actions.delete")}
-            </button>
+            </UiButton>
           </footer>
         </MusicDialog>
       ) : null}
@@ -1302,8 +1303,8 @@ export function MusicLibraryPanel({
       ) : null}
       {addTrack ? (
         <MusicDialog title={t("music.addToPlaylist")} onClose={closeAdd}>
-          <label className="music-field">
-            {addTrack.title}
+          <Field className="music-field" label={addTrack.title}>
+
             <CustomSelect
               triggerRef={playlistChoiceSelect}
               value={targetPlaylistId}
@@ -1313,16 +1314,16 @@ export function MusicLibraryPanel({
               ariaLabel={addTrack.title}
               options={playlistChoices.map((playlist) => ({ value: playlist.id, label: playlist.name }))}
             />
-          </label>
+          </Field>
           {playlistChoicesError ? (
-            <p role="alert" className="music-error">
+            <Notice role="alert" className="music-error" tone="danger">
               {playlistChoicesError}
-            </p>
+            </Notice>
           ) : null}
           {playlistChoicesLoading ||
           playlistChoicesCursor ||
           playlistChoicesError ? (
-            <button
+            <UiButton variant="plain"
               ref={playlistChoicesMore}
               type="button"
               aria-disabled={playlistChoicesLoading || busy}
@@ -1337,7 +1338,7 @@ export function MusicLibraryPanel({
                 : playlistChoicesError
                   ? t("common.actions.refresh")
                   : t("music.loadMore")}
-            </button>
+            </UiButton>
           ) : null}
           {!playlistChoicesLoading &&
           !playlistChoicesError &&
@@ -1345,7 +1346,7 @@ export function MusicLibraryPanel({
             <p>{t("music.createPlaylistFirst")}</p>
           ) : null}
           <footer>
-            <button
+            <UiButton variant="plain"
               ref={playlistChoicesCreate}
               type="button"
               disabled={busy}
@@ -1355,8 +1356,8 @@ export function MusicLibraryPanel({
               }} className="plain-button"
             >
               {t("music.newPlaylist")}
-            </button>
-            <button
+            </UiButton>
+            <UiButton variant="primary"
               type="button"
               disabled={!targetPlaylistId || busy}
               className="primary-button"
@@ -1381,7 +1382,7 @@ export function MusicLibraryPanel({
               }}
             >
               {t("music.add")}
-            </button>
+            </UiButton>
           </footer>
         </MusicDialog>
       ) : null}
@@ -1398,15 +1399,9 @@ function MusicSection({
   action?: React.ReactNode;
 }) {
   return (
-    <section className="music-section">
-      {title ? (
-        <div className="music-section-heading">
-          <h3>{title}</h3>
-          {action}
-        </div>
-      ) : null}
+    <Section className="music-section" title={title} actions={action}>
       {children}
-    </section>
+    </Section>
   );
 }
 function SpeakerIcon() {

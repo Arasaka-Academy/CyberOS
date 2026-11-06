@@ -133,7 +133,7 @@
   border-radius: 0;
 }
 .playback-menu :where(.playback-title, .playback-transport > button, .playback-output-fields > button, .playback-secondary, button.playback-output-summary):hover:not(:disabled) {
-  border-color: var(--cyber-cyan);
+  border-color: var(--hud-cyan);
   background: var(--surface-hover);
 }
 .playback-menu .playback-transport > [data-playback-primary],
@@ -228,7 +228,7 @@
 .playback-restore-state { display: flex; align-items: center; gap: 6px; flex: none; color: var(--muted); }
 .playback-restore-chevron { margin-left: auto; }
 .playback-restore:hover,
-.playback-restore:focus-visible { color: var(--text); border-color: var(--cyber-cyan); }
+.playback-restore:focus-visible { color: var(--text); border-color: var(--hud-cyan); }
 .playback-restore-dot { width: 5px; height: 5px; background: var(--muted); }
 .playback-restore[data-playback-state="playing"] .playback-restore-dot { background: var(--green, var(--cyberos-color-success)); }
 .playback-restore[data-playback-state="error"] .playback-restore-dot { background: var(--red); }

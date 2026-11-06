@@ -6,7 +6,7 @@
 .management-command-panel {
   padding: 10px 4px 20px;
   border: 0;
-  border-bottom: 2px solid var(--cyber-ink);
+  border-bottom: 2px solid var(--hud-ink);
   border-radius: 0;
 }
 
@@ -17,16 +17,16 @@
 
 .management-metric {
   min-height: 104px;
-  border-top: 3px solid var(--cyber-ink);
+  border-top: 3px solid var(--hud-ink);
 }
 
 .management-emblem {
-  border: 2px solid var(--cyber-ink);
+  border: 2px solid var(--hud-ink);
 }
 
 .management-dashboard-grid > .react-grid-item.react-grid-placeholder {
-  border: 2px solid var(--cyber-cyan);
-  background: rgb(0 240 255 / 20%);
+  border: 2px solid var(--hud-cyan);
+  background: color-mix(in srgb, var(--cyberos-color-focus) 20%, transparent);
 }
 
 .management-skeleton-block,
@@ -38,25 +38,25 @@
 }
 
 .workspace-drop-overlay {
-  background: rgb(252 238 10 / 90%);
-  box-shadow: inset 0 0 0 3px var(--cyber-cyan);
+  background: color-mix(in srgb, var(--cyberos-color-command) 90%, transparent);
+  box-shadow: inset 0 0 0 3px var(--hud-cyan);
 }
 
 .workspace-drop-panel {
-  border: 2px solid var(--cyber-ink);
-  color: var(--cyber-ink);
-  background: var(--cyber-yellow);
-  box-shadow: 7px 7px 0 var(--cyber-red);
+  border: 2px solid var(--hud-ink);
+  color: var(--hud-ink);
+  background: var(--hud-yellow);
+  box-shadow: 7px 7px 0 var(--hud-red);
 }
 
 .workspace-empty-state > svg,
 .empty-state > svg,
 .preview-empty > svg {
-  border: 1px solid var(--cyber-ink);
+  border: 1px solid var(--hud-ink);
   border-radius: 0;
-  color: var(--cyber-yellow);
-  background: var(--cyber-ink);
-  box-shadow: 3px 3px 0 var(--cyber-red);
+  color: var(--hud-yellow);
+  background: var(--hud-ink);
+  box-shadow: 3px 3px 0 var(--hud-red);
 }
 
 .empty-state strong,

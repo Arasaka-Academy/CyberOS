@@ -1,0 +1,16 @@
+<meta name="color-scheme" content="dark light" />
+<script is:inline>
+  try {
+    const p = JSON.parse(localStorage.getItem('cyberos:appearance:v1') || 'null');
+    const schemes = ['neon', 'mono', 'graphite', 'synthwave', 'bloodline', 'terminal', 'amber'];
+    const valid = p && schemes.includes(p.scheme) && (p.mode === 'dark' || p.mode === 'light');
+    document.documentElement.dataset.cyberScheme = valid ? p.scheme : 'neon';
+    document.documentElement.dataset.cyberMode = valid ? p.mode : 'dark';
+    document.documentElement.dataset.theme = valid ? p.mode : 'dark';
+    document.documentElement.style.colorScheme = valid ? p.mode : 'dark';
+  } catch {
+    document.documentElement.dataset.cyberScheme = 'neon';
+    document.documentElement.dataset.cyberMode = 'dark';
+    document.documentElement.dataset.theme = 'dark';
+  }
+</script>

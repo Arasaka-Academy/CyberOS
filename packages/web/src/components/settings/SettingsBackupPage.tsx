@@ -1,3 +1,4 @@
+import { Button as UiButton, Field, Input, Notice, Section } from "@cyberos/ui";
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { ArchiveRestore, Check, FolderOpen, KeyRound, LoaderCircle, ShieldCheck, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -165,7 +166,7 @@ export function SettingsBackupContent({
   const { t } = useTranslation();
   return (
     <div className="settings-content-body">
-      {error ? <p className="settings-inline-error" role="alert">{error}</p> : null}
+      {error ? <Notice className="settings-inline-error" role="alert" tone="danger">{error}</Notice> : null}
       {form ? <div className="settings-page-grid">
         <form className="settings-section-card settings-field-wide" onSubmit={onSubmit}>
           <header><div><h3>{t("settings.backup.title")}</h3><p>{t("settings.backup.description")}</p></div><ArchiveRestore size={18} aria-hidden="true" /></header>
@@ -173,36 +174,36 @@ export function SettingsBackupContent({
           <fieldset className="settings-field-grid" disabled={busy !== null}>
             <label className="settings-field-wide">
               <span>{t("settings.backup.repository")}</span>
-              <button ref={repositoryPickerRef} className="secondary-button settings-backup-repository-picker" type="button" onClick={onChooseRepository} disabled={busy !== null} aria-label={t("settings.backup.chooseDirectory")} aria-busy={busy === "directories" || undefined} data-tooltip={form.repositoryPath}>
+              <UiButton variant="secondary" ref={repositoryPickerRef} className="secondary-button settings-backup-repository-picker" type="button" onClick={onChooseRepository} disabled={busy !== null} aria-label={t("settings.backup.chooseDirectory")} aria-busy={busy === "directories" || undefined} data-tooltip={form.repositoryPath}>
                 {busy === "directories" ? <LoaderCircle className="is-spinning" size={15} aria-hidden="true" /> : <FolderOpen size={15} aria-hidden="true" />}
                 <span className="settings-backup-repository-path">{form.repositoryPath}</span>
                 <span>{t("settings.backup.chooseDirectory")}</span>
-              </button>
+              </UiButton>
               {repositoryChanged ? <small role="status">{t("settings.backup.directoryPending")}</small> : null}
             </label>
-            <label><span>{t("settings.backup.keepDaily")}</span><input type="number" min={1} max={365} value={form.keepDaily} onChange={(event) => onFormChange({ ...form, keepDaily: Number(event.target.value) })} /></label>
-            <label><span>{t("settings.backup.keepWeekly")}</span><input type="number" min={1} max={104} value={form.keepWeekly} onChange={(event) => onFormChange({ ...form, keepWeekly: Number(event.target.value) })} /></label>
+            <Field label={t("settings.backup.keepDaily")}><Input type="number" min={1} max={365} value={form.keepDaily} onChange={(event) => onFormChange({ ...form, keepDaily: Number(event.target.value) })} /></Field>
+            <Field label={t("settings.backup.keepWeekly")}><Input type="number" min={1} max={104} value={form.keepWeekly} onChange={(event) => onFormChange({ ...form, keepWeekly: Number(event.target.value) })} /></Field>
           </fieldset>
           <div className="settings-switch-row"><strong><HelpLabel label={t("settings.backup.requireMount")} content={t("settings.backup.requireMountDescription")} /></strong><Switch checked={form.requireMount} disabled={busy !== null} ariaLabel={t("settings.backup.requireMount")} onCheckedChange={(requireMount) => onFormChange({ ...form, requireMount, validatedAt: null, enabled: false })} /></div>
-          <div className="settings-card-actions"><button className="primary-button" type="submit" disabled={busy !== null} aria-busy={busy === "settings" || undefined}>{busy === "settings" ? <LoaderCircle className="is-spinning" size={15} /> : <Check size={15} />}{t("common.actions.saveChanges")}</button></div>
+          <div className="settings-card-actions"><UiButton variant="primary" className="primary-button" type="submit" disabled={busy !== null} aria-busy={busy === "settings" || undefined}>{busy === "settings" ? <LoaderCircle className="is-spinning" size={15} /> : <Check size={15} />}{t("common.actions.saveChanges")}</UiButton></div>
         </form>
 
-        <section className="settings-section-card">
-          <header><div><h3>{t("settings.backup.credentialTitle")}</h3><p>{form.passwordConfigured ? t("settings.backup.credentialConfigured") : t("settings.backup.credentialMissing")}</p></div><KeyRound size={18} aria-hidden="true" /></header>
-          <label className="settings-field-wide"><span>{t("settings.backup.password")}</span><input type="password" autoComplete="new-password" value={password} onChange={(event) => onPasswordChange(event.target.value)} /></label>
-          <div className="settings-card-actions">
-            <button className="secondary-button" type="button" disabled={busy !== null || !form.passwordConfigured} onClick={onClearCredential}><Trash2 size={15} />{t("common.actions.clear")}</button>
-            <button className="primary-button" type="button" disabled={busy !== null || !password} aria-busy={busy === "credential" || undefined} onClick={onSaveCredential}>{busy === "credential" ? <LoaderCircle className="is-spinning" size={15} /> : <Check size={15} />}{t("common.actions.save")}</button>
-          </div>
-        </section>
+        <Section className="settings-section-card" title={t("settings.backup.credentialTitle")} description={form.passwordConfigured ? t("settings.backup.credentialConfigured") : t("settings.backup.credentialMissing")} icon={<KeyRound size={18} aria-hidden="true" />}>
 
-        <section className="settings-section-card">
-          <header><div><h3>{t("settings.backup.repositoryActions")}</h3><p>{t("settings.backup.repositoryActionsDescription")}</p></div><ShieldCheck size={18} aria-hidden="true" /></header>
-          <div className="settings-card-actions is-stacked">
-            <button className="secondary-button" type="button" disabled={busy !== null || repositoryChanged || !form.passwordConfigured} aria-busy={busy === "validate" || undefined} onClick={onValidate}>{busy === "validate" ? <LoaderCircle className="is-spinning" size={15} /> : <ShieldCheck size={15} />}{t("settings.backup.validate")}</button>
-            <button className="danger-button" type="button" disabled={busy !== null || repositoryChanged || !form.passwordConfigured} aria-busy={busy === "initialize" || undefined} onClick={onInitialize}>{busy === "initialize" ? <LoaderCircle className="is-spinning" size={15} /> : <ArchiveRestore size={15} />}{t("settings.backup.initialize")}</button>
+          <Field className="settings-field-wide" label={t("settings.backup.password")}><Input type="password" autoComplete="new-password" value={password} onChange={(event) => onPasswordChange(event.target.value)} /></Field>
+          <div className="settings-card-actions">
+            <UiButton variant="secondary" className="secondary-button" type="button" disabled={busy !== null || !form.passwordConfigured} onClick={onClearCredential}><Trash2 size={15} />{t("common.actions.clear")}</UiButton>
+            <UiButton variant="primary" className="primary-button" type="button" disabled={busy !== null || !password} aria-busy={busy === "credential" || undefined} onClick={onSaveCredential}>{busy === "credential" ? <LoaderCircle className="is-spinning" size={15} /> : <Check size={15} />}{t("common.actions.save")}</UiButton>
           </div>
-        </section>
+        </Section>
+
+        <Section className="settings-section-card" title={t("settings.backup.repositoryActions")} description={t("settings.backup.repositoryActionsDescription")} icon={<ShieldCheck size={18} aria-hidden="true" />}>
+
+          <div className="settings-card-actions is-stacked">
+            <UiButton variant="secondary" className="secondary-button" type="button" disabled={busy !== null || repositoryChanged || !form.passwordConfigured} aria-busy={busy === "validate" || undefined} onClick={onValidate}>{busy === "validate" ? <LoaderCircle className="is-spinning" size={15} /> : <ShieldCheck size={15} />}{t("settings.backup.validate")}</UiButton>
+            <UiButton variant="danger" className="danger-button" type="button" disabled={busy !== null || repositoryChanged || !form.passwordConfigured} aria-busy={busy === "initialize" || undefined} onClick={onInitialize}>{busy === "initialize" ? <LoaderCircle className="is-spinning" size={15} /> : <ArchiveRestore size={15} />}{t("settings.backup.initialize")}</UiButton>
+          </div>
+        </Section>
       </div> : null}
     </div>
   );

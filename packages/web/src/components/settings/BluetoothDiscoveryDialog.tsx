@@ -1,3 +1,4 @@
+import { Button as UiButton, DialogHeader, EmptyState } from "@cyberos/ui";
 import { useId, type ReactNode } from "react";
 import { Bluetooth, LoaderCircle, RefreshCw, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -21,12 +22,12 @@ export function BluetoothDiscoveryDialog({ devices, busyKey, scanning, disabled,
   const dialogRef = useModalDialog(onClose);
   return <ModalPortal className="management-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section ref={dialogRef} className="management-modal bluetooth-discovery-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
-      <header><div><h2 id={titleId}>{t("settings.bluetooth.discoveryTitle")}</h2><p>{t("settings.bluetooth.discoveryDescription")}</p></div><button type="button" className="management-icon-action bluetooth-device-action" aria-label={t("common.actions.close")} data-tooltip={t("common.actions.close")} onClick={onClose}><X aria-hidden="true" size={17} /></button></header>
+      <DialogHeader title={t("settings.bluetooth.discoveryTitle")} description={t("settings.bluetooth.discoveryDescription")} headingId={titleId} actions={<><UiButton variant="ghost" iconOnly type="button" className="management-icon-action bluetooth-device-action" aria-label={t("common.actions.close")} data-tooltip={t("common.actions.close")} onClick={onClose}><X aria-hidden="true" size={17} /></UiButton></>} />
       <div className="bluetooth-discovery-body">
         {error ? <div className="settings-device-unavailable" role="alert"><Bluetooth aria-hidden="true" size={18} /><p>{error}</p></div> : null}
         {challenge}
-        <div className="bluetooth-discovery-toolbar"><span role="status">{scanning ? t("settings.bluetooth.scanning") : t("settings.bluetooth.scanFinished")}</span><button type="button" aria-busy={busyKey?.startsWith("scan") || undefined} disabled={disabled || busyKey !== null} onClick={onScan}>{busyKey?.startsWith("scan") ? <LoaderCircle className="is-spinning" aria-hidden="true" size={15} /> : scanning ? <X aria-hidden="true" size={15} /> : <RefreshCw aria-hidden="true" size={15} />}<span>{scanning ? t("settings.bluetooth.stopScan") : t("settings.bluetooth.scanDuration")}</span></button></div>
-        {devices.length ? <BluetoothDeviceList devices={devices} busyKey={busyKey} disabled={disabled} onAction={onAction} /> : <p className="management-empty">{scanning ? t("settings.bluetooth.scanning") : t("settings.bluetooth.noDevices")}</p>}
+        <div className="bluetooth-discovery-toolbar"><span role="status">{scanning ? t("settings.bluetooth.scanning") : t("settings.bluetooth.scanFinished")}</span><UiButton variant="ghost" type="button" aria-busy={busyKey?.startsWith("scan") || undefined} disabled={disabled || busyKey !== null} onClick={onScan}>{busyKey?.startsWith("scan") ? <LoaderCircle className="is-spinning" aria-hidden="true" size={15} /> : scanning ? <X aria-hidden="true" size={15} /> : <RefreshCw aria-hidden="true" size={15} />}<span>{scanning ? t("settings.bluetooth.stopScan") : t("settings.bluetooth.scanDuration")}</span></UiButton></div>
+        {devices.length ? <BluetoothDeviceList devices={devices} busyKey={busyKey} disabled={disabled} onAction={onAction} /> : <EmptyState className="management-empty">{scanning ? t("settings.bluetooth.scanning") : t("settings.bluetooth.noDevices")}</EmptyState>}
       </div>
     </section>
   </ModalPortal>;

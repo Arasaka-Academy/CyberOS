@@ -1,3 +1,4 @@
+import { Button as UiButton, DialogHeader, EmptyState, Input, InputGroup } from "@cyberos/ui";
 import type { PhotosSemanticIndexStatus, PhotosSearchInfo } from "@cyberos/shared";
 import { ModalPortal } from "../common/ModalPortal.js";
 import { useAppScroll, useAppViewState, useMobileBack } from "../../mobile/MobileNavigation.js";
@@ -820,25 +821,25 @@ export function PhotoLibraryPanel({
             {searchInfo?.semanticState === "unavailable" ? t("workspace.photos.semanticUnavailable") : t("workspace.photos.semanticCoverage", { indexed: semanticIndex?.indexed ?? searchInfo?.indexed ?? 0, total: semanticIndex?.total ?? searchInfo?.total ?? 0 })}
           </p> : null}
           <div className="photo-query-toolbar">
-            <form className="photo-search-field" role="search" onSubmit={submitSearch}>
-              <button type="submit" data-tooltip={t("workspace.photos.search")} aria-label={t("workspace.photos.search")}>
+            <form className="photo-search-field" role="search" onSubmit={submitSearch}><InputGroup leading={<UiButton iconOnly variant="ghost" type="submit" data-tooltip={t("workspace.photos.search")} aria-label={t("workspace.photos.search")}>
                 <Search aria-hidden="true" size={15} />
-              </button>
-              <input
+              </UiButton>}>
+
+              <Input
                 type="search"
                 value={searchText}
                 onChange={(event) => setSearchText(event.target.value)}
                 placeholder={t("workspace.photos.searchPlaceholder")}
                 aria-label={t("workspace.photos.searchPlaceholder")}
               />
-            </form>
+            </InputGroup></form>
             <div className="photo-view-switch" role="tablist" aria-label={t("workspace.photos.views")}>
-              <button type="button" role="tab" aria-selected={view === "timeline"} onClick={() => setView("timeline")} data-tooltip={t("workspace.photos.timelineView")}>
+              <UiButton variant="ghost" type="button" role="tab" aria-selected={view === "timeline"} onClick={() => setView("timeline")} data-tooltip={t("workspace.photos.timelineView")}>
                 <List aria-hidden="true" size={15} /><span>{t("workspace.photos.timelineView")}</span>
-              </button>
-              <button type="button" role="tab" aria-selected={view === "map"} onClick={() => setView("map")} data-tooltip={t("workspace.photos.mapView")}>
+              </UiButton>
+              <UiButton variant="ghost" type="button" role="tab" aria-selected={view === "map"} onClick={() => setView("map")} data-tooltip={t("workspace.photos.mapView")}>
                 <Map aria-hidden="true" size={15} /><span>{t("workspace.photos.mapView")}</span>
-              </button>
+              </UiButton>
             </div>
             <label className="photo-sort-field">
               <span>{t("workspace.photos.sort")}</span>
@@ -857,13 +858,13 @@ export function PhotoLibraryPanel({
                 ariaLabel={t("workspace.photos.sort")}
                 className="control-compact photo-sort-select"
               />
-              <button type="button" onClick={reverseSortDirection} data-tooltip={t("workspace.photos.sortDirection")} aria-label={t("workspace.photos.sortDirection")}>
+              <UiButton variant="ghost" type="button" onClick={reverseSortDirection} data-tooltip={t("workspace.photos.sortDirection")} aria-label={t("workspace.photos.sortDirection")}>
                 {sortDirection === "asc" ? "↑" : "↓"}
-              </button>
+              </UiButton>
             </label>
             {runtimeAlert && runtimeAlertLabel ? (
               <div ref={runtimeAlertRef} className="photo-runtime-alert-popover">
-                <button
+                <UiButton iconOnly variant="ghost"
                   ref={runtimeAlertTriggerRef}
                   className={`photo-runtime-alert${runtimeAlertOpen ? " is-open" : ""}`}
                   data-tone={runtimeAlert.tone}
@@ -876,7 +877,7 @@ export function PhotoLibraryPanel({
                   onClick={() => setRuntimeAlertOpen((open) => !open)}
                 >
                   <CircleAlert aria-hidden="true" size={15} />
-                </button>
+                </UiButton>
                 {runtimeAlertOpen ? (
                   <div
                     id="photo-runtime-alert-details"
@@ -887,7 +888,7 @@ export function PhotoLibraryPanel({
                   >
                     <div className="photo-runtime-alert-heading">
                       <strong id="photo-runtime-alert-title">{t("workspace.photos.runtimeAlertTitle")}</strong>
-                      <button
+                      <UiButton iconOnly variant="ghost"
                         type="button"
                         onClick={() => {
                           setRuntimeAlertOpen(false);
@@ -897,7 +898,7 @@ export function PhotoLibraryPanel({
                         aria-label={t("workspace.photos.closeRuntimeAlert")}
                       >
                         <X aria-hidden="true" size={14} />
-                      </button>
+                      </UiButton>
                     </div>
                     <p>{runtimeAlert.error ?? t("workspace.photos.runtimeAlertFallback")}</p>
                     <dl>
@@ -933,7 +934,7 @@ export function PhotoLibraryPanel({
               onApply={applyFilters}
             />
             {photos.length ? (
-              <button
+              <UiButton iconOnly variant="ghost"
                 type="button"
                 className="photo-select-loaded"
                 onClick={selectAllLoaded}
@@ -942,24 +943,24 @@ export function PhotoLibraryPanel({
                 aria-label={t("workspace.photos.selectLoaded")}
               >
                 {selectedIds.size === photos.length ? <CheckSquare aria-hidden="true" size={15} /> : <Square aria-hidden="true" size={15} />}
-              </button>
+              </UiButton>
             ) : null}
           </div>
           {selected.length ? (
             <div className="photo-selection-actions" aria-label={t("workspace.photos.selectionActions")}>
               <span>{t("workspace.photos.selected", { count: selected.length })}</span>
-              <button type="button" onClick={() => void downloadSelection()} disabled={Boolean(busyAction)} data-tooltip={t("workspace.photos.downloadSelected")} aria-label={t("workspace.photos.downloadSelected")}>
+              <UiButton variant="ghost" type="button" onClick={() => void downloadSelection()} disabled={Boolean(busyAction)} data-tooltip={t("workspace.photos.downloadSelected")} aria-label={t("workspace.photos.downloadSelected")}>
                 <Download aria-hidden="true" size={15} /><span>{t("workspace.photos.downloadSelected")}</span>
-              </button>
-              <button type="button" onClick={() => setPicker("move")} disabled={Boolean(busyAction)} data-tooltip={t("workspace.photos.moveSelected")} aria-label={t("workspace.photos.moveSelected")}>
+              </UiButton>
+              <UiButton variant="ghost" type="button" onClick={() => setPicker("move")} disabled={Boolean(busyAction)} data-tooltip={t("workspace.photos.moveSelected")} aria-label={t("workspace.photos.moveSelected")}>
                 <FolderInput aria-hidden="true" size={15} /><span>{t("workspace.photos.moveSelected")}</span>
-              </button>
-              <button ref={deleteTriggerRef} className="is-danger" type="button" onClick={() => setDeleteOpen(true)} disabled={Boolean(busyAction)} data-tooltip={t("workspace.photos.deleteSelected")} aria-label={t("workspace.photos.deleteSelected")}>
+              </UiButton>
+              <UiButton variant="danger" ref={deleteTriggerRef} className="is-danger" type="button" onClick={() => setDeleteOpen(true)} disabled={Boolean(busyAction)} data-tooltip={t("workspace.photos.deleteSelected")} aria-label={t("workspace.photos.deleteSelected")}>
                 <Trash2 aria-hidden="true" size={15} /><span>{t("workspace.photos.deleteSelected")}</span>
-              </button>
-              <button type="button" onClick={() => setSelectedIds(new Set())} data-tooltip={t("workspace.photos.clearSelection")} aria-label={t("workspace.photos.clearSelection")}>
+              </UiButton>
+              <UiButton iconOnly variant="ghost" type="button" onClick={() => setSelectedIds(new Set())} data-tooltip={t("workspace.photos.clearSelection")} aria-label={t("workspace.photos.clearSelection")}>
                 <X aria-hidden="true" size={15} />
-              </button>
+              </UiButton>
             </div>
           ) : null}
           <div className="photo-query-summary"><span>{t("workspace.photos.resultCount", { count: total })}</span>{status?.metadataIndex?.pending ? <span>{t("workspace.photos.metadataProgress", { indexed: status.metadataIndex.indexed, total: status.metadataIndex.total })}</span> : null}</div>
@@ -980,7 +981,7 @@ export function PhotoLibraryPanel({
         {loadMode === "loading" ? (
           <PhotoTimelineSkeleton />
         ) : loadMode === "error" ? (
-          <div className="workspace-empty-state" role="alert"><ImageOff aria-hidden="true" size={28} /><strong>{t("workspace.photos.loadFailed")}</strong><p>{loadError}</p><button className="secondary-button" type="button" onClick={() => void loadLibrary()}>{t("common.actions.refresh")}</button></div>
+          <EmptyState className="workspace-empty-state" role="alert" icon={<ImageOff aria-hidden="true" size={28} />} title={t("workspace.photos.loadFailed")} description={loadError} actions={<><UiButton variant="secondary" className="secondary-button" type="button" onClick={() => void loadLibrary()}>{t("common.actions.refresh")}</UiButton></>}></EmptyState>
         ) : !settings ? (
           <PhotoLibraryEmptyState onConfigure={onOpenSettings} />
         ) : view === "map" ? (
@@ -991,11 +992,11 @@ export function PhotoLibraryPanel({
             onError={(message) => onNotifyError(message)}
           />
         ) : photos.length === 0 ? (
-          <div className="workspace-empty-state photo-library-empty" role="status">
+          <EmptyState className="workspace-empty-state photo-library-empty" role="status" title={hasQueryFilters ? t("workspace.photos.noResultsTitle") : statusBusy ? t("workspace.photos.scanningTitle") : t("workspace.photos.emptyTitle")} description={hasQueryFilters ? t("workspace.photos.noResultsBody") : statusBusy ? t("workspace.photos.scanningBody", { count: status?.scanned ?? 0 }) : t("workspace.photos.emptyBody")}>
             {statusBusy && !hasQueryFilters ? <LoaderCircle className="is-spinning" aria-hidden="true" size={30} /> : <ImageOff aria-hidden="true" size={30} />}
-            <strong>{hasQueryFilters ? t("workspace.photos.noResultsTitle") : statusBusy ? t("workspace.photos.scanningTitle") : t("workspace.photos.emptyTitle")}</strong>
-            <p>{hasQueryFilters ? t("workspace.photos.noResultsBody") : statusBusy ? t("workspace.photos.scanningBody", { count: status?.scanned ?? 0 }) : t("workspace.photos.emptyBody")}</p>
-          </div>
+
+
+          </EmptyState>
         ) : (
           <div className="photo-timeline">
             {groupedPhotos.map((group) => (
@@ -1008,7 +1009,7 @@ export function PhotoLibraryPanel({
                     const aspectRatio = photoAspectRatio(photo.width, photo.height);
                     return (
                       <article className={`photo-tile${isSelected ? " is-selected" : ""}`} key={photo.id} style={{ aspectRatio }}>
-                        <button className="photo-open" type="button" onClick={(event) => openLightbox(photo, event.currentTarget)} aria-label={t("workspace.photos.openPhoto", { name: photo.name })}>
+                        <UiButton variant="ghost" className="photo-open" type="button" onClick={(event) => openLightbox(photo, event.currentTarget)} aria-label={t("workspace.photos.openPhoto", { name: photo.name })}>
                           <img
                             src={`/api/photos/${encodeURIComponent(photo.id)}/thumbnail`}
                             alt=""
@@ -1020,10 +1021,10 @@ export function PhotoLibraryPanel({
                           {mediaKind === "video" ? <span className="photo-media-badge is-video" aria-hidden="true"><Play size={13} fill="currentColor" /></span> : null}
                           {mediaKind === "raw" ? <span className="photo-media-badge is-raw" aria-hidden="true">RAW</span> : null}
                           <span className="photo-name">{photo.name}</span>
-                        </button>
-                        <button className="photo-select" type="button" aria-pressed={isSelected} onClick={() => toggleSelection(photo.id)} aria-label={isSelected ? t("workspace.photos.deselectPhoto", { name: photo.name }) : t("workspace.photos.selectPhoto", { name: photo.name })}>
+                        </UiButton>
+                        <UiButton variant="ghost" className="photo-select" type="button" aria-pressed={isSelected} onClick={() => toggleSelection(photo.id)} aria-label={isSelected ? t("workspace.photos.deselectPhoto", { name: photo.name }) : t("workspace.photos.selectPhoto", { name: photo.name })}>
                           {isSelected ? <Check aria-hidden="true" size={14} /> : <span aria-hidden="true" />}
-                        </button>
+                        </UiButton>
                       </article>
                     );
                   })}
@@ -1035,7 +1036,7 @@ export function PhotoLibraryPanel({
                 {paginationError ? (
                   <div className="photo-pagination-error" role="alert">
                     <span data-tooltip={paginationError}>{t("workspace.photos.loadMoreFailed")}</span>
-                    <button className="secondary-button" type="button" onClick={() => void loadMore()}>{t("workspace.photos.retryLoadMore")}</button>
+                    <UiButton variant="secondary" className="secondary-button" type="button" onClick={() => void loadMore()}>{t("workspace.photos.retryLoadMore")}</UiButton>
                   </div>
                 ) : loadingMore ? (
                   <span role="status"><LoaderCircle className="is-spinning" aria-hidden="true" size={15} />{t("workspace.photos.loadingMore")}</span>
@@ -1079,9 +1080,9 @@ export function PhotoLibraryPanel({
               }
             }}
           >
-            <header><span className="eyebrow">{t("workspace.photos.deleteSelected")}</span><h2 id="photo-delete-title">{t("workspace.photos.deleteTitle", { count: selected.length })}</h2></header>
+            <DialogHeader title={t("workspace.photos.deleteTitle", { count: selected.length })} eyebrow={<>{t("workspace.photos.deleteSelected")}</>} headingId="photo-delete-title" />
             <p>{t("workspace.photos.deleteBody")}</p>
-            <div className="file-action-actions"><button type="button" onClick={() => setDeleteOpen(false)} disabled={Boolean(busyAction)}>{t("common.actions.cancel")}</button><button className="danger-button" type="button" onClick={() => void applyBatch("trash")} disabled={Boolean(busyAction)} aria-busy={busyAction === "trash" || undefined}>{t("workspace.photos.requestDelete")}</button></div>
+            <div className="file-action-actions"><UiButton variant="ghost" type="button" onClick={() => setDeleteOpen(false)} disabled={Boolean(busyAction)}>{t("common.actions.cancel")}</UiButton><UiButton variant="danger" className="danger-button" type="button" onClick={() => void applyBatch("trash")} disabled={Boolean(busyAction)} aria-busy={busyAction === "trash" || undefined}>{t("workspace.photos.requestDelete")}</UiButton></div>
           </div>
         </ModalPortal>
       ) : null}
@@ -1089,19 +1090,16 @@ export function PhotoLibraryPanel({
       {lightboxPhoto ? (
         <ModalPortal className="photo-lightbox-backdrop" role="presentation" onRequestClose={() => setLightboxId(null)} onMouseDown={(event) => event.currentTarget === event.target && setLightboxId(null)}>
           <div ref={lightboxRef} className="photo-lightbox" role="dialog" aria-modal="true" aria-labelledby="photo-lightbox-title" tabIndex={-1} onKeyDown={handleLightboxKeyDown}>
-            <header className="photo-lightbox-header">
-              <div><span className="eyebrow">{t("workspace.photos.viewer")}</span><h2 id="photo-lightbox-title">{lightboxPhoto.name}</h2></div>
-              <div className="photo-lightbox-tools">
+            <DialogHeader className="photo-lightbox-header" title={lightboxPhoto.name} eyebrow={<>{t("workspace.photos.viewer")}</>} headingId="photo-lightbox-title" actions={<><div className="photo-lightbox-tools">
                 {lightboxMediaKind !== "video" ? <>
-                  <button type="button" onClick={() => setZoom((current) => Math.max(1, current - 0.5))} disabled={zoom <= 1} data-tooltip={t("workspace.photos.zoomOut")} aria-label={t("workspace.photos.zoomOut")}><Minus aria-hidden="true" size={17} /></button>
-                  <button type="button" onClick={() => setZoom(1)} data-tooltip={t("workspace.photos.resetZoom")} aria-label={t("workspace.photos.resetZoom")}><Maximize2 aria-hidden="true" size={17} /><span>{Math.round(zoom * 100)}%</span></button>
-                  <button type="button" onClick={() => setZoom((current) => Math.min(4, current + 0.5))} disabled={zoom >= 4} data-tooltip={t("workspace.photos.zoomIn")} aria-label={t("workspace.photos.zoomIn")}><Plus aria-hidden="true" size={17} /></button>
+                  <UiButton iconOnly variant="ghost" type="button" onClick={() => setZoom((current) => Math.max(1, current - 0.5))} disabled={zoom <= 1} data-tooltip={t("workspace.photos.zoomOut")} aria-label={t("workspace.photos.zoomOut")}><Minus aria-hidden="true" size={17} /></UiButton>
+                  <UiButton variant="ghost" type="button" onClick={() => setZoom(1)} data-tooltip={t("workspace.photos.resetZoom")} aria-label={t("workspace.photos.resetZoom")}><Maximize2 aria-hidden="true" size={17} /><span>{Math.round(zoom * 100)}%</span></UiButton>
+                  <UiButton iconOnly variant="ghost" type="button" onClick={() => setZoom((current) => Math.min(4, current + 0.5))} disabled={zoom >= 4} data-tooltip={t("workspace.photos.zoomIn")} aria-label={t("workspace.photos.zoomIn")}><Plus aria-hidden="true" size={17} /></UiButton>
                 </> : null}
-                <button type="button" onClick={() => setLightboxId(null)} data-tooltip={t("common.actions.close")} aria-label={t("common.actions.close")}><X aria-hidden="true" size={18} /></button>
-              </div>
-            </header>
+                <UiButton iconOnly variant="ghost" type="button" onClick={() => setLightboxId(null)} data-tooltip={t("common.actions.close")} aria-label={t("common.actions.close")}><X aria-hidden="true" size={18} /></UiButton>
+              </div></>} />
             <div className="photo-lightbox-body">
-              <button className="photo-lightbox-nav is-previous" type="button" onClick={() => showAdjacent(-1)} disabled={lightboxIndex <= 0} data-tooltip={t("workspace.photos.previous")} aria-label={t("workspace.photos.previous")}><ChevronLeft aria-hidden="true" size={24} /></button>
+              <UiButton iconOnly variant="ghost" className="photo-lightbox-nav is-previous" type="button" onClick={() => showAdjacent(-1)} disabled={lightboxIndex <= 0} data-tooltip={t("workspace.photos.previous")} aria-label={t("workspace.photos.previous")}><ChevronLeft aria-hidden="true" size={24} /></UiButton>
               <div className="photo-lightbox-canvas">
                 {lightboxMediaKind === "video" ? (
                   <video
@@ -1116,7 +1114,7 @@ export function PhotoLibraryPanel({
                   <img src={`/api/photos/${encodeURIComponent(lightboxPhoto.id)}/preview`} alt={lightboxPhoto.name} style={{ width: `${zoom * 100}%` }} />
                 )}
               </div>
-              <button className="photo-lightbox-nav is-next" type="button" onClick={() => showAdjacent(1)} disabled={lightboxIndex >= photos.length - 1} data-tooltip={t("workspace.photos.next")} aria-label={t("workspace.photos.next")}><ChevronRight aria-hidden="true" size={24} /></button>
+              <UiButton iconOnly variant="ghost" className="photo-lightbox-nav is-next" type="button" onClick={() => showAdjacent(1)} disabled={lightboxIndex >= photos.length - 1} data-tooltip={t("workspace.photos.next")} aria-label={t("workspace.photos.next")}><ChevronRight aria-hidden="true" size={24} /></UiButton>
               <aside className="photo-lightbox-meta">
                 <dl>
                   <div><dt>{t("workspace.photos.takenAt")}</dt><dd>{formatPhotoDateTime(lightboxPhoto.metadata?.capturedAtLocal ?? lightboxPhoto.takenAt, locale)}</dd></div>
@@ -1140,7 +1138,7 @@ export function PhotoLibraryPanel({
                       <dl>{Object.entries(entries).map(([key, values]) => <div key={key}><dt>{key}</dt><dd>{values.join(", ")}</dd></div>)}</dl>
                     </details>
                   ))}
-                  {metadata?.sensitiveOmitted && !sensitiveRevealed ? <button type="button" className="photo-reveal-sensitive" onClick={() => void revealSensitiveMetadata()} disabled={metadataLoading}><SlidersHorizontal aria-hidden="true" size={14} />{t("workspace.photos.revealSensitive")}</button> : null}
+                  {metadata?.sensitiveOmitted && !sensitiveRevealed ? <UiButton variant="ghost" type="button" className="photo-reveal-sensitive" onClick={() => void revealSensitiveMetadata()} disabled={metadataLoading}><SlidersHorizontal aria-hidden="true" size={14} />{t("workspace.photos.revealSensitive")}</UiButton> : null}
                   {Object.entries(metadata?.sensitiveGroups ?? {}).map(([source, entries]) => (
                     <details className="is-sensitive" key={source}>
                       <summary>{source}<span>{Object.keys(entries).length}</span></summary>
@@ -1161,15 +1159,15 @@ export function PhotoLibraryPanel({
 export function PhotoLibraryEmptyState({ onConfigure }: { onConfigure: () => void }) {
   const { t } = useTranslation();
   return (
-    <div className="workspace-empty-state photo-library-empty" role="status">
-      <Images aria-hidden="true" size={34} />
-      <strong>{t("workspace.photos.unconfiguredTitle")}</strong>
-      <p>{t("workspace.photos.unconfiguredBody")}</p>
-      <button className="primary-button" type="button" onClick={onConfigure}>
+    <EmptyState className="workspace-empty-state photo-library-empty" role="status" icon={<Images aria-hidden="true" size={34} />} title={t("workspace.photos.unconfiguredTitle")} description={t("workspace.photos.unconfiguredBody")} actions={<><UiButton variant="primary" className="primary-button" type="button" onClick={onConfigure}>
         <SlidersHorizontal aria-hidden="true" size={15} />
         <span>{t("workspace.photos.configure")}</span>
-      </button>
-    </div>
+      </UiButton></>}>
+
+
+
+
+    </EmptyState>
   );
 }
 

@@ -98,7 +98,7 @@
   object-fit: cover;
 }
 .video-poster:hover .video-artwork {
-  border-color: var(--cyber-cyan);
+  border-color: var(--hud-cyan);
 }
 .video-poster strong {
   font-size: 14px;
@@ -275,7 +275,7 @@
   width: 100%;
   max-height: 72vh;
   min-height: 0;
-  background: #000;
+  background: var(--cyberos-color-surface-raised);
 }
 .browser-controls {
   display: flex;
@@ -328,7 +328,7 @@
 }
 .browser-player-backdrop:fullscreen {
   padding: 0;
-  background: #000;
+  background: var(--cyberos-color-surface-raised);
 }
 .browser-player-backdrop:fullscreen .browser-player {
   width: 100%;

@@ -1,3 +1,4 @@
+import { Button as UiButton, Section } from "@cyberos/ui";
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { FolderPlus, LoaderCircle, Music2, RefreshCw, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -150,11 +151,11 @@ export function SettingsMusicLibraryCard({ pools, locale, onNotifySuccess, onNot
           <p><strong>{removeSource.name}</strong></p>
           <p>{t("music.removeSourceConfirm")}</p>
           <footer>
-            <button type="button" disabled={busy !== null} onClick={() => setRemoveSource(null)}>{t("common.actions.cancel")}</button>
-            <button type="button" className="danger-button" disabled={busy !== null} aria-busy={busy !== null} onClick={() => {
+            <UiButton variant="ghost" type="button" disabled={busy !== null} onClick={() => setRemoveSource(null)}>{t("common.actions.cancel")}</UiButton>
+            <UiButton variant="danger" type="button" className="danger-button" disabled={busy !== null} aria-busy={busy !== null} onClick={() => {
               const source = removeSource;
               void run(`remove-${source.id}`, () => musicRequest(`/sources/${encodeURIComponent(source.id)}`, "DELETE"), t("settings.media.musicSourceRemoved"));
-            }}>{t("music.remove")}</button>
+            }}>{t("music.remove")}</UiButton>
           </footer>
         </MusicDialog>
       ) : null}
@@ -178,20 +179,14 @@ export function SettingsMusicLibraryContent({ data, loading, error, busy, canAdd
   const { t } = useTranslation();
   const disabled = busy !== null || loading || data === null;
   return (
-    <section id="settings-music-library" className="settings-section-card settings-field-wide settings-music-library" aria-busy={loading || busy !== null}>
-      <header>
-        <div>
-          <h3><Music2 aria-hidden="true" size={18} />{t("settings.media.musicTitle")}</h3>
-          <p>{t("settings.media.musicDescription")}</p>
-        </div>
-        <button ref={addButtonRef} type="button" className="secondary-button settings-music-add" disabled={disabled || !canAdd} onClick={onAdd}>
+    <Section id="settings-music-library" className="settings-section-card settings-field-wide settings-music-library" aria-busy={loading || busy !== null} title={t("settings.media.musicTitle")} description={t("settings.media.musicDescription")} icon={<Music2 aria-hidden="true" size={18} />} actions={<><UiButton variant="secondary" ref={addButtonRef} type="button" className="secondary-button settings-music-add" disabled={disabled || !canAdd} onClick={onAdd}>
           <FolderPlus aria-hidden="true" size={15} />{t("music.addSource")}
-        </button>
-      </header>
+        </UiButton></>}>
+
       {error ? (
         <div className="settings-music-feedback" role="alert">
           <span>{error}</span>
-          <button type="button" disabled={loading || busy !== null} onClick={onRetry}>{t("settings.media.musicRetry")}</button>
+          <UiButton variant="ghost" type="button" disabled={loading || busy !== null} onClick={onRetry}>{t("settings.media.musicRetry")}</UiButton>
         </div>
       ) : null}
       {loading && !data ? <div className="settings-media-loading" role="status"><LoaderCircle className="is-spinning" aria-hidden="true" size={18} />{t("settings.media.musicLoading")}</div> : null}
@@ -218,12 +213,12 @@ export function SettingsMusicLibraryContent({ data, loading, error, busy, canAdd
                     </div>
                     <Switch className="settings-media-toggle" compact checked={source.enabled} disabled={disabled} label={t("music.sourceEnabled")} onCheckedChange={(enabled) => onToggle(source, enabled)} />
                     <div className="settings-media-row-actions">
-                      <button type="button" disabled={disabled || !source.enabled} onClick={() => onScan(source)} aria-label={`${t("music.scan")}: ${source.name}`} data-tooltip={t("music.scan")}>
+                      <UiButton iconOnly variant="ghost" type="button" disabled={disabled || !source.enabled} onClick={() => onScan(source)} aria-label={`${t("music.scan")}: ${source.name}`} data-tooltip={t("music.scan")}>
                         <RefreshCw aria-hidden="true" size={15} className={busy === `scan-${source.id}` ? "is-spinning" : undefined} />
-                      </button>
-                      <button type="button" disabled={disabled} onClick={() => onRemove(source)} aria-label={`${t("music.remove")}: ${source.name}`} data-tooltip={t("music.remove")}>
+                      </UiButton>
+                      <UiButton iconOnly variant="ghost" type="button" disabled={disabled} onClick={() => onRemove(source)} aria-label={`${t("music.remove")}: ${source.name}`} data-tooltip={t("music.remove")}>
                         <Trash2 aria-hidden="true" size={15} />
-                      </button>
+                      </UiButton>
                     </div>
                     {scan?.error ? <p className="settings-music-scan-error" role="alert">{scan.error}</p> : null}
                   </article>
@@ -233,6 +228,6 @@ export function SettingsMusicLibraryContent({ data, loading, error, busy, canAdd
           )}
         </>
       ) : null}
-    </section>
+    </Section>
   );
 }

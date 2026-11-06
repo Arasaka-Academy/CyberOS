@@ -1,0 +1,39 @@
+/* Application adaptation of CyberUI. Structural layouts remain with their owners. */
+@layer app {
+  .app-shell, .workspace-pane, .workspace-stage, .management-body, .settings-content, .photo-library, .tv-app {
+    background: var(--cyberos-color-canvas);
+  }
+  .app-shell::after { display: none; }
+  .agent-list, .settings-rail, .workspace-panel-rail { background: var(--cyberos-color-surface); border-color: var(--cyber-line); }
+  .brand, .workspace-header, .panel-header, .management-header, .settings-content-header,
+  .notification-drawer-header, .preview-toolbar, .editor-header, .editor-footer, .tv-header {
+    color: var(--cyber-ink); background: var(--cyber-bg); border-color: var(--cyber-line);
+  }
+  .brand-banner, .brand-banner-wordmark { color: var(--cyber-ink); }
+  .agent-brand-logo, .settings-brand-logo, .brand-banner-mark, .mobile-home-brand img, .tv-brand img { filter: var(--cyberos-logo-filter); }
+  .management-title-icon, .mobile-title-icon { color: var(--cyber-on-accent); background: var(--cyber-accent); }
+  .management-title-copy h2, .workspace-title, .settings-content-header h2 { color: var(--cyber-ink); font-weight: 600; }
+  .management-title-copy h2::before, .workspace-title::before { color: var(--cyber-accent); }
+  .workspace-panel-tab.is-active, .agent-row.is-active, .agent-item.is-active, .settings-nav button.is-active {
+    color: var(--cyber-ink); background: var(--cyber-soft); border-color: var(--cyber-accent);
+  }
+  :is(.custom-select-trigger, .search-filter-trigger, .hud-switch-track) { border-color: var(--cyber-line); background: var(--cyber-bg); color: var(--cyber-ink); box-shadow: none; }
+  :is(.custom-select-menu, .search-filter-menu, .mobile-action-menu) { color: var(--cyber-ink); background: var(--cyber-bg); border: 1px solid var(--cyber-line); box-shadow: 4px 4px 0 var(--cyber-soft); }
+  .custom-select-option.is-selected, .custom-select-option.is-active { color: var(--cyber-on-accent2); background: var(--cyber-accent2); }
+  .hud-switch[data-state='on'] .hud-switch-track { background: var(--cyber-accent); border-color: var(--cyber-accent); }
+  .hud-switch[data-state='on'] .hud-switch-thumb { background: var(--cyber-on-accent); }
+  .management-card, .approval-card { border-color: var(--cyber-line); background: var(--cyber-bg); box-shadow: none; }
+  .management-card > header { border-color: var(--cyber-line); }
+  .modal, .settings-modal, .editor-modal, .file-preview-dialog, .notification-drawer { background: var(--cyber-bg); border-color: var(--cyber-line); box-shadow: 6px 6px 0 var(--cyber-soft); }
+  .chat-pane, .chat-messages, .message-list { background: var(--cyber-bg); color: var(--cyber-ink); }
+  .composer, .composer-form, .chat-composer { border-color: var(--cyber-ink); background: var(--cyber-bg); box-shadow: none; }
+  .playback-dock, .playback-bar, .playback-menu { color: var(--cyber-ink); background: var(--cyber-bg); border-color: var(--cyber-line); box-shadow: none; }
+  .mobile-home, .mobile-dock, .mobile-app-header, .mobile-header-actions { color: var(--cyber-ink); background: var(--cyber-bg); border-color: var(--cyber-line); }
+  .tv-theme-dialog { width: min(760px, calc(100vw - 80px)); padding: 32px; color: var(--cyber-ink); background: var(--cyber-bg); border: 2px solid var(--cyber-line); }
+  .tv-theme-dialog h2 { margin-top: 0; font-size: 28px; }
+  .tv-theme-dialog > p { margin-top: 24px; }
+  .tv-theme-dialog button { min-height: 48px; font-size: 20px; }
+  .tv-theme-backdrop { position: fixed; inset: 0; display: grid; place-items: center; background: var(--cyberos-hud-overlay); }
+  :where(input, textarea) { caret-color: var(--cyber-accent2); }
+  :where(button, a, input, textarea, [tabindex]):focus-visible { outline-color: var(--cyber-accent2); }
+}

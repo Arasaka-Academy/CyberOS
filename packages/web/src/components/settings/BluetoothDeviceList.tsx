@@ -1,3 +1,4 @@
+import { Button as UiButton } from "@cyberos/ui";
 import {
   Bluetooth, BluetoothConnected, BluetoothOff, Gamepad2, Headphones, Laptop, Link,
   LoaderCircle, Send, Shield, ShieldOff, Smartphone, Speaker, Unplug, type LucideIcon
@@ -34,7 +35,7 @@ export function BluetoothDeviceList({ devices, busyKey, disabled, onAction }: {
           {connecting ? <span role="status">{t("settings.bluetooth.connecting")}</span> : device.connected ? <span className="is-ready">{t("settings.bluetooth.connected")}</span> : null}
         </div>
       </div>
-      <div className="bluetooth-device-actions">{actions.map(({ action, label, icon: Icon, danger }) => <button
+      <div className="bluetooth-device-actions">{actions.map(({ action, label, icon: Icon, danger }) => <UiButton variant={danger ? "danger" : "ghost"} iconOnly
         key={action}
         type="button"
         className={`management-icon-action bluetooth-device-action${danger ? " is-danger" : ""}`}
@@ -42,7 +43,7 @@ export function BluetoothDeviceList({ devices, busyKey, disabled, onAction }: {
         aria-label={label}
         disabled={disabled || busyKey !== null}
         onClick={() => onAction(action, device)}
-      >{busyKey === `${action}-${device.address}` ? <LoaderCircle className="is-spinning" aria-hidden="true" size={16} /> : <Icon aria-hidden="true" size={16} />}</button>)}</div>
+      >{busyKey === `${action}-${device.address}` ? <LoaderCircle className="is-spinning" aria-hidden="true" size={16} /> : <Icon aria-hidden="true" size={16} />}</UiButton>)}</div>
     </article>;
   })}</div>;
 }

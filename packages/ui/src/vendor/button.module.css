@@ -1,0 +1,39 @@
+/* Generated from packages/react/src/button.module.css. Regenerate in CyberUI with pnpm registry:build; after installation, edit this file freely. */
+@layer theme, base, components, utilities;
+@reference './tailwind-theme.css';
+
+@layer components {
+.button {
+  --cut: var(--cyber-cut); --edge: var(--cyber-ink); --face: var(--cyber-bg);
+  @apply tw:relative tw:isolate tw:inline-flex tw:items-center tw:justify-center tw:gap-cyber-md tw:min-h-cyber-touch tw:p-[var(--cyber-space-md)_22px];
+  border: 0; background: transparent; @apply tw:text-cyber-ink tw:[text-decoration:none] tw:font-cyber-display; @apply tw:text-[length:14px]; @apply tw:font-semibold tw:tracking-[.07em]; @apply tw:leading-[1.4] tw:uppercase;
+  transition: filter var(--cyber-state-duration); @apply tw:align-middle tw:shrink-[0];
+}
+.button > :not(.shape) { @apply tw:relative tw:z-[1]; }
+.shape { @apply tw:absolute tw:inset-[0] tw:z-[-1] tw:pointer-events-none; background: var(--edge); }
+.shape::after { content: ''; @apply tw:absolute tw:inset-[2px]; background: var(--face); }
+.shape, .shape::after {
+  clip-path: polygon(0 0,calc(100% - var(--cut)) 0,100% var(--cut),100% 100%,var(--cut) 100%,0 calc(100% - var(--cut)));
+}
+.shape::after { --cut: max(0px, calc(var(--cyber-cut) - 1.17px)); }
+.button[data-corners='tl-br'] .shape, .button[data-corners='tl-br'] .shape::after {
+  clip-path: polygon(var(--cut) 0,100% 0,100% calc(100% - var(--cut)),calc(100% - var(--cut)) 100%,0 100%,0 var(--cut));
+}
+.button[data-corners='tr'] .shape, .button[data-corners='tr'] .shape::after {
+  clip-path: polygon(0 0,calc(100% - var(--cut)) 0,100% var(--cut),100% 100%,0 100%);
+}
+.button[data-corners='none'] .shape, .button[data-corners='none'] .shape::after { clip-path: none; }
+.button[data-variant='primary'] { --edge: var(--cyber-accent); --face: var(--cyber-accent); @apply tw:text-cyber-on-accent; }
+.button[data-variant='accent2'] { --edge: var(--cyber-accent2); --face: var(--cyber-accent2); @apply tw:text-cyber-on-accent2; }
+.button[data-variant='soft'] { --edge: var(--cyber-soft); --face: var(--cyber-soft); }
+.button[data-variant='ghost'] { --edge: transparent; --face: transparent; }
+.button[data-variant='danger'] { --edge: var(--cyber-danger); @apply tw:text-cyber-danger; }
+.button[data-size='sm'] { --cut: 8px; @apply tw:min-h-[36px] tw:p-[7px_var(--cyber-space-lg)] tw:text-[length:12px]; }
+.button[data-size='sm'] .shape::after { --cut: 6.83px; }
+.button[data-size='lg'] { @apply tw:min-h-[56px] tw:p-[var(--cyber-space-lg)_28px] tw:text-[length:16px]; }
+.button:hover:not(:disabled):not([data-disabled]) { filter: brightness(1.18); }
+.button:active:not(:disabled), .button[data-pressed] { filter: brightness(.85); }
+.button:disabled,.button[data-disabled] { @apply tw:opacity-[.45]; }
+.button[aria-pressed='true'] { --edge: var(--cyber-accent); --face: var(--cyber-accent); @apply tw:text-cyber-on-accent; }
+.spinner { @apply tw:inline-block tw:w-[20px] tw:h-[20px]; border: 2px solid var(--cyber-line); @apply tw:border-t-cyber-ink tw:animate-cyber-spin; }
+}

@@ -1,0 +1,12 @@
+/* Generated from packages/react/src/input.module.css. Regenerate in CyberUI with pnpm registry:build; after installation, edit this file freely. */
+@layer theme, base, components, utilities;
+@reference './tailwind-theme.css';
+
+@layer components {
+.input { @apply tw:block tw:w-full tw:min-w-[0] tw:min-h-cyber-touch tw:p-[var(--cyber-space-md)_13px]; border: 1px solid var(--cyber-muted); @apply tw:rounded-[0]; background: var(--cyber-bg); @apply tw:text-cyber-ink tw:font-cyber-body; transition: border-color var(--cyber-state-duration); }
+.input::placeholder { @apply tw:text-cyber-muted tw:opacity-[.65]; }
+.input:hover { @apply tw:border-cyber-ink; }
+.input:disabled, .input[data-disabled] { @apply tw:opacity-[.45] tw:cursor-not-allowed; }
+.input[aria-invalid='true'],.input[data-invalid] { @apply tw:border-cyber-danger; }
+.input[readonly] { background: var(--cyber-soft); border-style: dashed; }
+}

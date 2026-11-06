@@ -7,6 +7,14 @@ use uuid::Uuid;
 
 use crate::error::VodError;
 
+pub(crate) fn theme_palette(scheme: &str, mode: &str) -> Option<serde_json::Value> {
+    let themes: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../packages/shared/src/appearance-palettes.json"
+    ))
+    .ok()?;
+    themes.get(format!("{scheme}/{mode}")).cloned()
+}
+
 pub(crate) struct TvControlsScript {
     path: PathBuf,
 }

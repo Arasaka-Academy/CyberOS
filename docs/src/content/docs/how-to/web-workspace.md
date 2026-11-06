@@ -93,7 +93,13 @@ Compose 项目区的“创建”按钮用于管理系统托管 App。名称用�
 
 “保存”只生成新的 revision 并显示“需要部署”；“保存并部署”在保存成功后直接执行 Compose Up，并以当前 revision 防止漂移。Engine 离线时仍可查看、创建和编辑，但不能部署或删除。删除前必须先执行 Down 移除项目容器，再进行独立二次确认；删除 App 不会清理镜像、named volume、网络或 storage-pool bind mount 数据。
 
-设置面板可以修改 model provider、Pi tool policy、Docker 配置、语言、预览大小和编辑器字体。界面固定使用深色 HUD 主题；保存 provider secret 后 UI 只显示是否已配置，不会回显密钥。
+设置面板可以修改 model provider、Pi tool policy、Docker 配置、语言、预览大小和编辑器字体。界面支持七套 CyberUI 配色，每套可选择深色或浅色模式；保存 provider secret 后 UI 只显示是否已配置，不会回显密钥。
+
+## 选择界面外观
+
+打开“系统设置 → 外观”，选择 neon、mono、graphite、synthwave、bloodline、terminal 或 amber，再选择深色或浅色。默认 neon 深色，不跟随操作系统自动切换。偏好保存在当前浏览器，刷新后保留；同源的 Web 与文档站会同步，文档站也可从工具栏的“界面外观”入口修改。
+
+TV 在顶部提供“界面外观”，独立保存于电视浏览器。TV 的原生播放控制条跟随该偏好，切换不会更换播放会话；同步失败时可以重试。清除浏览器站点数据会恢复默认主题。
 
 ## 常见状态判断
 

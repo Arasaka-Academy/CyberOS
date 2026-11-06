@@ -1,0 +1,11 @@
+/* Generated from packages/tokens/src/tokens.css. Regenerate in CyberUI with pnpm registry:build; after installation, edit this file freely. */
+/* Geometry and motion tokens can also be consumed without React. */
+:where([data-cyberui], [data-cyberui-portal]) {
+  --cyber-cut:12px; --cyber-cut-small:8px; --cyber-stroke:2px; --cyber-hair:1px;
+  --cyber-bracket:16px; --cyber-touch:44px;
+  --cyber-space-xs:4px; --cyber-space-sm:6px; --cyber-space-md:10px;
+  --cyber-space-lg:14px; --cyber-space-xl:18px; --cyber-space-2xl:24px;
+  --cyber-space-3xl:32px; --cyber-space-4xl:48px; --cyber-space-5xl:64px;
+  --cyber-state-duration:120ms; --cyber-enter-duration:180ms; --cyber-exit-duration:120ms;
+  --cyber-spin-duration:800ms; --cyber-pulse-duration:1600ms;
+}

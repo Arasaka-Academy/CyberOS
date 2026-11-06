@@ -1,3 +1,4 @@
+import { Button as UiButton, DialogActions, DialogHeader, EmptyState, Field, Input, SectionHeader, StatusBadge } from "@cyberos/ui";
 import { ModalPortal } from "../common/ModalPortal.js";
 import {
   useEffect,
@@ -436,15 +437,10 @@ export function SystemWifiManagement({
   return (
     <>
       <section className="management-section system-wifi-section">
-        <header className="management-section-header system-wifi-header">
-          <div>
-            <h3>{t("workspace.management.network.wifi.title")}</h3>
-            <p>{t("workspace.management.network.wifi.statusDescription")}</p>
-          </div>
-          <div className="system-wifi-toolbar">
+        <SectionHeader className="management-section-header system-wifi-header" title={t("workspace.management.network.wifi.title")} description={t("workspace.management.network.wifi.statusDescription")} actions={<><div className="system-wifi-toolbar">
             {wifi.devices.length > 1 ? (
-              <label>
-                <span className="visually-hidden">{t("workspace.management.network.wifi.device")}</span>
+              <Field label={t("workspace.management.network.wifi.device")}>
+
                 <CustomSelect
                   className="control-compact"
                   value={selectedDevice?.id ?? ""}
@@ -452,18 +448,17 @@ export function SystemWifiManagement({
                   options={wifi.devices.map((device) => ({ value: device.id, label: device.name }))}
                   onChange={setSelectedDeviceId}
                 />
-              </label>
+              </Field>
             ) : null}
-            <button type="button" onClick={() => { setError(null); setNetworksDialogOpen(true); }} disabled={unavailable || !wifi.hostdReady || !canManageWifi || busy}>
+            <UiButton variant="ghost" type="button" onClick={() => { setError(null); setNetworksDialogOpen(true); }} disabled={unavailable || !wifi.hostdReady || !canManageWifi || busy}>
               <RefreshCw aria-hidden="true" size={14} />
               <span>{t("workspace.management.network.wifi.scan")}</span>
-            </button>
-            <button type="button" onClick={openHotspot} disabled={!selectedDeviceCanHotspot || busy}>
+            </UiButton>
+            <UiButton variant="ghost" type="button" onClick={openHotspot} disabled={!selectedDeviceCanHotspot || busy}>
               <Router aria-hidden="true" size={14} />
               <span>{t("workspace.management.network.wifi.hotspot.settings")}</span>
-            </button>
-          </div>
-        </header>
+            </UiButton>
+          </div></>} />
 
         <div className="system-wifi-content">
           {error ? <p className="system-wifi-error" role="alert">{error}</p> : null}
@@ -502,11 +497,11 @@ export function SystemWifiManagement({
                   <div className="system-wifi-device-copy">
                     <div className="system-wifi-device-heading">
                       <strong>{selectedDevice.ssid ?? selectedDevice.name}</strong>
-                      <span className="management-status-pill" data-state={systemWifiDeviceTone(selectedDevice.state)}>
+                      <StatusBadge className="management-status-pill" data-state={systemWifiDeviceTone(selectedDevice.state)}>
                         {reconnecting
                           ? t("workspace.management.network.wifi.states.reconnecting")
                           : t(`workspace.management.network.wifi.states.${selectedDevice.state}`)}
-                      </span>
+                      </StatusBadge>
                     </div>
                     <small>
                       {selectedDevice.driver ?? t("common.dash")} · {selectedDevice.mac ?? t("common.dash")}
@@ -530,14 +525,14 @@ export function SystemWifiManagement({
                     <strong>{hotspot.ssid}</strong>
                     <small>{hotspot.band === "auto" ? t("workspace.management.network.wifi.hotspot.autoBand") : `${hotspot.band} GHz`} · {hotspot.autostart ? t("workspace.management.network.wifi.hotspot.autostartOn") : t("workspace.management.network.wifi.hotspot.autostartOff")}</small>
                   </div>
-                  <span className="management-status-pill" data-state={hotspot.active ? "ready" : "neutral"}>
+                  <StatusBadge className="management-status-pill" data-state={hotspot.active ? "ready" : "neutral"}>
                     {hotspot.active ? t("workspace.management.network.wifi.hotspot.running") : t("workspace.management.network.wifi.hotspot.stopped")}
-                  </span>
+                  </StatusBadge>
                 </div>
               ) : null}
             </>
           ) : (
-            <p className="management-empty">{t("workspace.management.network.wifi.noDevices")}</p>
+            <EmptyState className="management-empty">{t("workspace.management.network.wifi.noDevices")}</EmptyState>
           )}
         </div>
       </section>
@@ -555,8 +550,8 @@ export function SystemWifiManagement({
             {error ? <p className="system-wifi-error" role="alert">{error}</p> : null}
             <div className="system-wifi-network-controls system-wifi-toolbar">
               {wifi.devices.length > 1 ? (
-                <label>
-                  <span className="visually-hidden">{t("workspace.management.network.wifi.device")}</span>
+                <Field label={t("workspace.management.network.wifi.device")}>
+
                   <CustomSelect
                     value={selectedDevice.id}
                     ariaLabel={t("workspace.management.network.wifi.device")}
@@ -564,22 +559,22 @@ export function SystemWifiManagement({
                     options={wifi.devices.map((device) => ({ value: device.id, label: device.name }))}
                     onChange={setSelectedDeviceId}
                   />
-                </label>
+                </Field>
               ) : <strong>{selectedDevice.name}</strong>}
-              <button type="button" onClick={toggleRadio} disabled={!canManageWifi || busy} aria-pressed={wifi.radioEnabled === true}>
+              <UiButton variant="ghost" type="button" onClick={toggleRadio} disabled={!canManageWifi || busy} aria-pressed={wifi.radioEnabled === true}>
                 {wifi.radioEnabled ? <Wifi aria-hidden="true" size={15} /> : <WifiOff aria-hidden="true" size={15} />}
                 <span>{wifi.radioEnabled ? t("workspace.management.network.wifi.disableRadio") : t("workspace.management.network.wifi.enableRadio")}</span>
-              </button>
+              </UiButton>
               {selectedDevice.activeConnectionId && selectedDevice.mode === "client" ? (
-                <button type="button" className="is-danger" onClick={requestDisconnect} disabled={!canManageWifi || busy}>
+                <UiButton variant="danger" type="button" className="is-danger" onClick={requestDisconnect} disabled={!canManageWifi || busy}>
                   <WifiOff aria-hidden="true" size={14} />
                   <span>{t("workspace.management.network.wifi.disconnect")}</span>
-                </button>
+                </UiButton>
               ) : null}
-              <button type="button" onClick={(event) => { event.currentTarget.closest<HTMLElement>('[role="dialog"]')?.focus(); void refreshScan(); }} disabled={wifi.radioEnabled !== true || !wifi.hostdReady || !canManageWifi || scanning || busy} aria-busy={scanning || undefined}>
+              <UiButton variant="ghost" type="button" onClick={(event) => { event.currentTarget.closest<HTMLElement>('[role="dialog"]')?.focus(); void refreshScan(); }} disabled={wifi.radioEnabled !== true || !wifi.hostdReady || !canManageWifi || scanning || busy} aria-busy={scanning || undefined}>
                 {scanning ? <LoaderCircle aria-hidden="true" size={14} /> : <RefreshCw aria-hidden="true" size={14} />}
                 <span>{t("workspace.management.network.wifi.scan")}</span>
-              </button>
+              </UiButton>
             </div>
               <div className="system-wifi-grid">
                 <section className="system-wifi-list-panel">
@@ -599,7 +594,7 @@ export function SystemWifiManagement({
                             <small>{t(`workspace.management.network.wifi.security.${network.security}`)} · {network.strongest.band} GHz · {network.strongest.channel}</small>
                           </div>
                           <span>{network.strongest.signal}%</span>
-                          <button
+                          <UiButton variant="ghost"
                             type="button"
                             onClick={() => openConnect(network)}
                             disabled={wifi.radioEnabled !== true || !canManageWifi || busy || network.security === "unsupported" || network.strongest.active}
@@ -607,12 +602,12 @@ export function SystemWifiManagement({
                           >
                             {network.strongest.active ? <Check aria-hidden="true" size={14} /> : <KeyRound aria-hidden="true" size={14} />}
                             <span>{network.strongest.active ? t("workspace.management.network.wifi.current") : t("workspace.management.network.wifi.connect")}</span>
-                          </button>
+                          </UiButton>
                         </article>
                       ))}
                     </div>
                   ) : (
-                    <p className="management-empty">{wifi.radioEnabled !== true ? t(wifi.radioEnabled === false ? "workspace.management.network.wifi.radioOffTitle" : "workspace.management.network.wifi.radioUnknownTitle") : scanning ? t("workspace.management.network.wifi.scanning") : t("workspace.management.network.wifi.noScan")}</p>
+                    <EmptyState className="management-empty">{wifi.radioEnabled !== true ? t(wifi.radioEnabled === false ? "workspace.management.network.wifi.radioOffTitle" : "workspace.management.network.wifi.radioUnknownTitle") : scanning ? t("workspace.management.network.wifi.scanning") : t("workspace.management.network.wifi.noScan")}</EmptyState>
                   )}
                 </section>
 
@@ -632,26 +627,26 @@ export function SystemWifiManagement({
                             <strong>{profile.ssid}</strong>
                             <small>{profile.managed ? t("workspace.management.network.wifi.managed") : t("workspace.management.network.wifi.external")}</small>
                           </div>
-                          <span className="management-status-pill" data-state={profile.active ? "ready" : "neutral"}>
+                          <StatusBadge className="management-status-pill" data-state={profile.active ? "ready" : "neutral"}>
                             {profile.active ? t("workspace.management.network.wifi.current") : profile.autoconnect ? t("workspace.management.network.wifi.autoconnect") : t("workspace.management.network.wifi.saved")}
-                          </span>
+                          </StatusBadge>
                           <div className="system-wifi-row-actions">
                             {!profile.active ? (
-                              <button type="button" className="management-icon-action" onClick={() => connectSaved(profileNetwork(profile))} disabled={wifi.radioEnabled !== true || !canManageWifi || busy} aria-label={t("workspace.management.network.wifi.connectNetwork", { ssid: profile.ssid })} data-tooltip={t("workspace.management.network.wifi.connect")}>
+                              <UiButton variant="ghost" iconOnly type="button" className="management-icon-action" onClick={() => connectSaved(profileNetwork(profile))} disabled={wifi.radioEnabled !== true || !canManageWifi || busy} aria-label={t("workspace.management.network.wifi.connectNetwork", { ssid: profile.ssid })} data-tooltip={t("workspace.management.network.wifi.connect")}>
                                 <Wifi aria-hidden="true" size={14} />
-                              </button>
+                              </UiButton>
                             ) : null}
-                            <button type="button" className="management-icon-action" onClick={() => editProfile(profile)} disabled={!canManageWifi || !profile.managed || profile.security === "unsupported" || busy} aria-label={t("workspace.management.network.wifi.editNetwork", { ssid: profile.ssid })} data-tooltip={profile.managed ? t("common.actions.edit") : t("workspace.management.network.wifi.externalReadOnly")}>
+                            <UiButton variant="ghost" iconOnly type="button" className="management-icon-action" onClick={() => editProfile(profile)} disabled={!canManageWifi || !profile.managed || profile.security === "unsupported" || busy} aria-label={t("workspace.management.network.wifi.editNetwork", { ssid: profile.ssid })} data-tooltip={profile.managed ? t("common.actions.edit") : t("workspace.management.network.wifi.externalReadOnly")}>
                               <Pencil aria-hidden="true" size={14} />
-                            </button>
-                            <button type="button" className="management-icon-action is-danger" onClick={() => forgetProfile(profile)} disabled={!canManageWifi || !profile.managed || busy} aria-label={t("workspace.management.network.wifi.forgetNetwork", { ssid: profile.ssid })} data-tooltip={profile.managed ? t("workspace.management.network.wifi.forget") : t("workspace.management.network.wifi.externalReadOnly")}>
+                            </UiButton>
+                            <UiButton variant="danger" iconOnly type="button" className="management-icon-action is-danger" onClick={() => forgetProfile(profile)} disabled={!canManageWifi || !profile.managed || busy} aria-label={t("workspace.management.network.wifi.forgetNetwork", { ssid: profile.ssid })} data-tooltip={profile.managed ? t("workspace.management.network.wifi.forget") : t("workspace.management.network.wifi.externalReadOnly")}>
                               <Trash2 aria-hidden="true" size={14} />
-                            </button>
+                            </UiButton>
                           </div>
                         </article>
                       ))}
                     </div>
-                  ) : <p className="management-empty">{t("workspace.management.network.wifi.noProfiles")}</p>}
+                  ) : <EmptyState className="management-empty">{t("workspace.management.network.wifi.noProfiles")}</EmptyState>}
                 </section>
               </div>
 
@@ -667,12 +662,12 @@ export function SystemWifiManagement({
             <>
               <FormFact label={translate("workspace.management.network.wifi.securityLabel")} value={translate(`workspace.management.network.wifi.security.${connectDialog.network.security}`)} />
               {connectDialog.network.security !== "open" ? (
-                <label><span>{t("workspace.management.network.wifi.password")}</span><input autoFocus type="password" value={connectDialog.password} onChange={(event) => setConnectDialog({ ...connectDialog, password: event.target.value })} disabled={busy} autoComplete="new-password" /></label>
+                <Field label={t("workspace.management.network.wifi.password")}><Input autoFocus type="password" value={connectDialog.password} onChange={(event) => setConnectDialog({ ...connectDialog, password: event.target.value })} disabled={busy} autoComplete="new-password" /></Field>
               ) : null}
               <Switch className="system-wifi-checkbox" checked={connectDialog.autoconnect} onCheckedChange={(autoconnect) => setConnectDialog({ ...connectDialog, autoconnect })} disabled={busy} label={t("workspace.management.network.wifi.autoconnectLabel")} />
             </>
           )}
-          <DialogActions onCancel={() => connectDialog.confirmRisk ? setConnectDialog({ ...connectDialog, confirmRisk: false }) : setConnectDialog(null)} busy={busy} submitLabel={translate(connectDialog.confirmRisk ? "workspace.management.network.wifi.confirm.continue" : "workspace.management.network.wifi.connect")} submitDisabled={connectDialog.network.security !== "open" && !validSystemWifiPassword(connectDialog.password)} danger={connectDialog.confirmRisk} />
+          <WifiDialogActions onCancel={() => connectDialog.confirmRisk ? setConnectDialog({ ...connectDialog, confirmRisk: false }) : setConnectDialog(null)} busy={busy} submitLabel={translate(connectDialog.confirmRisk ? "workspace.management.network.wifi.confirm.continue" : "workspace.management.network.wifi.connect")} submitDisabled={connectDialog.network.security !== "open" && !validSystemWifiPassword(connectDialog.password)} danger={connectDialog.confirmRisk} />
         </WifiFormDialog>
       ) : null}
 
@@ -682,9 +677,9 @@ export function SystemWifiManagement({
             <RiskConfirmation title={translate("workspace.management.network.wifi.confirm.profileRestartTitle")} description={translate("workspace.management.network.wifi.confirm.profileRestartDescription")} />
           ) : (
             <>
-              <label><span>{t("workspace.management.network.wifi.ssid")}</span><input autoFocus value={profileDialog.ssid} onChange={(event) => setProfileDialog({ ...profileDialog, ssid: event.target.value })} disabled={busy} /></label>
-              <label>
-                <span>{t("workspace.management.network.wifi.securityLabel")}</span>
+              <Field label={t("workspace.management.network.wifi.ssid")}><Input autoFocus value={profileDialog.ssid} onChange={(event) => setProfileDialog({ ...profileDialog, ssid: event.target.value })} disabled={busy} /></Field>
+              <Field label={t("workspace.management.network.wifi.securityLabel")}>
+
                 <CustomSelect<ProfileDialogState["security"]>
                   value={profileDialog.security}
                   ariaLabel={t("workspace.management.network.wifi.securityLabel")}
@@ -694,12 +689,12 @@ export function SystemWifiManagement({
                   }))}
                   onChange={(security) => setProfileDialog({ ...profileDialog, security })}
                 />
-              </label>
-              {profileDialog.security !== "open" ? <label><span>{t("workspace.management.network.wifi.passwordOptional")}</span><input type="password" value={profileDialog.password} onChange={(event) => setProfileDialog({ ...profileDialog, password: event.target.value })} disabled={busy} autoComplete="new-password" placeholder={t("workspace.management.network.wifi.keepPassword")} /></label> : null}
+              </Field>
+              {profileDialog.security !== "open" ? <Field label={t("workspace.management.network.wifi.passwordOptional")}><Input type="password" value={profileDialog.password} onChange={(event) => setProfileDialog({ ...profileDialog, password: event.target.value })} disabled={busy} autoComplete="new-password" placeholder={t("workspace.management.network.wifi.keepPassword")} /></Field> : null}
               <Switch className="system-wifi-checkbox" checked={profileDialog.autoconnect} onCheckedChange={(autoconnect) => setProfileDialog({ ...profileDialog, autoconnect })} disabled={busy} label={t("workspace.management.network.wifi.autoconnectLabel")} />
             </>
           )}
-          <DialogActions onCancel={() => profileDialog.confirmRestart ? setProfileDialog({ ...profileDialog, confirmRestart: false }) : setProfileDialog(null)} busy={busy} submitLabel={translate(profileDialog.confirmRestart ? "workspace.management.network.wifi.confirm.continue" : "common.actions.save")} submitDisabled={!validSystemWifiSsid(profileDialog.ssid) || Boolean(profileDialog.password && !validSystemWifiPassword(profileDialog.password))} danger={profileDialog.confirmRestart} />
+          <WifiDialogActions onCancel={() => profileDialog.confirmRestart ? setProfileDialog({ ...profileDialog, confirmRestart: false }) : setProfileDialog(null)} busy={busy} submitLabel={translate(profileDialog.confirmRestart ? "workspace.management.network.wifi.confirm.continue" : "common.actions.save")} submitDisabled={!validSystemWifiSsid(profileDialog.ssid) || Boolean(profileDialog.password && !validSystemWifiPassword(profileDialog.password))} danger={profileDialog.confirmRestart} />
         </WifiFormDialog>
       ) : null}
 
@@ -712,19 +707,19 @@ export function SystemWifiManagement({
               <HotspotFields state={hotspotDialog} device={selectedDevice} busy={busy} t={translate} onChange={setHotspotDialog} />
               {hotspot ? (
                 <div className="system-wifi-hotspot-actions system-wifi-toolbar">
-                  <button type="button" onClick={() => hotspotAction(hotspot.active ? "stop" : "start")} disabled={!canManageHotspot || busy}>
+                  <UiButton variant="ghost" type="button" onClick={() => hotspotAction(hotspot.active ? "stop" : "start")} disabled={!canManageHotspot || busy}>
                     {hotspot.active ? <WifiOff aria-hidden="true" size={14} /> : <Radio aria-hidden="true" size={14} />}
                     <span>{hotspot.active ? t("workspace.management.network.wifi.hotspot.stop") : t("workspace.management.network.wifi.hotspot.start")}</span>
-                  </button>
-                  <button type="button" className="is-danger" onClick={() => hotspotAction("delete")} disabled={!canManageHotspot || busy}>
+                  </UiButton>
+                  <UiButton variant="danger" type="button" className="is-danger" onClick={() => hotspotAction("delete")} disabled={!canManageHotspot || busy}>
                     <Trash2 aria-hidden="true" size={14} />
                     <span>{t("common.actions.delete")}</span>
-                  </button>
+                  </UiButton>
                 </div>
               ) : null}
             </>
           )}
-          <DialogActions onCancel={() => hotspotDialog.confirmRestart ? setHotspotDialog({ ...hotspotDialog, confirmRestart: false }) : setHotspotDialog(null)} busy={busy} submitLabel={translate(hotspotDialog.confirmRestart ? "workspace.management.network.wifi.confirm.continue" : "common.actions.save")} submitDisabled={!validSystemWifiSsid(hotspotDialog.ssid) || (!hotspotDialog.existing && !validSystemWifiPassword(hotspotDialog.password)) || Boolean(hotspotDialog.password && !validSystemWifiPassword(hotspotDialog.password))} danger={hotspotDialog.confirmRestart} />
+          <WifiDialogActions onCancel={() => hotspotDialog.confirmRestart ? setHotspotDialog({ ...hotspotDialog, confirmRestart: false }) : setHotspotDialog(null)} busy={busy} submitLabel={translate(hotspotDialog.confirmRestart ? "workspace.management.network.wifi.confirm.continue" : "common.actions.save")} submitDisabled={!validSystemWifiSsid(hotspotDialog.ssid) || (!hotspotDialog.existing && !validSystemWifiPassword(hotspotDialog.password)) || Boolean(hotspotDialog.password && !validSystemWifiPassword(hotspotDialog.password))} danger={hotspotDialog.confirmRestart} />
         </WifiFormDialog>
       ) : null}
 
@@ -792,20 +787,20 @@ function WifiDialog({ title, eyebrow, busy, obscured = false, className, onClose
   return (
     <ModalPortal className="management-modal-backdrop system-wifi-modal-backdrop" onRequestClose={onClose} closeDisabled={busy || obscured} inert={obscured || undefined} aria-hidden={obscured || undefined} onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
       <section ref={dialogRef} className={["management-modal", "system-wifi-dialog", className].filter(Boolean).join(" ")} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} onKeyDown={handleKeyDown}>
-        <header><div><span className="eyebrow">{eyebrow}</span><h2 id={titleId}>{title}</h2></div><button type="button" className="management-icon-action" onClick={onClose} disabled={busy} aria-label={t("common.actions.close")} data-tooltip={t("common.actions.close")}><X aria-hidden="true" size={17} /></button></header>
+        <DialogHeader title={title} eyebrow={<>{eyebrow}</>} headingId={titleId} actions={<><UiButton variant="ghost" iconOnly type="button" className="management-icon-action" onClick={onClose} disabled={busy} aria-label={t("common.actions.close")} data-tooltip={t("common.actions.close")}><X aria-hidden="true" size={17} /></UiButton></>} />
         {children}
       </section>
     </ModalPortal>
   );
 }
 
-function DialogActions({ onCancel, busy, submitLabel, submitDisabled, danger }: { onCancel: () => void; busy: boolean; submitLabel: string; submitDisabled: boolean; danger: boolean }) {
+function WifiDialogActions({ onCancel, busy, submitLabel, submitDisabled, danger }: { onCancel: () => void; busy: boolean; submitLabel: string; submitDisabled: boolean; danger: boolean }) {
   const { t } = useTranslation();
   return (
-    <footer className="system-wifi-dialog-actions">
-      <button type="button" onClick={onCancel} disabled={busy}>{t("common.actions.cancel")}</button>
-      <button type="submit" className={danger ? "is-danger" : "is-primary"} disabled={busy || submitDisabled} aria-busy={busy || undefined}>{busy ? <LoaderCircle aria-hidden="true" size={14} /> : <Save aria-hidden="true" size={14} />}<span>{submitLabel}</span></button>
-    </footer>
+    <DialogActions className="system-wifi-dialog-actions">
+      <UiButton variant="ghost" type="button" onClick={onCancel} disabled={busy}>{t("common.actions.cancel")}</UiButton>
+      <UiButton variant={danger ? "danger" : "primary"} type="submit" className={danger ? "is-danger" : "is-primary"} disabled={busy || submitDisabled} aria-busy={busy || undefined}>{busy ? <LoaderCircle aria-hidden="true" size={14} /> : <Save aria-hidden="true" size={14} />}<span>{submitLabel}</span></UiButton>
+    </DialogActions>
   );
 }
 
@@ -837,9 +832,9 @@ function WifiConfirmationDialog({ confirmation, busy, error, onClose, t }: { con
   return (
     <ModalPortal className="management-modal-backdrop system-wifi-modal-backdrop" onRequestClose={onClose} closeDisabled={busy}>
       <section ref={dialogRef} className="management-modal system-wifi-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} onKeyDown={handleKeyDown}>
-        <header><div><span className="eyebrow">{t("workspace.management.network.wifi.confirm.eyebrow")}</span><h2 id={titleId}>{confirmation.title}</h2></div><button ref={closeButton} type="button" className="management-icon-action" onClick={onClose} disabled={busy} aria-label={t("common.actions.close")} data-tooltip={t("common.actions.close")}><X aria-hidden="true" size={17} /></button></header>
+        <DialogHeader title={confirmation.title} eyebrow={<>{t("workspace.management.network.wifi.confirm.eyebrow")}</>} headingId={titleId} actions={<><UiButton variant="ghost" iconOnly ref={closeButton} type="button" className="management-icon-action" onClick={onClose} disabled={busy} aria-label={t("common.actions.close")} data-tooltip={t("common.actions.close")}><X aria-hidden="true" size={17} /></UiButton></>} />
         <div className="system-wifi-confirm-body"><AlertTriangle aria-hidden="true" size={24} /><div><p>{confirmation.description}</p>{error ? <p className="system-wifi-error" role="alert">{error}</p> : null}</div></div>
-        <footer><button type="button" onClick={onClose} disabled={busy}>{t("common.actions.cancel")}</button><button type="button" className={confirmation.danger ? "is-danger" : "is-primary"} disabled={busy} aria-busy={busy || undefined} onClick={() => void confirmation.run().then(onClose).catch(() => undefined)}>{busy ? <LoaderCircle aria-hidden="true" size={14} /> : <Check aria-hidden="true" size={14} />}<span>{t("workspace.management.network.wifi.confirm.continue")}</span></button></footer>
+        <DialogActions><UiButton variant="ghost" type="button" onClick={onClose} disabled={busy}>{t("common.actions.cancel")}</UiButton><UiButton variant={confirmation.danger ? "danger" : "primary"} type="button" className={confirmation.danger ? "is-danger" : "is-primary"} disabled={busy} aria-busy={busy || undefined} onClick={() => void confirmation.run().then(onClose).catch(() => undefined)}>{busy ? <LoaderCircle aria-hidden="true" size={14} /> : <Check aria-hidden="true" size={14} />}<span>{t("workspace.management.network.wifi.confirm.continue")}</span></UiButton></DialogActions>
       </section>
     </ModalPortal>
   );
@@ -898,11 +893,11 @@ function HotspotFields({ state, device, busy, t, onChange }: { state: HotspotDia
   if (device.capabilities.bands.includes("5")) bandOptions.push({ value: "5", label: "5 GHz" });
   return (
     <>
-      <label><span>{t("workspace.management.network.wifi.ssid")}</span><input autoFocus value={state.ssid} onChange={(event) => onChange({ ...state, ssid: event.target.value })} disabled={busy} /></label>
-      <label><span>{state.existing ? t("workspace.management.network.wifi.passwordOptional") : t("workspace.management.network.wifi.password")}</span><input type="password" value={state.password} onChange={(event) => onChange({ ...state, password: event.target.value })} disabled={busy} autoComplete="new-password" placeholder={state.existing ? t("workspace.management.network.wifi.keepPassword") : undefined} /></label>
+      <Field label={t("workspace.management.network.wifi.ssid")}><Input autoFocus value={state.ssid} onChange={(event) => onChange({ ...state, ssid: event.target.value })} disabled={busy} /></Field>
+      <Field label={state.existing ? t("workspace.management.network.wifi.passwordOptional") : t("workspace.management.network.wifi.password")}><Input type="password" value={state.password} onChange={(event) => onChange({ ...state, password: event.target.value })} disabled={busy} autoComplete="new-password" placeholder={state.existing ? t("workspace.management.network.wifi.keepPassword") : undefined} /></Field>
       <div className="system-wifi-form-grid">
-        <label>
-          <span>{t("workspace.management.network.wifi.hotspot.band")}</span>
+        <Field label={t("workspace.management.network.wifi.hotspot.band")}>
+
           <CustomSelect
             value={state.band}
             ariaLabel={t("workspace.management.network.wifi.hotspot.band")}
@@ -910,9 +905,9 @@ function HotspotFields({ state, device, busy, t, onChange }: { state: HotspotDia
             disabled={busy}
             onChange={(band) => onChange({ ...state, band, channel: "" })}
           />
-        </label>
-        <label>
-          <span>{t("workspace.management.network.wifi.channel")}</span>
+        </Field>
+        <Field label={t("workspace.management.network.wifi.channel")}>
+
           <CustomSelect
             value={state.channel}
             ariaLabel={t("workspace.management.network.wifi.channel")}
@@ -923,7 +918,7 @@ function HotspotFields({ state, device, busy, t, onChange }: { state: HotspotDia
             ]}
             onChange={(channel) => onChange({ ...state, channel })}
           />
-        </label>
+        </Field>
       </div>
       <Switch className="system-wifi-checkbox" checked={state.autostart} onCheckedChange={(autostart) => onChange({ ...state, autostart })} disabled={busy} label={t("workspace.management.network.wifi.hotspot.autostart")} />
     </>

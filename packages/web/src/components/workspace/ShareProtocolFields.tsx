@@ -1,3 +1,4 @@
+import { Checkbox, Field, Input, Textarea } from "@cyberos/ui";
 import type { ShareProtocol } from "@cyberos/shared";
 import { Switch } from "../common/Switch.js";
 import { DLNA_MEDIA_TYPES, toggleDlnaMediaType, type ShareDefinitionFormState, type ShareProtocolFormState } from "../../config/share-settings.js";
@@ -82,14 +83,14 @@ export function ShareProtocolFields({ protocol, share, update, t }: {
   </div> : null}
 
   {protocol === "nfs" ? <div className="share-protocol-fields">
-    <label className="share-field-wide">
-      <span>{t("workspace.management.shares.fields.allowedCidrs")}</span>
-      <textarea
+    <Field className="share-field-wide" label={t("workspace.management.shares.fields.allowedCidrs")}>
+
+      <Textarea
         value={share.protocols.nfs.allowedCidrs}
         onChange={(event) => update("nfs", { allowedCidrs: event.target.value })}
         placeholder="192.168.1.0/24"
       />
-    </label>
+    </Field>
     <SwitchField
       label={t("workspace.management.shares.fields.readOnly")}
       checked={share.protocols.nfs.readOnly}
@@ -153,15 +154,15 @@ function TextField({
   onChange: (value: string) => void;
 }) {
   return (
-    <label>
-      <span>{label}</span>
-      <input value={value} placeholder={placeholder} inputMode={inputMode} onChange={(event) => onChange(event.target.value)} />
-    </label>
+    <Field label={label}>
+
+      <Input value={value} placeholder={placeholder} inputMode={inputMode} onChange={(event) => onChange(event.target.value)} />
+    </Field>
   );
 }
 
 function CheckField({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
-  return <label className="share-media-checkbox"><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} /><span>{label}</span></label>;
+  return <label className="share-media-checkbox"><Checkbox  checked={checked} onChange={(event) => onChange(event.target.checked)} /><span>{label}</span></label>;
 }
 
 function SwitchField({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {

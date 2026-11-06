@@ -1,4 +1,5 @@
 import { stat } from "node:fs/promises";
+import { appearanceSchemes, type AppearancePreference, type Scheme } from "@cyberos/shared/appearance";
 import type { FastifyInstance } from "fastify";
 import {
   createOperationNotification,
@@ -17,6 +18,7 @@ import { resolveVodPlayerRuntime, VodPlayerRuntimeError } from "../lib/vod-playe
 import { StorageScopeError, resolveScopedExistingPath, resolveStoragePoolScope } from "../lib/storage-scope.js";
 
 type VodPlayerCommandBody =
+  | ({ type: "set-ui-theme" } & AppearancePreference)
   | { type: "play"; storagePoolId?: string; path?: string; startPositionSeconds?: number; audioDeviceId?: string; expectedSessionId?: string }
   | { type: "pause" | "resume" | "toggle-pause" | "stop" | "retry" | "cycle-audio-track" | "cycle-subtitle-track"; sessionId?: string }
   | { type: "seek"; sessionId?: string; seconds?: number }
@@ -71,6 +73,12 @@ function recordAudioFallback(context: ApiRouteContext, status: VodPlayerStatus):
 async function buildCommand(body: VodPlayerCommandBody | undefined, context: ApiRouteContext): Promise<VodPlayerCommand> {
   if (!body || typeof body.type !== "string") {
     throw new VodPlayerRuntimeError("VOD Player command is required", 400, "INVALID_COMMAND");
+  }
+  if (body.type === "set-ui-theme") {
+    if (Object.keys(body).some(key => !["type", "scheme", "mode"].includes(key)) || !appearanceSchemes.includes(body.scheme as Scheme) || (body.mode !== "dark" && body.mode !== "light")) {
+      throw new VodPlayerRuntimeError("Native player theme is invalid", 400, "INVALID_COMMAND");
+    }
+    return { type: "set-ui-theme", scheme: body.scheme, mode: body.mode };
   }
   if (body.type === "play") {
     if (body.expectedSessionId !== undefined && (typeof body.expectedSessionId !== "string" || !body.expectedSessionId || body.expectedSessionId.length > 256 || body.expectedSessionId.includes("\0"))) {

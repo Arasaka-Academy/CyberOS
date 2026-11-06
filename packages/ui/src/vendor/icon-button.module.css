@@ -1,0 +1,7 @@
+/* Generated from packages/react/src/icon-button.module.css. Regenerate in CyberUI with pnpm registry:build; after installation, edit this file freely. */
+@layer theme, base, components, utilities;
+@reference './tailwind-theme.css';
+
+@layer components {
+.iconButton { @apply tw:p-cyber-md tw:min-w-[44px] tw:aspect-[1]; }
+}

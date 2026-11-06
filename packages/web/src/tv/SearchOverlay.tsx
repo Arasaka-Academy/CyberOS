@@ -1,3 +1,4 @@
+import { Button as UiButton, EmptyState, Input, Notice } from "@cyberos/ui";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ArrowLeft, ChevronLeft, ChevronRight, Delete, Languages, Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -133,7 +134,7 @@ export function SearchOverlay({ open, onClose, onOpen }: {
     }}>
     <div className="tv-search-header" data-tv-region="search-header">
       <Search aria-hidden="true" />
-      <input ref={inputRef} className="tv-search-input" data-tv-focusable data-tv-text-input data-tv-composing={snapshot.hasActiveComposition}
+      <Input ref={inputRef} className="tv-search-input" data-tv-focusable data-tv-text-input data-tv-composing={snapshot.hasActiveComposition}
         value={query} aria-label={t("tv.searchPlaceholder")} data-tooltip={t("tv.keyboardLanguage")} placeholder={t("tv.searchPlaceholder")}
         onChange={event => { resultFocus.current = null; change(event.target.value); }}
         onKeyDown={event => {
@@ -148,35 +149,35 @@ export function SearchOverlay({ open, onClose, onOpen }: {
         onKeyUp={event => controller.handleKeyUp(event.nativeEvent)}
         onBlur={() => controller.resetShiftGestureState()}
       />
-      {query ? <button className="tv-icon-button" data-tv-focusable aria-label={t("tv.clearSearch")} data-tooltip={t("tv.clearSearch")} onClick={() => { cancelComposition(); change(""); inputRef.current?.focus(); }}><X /></button> : null}
-      <button className="tv-icon-button" data-tv-focusable onClick={onClose} aria-label={t("tv.closeSearch")} data-tooltip={t("tv.closeSearch")}><ArrowLeft /></button>
+      {query ? <UiButton variant="ghost" iconOnly className="tv-icon-button" data-tv-focusable aria-label={t("tv.clearSearch")} data-tooltip={t("tv.clearSearch")} onClick={() => { cancelComposition(); change(""); inputRef.current?.focus(); }}><X /></UiButton> : null}
+      <UiButton variant="ghost" iconOnly className="tv-icon-button" data-tv-focusable onClick={onClose} aria-label={t("tv.closeSearch")} data-tooltip={t("tv.closeSearch")}><ArrowLeft /></UiButton>
     </div>
     {snapshot.hasActiveComposition ? <section className="tv-ime" aria-label={t("tv.candidates")}>
       <div className="tv-ime-composition" role="status">{snapshot.pinyinInput}</div>
-      {dictionary === "loading" ? <p role="status">{t("tv.loadingInput")}</p> : dictionary === "error" ? <div role="alert">{t("tv.inputFailed")} <button onClick={() => retryDictionary(v => v + 1)}>{t("tv.retry")}</button></div> :
+      {dictionary === "loading" ? <p role="status">{t("tv.loadingInput")}</p> : dictionary === "error" ? <Notice tone="danger" actions={<UiButton variant="secondary" onClick={() => retryDictionary(v => v + 1)}>{t("tv.retry")}</UiButton>}>{t("tv.inputFailed")}</Notice> :
         <div className="tv-ime-candidates" data-tv-region="candidates">
-          <button disabled={snapshot.page === 0} aria-label={t("tv.previousCandidates")} onClick={() => controller.addPage(-1)}><ChevronLeft /></button>
-          {snapshot.displayCandidates.map(item => <button key={item.word} data-tv-candidate data-tv-focusable onClick={() => choose(item, lastKey.current)}>{item.word}</button>)}
-          <button disabled={(snapshot.page + 1) * snapshot.pageSize >= snapshot.candidates.length} aria-label={t("tv.nextCandidates")} onClick={() => controller.addPage(1)}><ChevronRight /></button>
+          <UiButton iconOnly variant="ghost" disabled={snapshot.page === 0} aria-label={t("tv.previousCandidates")} onClick={() => controller.addPage(-1)}><ChevronLeft /></UiButton>
+          {snapshot.displayCandidates.map(item => <UiButton variant="ghost" key={item.word} data-tv-candidate data-tv-focusable onClick={() => choose(item, lastKey.current)}>{item.word}</UiButton>)}
+          <UiButton iconOnly variant="ghost" disabled={(snapshot.page + 1) * snapshot.pageSize >= snapshot.candidates.length} aria-label={t("tv.nextCandidates")} onClick={() => controller.addPage(1)}><ChevronRight /></UiButton>
         </div>}
     </section> : null}
     <div className="tv-keyboard" aria-label={t("tv.keyboard")}>
       {KEYS.map(row => <div className="tv-keyboard-row" data-tv-region="keyboard-row" key={row}>
-        {[...row].map(letter => <button data-tv-focusable key={letter} onClick={event => sendKey(letter, event.currentTarget)}>{letter.toUpperCase()}</button>)}
+        {[...row].map(letter => <UiButton variant="ghost" data-tv-focusable key={letter} onClick={event => sendKey(letter, event.currentTarget)}>{letter.toUpperCase()}</UiButton>)}
       </div>)}
       <div className="tv-keyboard-row tv-keyboard-tools" data-tv-region="keyboard-row">
-        <button data-tv-focusable aria-pressed={snapshot.chineseMode} onClick={event => toggleLanguage(event.currentTarget)}><Languages />{t(snapshot.chineseMode ? "tv.chineseInput" : "tv.englishInput")}</button>
-        <button data-tv-focusable onClick={event => sendKey(" ", event.currentTarget)}>{t(snapshot.hasActiveComposition ? "tv.keyboardSpace" : "tv.space")}</button>
-        <button data-tv-focusable onClick={event => sendKey("Backspace", event.currentTarget)} aria-label={t("tv.keyboardDelete")} data-tooltip={t("tv.keyboardDelete")}><Delete /></button>
+        <UiButton variant="ghost" data-tv-focusable aria-pressed={snapshot.chineseMode} onClick={event => toggleLanguage(event.currentTarget)}><Languages />{t(snapshot.chineseMode ? "tv.chineseInput" : "tv.englishInput")}</UiButton>
+        <UiButton variant="ghost" data-tv-focusable onClick={event => sendKey(" ", event.currentTarget)}>{t(snapshot.hasActiveComposition ? "tv.keyboardSpace" : "tv.space")}</UiButton>
+        <UiButton iconOnly variant="ghost" data-tv-focusable onClick={event => sendKey("Backspace", event.currentTarget)} aria-label={t("tv.keyboardDelete")} data-tooltip={t("tv.keyboardDelete")}><Delete /></UiButton>
       </div>
     </div>
     {query.trim() ? <section className="tv-search-results" aria-busy={state === "loading"}>
       <h2>{t("tv.searchResults")}</h2>
-      {state === "loading" ? <p role="status">{t("tv.searching")}</p> : state === "error" ? <div className="tv-search-error" role="alert">{t("tv.searchFailed")} <button onClick={() => setRetry(v => v + 1)}>{t("tv.retry")}</button></div> :
-        results.length ? <div className="tv-search-grid" data-tv-region="search-results">{results.map(title => <button className="tv-search-result" data-tv-focusable data-tv-search-title={title.id} key={title.id} onClick={() => { resultFocus.current = title.id; onOpen(title); }}>
+      {state === "loading" ? <p role="status">{t("tv.searching")}</p> : state === "error" ? <Notice className="tv-search-error" tone="danger" actions={<UiButton variant="secondary" onClick={() => setRetry(v => v + 1)}>{t("tv.retry")}</UiButton>}>{t("tv.searchFailed")}</Notice> :
+        results.length ? <div className="tv-search-grid" data-tv-region="search-results">{results.map(title => <UiButton variant="ghost" className="tv-search-result" data-tv-focusable data-tv-search-title={title.id} key={title.id} onClick={() => { resultFocus.current = title.id; onOpen(title); }}>
           <img src={mediaArtworkUrl(title.id, "poster")} alt="" onError={event => { event.currentTarget.hidden = true; }} />
           <span><strong>{title.title}</strong><small>{title.year ?? ""}</small></span>
-        </button>)}</div> : state === "ready" ? <p className="tv-search-empty">{t("tv.noResults")}</p> : null}
+        </UiButton>)}</div> : state === "ready" ? <EmptyState className="tv-search-empty" title={t("tv.noResults")} /> : null}
     </section> : null}
   </section>;
 }

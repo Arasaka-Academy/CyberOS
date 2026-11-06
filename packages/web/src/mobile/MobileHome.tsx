@@ -1,3 +1,4 @@
+import { Button as UiButton } from "@cyberos/ui";
 import { Bell, Database, LoaderCircle } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -54,13 +55,13 @@ function AppButton({ app, approvalCount, onOpenApp }: { app: AppDefinition; appr
   const label = t(app.shortLabelKey);
   const count = app.id === "agent" ? approvalCount : 0;
   return (
-    <button type="button" className="mobile-app-icon" data-app-id={app.id} onClick={() => onOpenApp(app.id)} aria-label={count ? `${label}, ${t("chat.pendingApprovalCount", { count })}` : label}>
+    <UiButton variant="ghost" type="button" className="mobile-app-icon" data-app-id={app.id} onClick={() => onOpenApp(app.id)} aria-label={count ? `${label}, ${t("chat.pendingApprovalCount", { count })}` : label}>
       <span className="mobile-app-art" aria-hidden="true">
         <app.Icon size={27} strokeWidth={1.6} />
         {count > 0 ? <span className="mobile-app-badge">{count > 99 ? "99+" : count}</span> : null}
       </span>
       <span className="mobile-app-name">{label}</span>
-    </button>
+    </UiButton>
   );
 }
 
@@ -86,10 +87,10 @@ export function MobileHome({ connection, unreadCount, approvalCount, onOpenApp, 
           <img src="/cyberos-icon.svg" alt="" aria-hidden="true" />
           <div><h1>CyberOS</h1><span className="mobile-connection" data-state={connection} role="status"><i aria-hidden="true" />{t(`mobile.connection.${connection}`)}</span></div>
         </div>
-        <div className="mobile-home-voice-actions">{voiceEntry}<button className="mobile-notifications" type="button" onClick={onOpenNotifications} aria-label={t("notifications.center.openWithCount", { count: unreadCount })}>
+        <div className="mobile-home-voice-actions">{voiceEntry}<UiButton variant="ghost" className="mobile-notifications" type="button" onClick={onOpenNotifications} aria-label={t("notifications.center.openWithCount", { count: unreadCount })}>
           <Bell size={21} aria-hidden="true" />
           {unreadCount > 0 ? <span className="mobile-app-badge" aria-hidden="true">{unreadCount > 99 ? "99+" : unreadCount}</span> : null}
-        </button></div>
+        </UiButton></div>
       </header>
       <nav className="mobile-app-grid" aria-label={t("mobile.apps")}>
         {MOBILE_GRID_APPS.map((app) => <AppButton key={app.id} app={app} approvalCount={approvalCount} onOpenApp={onOpenApp} />)}

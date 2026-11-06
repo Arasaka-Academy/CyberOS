@@ -107,7 +107,7 @@
   position: absolute;
   top: 12px;
   left: 11px;
-  color: var(--cyber-cyan);
+  color: var(--hud-cyan);
   pointer-events: none;
 }
 
@@ -128,7 +128,7 @@
 }
 
 .library-search-toolbar .search > input:hover {
-  border-color: var(--cyber-cyan);
+  border-color: var(--hud-cyan);
 }
 
 /* Media headers share the same compact actions; panel button defaults must not shrink their icons. */
@@ -150,7 +150,7 @@
 
 .library-header-actions > .panel-header-action:hover:not(:disabled),
 .library-header-actions > .panel-header-action:focus-visible {
-  border-color: var(--cyber-cyan);
+  border-color: var(--hud-cyan);
   color: var(--text);
   background: var(--surface-hover);
 }

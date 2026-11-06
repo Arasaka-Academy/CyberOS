@@ -1,0 +1,12 @@
+/* Generated from packages/react/src/choice.module.css. Regenerate in CyberUI with pnpm registry:build; after installation, edit this file freely. */
+@layer theme, base, components, utilities;
+@reference './tailwind-theme.css';
+
+@layer components {
+.selectButton { @apply tw:flex tw:justify-between tw:items-center tw:gap-[16px] tw:w-full tw:min-h-cyber-touch tw:p-[var(--cyber-space-md)_13px]; border: 1px solid var(--cyber-muted); background: var(--cyber-bg); @apply tw:text-cyber-ink tw:text-left; }
+.selectButton[data-disabled] { @apply tw:opacity-[.45]; }
+.listBox { @apply tw:p-[3px] tw:max-h-[300px] tw:overflow-auto; outline: none; }
+.listItem { @apply tw:p-[var(--cyber-space-md)_13px]; outline: none; @apply tw:cursor-pointer tw:flex tw:items-center tw:gap-cyber-md tw:min-h-[42px] tw:text-[length:14px]; }
+.listItem[data-focused], .listItem[data-selected] { @apply tw:text-cyber-on-ink; background: var(--cyber-ink); }
+.listItem[data-disabled] { @apply tw:opacity-[.45]; }
+}

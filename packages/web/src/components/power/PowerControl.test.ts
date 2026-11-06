@@ -45,7 +45,7 @@ describe("PowerDialog", () => {
 
     expect(html).toContain("Shut down this device?");
     expect(html).toContain("Shut down now");
-    expect(html).toContain('class="danger-button power-confirm-button"');
+    expect(html).toMatch(/class="[^"]*\bdanger-button power-confirm-button\b[^"]*"/u);
     expect(html).not.toContain('data-action="reboot"');
   });
 

@@ -1,11 +1,14 @@
 .settings-section-card.settings-git-skill-dialog,
 .settings-section-card.settings-mcp-dialog {
+  display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 0;
   width: min(600px, 100%);
   max-height: calc(100dvh - 36px);
   overflow: hidden;
   padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 0;
   background: var(--dialog-bg);
 }
 

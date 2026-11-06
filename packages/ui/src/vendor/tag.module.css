@@ -1,0 +1,9 @@
+/* Generated from packages/react/src/tag.module.css. Regenerate in CyberUI with pnpm registry:build; after installation, edit this file freely. */
+@layer theme, base, components, utilities;
+@reference './tailwind-theme.css';
+
+@layer components {
+.tag { @apply tw:inline-flex tw:items-center tw:gap-cyber-sm; font: 12px/1.5 var(--cyber-font-mono); @apply tw:tracking-[.04em] tw:p-[3px_9px]; background: var(--cyber-soft); @apply tw:text-cyber-ink tw:wrap-anywhere; }
+.tag { border: 1px solid var(--cyber-ink); background: transparent; }
+.tag button { border: 0; @apply tw:text-inherit; background: transparent; @apply tw:p-cyber-xs tw:flex tw:cursor-pointer; }
+}

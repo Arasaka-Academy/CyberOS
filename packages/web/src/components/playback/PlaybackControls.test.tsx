@@ -61,7 +61,7 @@ describe("sidebar playback", () => {
     const html = renderToStaticMarkup(createElement(Surface));
     expect(html).toContain('data-playback-state="error"');
     expect(html).toContain("No playback");
-    expect(html).toContain('role="alert">NAS unavailable');
+    expect(html).toMatch(/role="alert"[^>]*>[\s\S]*?NAS unavailable/u);
   });
 
   it("retains music controls when ownership has been released", () => {
@@ -100,7 +100,7 @@ describe("sidebar playback", () => {
     music.status = { ...status, state: "error", queue: [track], error: "Speaker lost", errorCode: "AUDIO_UNAVAILABLE", audioDeviceId: "bluetooth:lost-speaker" };
     const unavailable = renderToStaticMarkup(createElement(Surface));
     expect(unavailable).toContain('aria-label="Audio output: Configured speaker unavailable"');
-    expect(unavailable).toContain('role="alert">Speaker lost');
+    expect(unavailable).toMatch(/role="alert"[^>]*>[\s\S]*?Speaker lost/u);
     music.status = { ...status, queue: [track] };
     expect(renderToStaticMarkup(createElement(Surface))).toContain('aria-label="Audio output: Output not reported"');
   });

@@ -23,5 +23,5 @@
 .chat-pane,
 .workspace-stage[data-panel="files"],
 .mobile-tabs {
-  color-scheme: dark;
+  color-scheme: inherit;
 }

@@ -1,3 +1,4 @@
+import { Button as UiButton, DialogActions, DialogHeader, Field, Input, Textarea } from "@cyberos/ui";
 import { CustomSelect } from "../common/CustomSelect.js";
 import { ModalPortal } from "../common/ModalPortal.js";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
@@ -291,20 +292,9 @@ export function DockerComposeAppDialog({
         tabIndex={-1}
         onKeyDown={handleKeyDown}
       >
-        <header>
-          <div className="docker-compose-app-heading">
-            <span className="docker-compose-app-icon"><Code2 aria-hidden="true" size={19} /></span>
-            <div>
-              <span className="eyebrow">{t("workspace.management.docker.apps.eyebrow")}</span>
-              <h2 id="docker-compose-app-title">
-                {detail ? t("workspace.management.docker.apps.editTitle") : t("workspace.management.docker.apps.createTitle")}
-              </h2>
-            </div>
-          </div>
-          <button type="button" className="management-icon-action" onClick={onClose} disabled={busy} aria-label={t("common.actions.close")} data-tooltip={t("common.actions.close")}>
+        <DialogHeader title={detail ? t("workspace.management.docker.apps.editTitle") : t("workspace.management.docker.apps.createTitle")} headingId="docker-compose-app-title" actions={<><span className="docker-compose-app-icon"><Code2 aria-hidden="true" size={19} /></span><span className="eyebrow">{t("workspace.management.docker.apps.eyebrow")}</span><UiButton variant="ghost" iconOnly type="button" className="management-icon-action" onClick={onClose} disabled={busy} aria-label={t("common.actions.close")} data-tooltip={t("common.actions.close")}>
             <X aria-hidden="true" size={17} />
-          </button>
-        </header>
+          </UiButton></>} />
 
         {confirmDelete && detail ? (
           <div className="docker-compose-delete-confirmation">
@@ -330,13 +320,13 @@ export function DockerComposeAppDialog({
             ) : (
               <>
                 <div className="docker-compose-app-meta-grid">
-                  <label>
-                    <span>{t("workspace.management.docker.apps.name")}</span>
-                    <input value={form.name} maxLength={128} onChange={(event) => updateName(event.target.value)} disabled={busy} />
-                  </label>
-                  <label>
-                    <span>{t("workspace.management.docker.apps.projectKey")}</span>
-                    <input
+                  <Field label={t("workspace.management.docker.apps.name")}>
+
+                    <Input value={form.name} maxLength={128} onChange={(event) => updateName(event.target.value)} disabled={busy} />
+                  </Field>
+                  <Field label={t("workspace.management.docker.apps.projectKey")}>
+
+                    <Input
                       value={form.projectKey}
                       maxLength={63}
                       onChange={(event) => {
@@ -345,22 +335,22 @@ export function DockerComposeAppDialog({
                       }}
                       disabled={busy || Boolean(detail)}
                     />
-                  </label>
-                  <label className="docker-compose-app-path">
-                    <span>{t("workspace.management.docker.apps.managedPath")}</span>
-                    <input value={managedPath} readOnly />
-                  </label>
+                  </Field>
+                  <Field className="docker-compose-app-path" label={t("workspace.management.docker.apps.managedPath")}>
+
+                    <Input value={managedPath} readOnly />
+                  </Field>
                 </div>
 
-                <label className="docker-compose-editor-field">
-                  <span>{t("workspace.management.docker.apps.composeLabel")}</span>
-                  <textarea
+                <Field className="docker-compose-editor-field" label={t("workspace.management.docker.apps.composeLabel")}>
+
+                  <Textarea
                     value={form.composeContent}
                     onChange={(event) => updateForm("composeContent", event.target.value)}
                     spellCheck={false}
                     disabled={busy}
                   />
-                </label>
+                </Field>
 
                 <section className="docker-compose-environment">
                   <div>
@@ -368,25 +358,25 @@ export function DockerComposeAppDialog({
                       <h3>{t("workspace.management.docker.apps.environmentTitle")}</h3>
                       <p>{t("workspace.management.docker.apps.environmentDescription")}</p>
                     </div>
-                    <button type="button" onClick={() => updateForm("environment", [
+                    <UiButton variant="ghost" type="button" onClick={() => updateForm("environment", [
                       ...form.environment,
                       { key: "", value: "", valueConfigured: false, originalKey: null, valueChanged: false }
                     ])} disabled={busy}>
                       <Plus aria-hidden="true" size={14} />
                       <span>{t("workspace.management.docker.apps.addEnvironment")}</span>
-                    </button>
+                    </UiButton>
                   </div>
                   {form.environment.length ? (
                     <div className="docker-compose-environment-list">
                       {form.environment.map((entry, index) => (
                         <div key={index} className="docker-compose-environment-row">
-                          <label>
-                            <span className="visually-hidden">{t("workspace.management.docker.apps.environmentKey")}</span>
-                            <input value={entry.key} placeholder={t("workspace.management.docker.apps.environmentKey")} onChange={(event) => updateEnvironment(index, "key", event.target.value)} disabled={busy} />
-                          </label>
-                          <label>
-                            <span className="visually-hidden">{t("workspace.management.docker.apps.environmentValue")}</span>
-                            <textarea
+                          <Field label={t("workspace.management.docker.apps.environmentKey")}>
+
+                            <Input value={entry.key} placeholder={t("workspace.management.docker.apps.environmentKey")} onChange={(event) => updateEnvironment(index, "key", event.target.value)} disabled={busy} />
+                          </Field>
+                          <Field label={t("workspace.management.docker.apps.environmentValue")}>
+
+                            <Textarea
                               value={entry.value}
                               placeholder={entry.valueConfigured
                                 ? t("workspace.management.docker.apps.environmentConfigured")
@@ -396,14 +386,14 @@ export function DockerComposeAppDialog({
                               autoComplete="new-password"
                               rows={1}
                             />
-                          </label>
+                          </Field>
                           {entry.valueConfigured && !entry.value ? <span><Check aria-hidden="true" size={13} />{t("workspace.management.docker.apps.configured")}</span> : null}
-                          <button type="button" className="management-icon-action is-danger" onClick={() => updateForm(
+                          <UiButton variant="danger" iconOnly type="button" className="management-icon-action is-danger" onClick={() => updateForm(
                             "environment",
                             form.environment.filter((_, entryIndex) => entryIndex !== index)
                           )} disabled={busy} aria-label={t("workspace.management.docker.apps.removeEnvironment")} data-tooltip={t("workspace.management.docker.apps.removeEnvironment")}>
                             <Trash2 aria-hidden="true" size={15} />
-                          </button>
+                          </UiButton>
                         </div>
                       ))}
                     </div>
@@ -411,8 +401,8 @@ export function DockerComposeAppDialog({
                 </section>
 
                 <section className="docker-compose-host-access">
-                  <label>
-                    <span>{t("workspace.management.docker.hostAccess.service")}</span>
+                  <Field label={t("workspace.management.docker.hostAccess.service")}>
+
                     <CustomSelect
                       value={activeHostAccessService}
                       onChange={(selectedValue) => setHostAccessService(selectedValue)}
@@ -420,7 +410,7 @@ export function DockerComposeAppDialog({
                       ariaLabel={t("workspace.management.docker.hostAccess.service")}
                       options={hostAccessServices.map((service) => ({ value: service, label: service }))}
                     />
-                  </label>
+                  </Field>
                   {activeHostAccessService ? (
                     <HostAccessPicker
                       grants={activeHostAccessGrants}
@@ -457,49 +447,49 @@ export function DockerComposeAppDialog({
           </div>
         )}
 
-        <footer className="docker-compose-app-footer">
+        <DialogActions className="docker-compose-app-footer">
           {loadFailed ? (
-            <button type="button" onClick={onClose} className="secondary-button">{t("common.actions.close")}</button>
+            <UiButton variant="secondary" type="button" onClick={onClose} className="secondary-button">{t("common.actions.close")}</UiButton>
           ) : confirmDelete && detail ? (
             <>
-              <button type="button" onClick={() => { setConfirmDelete(false); setError(null); }} disabled={deleting} className="secondary-button">{t("common.actions.cancel")}</button>
-              <button type="button" className="danger-button" onClick={() => void remove()} disabled={deleting || hasContainers || !engineReady} aria-busy={deleting || undefined}>
+              <UiButton variant="secondary" type="button" onClick={() => { setConfirmDelete(false); setError(null); }} disabled={deleting} className="secondary-button">{t("common.actions.cancel")}</UiButton>
+              <UiButton variant="danger" type="button" className="danger-button" onClick={() => void remove()} disabled={deleting || hasContainers || !engineReady} aria-busy={deleting || undefined}>
                 {deleting ? <LoaderCircle className="is-spinning" aria-hidden="true" size={15} /> : <Trash2 aria-hidden="true" size={15} />}
                 <span>{t("workspace.management.docker.apps.confirmDelete")}</span>
-              </button>
+              </UiButton>
             </>
           ) : (
             <>
               <div>
                 {detail ? (
-                  <button type="button" className="danger-button is-quiet" onClick={() => setConfirmDelete(true)} disabled={busy}>
+                  <UiButton variant="danger" type="button" className="danger-button is-quiet" onClick={() => setConfirmDelete(true)} disabled={busy}>
                     <Trash2 aria-hidden="true" size={15} />
                     <span>{t("common.actions.delete")}</span>
-                  </button>
+                  </UiButton>
                 ) : null}
               </div>
               <div>
                 {conflicted ? (
-                  <button type="button" onClick={() => void reload()} disabled={busy} className="secondary-button">
+                  <UiButton variant="secondary" type="button" onClick={() => void reload()} disabled={busy} className="secondary-button">
                     <span>{t("workspace.management.docker.apps.reload")}</span>
-                  </button>
+                  </UiButton>
                 ) : null}
-                <button type="button" onClick={() => void validate()} disabled={disableSave} aria-busy={validating || undefined} className="secondary-button">
+                <UiButton variant="secondary" type="button" onClick={() => void validate()} disabled={disableSave} aria-busy={validating || undefined} className="secondary-button">
                   {validating ? <LoaderCircle className="is-spinning" aria-hidden="true" size={15} /> : <Check aria-hidden="true" size={15} />}
                   <span>{t("workspace.management.docker.apps.validate")}</span>
-                </button>
-                <button type="button" onClick={() => void save("save")} disabled={disableSubmit} aria-busy={submitAction === "save" || undefined} className="secondary-button">
+                </UiButton>
+                <UiButton variant="secondary" type="button" onClick={() => void save("save")} disabled={disableSubmit} aria-busy={submitAction === "save" || undefined} className="secondary-button">
                   {submitAction === "save" ? <LoaderCircle className="is-spinning" aria-hidden="true" size={15} /> : <Save aria-hidden="true" size={15} />}
                   <span>{t("workspace.management.docker.apps.save")}</span>
-                </button>
-                <button type="button" className="primary-button" onClick={() => void save("deploy")} disabled={disableSubmit || !canDeploy} aria-busy={submitAction === "deploy" || undefined}>
+                </UiButton>
+                <UiButton variant="primary" type="button" className="primary-button" onClick={() => void save("deploy")} disabled={disableSubmit || !canDeploy} aria-busy={submitAction === "deploy" || undefined}>
                   {submitAction === "deploy" ? <LoaderCircle className="is-spinning" aria-hidden="true" size={15} /> : <Rocket aria-hidden="true" size={15} />}
                   <span>{t("workspace.management.docker.apps.saveDeploy")}</span>
-                </button>
+                </UiButton>
               </div>
             </>
           )}
-        </footer>
+        </DialogActions>
       </section>
     </ModalPortal>
   );

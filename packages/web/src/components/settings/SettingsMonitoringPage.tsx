@@ -1,3 +1,4 @@
+import { Button as UiButton, Field, Input, Notice, Section } from "@cyberos/ui";
 import { useEffect, useState, type FormEvent } from "react";
 import { Activity, Check, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -66,10 +67,10 @@ export function SettingsMonitoringContent({
   const { t } = useTranslation();
   return (
     <form className="settings-content-body" onSubmit={onSubmit}>
-      {error ? <p className="settings-inline-error" role="alert">{error}</p> : null}
+      {error ? <Notice className="settings-inline-error" role="alert" tone="danger">{error}</Notice> : null}
       {form ? <div className="settings-page-grid">
-        <section className="settings-section-card settings-field-wide">
-          <header><div><h3>{t("settings.monitoring.title")}</h3><p>{t("settings.monitoring.description")}</p></div><Activity size={18} aria-hidden="true" /></header>
+        <Section className="settings-section-card settings-field-wide" title={t("settings.monitoring.title")} description={t("settings.monitoring.description")} icon={<Activity size={18} aria-hidden="true" />}>
+
           <div className="settings-switch-row"><strong><HelpLabel label={t("settings.monitoring.enabled")} content={t("settings.monitoring.enabledDescription")} /></strong><Switch checked={form.enabled} disabled={busy} ariaLabel={t("settings.monitoring.enabled")} onCheckedChange={(enabled) => onFormChange({ ...form, enabled })} /></div>
           <fieldset className="settings-field-grid" disabled={busy}>
             <NumberField label={t("settings.monitoring.rawRetention")} value={form.rawRetentionDays} min={1} max={14} onChange={(rawRetentionDays) => onFormChange({ ...form, rawRetentionDays })} />
@@ -77,13 +78,13 @@ export function SettingsMonitoringContent({
             <NumberField label={t("settings.monitoring.hourRetention")} value={form.hourRetentionDays} min={30} max={1825} onChange={(hourRetentionDays) => onFormChange({ ...form, hourRetentionDays })} />
             <NumberField label={t("settings.monitoring.maxDatabaseMiB")} value={Math.round(form.maxDatabaseBytes / MIB)} min={16} max={16384} onChange={(value) => onFormChange({ ...form, maxDatabaseBytes: value * MIB })} />
           </fieldset>
-          <div className="settings-card-actions"><button className="primary-button" type="submit" disabled={busy} aria-busy={busy || undefined}>{busy ? <LoaderCircle className="is-spinning" size={15} /> : <Check size={15} />}{t("common.actions.saveChanges")}</button></div>
-        </section>
+          <div className="settings-card-actions"><UiButton variant="primary" className="primary-button" type="submit" disabled={busy} aria-busy={busy || undefined}>{busy ? <LoaderCircle className="is-spinning" size={15} /> : <Check size={15} />}{t("common.actions.saveChanges")}</UiButton></div>
+        </Section>
       </div> : null}
     </form>
   );
 }
 
 function NumberField({ label, value, min, max, onChange }: { label: string; value: number; min: number; max: number; onChange: (value: number) => void }) {
-  return <label><span>{label}</span><input type="number" min={min} max={max} value={value} onChange={(event) => onChange(Number(event.target.value))} /></label>;
+  return <Field label={label}><Input type="number" min={min} max={max} value={value} onChange={(event) => onChange(Number(event.target.value))} /></Field>;
 }

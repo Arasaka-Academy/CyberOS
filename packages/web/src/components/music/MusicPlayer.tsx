@@ -1,3 +1,4 @@
+import { Button as UiButton, Notice } from "@cyberos/ui";
 import { OutputDeviceSelect } from "../playback/OutputDeviceSelect.js";
 import { useOptionalPlayback } from "../playback/PlaybackProvider.js";
 import { PlaybackSlider } from "../playback/PlaybackSlider.js";
@@ -204,7 +205,7 @@ export function MusicPlayerDetails({
               <p>{current?.artist}</p>
               <p>{current?.album}</p>
               <div className="music-detail-actions">
-                <button
+                <UiButton iconOnly variant="plain"
                   type="button"
                   disabled={busy || !currentTrack}
                   aria-pressed={currentTrack?.favorite ?? false}
@@ -236,8 +237,8 @@ export function MusicPlayerDetails({
                     size={17}
                     fill={currentTrack?.favorite ? "currentColor" : "none"}
                   />
-                </button>
-                <button
+                </UiButton>
+                <UiButton iconOnly variant="plain"
                   type="button"
                   disabled={busy}
                   aria-pressed={status.shuffle}
@@ -252,8 +253,8 @@ export function MusicPlayerDetails({
                   aria-label={t("music.shuffle")} className="plain-button"
                 >
                   <Shuffle size={17} />
-                </button>
-                <button
+                </UiButton>
+                <UiButton variant="plain"
                   type="button"
                   disabled={busy}
                   aria-label={t(`music.repeat.${status.repeat}`)}
@@ -277,13 +278,13 @@ export function MusicPlayerDetails({
                   ) : (
                     <Repeat size={17} />
                   )}
-                </button>
+                </UiButton>
               </div>
             </div>
           </div>
           <div className="music-drawer-transport">
             <div className="music-transport">
-              <button
+              <UiButton iconOnly variant="plain"
                 type="button"
                 disabled={busy || !status.queue.length}
                 onClick={() => void execute({ type: "previous" })}
@@ -291,8 +292,8 @@ export function MusicPlayerDetails({
                 data-tooltip={t("music.previous")} className="plain-button"
               >
                 <SkipBack size={20} />
-              </button>
-              <button
+              </UiButton>
+              <UiButton variant="primary"
                 type="button"
                 className="primary-button"
                 disabled={busy || !status.queue.length}
@@ -300,8 +301,8 @@ export function MusicPlayerDetails({
               >
                 {playing ? <Pause size={20} /> : <Play size={20} />}
                 {playing ? t("music.pause") : t("music.play")}
-              </button>
-              <button
+              </UiButton>
+              <UiButton iconOnly variant="plain"
                 type="button"
                 disabled={busy || !status.queue.length}
                 onClick={() => void execute({ type: "next" })}
@@ -309,7 +310,7 @@ export function MusicPlayerDetails({
                 data-tooltip={t("music.next")} className="plain-button"
               >
                 <SkipForward size={20} />
-              </button>
+              </UiButton>
             </div>
             <label className="music-progress">
               <span>{musicTime(status.positionSeconds)}</span>
@@ -332,7 +333,7 @@ export function MusicPlayerDetails({
               <span>{t("music.output")}</span>
               <OutputDeviceSelect value={status.audioDeviceId} devices={devices} disabled={busy} defaultLabel={t("music.defaultOutput")} onChange={audioDeviceId => void execute({ type: "output", audioDeviceId })} />
             </label>
-            <button
+            <UiButton variant="plain"
               type="button"
               onClick={() => {
                 setDrawerOpen(false);
@@ -341,7 +342,7 @@ export function MusicPlayerDetails({
             >
               <Bluetooth size={16} aria-hidden="true" />
               {t("music.bluetoothSettings")}
-            </button>
+            </UiButton>
             <label>
               <Volume2 size={16} aria-hidden="true" />
               <PlaybackSlider
@@ -353,7 +354,7 @@ export function MusicPlayerDetails({
               />
               <span>{Math.round(status.volume)}</span>
             </label>
-            {playback?.nas?.owner === "music" && playback.nas.sessionId ? <button disabled={busy} aria-pressed={playback.nas.preferences.musicMuted} onClick={() => void playback.control({ type: "set-muted", sessionId: playback.nas!.sessionId!, muted: !playback.nas!.preferences.musicMuted }).catch(error => setDeviceError(error instanceof Error ? error.message : String(error)))} className="plain-button">{t("playback.mute")}</button> : null}
+            {playback?.nas?.owner === "music" && playback.nas.sessionId ? <UiButton variant="plain" disabled={busy} aria-pressed={playback.nas.preferences.musicMuted} onClick={() => void playback.control({ type: "set-muted", sessionId: playback.nas!.sessionId!, muted: !playback.nas!.preferences.musicMuted }).catch(error => setDeviceError(error instanceof Error ? error.message : String(error)))} className="plain-button">{t("playback.mute")}</UiButton> : null}
           </div>
           {status.owner === "video" ? (
             <p className="music-inline-state">
@@ -378,29 +379,29 @@ export function MusicPlayerDetails({
             </p>
           )}
           {error || status.error || deviceError || favoriteError ? (
-            <p className="music-error" role="alert">
+            <Notice className="music-error" role="alert" tone="danger">
               {error ?? status.error ?? deviceError ?? favoriteError}
-            </p>
+            </Notice>
           ) : null}
           <div
             className="music-tabs"
             role="group"
             aria-label={t("music.nowPlaying")}
           >
-            <button
+            <UiButton variant="ghost"
               type="button"
               aria-pressed={tab === "queue"}
               onClick={() => setTab("queue")} className="plain-button"
             >
               {t("music.queue")} <span>{status.queue.length}</span>
-            </button>
-            <button
+            </UiButton>
+            <UiButton variant="ghost"
               type="button"
               aria-pressed={tab === "lyrics"}
               onClick={() => setTab("lyrics")} className="plain-button"
             >
               {t("music.lyrics")}
-            </button>
+            </UiButton>
           </div>
           {tab === "queue" ? (
             <>
@@ -445,7 +446,7 @@ export function MusicPlayerDetails({
                     <span className="music-row-number">
                       {String(index + 1).padStart(2, "0")}
                     </span>
-                    <button
+                    <UiButton variant="ghost"
                       type="button"
                       className="plain-button music-queue-title"
                       data-music-reorder-title=""
@@ -459,8 +460,8 @@ export function MusicPlayerDetails({
                     >
                       <strong>{item.title}</strong>
                       <small>{item.artist}</small>
-                    </button>
-                    <button
+                    </UiButton>
+                    <UiButton iconOnly variant="plain"
                       type="button"
                       aria-label={t("music.moveUp")}
                       data-tooltip={t("music.moveUp")}
@@ -469,8 +470,8 @@ export function MusicPlayerDetails({
                       onClick={() => void reorder(item, -1)} className="plain-button"
                     >
                       <ArrowUp size={15} />
-                    </button>
-                    <button
+                    </UiButton>
+                    <UiButton iconOnly variant="plain"
                       type="button"
                       aria-label={t("music.moveDown")}
                       data-tooltip={t("music.moveDown")}
@@ -479,8 +480,8 @@ export function MusicPlayerDetails({
                       onClick={() => void reorder(item, 1)} className="plain-button"
                     >
                       <ArrowDown size={15} />
-                    </button>
-                    <button
+                    </UiButton>
+                    <UiButton iconOnly variant="plain"
                       type="button"
                       aria-label={t("music.remove")}
                       data-tooltip={t("music.remove")}
@@ -490,25 +491,25 @@ export function MusicPlayerDetails({
                       } className="plain-button"
                     >
                       <Trash2 size={15} />
-                    </button>
+                    </UiButton>
                   </div>
                 ))}
               </div>
               <footer>
-                <button
+                <UiButton variant="plain"
                   type="button"
                   disabled={busy || !status.queue.length}
                   onClick={() => void execute({ type: "clear" })} className="plain-button"
                 >
                   {t("music.clearQueue")}
-                </button>
-                <button
+                </UiButton>
+                <UiButton variant="plain"
                   type="button"
                   disabled={!status.queue.length}
                   onClick={() => setSaveOpen(true)} className="plain-button"
                 >
                   {t("music.saveQueue")}
-                </button>
+                </UiButton>
               </footer>
             </>
           ) : (

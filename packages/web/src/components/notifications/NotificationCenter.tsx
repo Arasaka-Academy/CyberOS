@@ -1,3 +1,4 @@
+import { Button as UiButton, DialogHeader } from "@cyberos/ui";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -136,13 +137,8 @@ export function NotificationCenter({
         aria-labelledby="notification-center-title"
         tabIndex={-1}
       >
-        <header className="notification-drawer-header">
-          <div>
-            <span className="eyebrow">{t("notifications.center.eyebrow")}</span>
-            <h2 id="notification-center-title">{t("notifications.center.title")}</h2>
-          </div>
-          <div className="notification-drawer-actions">
-            <button
+        <DialogHeader className="notification-drawer-header" title={t("notifications.center.title")} eyebrow={<>{t("notifications.center.eyebrow")}</>} headingId="notification-center-title" actions={<><div className="notification-drawer-actions">
+            <UiButton iconOnly variant="ghost"
               type="button"
               onClick={activeTab === "operations" ? onReadAll : activeTab === "bluetooth" ? onReadAllBluetooth : onReadAllAlerts}
               disabled={activeUnreadCount === 0}
@@ -150,8 +146,8 @@ export function NotificationCenter({
               aria-label={t("notifications.center.markAllRead")}
             >
               <CheckCheck aria-hidden="true" size={17} />
-            </button>
-            <button
+            </UiButton>
+            <UiButton iconOnly variant="ghost"
               ref={closeButtonRef}
               type="button"
               onClick={onClose}
@@ -159,9 +155,8 @@ export function NotificationCenter({
               aria-label={t("common.actions.close")}
             >
               <X aria-hidden="true" size={17} />
-            </button>
-          </div>
-        </header>
+            </UiButton>
+          </div></>} />
 
         <div className="notification-drawer-summary" aria-live="polite">
           <Bell aria-hidden="true" size={14} />
@@ -169,15 +164,15 @@ export function NotificationCenter({
         </div>
 
         <div className="view-tabs notification-tabs" role="tablist" aria-label={t("notifications.center.tabs.label")}>
-          <button type="button" role="tab" aria-selected={activeTab === "operations"} onClick={() => setActiveTab("operations")}>
+          <UiButton variant="ghost" type="button" role="tab" aria-selected={activeTab === "operations"} onClick={() => setActiveTab("operations")}>
             {t("notifications.center.tabs.operations")}<span className="view-tab-badge">{operationUnreadCount}</span>
-          </button>
-          <button type="button" role="tab" aria-selected={activeTab === "bluetooth"} onClick={() => setActiveTab("bluetooth")}>
+          </UiButton>
+          <UiButton variant="ghost" type="button" role="tab" aria-selected={activeTab === "bluetooth"} onClick={() => setActiveTab("bluetooth")}>
             {t("notifications.center.tabs.bluetooth")}<span className="view-tab-badge">{bluetoothUnreadCount}</span>
-          </button>
-          <button type="button" role="tab" aria-selected={activeTab === "alerts"} onClick={() => setActiveTab("alerts")}>
+          </UiButton>
+          <UiButton variant="ghost" type="button" role="tab" aria-selected={activeTab === "alerts"} onClick={() => setActiveTab("alerts")}>
             {t("notifications.center.tabs.alerts")}<span className="view-tab-badge">{alertUnreadCount}</span>
-          </button>
+          </UiButton>
         </div>
 
         <div className="notification-list" role="tabpanel">
@@ -235,7 +230,7 @@ function BluetoothTransfersList({ loading, transfers, locale, now, onRead, t }: 
     const relativeTime = formatRelativeTime(timestamp, locale, now);
     const absoluteTime = formatDate(timestamp, locale);
     const Icon = transfer.direction === "send" ? Send : Inbox;
-    return <button type="button" key={transfer.id} className="notification-item" data-status={transfer.status} data-unread={transfer.readAt === null ? "true" : "false"} onClick={() => onRead(transfer.id)} aria-label={`${transfer.displayName}. ${t(`settings.bluetooth.transfers.statuses.${transfer.status}`)}`}>
+    return <UiButton variant="ghost" type="button" key={transfer.id} className="notification-item" data-status={transfer.status} data-unread={transfer.readAt === null ? "true" : "false"} onClick={() => onRead(transfer.id)} aria-label={`${transfer.displayName}. ${t(`settings.bluetooth.transfers.statuses.${transfer.status}`)}`}>
       <span className="notification-status-icon" aria-hidden="true"><Icon size={17} /></span>
       <span className="notification-item-content">
         <span className="notification-item-title"><Bluetooth aria-hidden="true" size={14} /><strong>{transfer.displayName}</strong></span>
@@ -244,7 +239,7 @@ function BluetoothTransfersList({ loading, transfers, locale, now, onRead, t }: 
         <time dateTime={timestamp} data-tooltip={absoluteTime}>{relativeTime}</time>
       </span>
       {transfer.readAt === null ? <span className="notification-unread-dot" aria-hidden="true" /> : null}
-    </button>;
+    </UiButton>;
   })}</>;
 }
 
@@ -275,7 +270,7 @@ function OperationsList({ loading, notifications, locale, now, onRead, t }: {
               const relativeTime = formatRelativeTime(notification.updatedAt, locale, now);
               const absoluteTime = formatDate(notification.updatedAt, locale);
               return (
-                <button
+                <UiButton variant="ghost"
                   type="button"
                   key={notification.id}
                   className="notification-item"
@@ -297,7 +292,7 @@ function OperationsList({ loading, notifications, locale, now, onRead, t }: {
                     <time dateTime={notification.updatedAt} data-tooltip={absoluteTime}>{relativeTime}</time>
                   </span>
                   {notification.readAt === null ? <span className="notification-unread-dot" aria-hidden="true" /> : null}
-                </button>
+                </UiButton>
               );
             })
           )}
@@ -325,13 +320,13 @@ function AlertsList({ loading, incidents, locale, now, onRead, onAcknowledge, t 
     const absoluteTime = formatDate(timestamp, locale);
     return <article key={incident.id} className="notification-item notification-alert-item" data-status={incident.status} data-severity={incident.severity} data-unread={incident.readAt === null ? "true" : "false"}>
       <span className="notification-status-icon" aria-hidden="true"><ShieldAlert size={17} /></span>
-      <button type="button" className="notification-alert-content" onClick={() => onRead(incident.id)} aria-label={`${incident.title}. ${t(`notifications.center.alerts.statuses.${incident.status}`)}`}>
+      <UiButton variant="ghost" type="button" className="notification-alert-content" onClick={() => onRead(incident.id)} aria-label={`${incident.title}. ${t(`notifications.center.alerts.statuses.${incident.status}`)}`}>
         <span className="notification-item-title"><strong>{incident.title}</strong></span>
         <span className="notification-item-summary">{t(`notifications.center.alerts.statuses.${incident.status}`)} · {t(`notifications.center.alerts.severity.${incident.severity}`)}{incident.occurrenceCount > 1 ? ` · ${t("notifications.center.alerts.occurrences", { count: incident.occurrenceCount })}` : ""}</span>
         <time dateTime={timestamp} data-tooltip={absoluteTime}>{relativeTime}</time>
-      </button>
+      </UiButton>
       <span className="notification-alert-actions">
-        {incident.status === "firing" && incident.acknowledgedAt === null ? <button type="button" onClick={() => onAcknowledge(incident.id)}>{t("notifications.center.alerts.acknowledge")}</button> : null}
+        {incident.status === "firing" && incident.acknowledgedAt === null ? <UiButton variant="ghost" type="button" onClick={() => onAcknowledge(incident.id)}>{t("notifications.center.alerts.acknowledge")}</UiButton> : null}
         {incident.readAt === null ? <span className="notification-unread-dot" aria-hidden="true" /> : null}
       </span>
     </article>;

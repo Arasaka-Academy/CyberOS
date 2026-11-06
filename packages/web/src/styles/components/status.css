@@ -10,7 +10,7 @@
   border: 1px solid currentColor;
   border-radius: 0;
   color: var(--neutral-status-text);
-  background: rgb(244 236 231 / 4%);
+  background: color-mix(in srgb, var(--cyberos-color-text) 4%, transparent);
   font-size: 11px;
   font-style: normal;
   font-family: var(--font-mono);

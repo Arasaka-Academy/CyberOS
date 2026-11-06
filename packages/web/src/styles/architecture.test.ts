@@ -18,8 +18,8 @@ async function cascade(file: URL, ancestors: string[] = []): Promise<postcss.Roo
   for (const node of root.nodes) {
     if (node.type !== "atrule" || node.name !== "import") continue;
     const target = node.params.match(/^["']([^"']+)["']/)?.[1];
-    const imported = target === "@cyberos/shared/hud-tokens.css"
-      ? new URL("../../../shared/src/hud-tokens.css", import.meta.url)
+    const imported = target?.startsWith("@cyberos/shared/")
+      ? new URL("../../../shared/src/" + target.slice("@cyberos/shared/".length), import.meta.url)
       : target?.startsWith(".") ? new URL(target, file) : null;
     if (imported) result.push(...await cascade(imported, [...ancestors, file.href]));
   }

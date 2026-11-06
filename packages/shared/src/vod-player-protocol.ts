@@ -1,3 +1,4 @@
+import { appearanceSchemes, type AppearancePreference, type Scheme } from "./appearance.js";
 import type {
   VodPlayerCapabilities as GeneratedVodPlayerCapabilities,
   VodPlayerErrorCode as GeneratedVodPlayerErrorCode,
@@ -17,7 +18,8 @@ export type VodPlayerStatus = Omit<GeneratedVodPlayerStatus, "owner" | "music" |
 
 type GeneratedPlayCommand = Extract<VodPlayerWireCommand, { type: "play" }>;
 export type VodPlayerCommand =
-  | Exclude<VodPlayerWireCommand, { type: "status" | "play" | "music" }>
+  | ({ type: "set-ui-theme" } & AppearancePreference)
+  | Exclude<VodPlayerWireCommand, { type: "status" | "play" | "music" | "set-ui-theme" }>
   | Omit<GeneratedPlayCommand, "startPositionSeconds" | "audioDeviceId" | "mediaFileId" | "expectedSessionId">
     & { startPositionSeconds?: number; audioDeviceId?: string; mediaFileId?: string; expectedSessionId?: string };
 
@@ -80,6 +82,10 @@ export function parseVodPlayerBrokerResponse(raw: string): VodPlayerBrokerRespon
 }
 
 function parseCommand(value: Record<string, unknown>): VodPlayerBrokerRequest["command"] | null {
+  if (value.type === "set-ui-theme") {
+    return hasOnlyKeys(value, ["type", "scheme", "mode"]) && typeof value.scheme === "string" && appearanceSchemes.includes(value.scheme as Scheme) && (value.mode === "dark" || value.mode === "light")
+      ? { type: "set-ui-theme", scheme: value.scheme as Scheme, mode: value.mode } : null;
+  }
   if (value.type === "status") return hasOnlyKeys(value, ["type"]) ? { type: "status" } : null;
   if (value.type === "audio-focus") return hasOnlyKeys(value, ["type", "leaseId", "action"]) && safeIdentifier(value.leaseId) && (value.action === "acquire" || value.action === "renew" || value.action === "release") ? { type: "audio-focus", leaseId: value.leaseId, action: value.action } : null;
   if (value.type === "play") {

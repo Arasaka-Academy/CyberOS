@@ -1,0 +1,18 @@
+@layer app {
+  .ui-dialog-header {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: nowrap;
+    min-width: 0; border-bottom: 1px solid var(--cyber-line); background: var(--dialog-bg, var(--cyber-bg)); color: var(--cyber-ink);
+  }
+  .ui-dialog-icon { display: grid; place-items: center; width: 24px; height: 24px; flex: 0 0 24px; color: var(--cyber-accent2); }
+  .ui-dialog-icon > svg { width: 18px; height: 18px; }
+  .ui-dialog-heading { flex: 1; min-width: 0; }
+  .ui-dialog-heading > :is(h2, h3) { margin: 0; color: var(--cyber-ink); font: 600 var(--dialog-title-size, 17px)/1.4 var(--cyberos-font-ui); overflow-wrap: anywhere; }
+  .ui-dialog-heading > p { margin: 5px 0 0; color: var(--cyber-muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+  .ui-dialog-eyebrow { display: block; margin-bottom: 4px; color: var(--cyber-muted); font: 11px/1.4 var(--cyberos-font-mono); }
+  .ui-dialog-header-actions { display: flex; align-items: center; flex-wrap: wrap; flex: 0 0 auto; gap: 8px; }
+  .ui-dialog-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; min-width: 0; border-top: 1px solid var(--cyber-line); background: var(--dialog-bg, var(--cyber-bg)); }
+  @media (max-width: 560px) {
+    .ui-dialog-actions > button { flex: 1 1 auto; min-width: 0; white-space: normal; }
+    .ui-dialog-header-actions { gap: 4px; }
+  }
+}

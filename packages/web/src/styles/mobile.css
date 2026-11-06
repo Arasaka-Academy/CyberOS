@@ -49,7 +49,7 @@
   .mobile-home-brand h1 { margin: 0; color: var(--accent); font: 700 30px/1 var(--font-display); letter-spacing: 1px; }
   .mobile-connection { display: flex; align-items: center; gap: 6px; margin-top: 7px; color: var(--muted); font-size: 11px; }
   .mobile-connection i { width: 5px; height: 5px; background: currentColor; }
-  .mobile-connection[data-state="online"] { color: var(--cyber-cyan); }
+  .mobile-connection[data-state="online"] { color: var(--hud-cyan); }
   .mobile-connection[data-state="offline"] { color: var(--red); }
   .mobile-notifications { position: relative; display: grid; place-items: center; width: 44px; height: 44px; color: var(--text); background: var(--surface); border: 1px solid var(--line); }
   .mobile-app-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 24px 12px; align-content: start; }
@@ -58,7 +58,7 @@
   .mobile-app-art::before, .mobile-app-art::after { position: absolute; inset: 0; content: ""; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px)); z-index: -1; }
   .mobile-app-art::before { background: var(--red); transform: translate(4px, 4px); }
   .mobile-app-art::after { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
-  .mobile-app-icon:nth-child(3n + 2) .mobile-app-art { color: var(--cyber-cyan); }
+  .mobile-app-icon:nth-child(3n + 2) .mobile-app-art { color: var(--hud-cyan); }
   .mobile-app-icon:hover .mobile-app-art::after { background: var(--surface-hover); }
   .mobile-app-icon:active .mobile-app-art { translate: 1px 1px; }
   .mobile-app-name { width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; line-height: 20px; text-align: center; }
@@ -81,7 +81,7 @@
     min-height: var(--app-titlebar-height);
     overflow: visible;
     color: var(--text);
-    background: linear-gradient(90deg, rgb(255 0 60 / 8%), transparent 46%), var(--surface);
+    background: linear-gradient(90deg, color-mix(in srgb, var(--cyberos-color-danger) 8%, transparent), transparent 46%), var(--surface);
     box-shadow: none;
   }
   .app-shell .mobile-app-titlebar .management-title-icon {
@@ -96,9 +96,9 @@
   .mobile-app-titlebar .management-title-icon svg { width: 20px; height: 20px; }
   .app-shell .mobile-app-titlebar .management-title-copy { grid-area: copy; grid-template-rows: 24px 16px; gap: 2px; min-width: 0; height: auto; }
   .app-shell .mobile-app-titlebar .management-title-copy h2 { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 20px; font-weight: 700; line-height: 24px; margin: 0; }
-  .app-shell .mobile-app-titlebar .management-title-copy h2::before { display: inline; margin-right: 7px; color: var(--cyber-red); content: "//"; }
+  .app-shell .mobile-app-titlebar .management-title-copy h2::before { display: inline; margin-right: 7px; color: var(--hud-red); content: "//"; }
   .app-shell .mobile-app-titlebar .management-title-copy p { display: block; max-width: none; color: var(--muted); font-size: 12px; line-height: 16px; }
-  .mobile-app-titlebar h2:focus-visible { outline: 2px solid var(--cyber-cyan); outline-offset: 2px; }
+  .mobile-app-titlebar h2:focus-visible { outline: 2px solid var(--hud-cyan); outline-offset: 2px; }
   .mobile-titlebar-toolbar {
     position: relative;
     grid-area: toolbar;
@@ -113,7 +113,7 @@
   }
   .app-shell :is(.mobile-app-back, .mobile-app-home, .mobile-more-button) { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; gap: 6px; min-width: 44px; height: 44px; padding: 0 8px; border: 1px solid transparent; color: var(--text); background: transparent; font: 700 12px/16px var(--font-emphasis); white-space: nowrap; }
   .app-shell .mobile-app-home { margin-left: auto; color: var(--accent-soft-text); background: var(--accent-soft-bg); }
-  .app-shell :is(.mobile-app-back, .mobile-app-home, .mobile-more-button):hover { border-color: var(--cyber-cyan); }
+  .app-shell :is(.mobile-app-back, .mobile-app-home, .mobile-more-button):hover { border-color: var(--hud-cyan); }
   .app-shell .management-actions.mobile-header-actions { position: static; display: flex; flex: 0 0 auto; flex-wrap: nowrap; width: auto; max-width: none; margin-left: auto; overflow: visible; gap: 6px; padding: 0; }
   .app-shell .mobile-header-actions + .mobile-app-home { margin-left: 0; }
   .app-shell .mobile-header-actions > :is(.panel-header-action, .mobile-more-button) { width: 44px; height: 44px; padding: 0; }
@@ -161,7 +161,7 @@
   .app-shell .mobile-settings-page .settings-nav section { display: grid; gap: 6px; margin-bottom: 20px; }
   .app-shell .mobile-settings-page .settings-nav h3 { display: block; margin: 8px 4px; }
   .app-shell .mobile-settings-page .settings-nav button { width: 100%; min-height: 52px; padding: 10px 12px; }
-  .app-shell .mobile-settings-page .settings-content { min-width: 0; min-height: 0; overflow: auto; }
+  .app-shell .mobile-settings-page .settings-content { min-width: 0; min-height: 0; grid-template-rows: minmax(0, 1fr); overflow: auto; }
   .mobile-settings-page .settings-content-body { padding: 16px 12px; }
   .settings-power-section { padding: 0 12px 20px; }
   .settings-power-button { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; }

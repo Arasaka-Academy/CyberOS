@@ -1,0 +1,9 @@
+/* Generated from packages/react/src/card.module.css. Regenerate in CyberUI with pnpm registry:build; after installation, edit this file freely. */
+@layer theme, base, components, utilities;
+@reference './tailwind-theme.css';
+
+@layer components {
+.card { background: var(--cyber-soft); @apply tw:p-[22px] tw:min-w-[0]; }
+.card h3 { @apply tw:mb-[8px] tw:text-[length:20px]; }
+.card p { @apply tw:text-cyber-muted tw:mb-[0]; }
+}

@@ -32,46 +32,9 @@
 }
 
 .photo-search-field {
-  display: flex;
+  display: block;
   flex: 1 1 260px;
-  align-items: center;
-  gap: 7px;
   min-width: 160px;
-  height: 34px;
-  padding: 0 9px;
-  border: 1px solid var(--line-soft);
-  border-radius: 5px;
-  color: var(--muted);
-  background: var(--input-bg);
-}
-
-.photo-search-field > button {
-  display: grid;
-  flex: 0 0 32px;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  place-items: center;
-  border: 0;
-  border-radius: 0;
-  color: var(--muted);
-  background: transparent;
-}
-
-.photo-search-field > button:hover,
-.photo-search-field > button:focus-visible {
-  color: var(--text);
-  background: var(--surface);
-}
-
-.photo-search-field input {
-  width: 100%;
-  min-width: 0;
-  border: 0;
-  outline: 0;
-  color: var(--text);
-  background: transparent;
-  font-size: 11px;
 }
 
 .photo-view-switch,

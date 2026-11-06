@@ -246,6 +246,8 @@ export const en = {
     helpFor: "About {{label}}",
     actions: {
       approve: "Approve",
+      retry: "Retry",
+      done: "Done",
       cancel: "Cancel",
       close: "Close",
       closeSettings: "Close settings",
@@ -2543,7 +2545,7 @@ export const en = {
       },
       appearance: {
         title: "Appearance",
-        description: "Language preference for this browser."
+        description: "Color scheme, display mode, and language for this browser."
       },
       downloads: {
         title: "Downloads",
@@ -3295,6 +3297,9 @@ export const en = {
       }
     },
     appearance: {
+      title: "Appearance",
+      browserSaved: "Saved in this browser",
+      nativeSyncFailed: "Player appearance could not sync",
       languageTitle: "Language",
       languageDescription: "Choose the interface language for this browser.",
       languageField: "Interface language",
@@ -3738,6 +3743,8 @@ export const zhCN = {
     helpFor: "{{label}}的提示",
     actions: {
       approve: "批准",
+      retry: "重试",
+      done: "完成",
       cancel: "取消",
       close: "关闭",
       closeSettings: "关闭设置",
@@ -6035,7 +6042,7 @@ export const zhCN = {
       },
       appearance: {
         title: "外观",
-        description: "当前浏览器的语言偏好。"
+        description: "当前浏览器的配色、明暗模式和语言偏好。"
       },
       downloads: {
         title: "下载",
@@ -6787,6 +6794,9 @@ export const zhCN = {
       }
     },
     appearance: {
+      title: "界面外观",
+      browserSaved: "保存在当前浏览器",
+      nativeSyncFailed: "播放控制条主题同步失败",
       languageTitle: "语言",
       languageDescription: "选择此浏览器的界面语言。",
       languageField: "界面语言",

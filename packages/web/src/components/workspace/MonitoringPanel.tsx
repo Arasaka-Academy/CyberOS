@@ -1,3 +1,4 @@
+import { Button as UiButton, SectionHeader, StatusBadge } from "@cyberos/ui";
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -290,7 +291,7 @@ function MonitoringPanelContent({ locale }: { locale: SupportedLocale }) {
 
       <nav className="view-tabs monitoring-view-tabs" role="tablist" aria-label={t("workspace.monitoring.tabs.label")}>
         {(["overview", "rules", "incidents"] as const).map((tab) => (
-          <button
+          <UiButton variant="ghost"
             key={tab}
             type="button"
             role="tab"
@@ -303,7 +304,7 @@ function MonitoringPanelContent({ locale }: { locale: SupportedLocale }) {
                 {overview.alerts.unreadCount > 99 ? "99+" : overview.alerts.unreadCount}
               </span>
             ) : null}
-          </button>
+          </UiButton>
         ))}
       </nav>
 
@@ -320,7 +321,7 @@ function MonitoringPanelContent({ locale }: { locale: SupportedLocale }) {
           <div className="monitoring-range-wrap">
             <div className="monitoring-range" role="group" aria-label={t("workspace.monitoring.range.label")}>
               {RANGE_OPTIONS.map((option) => (
-                <button
+                <UiButton variant="ghost"
                   key={option.id}
                   type="button"
                   className={range === option.id ? "is-active" : ""}
@@ -328,7 +329,7 @@ function MonitoringPanelContent({ locale }: { locale: SupportedLocale }) {
                   onClick={() => setRange(option.id)}
                 >
                   {t(`workspace.monitoring.range.${option.id}`)}
-                </button>
+                </UiButton>
               ))}
             </div>
           </div>
@@ -369,9 +370,9 @@ function MonitoringOverviewCard({ overview, locale }: { overview: MonitoringOver
       <div className="management-emblem" aria-hidden="true"><Activity size={31} /></div>
       <div className="management-command-copy">
         <div>
-          <span className="management-status-pill" data-state={statusTone(overview?.status)}>
+          <StatusBadge className="management-status-pill" data-state={statusTone(overview?.status)}>
             {t(`workspace.monitoring.states.${overview?.status ?? "starting"}`)}
-          </span>
+          </StatusBadge>
           <h3>{t("workspace.monitoring.overview.title")}</h3>
           <p>{t("workspace.monitoring.overview.detail")}</p>
         </div>
@@ -408,9 +409,7 @@ function MonitoringChart({
   const data = mergeMonitoringSeries(definitions, locale, valueKind);
   return (
     <section className="management-section monitoring-chart-section">
-      <header className="management-section-header">
-        <div><h3>{title}</h3><p>{description}</p></div>
-      </header>
+      <SectionHeader className="management-section-header" title={title} description={description} />
       <div className="monitoring-chart" aria-label={title}>
         {data.some((row) => definitions.some((definition) => row[definition.key] !== null && row[definition.key] !== undefined)) ? (
           <ResponsiveContainer width="100%" height="100%">
@@ -458,7 +457,7 @@ function CapacityPanel({ overview, locale }: { overview: MonitoringOverview | nu
     .map((value) => [value.labels.filesystem, value.value]));
   return (
     <section className="management-section monitoring-resource-section">
-      <header className="management-section-header"><div><h3>{t("workspace.monitoring.capacity.title")}</h3><p>{t("workspace.monitoring.capacity.description")}</p></div></header>
+      <SectionHeader className="management-section-header" title={t("workspace.monitoring.capacity.title")} description={t("workspace.monitoring.capacity.description")} />
       <div className="management-resource-list">
         {totals.length ? totals.map((total) => {
           const free = available.get(total.labels.filesystem ?? "") ?? 0;
@@ -482,7 +481,7 @@ function ServicesPanel({ overview, locale }: { overview: MonitoringOverview | nu
   const services = latestValues(overview, "cyberos_systemd_unit_active");
   return (
     <section className="management-section monitoring-services-section">
-      <header className="management-section-header"><div><h3>{t("workspace.monitoring.services.title")}</h3><p>{t("workspace.monitoring.services.description")}</p></div></header>
+      <SectionHeader className="management-section-header" title={t("workspace.monitoring.services.title")} description={t("workspace.monitoring.services.description")} />
       <div className="monitoring-service-grid">
         {services.map((service) => (
           <div key={service.labels.unit} className="monitoring-service-row">

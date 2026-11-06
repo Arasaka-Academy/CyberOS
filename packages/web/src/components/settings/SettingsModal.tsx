@@ -1,3 +1,4 @@
+import { Button as UiButton, DescriptionList, DialogActions, DialogHeader, Field, Input, InputGroup, Notice, Section, ThemePicker } from "@cyberos/ui";
 import { ModalPortal } from "../common/ModalPortal.js";
 import { MobileAppHeader, useAppHeadingFocus } from "../../mobile/MobileAppHeader.js";
 import { useMobileBack, useMobileNavigation } from "../../mobile/MobileNavigation.js";
@@ -354,22 +355,23 @@ export function SettingsModal({
             <img className="settings-brand-logo" src="/cyberos-icon.svg" alt={t("common.appName")} />
           </div>
 
-          <label className="settings-search">
-            <Search aria-hidden="true" size={15} />
-            <input
+          <InputGroup className="settings-search" leading={<Search aria-hidden="true" size={15} />}>
+
+            <Input
               ref={searchInputRef}
               value={settingsSearch}
               onChange={(event) => setSettingsSearch(event.target.value)}
               placeholder={t("settings.searchPlaceholder")}
+              aria-label={t("settings.searchPlaceholder")}
             />
-          </label>
+          </InputGroup>
 
           <nav className="settings-nav">
             {groups.map((group) => (
               <section key={group}>
                 <h3>{settingsGroupLabel(group, t)}</h3>
                 {visibleSections.filter((section) => section.group === group).map((section) => (
-                  <button
+                  <UiButton variant="ghost"
                     ref={section.id === activeSection ? activeSectionButtonRef : undefined}
                     key={section.id}
                     type="button"
@@ -378,7 +380,7 @@ export function SettingsModal({
                   >
                     {settingsSectionIcon(section.id)}
                     <strong>{settingsSectionTitle(section, t)}</strong>
-                  </button>
+                  </UiButton>
                 ))}
               </section>
             ))}
@@ -394,20 +396,14 @@ export function SettingsModal({
         </aside>
 
         {!compact || mobileDetail ? <section className="settings-content">
-          <header className="settings-content-header">
-            <div>
-              <h2 id={compact ? undefined : "settings-title"}>{settingsSectionTitle(currentSection, t)}</h2>
-              <p>{settingsSectionDescription(currentSection, t)}</p>
-            </div>
-            <button
+          {!compact ? <DialogHeader className="settings-content-header" title={settingsSectionTitle(currentSection, t)} description={settingsSectionDescription(currentSection, t)} headingId="settings-title" actions={<><UiButton iconOnly variant="ghost"
               type="button"
               onClick={onClose}
               data-tooltip={t("common.actions.closeSettings")}
               aria-label={t("common.actions.closeSettings")}
             >
               <X aria-hidden="true" size={18} />
-            </button>
-          </header>
+            </UiButton></>} /> : null}
 
           {activeSection === "overview" ? (
             <SettingsOverview
@@ -421,17 +417,11 @@ export function SettingsModal({
             <form className="settings-form" onSubmit={onSubmit}>
               <div className="settings-content-body">
                 <div className="settings-page-grid settings-provider-grid">
-                  <section className="settings-section-card">
-                    <header>
-                      <div>
-                        <h3>{t("settings.modelProvider.profileTitle")}</h3>
-                        <p>{t("settings.modelProvider.profileDescription")}</p>
-                      </div>
-                    </header>
+                  <Section className="settings-section-card" title={t("settings.modelProvider.profileTitle")} description={t("settings.modelProvider.profileDescription")}>
+
 
                     <fieldset className="settings-field-grid" disabled={loading || saving}>
-                      <div className="settings-preference-field">
-                        <span>{t("settings.modelProvider.provider")}</span>
+                      <Field className="settings-preference-field" htmlFor="model-provider" label={t("settings.modelProvider.provider")}>
                         <CustomSelect
                           id="model-provider"
                           value={form.providerName}
@@ -444,11 +434,11 @@ export function SettingsModal({
                           }
                           ariaLabel={t("settings.modelProvider.provider")}
                         />
-                      </div>
+                      </Field>
 
-                      <label className="settings-field-wide">
-                        <span>{t("settings.modelProvider.baseUrl")}</span>
-                        <input
+                      <Field className="settings-field-wide" label={t("settings.modelProvider.baseUrl")}>
+
+                        <Input
                           value={form.baseUrl}
                           onChange={(event) =>
                             onFormChange({
@@ -458,11 +448,11 @@ export function SettingsModal({
                           }
                           placeholder="https://api.example.com/v1"
                         />
-                      </label>
+                      </Field>
 
-                      <label className="settings-field-wide">
-                        <span>{t("settings.modelProvider.model")}</span>
-                        <input
+                      <Field className="settings-field-wide" label={t("settings.modelProvider.model")}>
+
+                        <Input
                           value={form.model}
                           onChange={(event) =>
                             onFormChange({
@@ -472,17 +462,12 @@ export function SettingsModal({
                           }
                           placeholder="provider/model-name"
                         />
-                      </label>
+                      </Field>
                     </fieldset>
-                  </section>
+                  </Section>
 
-                  <section className="settings-section-card">
-                    <header>
-                      <div>
-                        <h3>{t("settings.modelProvider.credentialsTitle")}</h3>
-                        <p>{t("settings.modelProvider.credentialsDescription")}</p>
-                      </div>
-                    </header>
+                  <Section className="settings-section-card" title={t("settings.modelProvider.credentialsTitle")} description={t("settings.modelProvider.credentialsDescription")}>
+
 
                     <fieldset className="settings-field-grid settings-field-grid-single" disabled={loading || saving}>
                       <SettingsSecretField
@@ -500,21 +485,21 @@ export function SettingsModal({
                       />
                     </fieldset>
 
-                  </section>
+                  </Section>
                 </div>
               </div>
 
-              <footer className="settings-actions">
+              <DialogActions className="settings-actions">
                 <span role="status">{saving ? t("common.actions.saving") : null}</span>
                 <div>
-                  <button className="secondary-button" type="button" onClick={onClose}>
+                  <UiButton variant="secondary" className="secondary-button" type="button" onClick={onClose}>
                     {t("common.actions.cancel")}
-                  </button>
-                  <button className="primary-button" type="submit" disabled={loading || saving} aria-busy={loading || saving || undefined}>
+                  </UiButton>
+                  <UiButton variant="primary" className="primary-button" type="submit" disabled={loading || saving} aria-busy={loading || saving || undefined}>
                     {saving ? t("common.actions.saving") : t("common.actions.saveChanges")}
-                  </button>
+                  </UiButton>
                 </div>
-              </footer>
+              </DialogActions>
             </form>
           ) : null}
 
@@ -814,12 +799,8 @@ function SettingsOverview({
 
   return (
     <div className="settings-content-body settings-overview">
-      <section className="settings-section-card settings-identity-card">
-        <SettingsOverviewCardHeader
-          icon={<MonitorCog aria-hidden="true" size={18} />}
-          title={t("settings.overview.systemProfile")}
-          description={t("settings.overview.systemProfileDescription")}
-        />
+      <Section className="settings-section-card settings-identity-card" icon={<MonitorCog aria-hidden="true" size={18} />} title={t("settings.overview.systemProfile")} description={t("settings.overview.systemProfileDescription")}>
+
         <div className="settings-metric-grid settings-system-metric-grid">
           {metricItems.map((item) => (
             <article key={String(item.label)}>
@@ -828,7 +809,7 @@ function SettingsOverview({
             </article>
           ))}
         </div>
-      </section>
+      </Section>
 
       <div className="settings-page-grid settings-overview-details">
         <SettingsInfoCard
@@ -838,9 +819,9 @@ function SettingsOverview({
           rows={hardwareRows}
         >
           {!systemInfo ? (
-            <p className="settings-inline-alert" role="status">
+            <Notice className="settings-inline-alert" role="status" tone="warning">
               {loading ? t("common.states.loading") : t("settings.overview.runtimeUnavailable")}
-            </p>
+            </Notice>
           ) : null}
         </SettingsInfoCard>
 
@@ -869,23 +850,7 @@ function SettingsOverview({
   );
 }
 
-function SettingsOverviewCardHeader({
-  icon,
-  title,
-  description
-}: {
-  icon: ReactNode;
-  title: string;
-  description: string;
-}) {
-  return (
-    <header className="settings-overview-card-header">
-      <span className="settings-overview-card-icon">{icon}</span>
-      <h3>{title}</h3>
-      <p>{description}</p>
-    </header>
-  );
-}
+
 
 interface SettingsInfoRow {
   label: string;
@@ -908,29 +873,15 @@ function SettingsInfoCard({
   children?: ReactNode;
 }) {
   return (
-    <section className="settings-section-card settings-system-card">
-      <SettingsOverviewCardHeader icon={icon} title={title} description={description} />
-      <SettingsInfoList rows={rows} />
+    <Section className="settings-section-card settings-system-card" icon={icon} title={title} description={description}>
+
+      <DescriptionList className="settings-summary-list settings-system-list" items={rows} />
       {children}
-    </section>
+    </Section>
   );
 }
 
-function SettingsInfoList({ rows }: { rows: SettingsInfoRow[] }) {
-  return (
-    <dl className="settings-summary-list settings-system-list">
-      {rows.map((row, index) => (
-        <div key={`${row.label}-${index}`}>
-          <dt>{row.label}</dt>
-          <dd className={row.mono ? "is-mono" : undefined} data-tooltip={row.value}>
-            {row.value}
-            {row.detail ? <small>{row.detail}</small> : null}
-          </dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
+
 
 function SettingsAppearancePage({
   languagePreference,
@@ -951,15 +902,13 @@ function SettingsAppearancePage({
   return (
     <div className="settings-content-body">
       <div className="settings-page-grid">
-        <section className="settings-section-card">
-          <header>
-            <div>
-              <h3>{t("settings.appearance.languageTitle")}</h3>
-              <p>{t("settings.appearance.languageDescription")}</p>
-            </div>
-          </header>
-          <div className="settings-preference-field">
-            <HelpLabel label={t("settings.appearance.languageField")} content={t("settings.appearance.languageHelp")} htmlFor="language-select" />
+        <Section className="settings-section-card" title={t("settings.appearance.title")} description={t("settings.appearance.browserSaved")}>
+
+          <ThemePicker />
+        </Section>
+        <Section className="settings-section-card" title={t("settings.appearance.languageTitle")} description={t("settings.appearance.languageDescription")}>
+
+          <Field className="settings-preference-field" htmlFor="language-select" label={t("settings.appearance.languageField")} help={<HelpTip label={t("settings.appearance.languageField")} content={t("settings.appearance.languageHelp")} />}>
             <CustomSelect
               id="language-select"
               value={languagePreference}
@@ -967,8 +916,8 @@ function SettingsAppearancePage({
               ariaLabel={`${t("settings.appearance.languageField")}: ${selectedLanguageLabel}`}
               onChange={onLanguagePreferenceChange}
             />
-          </div>
-        </section>
+          </Field>
+        </Section>
 
       </div>
     </div>
@@ -1002,22 +951,11 @@ function SettingsFilesPage({
   return (
     <div className="settings-content-body">
       <div className="settings-page-grid">
-        <section className="settings-section-card">
-          <header>
-            <div>
-              <h3>{t("settings.files.previewTitle")}</h3>
-              <p>{t("settings.files.previewDescription")}</p>
-            </div>
-          </header>
-          <div className="settings-preference-field settings-size-field">
-            <HelpLabel
-              label={t("settings.files.previewFileSizeLimit")}
-              content={t("settings.files.previewFileSizeLimitHelp", { limit: formatBytes(previewFileSizeLimitBytes, locale) })}
-              htmlFor="preview-file-size-limit"
-              helpId="preview-file-size-limit-help"
-            />
+        <Section className="settings-section-card" title={t("settings.files.previewTitle")} description={t("settings.files.previewDescription")}>
+
+          <Field className="settings-preference-field settings-size-field" htmlFor="preview-file-size-limit" label={t("settings.files.previewFileSizeLimit")} help={<HelpTip label={t("settings.files.previewFileSizeLimit")} content={t("settings.files.previewFileSizeLimitHelp", { limit: formatBytes(previewFileSizeLimitBytes, locale) })} id="preview-file-size-limit-help" />}>
             <div className="settings-unit-input">
-              <input
+              <Input
                 id="preview-file-size-limit"
                 type="text"
                 inputMode="numeric"
@@ -1029,8 +967,8 @@ function SettingsFilesPage({
               />
               <span>{t("settings.files.megabytes")}</span>
             </div>
-          </div>
-        </section>
+          </Field>
+        </Section>
 
       </div>
     </div>
@@ -1144,13 +1082,8 @@ export function SettingsPhotosPage({
         <div className="settings-content-body">
           <div className="settings-page-grid">
           <PhotosSemanticSettingsCard />
-          <section className="settings-section-card">
-            <header>
-              <div>
-                <h3>{t("settings.photos.libraryTitle")}</h3>
-                <p>{t("settings.photos.libraryDescription")}</p>
-              </div>
-            </header>
+          <Section className="settings-section-card" title={t("settings.photos.libraryTitle")} description={t("settings.photos.libraryDescription")}>
+
             <dl className="settings-summary-list settings-photo-context">
               <div>
                 <dt>{t("settings.photos.storagePool")}</dt>
@@ -1164,7 +1097,7 @@ export function SettingsPhotosPage({
               </div>
             </dl>
             <div className="settings-photo-library-actions">
-              <button
+              <UiButton variant="secondary"
                 className="secondary-button"
                 type="button"
                 onClick={() => setPickerOpen(true)}
@@ -1172,13 +1105,13 @@ export function SettingsPhotosPage({
               >
                 <Folder aria-hidden="true" size={15} />
                 <span>{settings ? t("settings.photos.changeDirectory") : t("settings.photos.chooseDirectory")}</span>
-              </button>
+              </UiButton>
             </div>
             {storagePools.length === 0 && !loading ? (
-              <p className="settings-inline-alert" role="alert">
-                <AlertTriangle aria-hidden="true" size={15} />
+              <Notice className="settings-inline-alert" role="alert" tone="warning" icon={<AlertTriangle aria-hidden="true" size={15} />}>
+
                 <span>{t("settings.photos.noStoragePools")}</span>
-              </p>
+              </Notice>
             ) : null}
             {libraryChanged ? (
               <p className="settings-photo-pending" role="status">
@@ -1186,19 +1119,15 @@ export function SettingsPhotosPage({
                 <span>{t("settings.photos.pendingSave")}</span>
               </p>
             ) : hasStatusProblem ? (
-              <p className="settings-inline-alert" role="alert">
-                <AlertTriangle aria-hidden="true" size={15} />
-                <span>{status?.error ?? stateLabel}</span>
-              </p>
-            ) : null}
-          </section>
+              <Notice className="settings-inline-alert" role="alert" tone={status?.error ? "danger" : "warning"} icon={<AlertTriangle aria-hidden="true" size={15} />}>
 
-          <section className="settings-section-card">
-            <header>
-              <div>
-                <h3>{t("settings.photos.mapTitle")}</h3>
-              </div>
-            </header>
+                <span>{status?.error ?? stateLabel}</span>
+              </Notice>
+            ) : null}
+          </Section>
+
+          <Section className="settings-section-card" title={t("settings.photos.mapTitle")}>
+
             <div className="settings-switch-row">
               <div className="settings-proxy-summary">
                 <strong className="help-label">
@@ -1222,47 +1151,32 @@ export function SettingsPhotosPage({
               />
             </div>
             <div className="settings-card-actions">
-              <button className="secondary-button" type="button" onClick={onOpenProxy} disabled={saving}>
+              <UiButton variant="secondary" className="secondary-button" type="button" onClick={onOpenProxy} disabled={saving}>
                 {t("settings.photos.configureProxy")}
-              </button>
+              </UiButton>
             </div>
-          </section>
+          </Section>
 
-          <section className="settings-section-card">
-            <header>
-              <div>
-                <h3>{t("settings.photos.processingTitle")}</h3>
-                <p>{t("settings.photos.processingDescription")}</p>
-              </div>
-            </header>
+          <Section className="settings-section-card" title={t("settings.photos.processingTitle")} description={t("settings.photos.processingDescription")}>
+
             <fieldset className="settings-field-grid settings-download-fields" disabled={loading || saving || !processingSettings}>
               <DownloadNumberField label={t("settings.photos.processingConcurrency")} value={draft.processingConcurrency} min={1} max={4} onChange={(value) => setDraft((current) => ({ ...current, processingConcurrency: value ?? 1 }))} />
               <DownloadNumberField label={t("settings.photos.scanIntervalMs")} value={draft.scanIntervalMs} min={60_000} max={86_400_000} step={60_000} onChange={(value) => setDraft((current) => ({ ...current, scanIntervalMs: value ?? 60_000 }))} />
               <DownloadNumberField label={t("settings.photos.commandTimeoutMs")} value={draft.commandTimeoutMs} min={5_000} max={900_000} step={1_000} onChange={(value) => setDraft((current) => ({ ...current, commandTimeoutMs: value ?? 5_000 }))} />
             </fieldset>
-          </section>
+          </Section>
 
-          <section className="settings-section-card">
-            <header>
-              <div>
-                <h3>{t("settings.photos.retryPolicyTitle")}</h3>
-                <p>{t("settings.photos.retryPolicyDescription")}</p>
-              </div>
-            </header>
+          <Section className="settings-section-card" title={t("settings.photos.retryPolicyTitle")} description={t("settings.photos.retryPolicyDescription")}>
+
             <fieldset className="settings-field-grid settings-download-fields" disabled={loading || saving || !processingSettings}>
               <DownloadNumberField label={t("settings.photos.maxAutoRetries")} value={draft.maxAutoRetries} min={0} max={20} onChange={(value) => setDraft((current) => ({ ...current, maxAutoRetries: value ?? 0 }))} />
               <DownloadNumberField label={t("settings.photos.retryBaseDelayMs")} value={draft.retryBaseDelayMs} min={500} max={1_800_000} step={500} onChange={(value) => setDraft((current) => ({ ...current, retryBaseDelayMs: value ?? 500 }))} />
               <DownloadNumberField label={t("settings.photos.retryMaxDelayMs")} value={draft.retryMaxDelayMs} min={draft.retryBaseDelayMs} max={1_800_000} step={1_000} onChange={(value) => setDraft((current) => ({ ...current, retryMaxDelayMs: value ?? current.retryBaseDelayMs }))} />
             </fieldset>
-          </section>
+          </Section>
 
-          <section className="settings-section-card">
-            <header>
-              <div>
-                <h3>{t("settings.photos.resourceLimitsTitle")}</h3>
-                <p>{t("settings.photos.resourceLimitsDescription")}</p>
-              </div>
-            </header>
+          <Section className="settings-section-card" title={t("settings.photos.resourceLimitsTitle")} description={t("settings.photos.resourceLimitsDescription")}>
+
             <fieldset className="settings-field-grid settings-download-fields" disabled={loading || saving || !processingSettings}>
               <DownloadNumberField label={t("settings.photos.maxFileSizeBytes")} value={draft.maxFileSizeBytes} min={1024 ** 2} max={1024 ** 4} step={1024 ** 2} onChange={(value) => setDraft((current) => ({ ...current, maxFileSizeBytes: value ?? 1024 ** 2 }))} />
               <DownloadNumberField label={t("settings.photos.maxXmpSizeBytes")} value={draft.maxXmpSizeBytes} min={1024} max={64 * 1024 ** 2} step={1024} onChange={(value) => setDraft((current) => ({ ...current, maxXmpSizeBytes: value ?? 1024 }))} />
@@ -1270,7 +1184,7 @@ export function SettingsPhotosPage({
               <DownloadNumberField label={t("settings.photos.minFreeSpaceBytes")} value={draft.minFreeSpaceBytes} min={0} max={1024 ** 4} step={1024 ** 2} onChange={(value) => setDraft((current) => ({ ...current, minFreeSpaceBytes: value ?? 0 }))} />
               <DownloadNumberField label={t("settings.photos.maxDecodedPixels")} value={draft.maxDecodedPixels} min={1_000_000} max={268_402_689} onChange={(value) => setDraft((current) => ({ ...current, maxDecodedPixels: value ?? 1_000_000 }))} />
             </fieldset>
-          </section>
+          </Section>
           </div>
         </div>
 
@@ -1287,10 +1201,10 @@ export function SettingsPhotosPage({
                     : null}
           </span>
           <div>
-            <button className="secondary-button" type="button" onClick={onClose} disabled={saving}>{t("common.actions.cancel")}</button>
-            <button className="primary-button" type="submit" disabled={loading || saving || (!processingSettings && !libraryChanged)} aria-busy={saving || undefined}>
+            <UiButton variant="secondary" className="secondary-button" type="button" onClick={onClose} disabled={saving}>{t("common.actions.cancel")}</UiButton>
+            <UiButton variant="primary" className="primary-button" type="submit" disabled={loading || saving || (!processingSettings && !libraryChanged)} aria-busy={saving || undefined}>
               {saving ? t("common.actions.saving") : saved ? <><Check aria-hidden="true" size={14} />{t("settings.photos.saved")}</> : t("common.actions.saveChanges")}
-            </button>
+            </UiButton>
           </div>
         </footer>
       </form>
@@ -1397,21 +1311,15 @@ export function SettingsDownloadsPage({
     <form className="settings-form" onSubmit={(event) => void submit(event)}>
       <div className="settings-content-body">
         <div className="settings-page-grid settings-downloads-grid">
-            <section className="settings-section-card">
-              <header>
-                <div>
-                  <h3>{t("settings.downloads.concurrencyTitle")}</h3>
-                  <p>{t("settings.downloads.concurrencyDescription")}</p>
-                </div>
-              </header>
+            <Section className="settings-section-card" title={t("settings.downloads.concurrencyTitle")} description={t("settings.downloads.concurrencyDescription")}>
+
 
               {([
                 { key: "concurrency", id: "download-concurrency", label: "settings.downloads.concurrencyField", help: "settings.downloads.concurrencyHelp" },
                 { key: "btConcurrency", id: "download-bt-concurrency", label: "settings.downloads.btConcurrencyField", help: "settings.downloads.btConcurrencyHelp" }
               ] as const).map((control) => (
               <fieldset className="settings-download-control" disabled={loading || saving} key={control.key}>
-                <div className="settings-preference-field">
-                  <HelpLabel label={t(control.label)} content={t(control.help)} htmlFor={control.id} />
+                <Field className="settings-preference-field" htmlFor={control.id} label={t(control.label)} help={<HelpTip label={t(control.label)} content={t(control.help)} />}>
                   <CustomSelect
                     id={control.id}
                     value={String(draft[control.key])}
@@ -1426,7 +1334,7 @@ export function SettingsDownloadsPage({
                       [control.key]: Number(value)
                     }))}
                   />
-                </div>
+                </Field>
                 <div className="settings-download-visual" aria-hidden="true">
                   <Download size={22} />
                   <strong>{draft[control.key]}</strong>
@@ -1441,15 +1349,15 @@ export function SettingsDownloadsPage({
                   <span>{directoryText}</span>
                 </div>
                 <div className="settings-download-directory-actions">
-                  <button id="download-default-directory" ref={directoryButtonRef} type="button" className="secondary-button" disabled={!storagePools.some((pool) => pool.status !== "offline")} onClick={() => setPickerOpen(true)}>
+                  <UiButton variant="secondary" id="download-default-directory" ref={directoryButtonRef} type="button" className="secondary-button" disabled={!storagePools.some((pool) => pool.status !== "offline")} onClick={() => setPickerOpen(true)}>
                     <Folder aria-hidden="true" size={15} />
                     {t("settings.downloads.chooseDirectory")}
-                  </button>
-                  <button type="button" className="secondary-button" disabled={draft.defaultStoragePoolId === null} onClick={() => {
+                  </UiButton>
+                  <UiButton variant="secondary" type="button" className="secondary-button" disabled={draft.defaultStoragePoolId === null} onClick={() => {
                     setDraft((current) => ({ ...current, defaultStoragePoolId: null, defaultTargetDirectory: null }));
                     setSaved(false);
                     setSaveError(null);
-                  }}>{t("settings.downloads.clearDirectory")}</button>
+                  }}>{t("settings.downloads.clearDirectory")}</UiButton>
                 </div>
               </fieldset>
               <fieldset className="settings-field-grid settings-download-fields" disabled={loading || saving}>
@@ -1471,53 +1379,38 @@ export function SettingsDownloadsPage({
                   onChange={(value) => setDraft((current) => ({ ...current, segmentedDownloadMinBytes: value ?? 1024 * 1024 }))}
                 />
               </fieldset>
-            </section>
+            </Section>
 
-            <section className="settings-section-card">
-              <header>
-                <div>
-                  <h3>{t("settings.downloads.retryTitle")}</h3>
-                  <p>{t("settings.downloads.retryDescription")}</p>
-                </div>
-              </header>
+            <Section className="settings-section-card" title={t("settings.downloads.retryTitle")} description={t("settings.downloads.retryDescription")}>
+
               <fieldset className="settings-field-grid settings-download-fields" disabled={loading || saving}>
                 <DownloadNumberField label={t("settings.downloads.maxAutoRetries")} value={draft.maxAutoRetries} min={0} max={20} onChange={(value) => setDraft((current) => ({ ...current, maxAutoRetries: value ?? 0 }))} />
                 <DownloadNumberField label={t("settings.downloads.retryBaseDelayMs")} value={draft.retryBaseDelayMs} min={500} max={60_000} step={500} onChange={(value) => setDraft((current) => ({ ...current, retryBaseDelayMs: value ?? 500 }))} />
                 <DownloadNumberField label={t("settings.downloads.retryMaxDelayMs")} value={draft.retryMaxDelayMs} min={draft.retryBaseDelayMs} max={1_800_000} step={1000} onChange={(value) => setDraft((current) => ({ ...current, retryMaxDelayMs: value ?? current.retryBaseDelayMs }))} />
                 <DownloadNumberField label={t("settings.downloads.retryAfterMaxDelayMs")} value={draft.retryAfterMaxDelayMs} min={1000} max={3_600_000} step={1000} onChange={(value) => setDraft((current) => ({ ...current, retryAfterMaxDelayMs: value ?? 1000 }))} />
               </fieldset>
-            </section>
+            </Section>
 
-            <section className="settings-section-card">
-              <header>
-                <div>
-                  <h3>{t("settings.downloads.timeoutsTitle")}</h3>
-                  <p>{t("settings.downloads.timeoutsDescription")}</p>
-                </div>
-              </header>
+            <Section className="settings-section-card" title={t("settings.downloads.timeoutsTitle")} description={t("settings.downloads.timeoutsDescription")}>
+
               <fieldset className="settings-field-grid settings-download-fields" disabled={loading || saving}>
                 <DownloadNumberField label={t("settings.downloads.connectTimeoutMs")} value={draft.connectTimeoutMs} min={1000} max={120_000} step={1000} onChange={(value) => setDraft((current) => ({ ...current, connectTimeoutMs: value ?? 1000 }))} />
                 <DownloadNumberField label={t("settings.downloads.responseHeaderTimeoutMs")} value={draft.responseHeaderTimeoutMs} min={5000} max={300_000} step={1000} onChange={(value) => setDraft((current) => ({ ...current, responseHeaderTimeoutMs: value ?? 5000 }))} />
                 <DownloadNumberField label={t("settings.downloads.readIdleTimeoutMs")} value={draft.readIdleTimeoutMs} min={5000} max={900_000} step={1000} onChange={(value) => setDraft((current) => ({ ...current, readIdleTimeoutMs: value ?? 5000 }))} />
               </fieldset>
-            </section>
+            </Section>
 
-            <section className="settings-section-card">
-              <header>
-                <div>
-                  <h3>{t("settings.downloads.storageTitle")}</h3>
-                  <p>{t("settings.downloads.storageDescription")}</p>
-                </div>
-              </header>
+            <Section className="settings-section-card" title={t("settings.downloads.storageTitle")} description={t("settings.downloads.storageDescription")}>
+
               <fieldset className="settings-field-grid settings-download-fields" disabled={loading || saving}>
                 <DownloadNumberField label={t("settings.downloads.minFreeSpaceBytes")} help={t("settings.downloads.minFreeSpaceHelp")} value={draft.minFreeSpaceBytes} min={0} max={Number.MAX_SAFE_INTEGER} step={1024 * 1024} onChange={(value) => setDraft((current) => ({ ...current, minFreeSpaceBytes: value ?? 0 }))} />
                 <DownloadNumberField label={t("settings.downloads.maxFileSizeBytes")} help={t("settings.downloads.maxFileSizeHelp")} value={draft.maxFileSizeBytes} min={1} max={Number.MAX_SAFE_INTEGER} step={1024 * 1024} nullable onChange={(value) => setDraft((current) => ({ ...current, maxFileSizeBytes: value }))} />
               </fieldset>
-            </section>
+            </Section>
         </div>
       </div>
 
-      {saveError ? <p className="settings-inline-alert" role="alert">{saveError}</p> : null}
+      {saveError ? <Notice className="settings-inline-alert" role="alert" tone="danger">{saveError}</Notice> : null}
       <footer className="settings-actions">
         <span role="status">
           {saving
@@ -1529,12 +1422,12 @@ export function SettingsDownloadsPage({
                 : null}
         </span>
         <div>
-          <button className="secondary-button" type="button" onClick={onClose} disabled={saving}>
+          <UiButton variant="secondary" className="secondary-button" type="button" onClick={onClose} disabled={saving}>
             {t("common.actions.cancel")}
-          </button>
-          <button className="primary-button" type="submit" disabled={loading || saving || !settings} aria-busy={loading || saving || undefined}>
+          </UiButton>
+          <UiButton variant="primary" className="primary-button" type="submit" disabled={loading || saving || !settings} aria-busy={loading || saving || undefined}>
             {saving ? t("settings.downloads.saving") : saved ? <><Check aria-hidden="true" size={14} />{t("settings.downloads.saved")}</> : t("common.actions.saveChanges")}
-          </button>
+          </UiButton>
         </div>
       </footer>
     </form>
@@ -1605,9 +1498,8 @@ function DownloadNumberField({
 }) {
   const id = useId();
   return (
-    <div className="settings-preference-field">
-      {help ? <HelpLabel label={label} content={help} htmlFor={id} /> : <label htmlFor={id}>{label}</label>}
-      <input
+    <Field className="settings-preference-field" htmlFor={id} label={label} help={help ? <HelpTip label={label} content={help} /> : null}>
+      <Input
         id={id}
         type="number"
         value={value ?? ""}
@@ -1620,7 +1512,7 @@ function DownloadNumberField({
           onChange(next === "" && nullable ? null : Number(next));
         }}
       />
-    </div>
+    </Field>
   );
 }
 
@@ -1650,20 +1542,15 @@ function SettingsToolPolicyPage({
     <form className="settings-form" onSubmit={onSubmit}>
       <div className="settings-content-body">
         <div className="settings-page-grid">
-          <section className="settings-section-card">
-            <header>
-              <div>
-                <h3>{t("settings.toolPolicy.readOnlyTitle")}</h3>
-                <p>{t("settings.toolPolicy.readOnlyDescription")}</p>
-              </div>
-            </header>
+          <Section className="settings-section-card" title={t("settings.toolPolicy.readOnlyTitle")} description={t("settings.toolPolicy.readOnlyDescription")}>
+
             <div className="settings-tool-policy-list">
               {READ_ONLY_CAPABILITIES.map((capabilityId) => (
-                <label key={capabilityId} className="settings-policy-row">
-                  <span>
+                <Field key={capabilityId} className="settings-policy-row" label={<>
                     <strong>{capabilityId}</strong>
                     <small>{t(`settings.toolPolicy.capabilities.${CAPABILITY_DESCRIPTION_KEY[capabilityId]}`)}</small>
-                  </span>
+                  </>}>
+
                   <CustomSelect
                     id={`capability-policy-${capabilityId}`}
                     value={form.policies[capabilityId]}
@@ -1677,25 +1564,20 @@ function SettingsToolPolicyPage({
                     }
                     disabled={loading || saving}
                   />
-                </label>
+                </Field>
               ))}
             </div>
-          </section>
+          </Section>
 
-          <section className="settings-section-card">
-            <header>
-              <div>
-                <h3>{t("settings.toolPolicy.dangerousTitle")}</h3>
-                <p>{t("settings.toolPolicy.dangerousDescription")}</p>
-              </div>
-            </header>
+          <Section className="settings-section-card" title={t("settings.toolPolicy.dangerousTitle")} description={t("settings.toolPolicy.dangerousDescription")}>
+
             <div className="settings-tool-policy-list">
               {MUTATING_CAPABILITIES.map((capabilityId) => (
-                <label key={capabilityId} className="settings-policy-row">
-                  <span>
+                <Field key={capabilityId} className="settings-policy-row" label={<>
                     <strong>{capabilityId}</strong>
                     <small>{t(`settings.toolPolicy.capabilities.${CAPABILITY_DESCRIPTION_KEY[capabilityId]}`)}</small>
-                  </span>
+                  </>}>
+
                   <CustomSelect
                     id={`capability-policy-${capabilityId}`}
                     value={form.policies[capabilityId]}
@@ -1709,10 +1591,10 @@ function SettingsToolPolicyPage({
                     }
                     disabled={loading || saving}
                   />
-                </label>
+                </Field>
               ))}
             </div>
-          </section>
+          </Section>
 
         </div>
       </div>
@@ -1720,12 +1602,12 @@ function SettingsToolPolicyPage({
       <footer className="settings-actions">
         <span role="status">{saving ? t("common.actions.saving") : null}</span>
         <div>
-          <button className="secondary-button" type="button" onClick={onClose}>
+          <UiButton variant="secondary" className="secondary-button" type="button" onClick={onClose}>
             {t("common.actions.cancel")}
-          </button>
-          <button className="primary-button" type="submit" disabled={loading || saving} aria-busy={loading || saving || undefined}>
+          </UiButton>
+          <UiButton variant="primary" className="primary-button" type="submit" disabled={loading || saving} aria-busy={loading || saving || undefined}>
             {saving ? t("common.actions.saving") : t("common.actions.saveChanges")}
-          </button>
+          </UiButton>
         </div>
       </footer>
     </form>
@@ -1753,13 +1635,8 @@ function SettingsVmPage({
     <form className="settings-form" onSubmit={onSubmit}>
       <div className="settings-content-body">
         <div className="settings-page-grid settings-docker-grid">
-          <section className="settings-section-card">
-            <header>
-              <div>
-                <h3>{t("settings.virtualMachines.runtimeTitle")}</h3>
-                <p>{t("settings.virtualMachines.runtimeDescription")}</p>
-              </div>
-            </header>
+          <Section className="settings-section-card" title={t("settings.virtualMachines.runtimeTitle")} description={t("settings.virtualMachines.runtimeDescription")}>
+
 
             <fieldset className="settings-field-grid" disabled={loading || saving}>
               <span className="help-label settings-field-wide">
@@ -1771,19 +1648,19 @@ function SettingsVmPage({
                 <HelpTip label={t("settings.virtualMachines.enabledField")} content={`${t("settings.virtualMachines.enabledDescription")} ${t("settings.virtualMachines.runtimeNote")}`} />
               </span>
             </fieldset>
-          </section>
+          </Section>
         </div>
       </div>
 
       <footer className="settings-actions">
         <span role="status">{saving ? t("common.actions.saving") : null}</span>
         <div>
-          <button className="secondary-button" type="button" onClick={onClose}>
+          <UiButton variant="secondary" className="secondary-button" type="button" onClick={onClose}>
             {t("common.actions.cancel")}
-          </button>
-          <button className="primary-button" type="submit" disabled={loading || saving} aria-busy={loading || saving || undefined}>
+          </UiButton>
+          <UiButton variant="primary" className="primary-button" type="submit" disabled={loading || saving} aria-busy={loading || saving || undefined}>
             {saving ? t("common.actions.saving") : t("common.actions.saveChanges")}
-          </button>
+          </UiButton>
         </div>
       </footer>
     </form>

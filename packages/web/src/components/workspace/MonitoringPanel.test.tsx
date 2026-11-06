@@ -24,7 +24,8 @@ describe("MonitoringPanel", () => {
     expect(html).toContain('class="monitoring-toolbar" role="toolbar"');
     expect(html).toContain('class="monitoring-toolbar-selection"');
     expect(html).toContain('class="monitoring-range-wrap"');
-    expect(html).toContain('role="tab" aria-selected="true">Overview</button>');
+    const selectedTab = html.match(/<button\b(?=[^>]*role="tab")(?=[^>]*aria-selected="true")[^>]*>[\s\S]*?<\/button>/u)?.[0];
+    expect(selectedTab).toContain("Overview</button>");
     for (const label of ["1h", "6h", "24h", "7d", "30d", "1y"]) {
       expect(html).toContain(`>${label}</button>`);
     }

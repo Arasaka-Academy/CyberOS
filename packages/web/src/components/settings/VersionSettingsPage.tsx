@@ -1,3 +1,4 @@
+import { Button as UiButton, Notice, Section } from "@cyberos/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, ClipboardCopy, GitBranch, GitCommitHorizontal, Package, Tag } from "lucide-react";
@@ -34,19 +35,11 @@ export function VersionSettingsPage({ buildInfo, error, loading, locale }: Versi
     const status = loading ? t("common.states.loading") : t("common.states.unavailable");
     return (
       <div className="settings-content-body settings-version-page">
-        <section className="settings-section-card settings-version-card">
-          <header>
-            <div className="settings-system-card-heading">
-              <Package aria-hidden="true" size={17} />
-              <div>
-                <h3>{t("settings.version.buildIdentity")}</h3>
-                <p>{t("settings.version.metadataUnavailable")}</p>
-              </div>
-            </div>
-          </header>
-          <p className="settings-inline-alert" role="status">{status}</p>
-          {error ? <p className="settings-version-error">{error}</p> : null}
-        </section>
+        <Section className="settings-section-card settings-version-card" title={t("settings.version.buildIdentity")} description={t("settings.version.metadataUnavailable")} icon={<Package aria-hidden="true" size={17} />}>
+
+          <Notice className="settings-inline-alert" role="status" tone="warning">{status}</Notice>
+          {error ? <Notice className="settings-version-error" tone="danger">{error}</Notice> : null}
+        </Section>
       </div>
     );
   }
@@ -67,16 +60,8 @@ export function VersionSettingsPage({ buildInfo, error, loading, locale }: Versi
 
   return (
     <div className="settings-content-body settings-version-page">
-      <section className="settings-section-card settings-version-card">
-        <header>
-          <div className="settings-system-card-heading">
-            <Package aria-hidden="true" size={17} />
-            <div>
-              <h3>{t("settings.version.buildIdentity")}</h3>
-              <p>{t("settings.version.buildIdentityDescription")}</p>
-            </div>
-          </div>
-        </header>
+      <Section className="settings-section-card settings-version-card" title={t("settings.version.buildIdentity")} description={t("settings.version.buildIdentityDescription")} icon={<Package aria-hidden="true" size={17} />}>
+
 
         <div className="settings-version-release">
           <span>{t("common.appName")}</span>
@@ -89,7 +74,7 @@ export function VersionSettingsPage({ buildInfo, error, loading, locale }: Versi
             <dt><GitCommitHorizontal aria-hidden="true" size={15} />{t("settings.version.commit")}</dt>
             <dd className="is-mono" data-tooltip={commitSha}>{commitSha}</dd>
             {buildInfo.commitSha ? (
-              <button
+              <UiButton iconOnly variant="ghost"
                 className="settings-version-copy"
                 type="button"
                 onClick={() => void copyCommitSha()}
@@ -98,7 +83,7 @@ export function VersionSettingsPage({ buildInfo, error, loading, locale }: Versi
                 data-state={copyState}
               >
                 {copyState === "copied" ? <Check aria-hidden="true" size={15} /> : <ClipboardCopy aria-hidden="true" size={15} />}
-              </button>
+              </UiButton>
             ) : null}
           </div>
           <div>
@@ -118,7 +103,7 @@ export function VersionSettingsPage({ buildInfo, error, loading, locale }: Versi
             <dd data-dirty={buildInfo.dirty === true ? "true" : undefined}>{dirtyLabel}</dd>
           </div>
         </dl>
-      </section>
+      </Section>
     </div>
   );
 }

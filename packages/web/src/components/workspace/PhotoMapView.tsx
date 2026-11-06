@@ -1,3 +1,6 @@
+import { Button as UiButton } from "@cyberos/ui";
+import { getAppearance } from "@cyberos/ui/theme";
+import { APPEARANCE_EVENT, createTheme } from "@cyberos/shared/appearance";
 import { Crosshair, Download, LoaderCircle, Map as MapIcon, RefreshCw, Search } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -10,10 +13,22 @@ import {
   type PhotoQueryRequest
 } from "../../api.js";
 import type { PhotoLocationBounds } from "@cyberos/shared";
-import "maplibre-gl/dist/maplibre-gl.css";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 
 const WORLD_BOUNDS: PhotoLocationBounds = { kind: "bounds", west: -180, south: -85, east: 180, north: 85 };
+
+function mapPalette() {
+  const { scheme, mode } = getAppearance();
+  return createTheme(scheme, mode);
+}
+
+function applyMapAppearance(map: import("maplibre-gl").Map) {
+  if (!map.getLayer("photo-points")) return;
+  const palette = mapPalette();
+  map.setPaintProperty("photo-points", "circle-color", palette.accent);
+  map.setPaintProperty("photo-points", "circle-stroke-color", palette.bg);
+  map.setPaintProperty("photo-counts", "text-color", palette.onAccent);
+}
 
 export function configureMapLibreWorker(
   maplibre: Pick<typeof import("maplibre-gl"), "setWorkerUrl">
@@ -53,6 +68,12 @@ export function PhotoMapView({
 
   filtersRef.current = filters;
   searchBoundsRef.current = onSearchBounds;
+
+  useEffect(() => {
+    const refresh = () => { if (mapRef.current?.isStyleLoaded()) applyMapAppearance(mapRef.current); };
+    window.addEventListener(APPEARANCE_EVENT, refresh);
+    return () => window.removeEventListener(APPEARANCE_EVENT, refresh);
+  }, []);
 
   const loadPoints = useCallback(async (nextBounds: PhotoLocationBounds, commitBounds = false) => {
     const requestId = ++loadRequestRef.current;
@@ -179,8 +200,8 @@ export function PhotoMapView({
               source: "photos",
               paint: {
                 "circle-radius": ["interpolate", ["linear"], ["get", "count"], 1, 7, 100, 18],
-                "circle-color": "#f4c95d",
-                "circle-stroke-color": "#16191f",
+                "circle-color": mapPalette().accent,
+                "circle-stroke-color": mapPalette().bg,
                 "circle-stroke-width": 2
               }
             },
@@ -190,13 +211,14 @@ export function PhotoMapView({
               source: "photos",
               filter: [">", ["get", "count"], 1],
               layout: { "text-field": ["to-string", ["get", "count"]], "text-size": 11 },
-              paint: { "text-color": "#16191f" }
+              paint: { "text-color": mapPalette().onAccent }
             }
           ]
         }
       });
       mapRef.current = map;
       map.on("load", () => {
+        applyMapAppearance(map);
         const source = map.getSource("photos") as import("maplibre-gl").GeoJSONSource | undefined;
         source?.setData(pointsToGeoJson(clustersRef.current));
       });
@@ -265,12 +287,12 @@ export function PhotoMapView({
       <div className="photo-map-toolbar">
         <span>{mapLabel}</span>
         <div>
-          <button type="button" onClick={useCurrentLocation} disabled={!mapReady} data-tooltip={t("workspace.photos.myLocation")} aria-label={t("workspace.photos.myLocation")}>
+          <UiButton iconOnly variant="ghost" type="button" onClick={useCurrentLocation} disabled={!mapReady} data-tooltip={t("workspace.photos.myLocation")} aria-label={t("workspace.photos.myLocation")}>
             <Crosshair aria-hidden="true" size={15} />
-          </button>
-          <button type="button" onClick={() => void loadPoints(pendingBounds ?? bounds, true)} disabled={!mapReady || !pendingBounds || loading}>
+          </UiButton>
+          <UiButton variant="ghost" type="button" onClick={() => void loadPoints(pendingBounds ?? bounds, true)} disabled={!mapReady || !pendingBounds || loading}>
             <Search aria-hidden="true" size={14} />{t("workspace.photos.searchArea")}
-          </button>
+          </UiButton>
         </div>
       </div>
       <div className="photo-map-canvas">
@@ -350,10 +372,10 @@ export function PhotoMapDownloadPanel({
         <MapIcon aria-hidden="true" size={22} />
         <strong>{t("workspace.photos.mapDownloadFailed")}</strong>
         <p>{error}</p>
-        <button className="primary-button" type="button" onClick={onDownload} disabled={busy} aria-busy={busy || undefined}>
+        <UiButton variant="primary" className="primary-button" type="button" onClick={onDownload} disabled={busy} aria-busy={busy || undefined}>
           {busy ? <LoaderCircle className="is-spinning" aria-hidden="true" size={16} /> : <RefreshCw aria-hidden="true" size={16} />}
           {t("workspace.photos.mapRetry")}
-        </button>
+        </UiButton>
       </div>
     );
   }
@@ -361,10 +383,10 @@ export function PhotoMapDownloadPanel({
     <div className="photo-map-download-state" role="status">
       <MapIcon aria-hidden="true" size={22} />
       <strong>{t("workspace.photos.noBaseMap")}</strong>
-      <button className="primary-button" type="button" onClick={onDownload} disabled={busy} aria-busy={busy || undefined}>
+      <UiButton variant="primary" className="primary-button" type="button" onClick={onDownload} disabled={busy} aria-busy={busy || undefined}>
         {busy ? <LoaderCircle className="is-spinning" aria-hidden="true" size={16} /> : <Download aria-hidden="true" size={16} />}
         {t("workspace.photos.downloadOfflineMap")}
-      </button>
+      </UiButton>
     </div>
   );
 }

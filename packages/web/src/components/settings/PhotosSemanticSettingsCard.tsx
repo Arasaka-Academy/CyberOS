@@ -1,3 +1,4 @@
+import { Button as UiButton, Field, Input, Notice, Section } from "@cyberos/ui";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { PhotosEmbeddingModel, PhotosSemanticIndexStatus, PhotosSemanticSettingsPatch } from "@cyberos/shared";
@@ -71,12 +72,12 @@ export function PhotosSemanticSettingsCard() {
   }
   const dimensions = tested?.dimensions ?? saved?.dimensions;
   const space = tested?.embeddingSpaceId ?? status?.embeddingSpaceId;
-  return <section className="settings-section-card photos-semantic-settings" aria-busy={busy || !draft}>
-    <header><h3 className="help-label">{t("settings.photos.semantic.title")}<HelpTip label={t("settings.photos.semantic.title")} content={t("settings.photos.semantic.help")} /></h3></header>
+  return <Section className="settings-section-card photos-semantic-settings" aria-busy={busy || !draft} title={<>{t("settings.photos.semantic.title")}<HelpTip label={t("settings.photos.semantic.title")} content={t("settings.photos.semantic.help")} /></>}>
+
     <fieldset className="settings-field-grid" disabled={!draft || busy}>
       <div className="settings-switch-row settings-field-wide"><strong>{t("settings.photos.semantic.enabled")}</strong><Switch checked={draft?.enabled ?? false} ariaLabel={t("settings.photos.semantic.enabled")} onCheckedChange={(enabled) => edit({ enabled })} /></div>
-      <label className="settings-field-wide"><span>{t("settings.photos.semantic.url")}</span><input type="url" value={draft?.baseUrl ?? ""} placeholder="https://mac-mini.example.ts.net:9443" onChange={(event) => edit({ baseUrl: event.target.value })} /></label>
-      <label className="settings-field-wide"><span>{t("settings.photos.semantic.model")}</span><input value={draft?.model ?? ""} spellCheck={false} onChange={(event) => edit({ model: event.target.value })} /></label>
+      <Field className="settings-field-wide" label={t("settings.photos.semantic.url")}><Input type="url" value={draft?.baseUrl ?? ""} placeholder="https://mac-mini.example.ts.net:9443" onChange={(event) => edit({ baseUrl: event.target.value })} /></Field>
+      <Field className="settings-field-wide" label={t("settings.photos.semantic.model")}><Input value={draft?.model ?? ""} spellCheck={false} onChange={(event) => edit({ model: event.target.value })} /></Field>
       <SettingsSecretField id="photos-semantic-api-key" label={t("settings.photos.semantic.key")} value={draft?.apiKey ?? ""} configured={saved?.apiKeyConfigured ?? false} clearSaved={draft?.clearApiKey ?? false}
         placeholder={saved?.apiKeyConfigured ? t("settings.photos.semantic.keySaved") : t("settings.photos.semantic.key")}
         clearLabel={t("settings.photos.semantic.clearKey")} onChange={(apiKey, clearApiKey) => edit({ apiKey, clearApiKey })} />
@@ -90,14 +91,14 @@ export function PhotosSemanticSettingsCard() {
       {space ? <div><dt>{t("settings.photos.semantic.version")}</dt><dd className="is-mono">{space}</dd></div> : null}
       {status.estimatedRemainingSeconds !== null ? <div><dt>{t("settings.photos.semantic.remaining")}</dt><dd>{Math.ceil(status.estimatedRemainingSeconds / 60).toLocaleString()} {t("settings.photos.semantic.minutes")}</dd></div> : null}
     </dl> : null}
-    {error || loadError || status?.error ? <p className="settings-inline-alert" role="alert">{error ?? loadError ?? status?.error}</p> : null}
+    {error || loadError || status?.error ? <Notice className="settings-inline-alert" role="alert" tone="danger">{error ?? loadError ?? status?.error}</Notice> : null}
     {message ? <p role="status">{message}</p> : null}
     <div className="settings-card-actions">
-      <button type="button" className="primary-button" disabled={!draft || busy} onClick={() => void run("save")}>{t("settings.photos.semantic.save")}</button>
-      <button type="button" className="secondary-button" disabled={!draft?.baseUrl || busy} onClick={() => void run("test")}>{t("settings.photos.semantic.test")}</button>
-      <button type="button" className="secondary-button" disabled={!saved?.enabled || busy} onClick={() => void run("retry")}>{t("settings.photos.semantic.retry")}</button>
-      <button type="button" className="secondary-button" disabled={!status?.embeddingSpaceId || busy} onClick={() => setConfirmRebuild(!confirmRebuild)}>{t("settings.photos.semantic.rebuild")}</button>
+      <UiButton variant="primary" type="button" className="primary-button" disabled={!draft || busy} onClick={() => void run("save")}>{t("settings.photos.semantic.save")}</UiButton>
+      <UiButton variant="secondary" type="button" className="secondary-button" disabled={!draft?.baseUrl || busy} onClick={() => void run("test")}>{t("settings.photos.semantic.test")}</UiButton>
+      <UiButton variant="secondary" type="button" className="secondary-button" disabled={!saved?.enabled || busy} onClick={() => void run("retry")}>{t("settings.photos.semantic.retry")}</UiButton>
+      <UiButton variant="secondary" type="button" className="secondary-button" disabled={!status?.embeddingSpaceId || busy} onClick={() => setConfirmRebuild(!confirmRebuild)}>{t("settings.photos.semantic.rebuild")}</UiButton>
     </div>
-    {confirmRebuild ? <div className="settings-inline-alert" role="alert"><span>{t("settings.photos.semantic.rebuildHelp")}</span><button className="secondary-button" type="button" onClick={() => void run("rebuild")} disabled={busy}>{t("settings.photos.semantic.confirmRebuild")}</button></div> : null}
-  </section>;
+    {confirmRebuild ? <Notice className="settings-inline-alert" role="alert" tone="warning" actions={<><UiButton variant="secondary" className="secondary-button" type="button" onClick={() => void run("rebuild")} disabled={busy}>{t("settings.photos.semantic.confirmRebuild")}</UiButton></>}><span>{t("settings.photos.semantic.rebuildHelp")}</span></Notice> : null}
+  </Section>;
 }

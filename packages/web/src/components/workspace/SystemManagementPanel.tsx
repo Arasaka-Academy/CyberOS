@@ -1,3 +1,4 @@
+import { Button as UiButton, Checkbox, DialogActions, DialogHeader, EmptyState, Field, Input, SectionHeader, StatusBadge } from "@cyberos/ui";
 import { CustomSelect } from "../common/CustomSelect.js";
 import { ModalPortal } from "../common/ModalPortal.js";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
@@ -282,7 +283,7 @@ export function SystemNetworkManagementPanel({
                     <div className="management-emblem" aria-hidden="true"><Network size={31} /></div>
                     <div className="management-command-copy">
                       <div>
-                        <span className="management-status-pill" data-state={systemStatusTone(status, loading, error)}>{systemStatusLabel(status, loading, error, translate)}</span>
+                        <StatusBadge className="management-status-pill" data-state={systemStatusTone(status, loading, error)}>{systemStatusLabel(status, loading, error, translate)}</StatusBadge>
                         <h3>{t("workspace.management.network.title")}</h3>
                         <p data-tooltip={systemDiagnosticTitle(error, summary?.issues)}>{networkStatusDetail(summary, loading, error, translate)}</p>
                       </div>
@@ -316,8 +317,8 @@ export function SystemNetworkManagementPanel({
                   />
                 ) : (
                   <section className="management-section">
-                    <SectionHeader title={t("workspace.management.network.ethernet.title")} description={t("workspace.management.network.ethernet.description")} />
-                    <p className="management-empty">{error ?? t("workspace.management.network.loadError")}</p>
+                    <SectionHeader className="management-section-header" title={t("workspace.management.network.ethernet.title")} description={t("workspace.management.network.ethernet.description")} />
+                    <EmptyState className="management-empty">{error ?? t("workspace.management.network.loadError")}</EmptyState>
                   </section>
                 )
               },
@@ -332,11 +333,11 @@ export function SystemNetworkManagementPanel({
                   />
                 ) : (
                   <section className="management-section">
-                    <SectionHeader
+                    <SectionHeader className="management-section-header"
                       title={t("workspace.management.network.wifi.title")}
                       description={t("workspace.management.network.wifi.description")}
                     />
-                    <p className="management-empty">{error ?? t("workspace.management.network.loadError")}</p>
+                    <EmptyState className="management-empty">{error ?? t("workspace.management.network.loadError")}</EmptyState>
                   </section>
                 )
               },
@@ -350,14 +351,14 @@ export function SystemNetworkManagementPanel({
                 title: String(t("workspace.management.network.interfacesTitle")),
                 content: (
                   <section className="management-section management-table-section">
-                    <SectionHeader title={t("workspace.management.network.interfacesTitle")} description={t("workspace.management.network.interfacesDescription")} />
+                    <SectionHeader className="management-section-header" title={t("workspace.management.network.interfacesTitle")} description={t("workspace.management.network.interfacesDescription")} />
                     {interfaces.length ? (
                       <div className="management-table-wrap">
                         <table className="management-table management-table-network">
                           <thead><tr><th>{t("workspace.management.columns.name")}</th><th>{t("workspace.management.columns.status")}</th><th>{t("workspace.management.network.columns.kind")}</th><th>{t("workspace.management.network.columns.addresses")}</th><th>{t("workspace.management.network.columns.mac")}</th><th>{t("workspace.management.network.columns.speed")}</th><th>{t("workspace.management.network.columns.mtu")}</th><th>{t("workspace.management.network.columns.defaultRoute")}</th></tr></thead>
                           <tbody>{interfaces.map((networkInterface) => (
                             <tr key={networkInterface.id}>
-                              <td data-tooltip={networkInterface.name}><button type="button" className="network-interface-name-button" onClick={() => setSelectedInterfaceId(networkInterface.id)} aria-label={t("workspace.management.network.openInterfaceDetails", { name: networkInterface.name })}>{networkInterface.name}</button></td>
+                              <td data-tooltip={networkInterface.name}><UiButton variant="ghost" type="button" className="network-interface-name-button" onClick={() => setSelectedInterfaceId(networkInterface.id)} aria-label={t("workspace.management.network.openInterfaceDetails", { name: networkInterface.name })}>{networkInterface.name}</UiButton></td>
                               <td><StatusIcon tone={networkInterfaceTone(networkInterface)} label={networkInterfaceStateLabel(networkInterface, translate)} /></td>
                               <td>{translate(`workspace.management.network.kinds.${networkInterface.kind}`)}</td>
                               <td data-tooltip={formatAddresses(networkInterface)}>{formatAddresses(networkInterface)}</td>
@@ -369,7 +370,7 @@ export function SystemNetworkManagementPanel({
                           ))}</tbody>
                         </table>
                       </div>
-                    ) : <p className="management-empty management-table-empty-state">{t("workspace.management.network.noInterfaces")}</p>}
+                    ) : <EmptyState className="management-empty management-table-empty-state">{t("workspace.management.network.noInterfaces")}</EmptyState>}
                   </section>
                 )
               },
@@ -378,8 +379,8 @@ export function SystemNetworkManagementPanel({
                 title: String(t("workspace.management.network.routesTitle")),
                 content: (
                   <section className="management-section">
-                    <SectionHeader title={t("workspace.management.network.routesTitle")} description={t("workspace.management.network.routesDescription")} />
-                    <div className="management-workload-list">{routes.length ? routes.map((route, index) => <NetworkRouteRow key={`${route.destination}-${route.device}-${index}`} route={route} />) : <p className="management-empty">{t("workspace.management.network.noRoutes")}</p>}</div>
+                    <SectionHeader className="management-section-header" title={t("workspace.management.network.routesTitle")} description={t("workspace.management.network.routesDescription")} />
+                    <div className="management-workload-list">{routes.length ? routes.map((route, index) => <NetworkRouteRow key={`${route.destination}-${route.device}-${index}`} route={route} />) : <EmptyState className="management-empty">{t("workspace.management.network.noRoutes")}</EmptyState>}</div>
                   </section>
                 )
               },
@@ -388,7 +389,7 @@ export function SystemNetworkManagementPanel({
                 title: String(t("workspace.management.network.readinessTitle")),
                 content: (
                   <section className="management-section">
-                    <SectionHeader title={t("workspace.management.network.readinessTitle")} description={t("workspace.management.network.readinessDescription")} />
+                    <SectionHeader className="management-section-header" title={t("workspace.management.network.readinessTitle")} description={t("workspace.management.network.readinessDescription")} />
                     <NetworkReadinessSummary metrics={summary?.metrics} locale={locale} />
                   </section>
                 )
@@ -671,7 +672,7 @@ export function SystemStorageManagementPanel({
                     <div className="management-emblem" aria-hidden="true"><Database size={31} /></div>
                     <div className="management-command-copy">
                       <div>
-                        <span className="management-status-pill" data-state={systemStatusTone(status, loading, error)}>{systemStatusLabel(status, loading, error, translate)}</span>
+                        <StatusBadge className="management-status-pill" data-state={systemStatusTone(status, loading, error)}>{systemStatusLabel(status, loading, error, translate)}</StatusBadge>
                         <h3>{t("workspace.management.storage.title")}</h3>
                         <p data-tooltip={systemDiagnosticTitle(error, summary?.issues)}>{storageStatusDetail(summary, loading, error, translate)}</p>
                       </div>
@@ -698,14 +699,14 @@ export function SystemStorageManagementPanel({
                 title: String(t("workspace.management.storage.poolsTitle")),
                 content: (
                   <section className="management-section management-table-section">
-                    <SectionHeader title={t("workspace.management.storage.poolsTitle")} description={t("workspace.management.storage.poolsDescription")} />
+                    <SectionHeader className="management-section-header" title={t("workspace.management.storage.poolsTitle")} description={t("workspace.management.storage.poolsDescription")} />
                     {pools.length ? (
                       <div className="management-table-wrap">
                         <table className="management-table management-table-storage">
                           <thead><tr><th>{t("workspace.management.columns.name")}</th><th>{t("workspace.management.columns.status")}</th><th>{t("workspace.management.storage.columns.raid")}</th><th>{t("workspace.management.storage.columns.usage")}</th><th>{t("workspace.management.storage.columns.mount")}</th><th>{t("workspace.management.storage.columns.members")}</th></tr></thead>
                           <tbody>{pools.map((pool) => (
                             <tr key={pool.id}>
-                              <td data-tooltip={pool.name}><button type="button" className="storage-pool-name-button" onClick={() => openPoolDetails(pool)} aria-label={t("workspace.management.storage.openPoolDetails", { name: pool.name })}>{pool.name}</button></td>
+                              <td data-tooltip={pool.name}><UiButton variant="ghost" type="button" className="storage-pool-name-button" onClick={() => openPoolDetails(pool)} aria-label={t("workspace.management.storage.openPoolDetails", { name: pool.name })}>{pool.name}</UiButton></td>
                               <td><StatusIcon tone={storagePoolTone(pool)} label={storagePoolStatusLabel(pool, translate)} /></td>
                               <td data-tooltip={pool.raidPath}>{pool.raidLevel ?? t("common.dash")}</td>
                               <td>{formatStorageUsage(pool, locale, translate)}</td>
@@ -715,7 +716,7 @@ export function SystemStorageManagementPanel({
                           ))}</tbody>
                         </table>
                       </div>
-                    ) : <p className="management-empty management-table-empty-state">{t("workspace.management.storage.noPools")}</p>}
+                    ) : <EmptyState className="management-empty management-table-empty-state">{t("workspace.management.storage.noPools")}</EmptyState>}
                   </section>
                 )
               },
@@ -724,8 +725,8 @@ export function SystemStorageManagementPanel({
                 title: String(t("workspace.management.storage.disksTitle")),
                 content: (
                   <section className="management-section">
-                    <SectionHeader title={t("workspace.management.storage.disksTitle")} description={t("workspace.management.storage.disksDescription")} />
-                    <div className="management-workload-list">{disks.length ? disks.map((disk) => <StorageDiskRow key={disk.id} disk={disk} locale={locale} onOpen={() => openDiskDetails(disk)} />) : <p className="management-empty">{t("workspace.management.storage.noDisks")}</p>}</div>
+                    <SectionHeader className="management-section-header" title={t("workspace.management.storage.disksTitle")} description={t("workspace.management.storage.disksDescription")} />
+                    <div className="management-workload-list">{disks.length ? disks.map((disk) => <StorageDiskRow key={disk.id} disk={disk} locale={locale} onOpen={() => openDiskDetails(disk)} />) : <EmptyState className="management-empty">{t("workspace.management.storage.noDisks")}</EmptyState>}</div>
                   </section>
                 )
               },
@@ -734,7 +735,7 @@ export function SystemStorageManagementPanel({
                 title: String(t("workspace.management.storage.healthTitle")),
                 content: (
                   <section className="management-section">
-                    <SectionHeader title={t("workspace.management.storage.healthTitle")} description={t("workspace.management.storage.healthDescription")} />
+                    <SectionHeader className="management-section-header" title={t("workspace.management.storage.healthTitle")} description={t("workspace.management.storage.healthDescription")} />
                     <StorageHealthCharts summary={summary} locale={locale} t={translate} />
                   </section>
                 )
@@ -762,15 +763,9 @@ export function SystemStorageManagementPanel({
             aria-modal="true"
             aria-labelledby="storage-pool-details-title"
           >
-            <header>
-              <div className="storage-pool-details-heading">
-                <span className="eyebrow">{t("workspace.management.storage.detailsEyebrow")}</span>
-                <h2 id="storage-pool-details-title" data-tooltip={selectedPool.name}>{selectedPool.name}</h2>
-                <span className="management-row-status" data-state={storagePoolTone(selectedPool)}>
+            <DialogHeader headingTooltip={selectedPool.name} title={selectedPool.name} eyebrow={<>{t("workspace.management.storage.detailsEyebrow")}</>} headingId="storage-pool-details-title" actions={<><StatusBadge className="management-row-status" data-state={storagePoolTone(selectedPool)}>
                   {storagePoolStatusLabel(selectedPool, translate)}
-                </span>
-              </div>
-              <button
+                </StatusBadge><UiButton variant="ghost" iconOnly
                 type="button"
                 className="management-icon-action"
                 onClick={closePoolDetails}
@@ -779,8 +774,7 @@ export function SystemStorageManagementPanel({
                 aria-label={t("common.actions.cancel")}
               >
                 <X aria-hidden="true" size={15} />
-              </button>
-            </header>
+              </UiButton></>} />
 
             <div className="storage-pool-details-body">
               <div className="storage-pool-details-overview">
@@ -800,13 +794,7 @@ export function SystemStorageManagementPanel({
               </div>
 
               <section className="storage-pool-members" aria-labelledby="storage-pool-members-title">
-                <header>
-                  <div>
-                    <span className="eyebrow">{t("workspace.management.storage.membersEyebrow")}</span>
-                    <h3 id="storage-pool-members-title">{t("workspace.management.storage.membersTitle")}</h3>
-                  </div>
-                  <strong>{formatLocaleNumber(selectedPool.memberDevices.length, locale)}</strong>
-                </header>
+                <DialogHeader title={t("workspace.management.storage.membersTitle")} eyebrow={<>{t("workspace.management.storage.membersEyebrow")}</>} headingLevel={3} headingId="storage-pool-members-title" actions={<><strong>{formatLocaleNumber(selectedPool.memberDevices.length, locale)}</strong></>} />
                 <div className="storage-pool-member-list">
                   {selectedPool.memberDevices.map((device) => (
                     <div className="storage-pool-member" key={device}>
@@ -835,23 +823,23 @@ export function SystemStorageManagementPanel({
                 {!summary?.capabilities.canDeletePool ? (
                   <p className="storage-pool-delete-disabled">{t("workspace.management.storage.deleteUnavailable")}</p>
                 ) : deleteStep === "idle" ? (
-                  <button type="button" className="danger-button" onClick={beginPoolDelete} disabled={deleting}>
+                  <UiButton variant="danger" type="button" className="danger-button" onClick={beginPoolDelete} disabled={deleting}>
                     <Trash2 aria-hidden="true" size={15} />
                     <span>{t("workspace.management.storage.deletePool")}</span>
-                  </button>
+                  </UiButton>
                 ) : deleteStep === "warning" ? (
                   <div className="storage-pool-delete-actions">
-                    <button type="button" onClick={() => setDeleteStep("idle")} disabled={deleting}>{t("common.actions.cancel")}</button>
-                    <button type="button" className="danger-button" onClick={continuePoolDelete} disabled={deleting}>
+                    <UiButton variant="ghost" type="button" onClick={() => setDeleteStep("idle")} disabled={deleting}>{t("common.actions.cancel")}</UiButton>
+                    <UiButton variant="danger" type="button" className="danger-button" onClick={continuePoolDelete} disabled={deleting}>
                       <CircleAlert aria-hidden="true" size={15} />
                       <span>{t("workspace.management.storage.deleteContinue")}</span>
-                    </button>
+                    </UiButton>
                   </div>
                 ) : (
                   <div className="storage-pool-delete-confirmation">
-                    <label>
-                      <span>{t("workspace.management.storage.deleteConfirmationLabel", { name: storagePoolConfirmationName(selectedPool) })}</span>
-                      <input
+                    <Field label={t("workspace.management.storage.deleteConfirmationLabel", { name: storagePoolConfirmationName(selectedPool) })}>
+
+                      <Input
                         value={deleteConfirmation}
                         onChange={(event) => setDeleteConfirmation(event.target.value)}
                         autoComplete="off"
@@ -859,10 +847,10 @@ export function SystemStorageManagementPanel({
                         disabled={deleting}
                         placeholder={storagePoolConfirmationName(selectedPool)}
                       />
-                    </label>
+                    </Field>
                     <div className="storage-pool-delete-actions">
-                      <button type="button" onClick={() => setDeleteStep("idle")} disabled={deleting}>{t("common.actions.cancel")}</button>
-                      <button
+                      <UiButton variant="ghost" type="button" onClick={() => setDeleteStep("idle")} disabled={deleting}>{t("common.actions.cancel")}</UiButton>
+                      <UiButton variant="danger"
                         type="button"
                         className="danger-button"
                         onClick={() => void submitPoolDelete()}
@@ -871,7 +859,7 @@ export function SystemStorageManagementPanel({
                       >
                         {deleting ? <LoaderCircle className="storage-pool-spinner" aria-hidden="true" size={15} /> : <Trash2 aria-hidden="true" size={15} />}
                         <span>{deleting ? t("common.states.loading") : t("workspace.management.storage.deleteConfirm")}</span>
-                      </button>
+                      </UiButton>
                     </div>
                   </div>
                 )}
@@ -905,12 +893,7 @@ export function SystemStorageManagementPanel({
             aria-modal="true"
             aria-labelledby="storage-pool-title"
           >
-            <header>
-              <div>
-                <span className="eyebrow">{t("workspace.management.storage.createEyebrow")}</span>
-                <h2 id="storage-pool-title">{t("workspace.management.storage.createTitle")}</h2>
-              </div>
-              <button
+            <DialogHeader title={t("workspace.management.storage.createTitle")} eyebrow={<>{t("workspace.management.storage.createEyebrow")}</>} headingId="storage-pool-title" actions={<><UiButton variant="ghost" iconOnly
                 type="button"
                 className="management-icon-action"
                 onClick={closeCreateModal}
@@ -919,13 +902,12 @@ export function SystemStorageManagementPanel({
                 aria-label={t("common.actions.cancel")}
               >
                 <X aria-hidden="true" size={15} />
-              </button>
-            </header>
+              </UiButton></>} />
             <form className="storage-pool-form" onSubmit={submitStorageProposal}>
               <div className="storage-pool-fields">
-                <label>
-                  <span>{t("workspace.management.storage.fields.name")}</span>
-                  <input
+                <Field label={t("workspace.management.storage.fields.name")}>
+
+                  <Input
                     value={form.name}
                     disabled={submitting}
                     onChange={(event) => {
@@ -936,9 +918,9 @@ export function SystemStorageManagementPanel({
                     autoComplete="off"
                     maxLength={32}
                   />
-                </label>
-                <label>
-                  <span>{t("workspace.management.storage.fields.raid")}</span>
+                </Field>
+                <Field label={t("workspace.management.storage.fields.raid")}>
+
                   <CustomSelect
                     value={form.raidLevel}
                     disabled={submitting}
@@ -948,9 +930,9 @@ export function SystemStorageManagementPanel({
                     ariaLabel={t("workspace.management.storage.fields.raid")}
                     options={STORAGE_RAID_LEVELS.map((level) => ({ value: level, label: `RAID ${level} (${t("workspace.management.storage.raidMinimum", { count: raidMinimum(level) })})` }))}
                   />
-                </label>
-                <label>
-                  <span>{t("workspace.management.storage.fields.filesystem")}</span>
+                </Field>
+                <Field label={t("workspace.management.storage.fields.filesystem")}>
+
                   <CustomSelect
                     value={form.filesystem}
                     disabled={submitting}
@@ -960,7 +942,7 @@ export function SystemStorageManagementPanel({
                     ariaLabel={t("workspace.management.storage.fields.filesystem")}
                     options={STORAGE_FILESYSTEMS.map((filesystem) => ({ value: filesystem, label: t(`workspace.management.storage.filesystems.${filesystem}`) }))}
                   />
-                </label>
+                </Field>
               </div>
 
               <section
@@ -981,8 +963,8 @@ export function SystemStorageManagementPanel({
                         .join(" · ");
                       return (
                         <label key={disk.id} className="storage-disk-option" data-state={availability}>
-                          <input
-                            type="checkbox"
+                          <Checkbox
+
                             checked={form.devices.includes(disk.path)}
                             disabled={!selectable || submitting}
                             onChange={(event) => toggleDevice(disk.path, event.target.checked)}
@@ -996,7 +978,7 @@ export function SystemStorageManagementPanel({
                       );
                     })
                   ) : (
-                    <p className="management-empty">{t("workspace.management.storage.noDisks")}</p>
+                    <EmptyState className="management-empty">{t("workspace.management.storage.noDisks")}</EmptyState>
                   )}
                 </div>
               </section>
@@ -1011,8 +993,8 @@ export function SystemStorageManagementPanel({
               </p>
 
               <label className="storage-pool-confirmation">
-                <input
-                  type="checkbox"
+                <Checkbox
+
                   checked={confirmed}
                   disabled={submitting}
                   onChange={(event) => setConfirmed(event.target.checked)}
@@ -1042,19 +1024,19 @@ export function SystemStorageManagementPanel({
                 </div>
               ) : null}
 
-              <footer className="storage-pool-form-actions">
-                <button type="button" onClick={closeCreateModal} disabled={submitting} className="secondary-button">
+              <DialogActions className="storage-pool-form-actions">
+                <UiButton variant="secondary" type="button" onClick={closeCreateModal} disabled={submitting} className="secondary-button">
                   {t("common.actions.cancel")}
-                </button>
-                <button type="submit" className="primary-button" disabled={submitting || !confirmed} aria-busy={submitting || undefined}>
+                </UiButton>
+                <UiButton variant="primary" type="submit" className="primary-button" disabled={submitting || !confirmed} aria-busy={submitting || undefined}>
                   {submitting ? (
                     <LoaderCircle className="storage-pool-spinner" aria-hidden="true" size={15} />
                   ) : (
                     <Plus aria-hidden="true" size={15} />
                   )}
                   <span>{submitting ? t("common.states.loading") : t("workspace.management.storage.createPool")}</span>
-                </button>
-              </footer>
+                </UiButton>
+              </DialogActions>
             </form>
           </section>
         </ModalPortal>
@@ -1218,12 +1200,7 @@ function StorageDiskDetailsModal({
         aria-modal="true"
         aria-labelledby="storage-disk-details-title"
       >
-        <header>
-          <div className="storage-disk-details-heading">
-            <span className="eyebrow">{t("workspace.management.storage.diskDetailsEyebrow")}</span>
-            <h2 id="storage-disk-details-title">{disk.path}</h2>
-          </div>
-          <button
+        <DialogHeader title={disk.path} eyebrow={<>{t("workspace.management.storage.diskDetailsEyebrow")}</>} headingId="storage-disk-details-title" actions={<><UiButton variant="ghost" iconOnly
             type="button"
             className="management-icon-action"
             onClick={onClose}
@@ -1231,8 +1208,7 @@ function StorageDiskDetailsModal({
             aria-label={t("common.actions.cancel")}
           >
             <X aria-hidden="true" size={15} />
-          </button>
-        </header>
+          </UiButton></>} />
 
         <div className="storage-disk-details-body">
           <div className="storage-disk-capacity-overview">
@@ -1255,14 +1231,7 @@ function StorageDiskDetailsModal({
           </div>
 
           <section className="storage-disk-detail-section storage-disk-smart-section">
-            <header>
-              <SmartStatusChart health={smart.health} t={t} detail />
-              <div>
-                <span className="eyebrow">SMART</span>
-                <h3>{smartHealthLabel(smart.health, t)}</h3>
-                <p>{t("workspace.management.storage.smartDetailsDescription")}</p>
-              </div>
-            </header>
+            <DialogHeader title={smartHealthLabel(smart.health, t)} description={t("workspace.management.storage.smartDetailsDescription")} eyebrow={<>SMART</>} headingLevel={3} actions={<><SmartStatusChart health={smart.health} t={t} detail /></>} />
             <div className="storage-disk-detail-facts">
               {smartFacts.map((fact) => <StoragePoolDetailFact key={fact.id} label={fact.label} value={fact.value} />)}
             </div>
@@ -1278,12 +1247,7 @@ function StorageDiskDetailsModal({
           </section>
 
           <section className="storage-disk-detail-section">
-            <header>
-              <div>
-                <span className="eyebrow">{t("workspace.management.storage.diskDetailsEyebrow")}</span>
-                <h3>{t("workspace.management.storage.deviceDetailsTitle")}</h3>
-              </div>
-            </header>
+            <DialogHeader title={t("workspace.management.storage.deviceDetailsTitle")} eyebrow={<>{t("workspace.management.storage.diskDetailsEyebrow")}</>} headingLevel={3} />
             <div className="storage-disk-detail-facts">
               {deviceFacts.map((fact) => <StoragePoolDetailFact key={fact.id} label={fact.label} value={fact.value} />)}
             </div>
@@ -1500,16 +1464,7 @@ function Fact({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SectionHeader({ title, description }: { title: string; description: string }) {
-  return (
-    <header className="management-section-header">
-      <div>
-        <h3>{title}</h3>
-        <p>{description}</p>
-      </div>
-    </header>
-  );
-}
+
 
 function MetricCard({ metric }: { metric: Metric }) {
   const Icon = metric.Icon;
@@ -1668,21 +1623,15 @@ function NetworkTrafficMonitor({
 
   return (
     <section className="management-section network-traffic-section">
-      <header className="management-section-header network-traffic-header">
-        <div>
-          <h3>{t("workspace.management.network.traffic.title")}</h3>
-          <p>{t("workspace.management.network.traffic.description")}</p>
-        </div>
-        <label className="network-traffic-interface-select">
-          <span>{t("workspace.management.network.traffic.interface")}</span>
+      <SectionHeader className="management-section-header network-traffic-header" title={t("workspace.management.network.traffic.title")} description={t("workspace.management.network.traffic.description")} actions={<><Field className="network-traffic-interface-select" label={t("workspace.management.network.traffic.interface")}>
+
           <CustomSelect
             value={selectedInterfaceId}
             onChange={(selectedValue) => setSelectedInterfaceId(selectedValue)}
             ariaLabel={t("workspace.management.network.traffic.interface")}
             options={[{ value: "all", label: t("workspace.management.network.traffic.allInterfaces") }, ...(selectableInterfaces.map((networkInterface) => ({ value: networkInterface.id, label: networkInterface.name })))]}
           />
-        </label>
-      </header>
+        </Field></>} />
 
       <div className="network-traffic-body">
         <div className="network-traffic-stats">
@@ -1816,20 +1765,11 @@ function NetworkInterfaceDetailsModal({
         aria-modal="true"
         aria-labelledby="network-interface-details-title"
       >
-        <header className="network-interface-details-header">
-          <div className="network-interface-details-heading">
-            <span className="network-interface-details-icon" aria-hidden="true">
+        <DialogHeader className="network-interface-details-header" title={networkInterface.name} headingId="network-interface-details-title" actions={<><span className="network-interface-details-icon" aria-hidden="true">
               <Network size={20} />
-            </span>
-            <div>
-              <span className="eyebrow">{t("workspace.management.network.detailsEyebrow")}</span>
-              <h2 id="network-interface-details-title">{networkInterface.name}</h2>
-            </div>
-            <span className="management-row-status" data-state={networkInterfaceTone(networkInterface)}>
+            </span><span className="eyebrow">{t("workspace.management.network.detailsEyebrow")}</span><StatusBadge className="management-row-status" data-state={networkInterfaceTone(networkInterface)}>
               {stateLabel}
-            </span>
-          </div>
-          <button
+            </StatusBadge><UiButton variant="ghost" iconOnly
             type="button"
             className="management-icon-action"
             onClick={onClose}
@@ -1838,8 +1778,7 @@ function NetworkInterfaceDetailsModal({
             aria-label={t("common.actions.cancel")}
           >
             <X aria-hidden="true" size={15} />
-          </button>
-        </header>
+          </UiButton></>} />
 
         <div className="network-interface-details-body">
           <section className="network-interface-overview">
@@ -1862,13 +1801,7 @@ function NetworkInterfaceDetailsModal({
 
           <div className="network-interface-detail-columns">
             <section className="network-interface-detail-section" aria-labelledby="network-interface-addresses-title">
-              <header>
-                <div>
-                  <span className="eyebrow">IP</span>
-                  <h3 id="network-interface-addresses-title">{t("workspace.management.network.addressesTitle")}</h3>
-                </div>
-                <strong>{formatLocaleNumber(networkInterface.addresses.length, locale)}</strong>
-              </header>
+              <DialogHeader title={t("workspace.management.network.addressesTitle")} eyebrow={<>IP</>} headingLevel={3} headingId="network-interface-addresses-title" actions={<><strong>{formatLocaleNumber(networkInterface.addresses.length, locale)}</strong></>} />
               {networkInterface.addresses.length ? (
                 <div className="network-interface-address-list">
                   {networkInterface.addresses.map((address, index) => (
@@ -1887,13 +1820,7 @@ function NetworkInterfaceDetailsModal({
             </section>
 
             <section className="network-interface-detail-section" aria-labelledby="network-interface-routes-title">
-              <header>
-                <div>
-                  <span className="eyebrow">{t("workspace.management.network.routesEyebrow")}</span>
-                  <h3 id="network-interface-routes-title">{t("workspace.management.network.interfaceRoutesTitle")}</h3>
-                </div>
-                <strong>{formatLocaleNumber(routes.length, locale)}</strong>
-              </header>
+              <DialogHeader title={t("workspace.management.network.interfaceRoutesTitle")} eyebrow={<>{t("workspace.management.network.routesEyebrow")}</>} headingLevel={3} headingId="network-interface-routes-title" actions={<><strong>{formatLocaleNumber(routes.length, locale)}</strong></>} />
               {routes.length ? (
                 <div className="network-interface-route-list">
                   {routes.map((route, index) => (
@@ -1916,13 +1843,7 @@ function NetworkInterfaceDetailsModal({
           </div>
 
           <section className="network-interface-flags" aria-labelledby="network-interface-flags-title">
-            <header>
-              <div>
-                <span className="eyebrow">{t("workspace.management.network.linkEyebrow")}</span>
-                <h3 id="network-interface-flags-title">{t("workspace.management.network.flagsTitle")}</h3>
-              </div>
-              <strong>{formatLocaleNumber(networkInterface.flags.length, locale)}</strong>
-            </header>
+            <DialogHeader title={t("workspace.management.network.flagsTitle")} eyebrow={<>{t("workspace.management.network.linkEyebrow")}</>} headingLevel={3} headingId="network-interface-flags-title" actions={<><strong>{formatLocaleNumber(networkInterface.flags.length, locale)}</strong></>} />
             {networkInterface.flags.length ? (
               <div>{networkInterface.flags.map((flag) => <span key={flag}>{flag}</span>)}</div>
             ) : (
@@ -1953,14 +1874,14 @@ function StorageDiskRow({
       <div className="storage-disk-identity">
         <HardDrive aria-hidden="true" size={18} />
         <div>
-          <button
+          <UiButton variant="ghost"
             type="button"
             className="storage-disk-name-button"
             onClick={onOpen}
             aria-label={t("workspace.management.storage.openDiskDetails", { name: disk.path })}
           >
             {disk.path}
-          </button>
+          </UiButton>
           <span data-tooltip={model}>{model}</span>
         </div>
       </div>

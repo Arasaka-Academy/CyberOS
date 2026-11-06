@@ -1,3 +1,4 @@
+import { Button as UiButton, DialogActions, DialogHeader, Field, Input, Notice, Section } from "@cyberos/ui";
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { AlertTriangle, GitBranch, LoaderCircle, Package, Plus, RefreshCw, ShieldCheck, Trash2, Upload, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -154,15 +155,12 @@ export function SettingsSkillsPage({
 
   return (
     <div className="settings-content-body settings-resource-page">
-      {error && !gitTarget ? <p className="settings-inline-alert" role="alert"><AlertTriangle aria-hidden="true" size={16} />{error}</p> : null}
-      <section className="settings-section-card">
-        <header>
-          <div><h3>{t("settings.skills.globalTitle")}</h3><p>{t("settings.skills.globalDescription")}</p></div>
-          <div className="settings-inline-actions">
-            <button type="button" onClick={() => setPickerTarget("new")} disabled={storagePools.length === 0}><Upload aria-hidden="true" size={15} />{t("settings.skills.importZip")}</button>
-            <button type="button" disabled={busyId !== null} onClick={() => { setError(null); setGitDraft({ url: "https://", ref: "", subdirectory: "" }); setGitTarget("new"); }}><Plus aria-hidden="true" size={15} />{t("settings.skills.installGit")}</button>
-          </div>
-        </header>
+      {error && !gitTarget ? <Notice className="settings-inline-alert" role="alert" tone="danger" icon={<AlertTriangle aria-hidden="true" size={16} />}>{error}</Notice> : null}
+      <Section className="settings-section-card" title={t("settings.skills.globalTitle")} description={t("settings.skills.globalDescription")} actions={<><div className="settings-inline-actions">
+            <UiButton variant="ghost" type="button" onClick={() => setPickerTarget("new")} disabled={storagePools.length === 0}><Upload aria-hidden="true" size={15} />{t("settings.skills.importZip")}</UiButton>
+            <UiButton variant="ghost" type="button" disabled={busyId !== null} onClick={() => { setError(null); setGitDraft({ url: "https://", ref: "", subdirectory: "" }); setGitTarget("new"); }}><Plus aria-hidden="true" size={15} />{t("settings.skills.installGit")}</UiButton>
+          </div></>}>
+
         <div className="settings-resource-list">
           {settings?.global.length ? settings.global.map((skill) => (
             <article className="settings-resource-row settings-skill-row" key={skill.id} data-state={skill.diagnostics.length ? "error" : "ready"}>
@@ -174,18 +172,18 @@ export function SettingsSkillsPage({
                 {skill.diagnostics.map((diagnostic) => <em key={diagnostic} role="alert">{diagnostic}</em>)}
               </div>
               <div className="settings-resource-actions">
-                {skill.sourceType === "git" ? <button type="button" data-tooltip={t("common.actions.update")} aria-label={t("common.actions.update")} onClick={() => void update(skill)} disabled={busyId === skill.id}><RefreshCw aria-hidden="true" size={15} /></button> : null}
-                <button type="button" data-tooltip={t("settings.skills.replace")} aria-label={t("settings.skills.replace")} onClick={() => replace(skill)} disabled={busyId === skill.id}><Upload aria-hidden="true" size={15} /></button>
-                <button className="is-danger" type="button" data-tooltip={t("common.actions.delete")} aria-label={t("common.actions.delete")} onClick={() => void remove(skill)} disabled={busyId === skill.id}><Trash2 aria-hidden="true" size={15} /></button>
+                {skill.sourceType === "git" ? <UiButton iconOnly variant="ghost" type="button" data-tooltip={t("common.actions.update")} aria-label={t("common.actions.update")} onClick={() => void update(skill)} disabled={busyId === skill.id}><RefreshCw aria-hidden="true" size={15} /></UiButton> : null}
+                <UiButton iconOnly variant="ghost" type="button" data-tooltip={t("settings.skills.replace")} aria-label={t("settings.skills.replace")} onClick={() => replace(skill)} disabled={busyId === skill.id}><Upload aria-hidden="true" size={15} /></UiButton>
+                <UiButton iconOnly variant="danger" className="is-danger" type="button" data-tooltip={t("common.actions.delete")} aria-label={t("common.actions.delete")} onClick={() => void remove(skill)} disabled={busyId === skill.id}><Trash2 aria-hidden="true" size={15} /></UiButton>
               </div>
               <Switch checked={skill.enabled} onCheckedChange={(checked) => void toggle(skill, checked)} ariaLabel={t("settings.skills.toggle", { name: skill.name })} compact busy={busyId === skill.id} />
             </article>
           )) : <div className="settings-resource-empty"><Package aria-hidden="true" size={20} /><span>{t("settings.skills.empty")}</span></div>}
         </div>
-      </section>
+      </Section>
 
-      <section className="settings-section-card">
-        <header><div><h3>{t("settings.skills.projectTitle")}</h3><p>{t("settings.skills.projectDescription")}</p></div><span className="settings-resource-status" data-state={settings?.project.trusted ? "ready" : "attention"}><ShieldCheck aria-hidden="true" size={14} />{settings?.project.trusted ? t("settings.skills.trusted") : t("settings.skills.untrusted")}</span></header>
+      <Section className="settings-section-card" title={t("settings.skills.projectTitle")} description={t("settings.skills.projectDescription")} icon={<ShieldCheck aria-hidden="true" size={14} />} actions={<><span className="settings-resource-status" data-state={settings?.project.trusted ? "ready" : "attention"}><ShieldCheck aria-hidden="true" size={14} />{settings?.project.trusted ? t("settings.skills.trusted") : t("settings.skills.untrusted")}</span></>}>
+
         <div className="settings-resource-list">
           {settings?.project.skills.length ? settings.project.skills.map((skill) => (
             <article className="settings-resource-row settings-project-skill" key={skill.path} data-state={skill.valid ? "ready" : "error"}>
@@ -195,7 +193,7 @@ export function SettingsSkillsPage({
             </article>
           )) : <div className="settings-resource-empty"><Package aria-hidden="true" size={20} /><span>{activeSessionId ? t("settings.skills.noProjectSkills") : t("settings.skills.noSession")}</span></div>}
         </div>
-      </section>
+      </Section>
 
       {gitTarget ? (
         <ModalPortal className="management-modal-backdrop" role="presentation" onMouseDown={closeGitDialog}>
@@ -209,26 +207,20 @@ export function SettingsSkillsPage({
             tabIndex={-1}
             onMouseDown={(event) => event.stopPropagation()}
           >
-            <header>
-              <div className="help-label">
-                <h3 id={gitTitleId}><GitBranch aria-hidden="true" size={18} />{gitTarget === "new" ? t("settings.skills.installGit") : t("settings.skills.replace")}</h3>
-                <HelpTip label={gitTarget === "new" ? t("settings.skills.installGit") : t("settings.skills.replace")} content={t("settings.skills.securityNotice")} id={gitDescriptionId} />
-              </div>
-              <button type="button" aria-label={t("common.actions.close")} data-tooltip={t("common.actions.close")} onClick={closeGitDialog} disabled={busyId !== null}><X aria-hidden="true" size={16} /></button>
-            </header>
+            <DialogHeader title={gitTarget === "new" ? t("settings.skills.installGit") : t("settings.skills.replace")} icon={<GitBranch aria-hidden="true" size={18} />} headingLevel={3} headingId={gitTitleId} actions={<><HelpTip label={gitTarget === "new" ? t("settings.skills.installGit") : t("settings.skills.replace")} content={t("settings.skills.securityNotice")} id={gitDescriptionId} /><UiButton iconOnly variant="ghost" type="button" aria-label={t("common.actions.close")} data-tooltip={t("common.actions.close")} onClick={closeGitDialog} disabled={busyId !== null}><X aria-hidden="true" size={16} /></UiButton></>} />
             <form className="settings-git-skill-form" onSubmit={(event) => void installGit(event)} aria-busy={busyId !== null || undefined}>
               <div className="settings-git-skill-body">
-                {error ? <p className="settings-inline-alert" role="alert"><AlertTriangle aria-hidden="true" size={16} />{error}</p> : null}
+                {error ? <Notice className="settings-inline-alert" role="alert" tone="danger" icon={<AlertTriangle aria-hidden="true" size={16} />}>{error}</Notice> : null}
                 <div className="settings-field-grid settings-resource-fields">
-                  <label className="settings-field-wide"><span>{t("settings.skills.gitUrl")}</span><input type="url" required value={gitDraft.url} disabled={busyId !== null} onChange={(event) => setGitDraft((current) => ({ ...current, url: event.target.value }))} /></label>
-                  <label><span>{t("settings.skills.gitRef")}</span><input value={gitDraft.ref} disabled={busyId !== null} onChange={(event) => setGitDraft((current) => ({ ...current, ref: event.target.value }))} /></label>
-                  <label><span>{t("settings.skills.gitSubdirectory")}</span><input value={gitDraft.subdirectory} disabled={busyId !== null} onChange={(event) => setGitDraft((current) => ({ ...current, subdirectory: event.target.value }))} /></label>
+                  <Field className="settings-field-wide" label={t("settings.skills.gitUrl")}><Input type="url" required value={gitDraft.url} disabled={busyId !== null} onChange={(event) => setGitDraft((current) => ({ ...current, url: event.target.value }))} /></Field>
+                  <Field label={t("settings.skills.gitRef")}><Input value={gitDraft.ref} disabled={busyId !== null} onChange={(event) => setGitDraft((current) => ({ ...current, ref: event.target.value }))} /></Field>
+                  <Field label={t("settings.skills.gitSubdirectory")}><Input value={gitDraft.subdirectory} disabled={busyId !== null} onChange={(event) => setGitDraft((current) => ({ ...current, subdirectory: event.target.value }))} /></Field>
                 </div>
               </div>
-              <footer className="settings-inline-actions">
-                <button type="button" className="secondary-button" onClick={closeGitDialog} disabled={busyId !== null}>{t("common.actions.cancel")}</button>
-                <button type="submit" className="primary-button" disabled={busyId !== null}>{busyId !== null ? <LoaderCircle aria-hidden="true" size={14} className="is-spinning" /> : null}{t("settings.skills.install")}</button>
-              </footer>
+              <DialogActions className="settings-inline-actions">
+                <UiButton variant="secondary" type="button" className="secondary-button" onClick={closeGitDialog} disabled={busyId !== null}>{t("common.actions.cancel")}</UiButton>
+                <UiButton variant="primary" type="submit" className="primary-button" disabled={busyId !== null}>{busyId !== null ? <LoaderCircle aria-hidden="true" size={14} className="is-spinning" /> : null}{t("settings.skills.install")}</UiButton>
+              </DialogActions>
             </form>
           </section>
         </ModalPortal>

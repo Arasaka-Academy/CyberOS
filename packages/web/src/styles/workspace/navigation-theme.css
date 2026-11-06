@@ -2,11 +2,11 @@
 
 .agent-list,
 .settings-rail {
-  border-right: 2px solid var(--cyber-red);
+  border-right: 2px solid var(--hud-red);
 }
 
 .brand {
-  border-bottom: 1px solid rgb(252 238 10 / 48%);
+  border-bottom: 1px solid color-mix(in srgb, var(--cyberos-color-command) 48%, transparent);
 }
 
 .agent-brand-logo,
@@ -34,7 +34,7 @@
 
 .agent-list-head::before,
 .dock-title::before {
-  color: var(--cyber-red);
+  color: var(--hud-red);
   content: "//";
 }
 
@@ -43,7 +43,7 @@
 .agent-notification-button,
 .agent-power-button,
 .agent-list .icon-button {
-  border: 1px solid rgb(252 238 10 / 48%);
+  border: 1px solid color-mix(in srgb, var(--cyberos-color-command) 48%, transparent);
 }
 
 .agent-list-head button:hover,
@@ -51,10 +51,10 @@
 .agent-notification-button:hover,
 .agent-power-button:hover,
 .agent-list .icon-button:hover:not(:disabled) {
-  border-color: var(--cyber-cyan);
-  color: var(--cyber-ink);
-  background: var(--cyber-cyan);
-  box-shadow: 2px 2px 0 var(--cyber-red);
+  border-color: var(--hud-cyan);
+  color: var(--hud-ink);
+  background: var(--hud-cyan);
+  box-shadow: 2px 2px 0 var(--hud-red);
 }
 
 .session-list {
@@ -77,20 +77,20 @@
 }
 
 .session-item.is-active::after {
-  color: var(--cyber-red);
+  color: var(--hud-red);
 }
 
 .agent-status,
 .agent-list :where(small, time) {
-  color: rgb(252 238 10 / 58%);
+  color: color-mix(in srgb, var(--cyberos-color-command) 58%, transparent);
 }
 
 .mobile-tabs {
-  border-bottom: 2px solid var(--cyber-red);
+  border-bottom: 2px solid var(--hud-red);
 }
 
 .mobile-tab-buttons {
-  border: 1px solid rgb(252 238 10 / 50%);
+  border: 1px solid color-mix(in srgb, var(--cyberos-color-command) 50%, transparent);
 }
 
 .split-handle {
@@ -114,7 +114,7 @@
 
 .app-shell .split-handle:focus-visible {
   outline-color: var(--cyberos-color-command);
-  box-shadow: 0 0 0 1px var(--cyber-ink), 0 0 0 3px var(--cyberos-color-command);
+  box-shadow: 0 0 0 1px var(--hud-ink), 0 0 0 3px var(--cyberos-color-command);
 }
 
 .app-shell.is-resizing .split-handle {

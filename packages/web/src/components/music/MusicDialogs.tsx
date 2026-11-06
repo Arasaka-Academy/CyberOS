@@ -1,3 +1,4 @@
+import { Button as UiButton, DialogHeader, Field, Input, Notice } from "@cyberos/ui";
 import { ModalPortal } from "../common/ModalPortal.js";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { X } from "lucide-react";
@@ -29,17 +30,14 @@ export function MusicDialog({
         aria-label={title}
         tabIndex={-1}
       >
-        <header>
-          <h2>{title}</h2>
-          <button
+        <DialogHeader title={title} actions={<><UiButton iconOnly variant="plain"
             type="button"
             onClick={onClose}
             aria-label={t("common.actions.close")}
             data-tooltip={t("common.actions.close")} className="plain-button"
           >
             <X size={18} aria-hidden="true" />
-          </button>
-        </header>
+          </UiButton></>} />
         {children}
       </section>
     </ModalPortal>
@@ -78,33 +76,33 @@ export function MusicNameDialog({
   return (
     <MusicDialog title={title} onClose={onClose}>
       <form onSubmit={(event) => void submit(event)}>
-        <label className="music-field">
-          {t("music.name")}
-          <input
+        <Field className="music-field" label={t("music.name")}>
+
+          <Input
             value={name}
             maxLength={200}
             onChange={(event) => setName(event.target.value)}
             autoFocus
             required
           />
-        </label>
+        </Field>
         {error ? (
-          <p role="alert" className="music-error">
+          <Notice role="alert" className="music-error" tone="danger">
             {error}
-          </p>
+          </Notice>
         ) : null}
         <footer>
-          <button type="button" onClick={onClose} disabled={busy} className="secondary-button">
+          <UiButton variant="secondary" type="button" onClick={onClose} disabled={busy} className="secondary-button">
             {t("common.actions.cancel")}
-          </button>
-          <button
+          </UiButton>
+          <UiButton variant="primary"
             type="submit"
             className="primary-button"
             disabled={busy || !name.trim()}
             aria-busy={busy}
           >
             {t("common.actions.save")}
-          </button>
+          </UiButton>
         </footer>
       </form>
     </MusicDialog>

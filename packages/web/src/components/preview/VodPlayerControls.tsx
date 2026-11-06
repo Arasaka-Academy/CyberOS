@@ -1,3 +1,4 @@
+import { Button as UiButton } from "@cyberos/ui";
 import { CustomSelect } from "../common/CustomSelect.js";
 import { useTranslation } from "react-i18next";
 import {
@@ -66,9 +67,9 @@ export function VodPlayerControls({ status, busy, onCommand, onRetry }: {
         <div className={`vod-player-message${isError ? " is-error" : " is-recovering"}`} role={isError ? "alert" : "status"}>
           {isError ? <AlertTriangle aria-hidden="true" size={15} /> : <RefreshCw className="is-spinning" aria-hidden="true" size={14} />}
           <span>{isRecovering ? recoveryMessage : errorMessage}</span>
-          <button type="button" className="preview-tool-button" onClick={onRetry} disabled={busy || !sessionId} aria-busy={busy || undefined} data-tooltip={t("preview.retry")} aria-label={t("preview.retry")}>
+          <UiButton iconOnly variant="ghost" type="button" className="preview-tool-button" onClick={onRetry} disabled={busy || !sessionId} aria-busy={busy || undefined} data-tooltip={t("preview.retry")} aria-label={t("preview.retry")}>
             {busy ? <LoaderCircle className="is-spinning" aria-hidden="true" size={14} /> : <RefreshCw aria-hidden="true" size={14} />}
-          </button>
+          </UiButton>
         </div>
       ) : null}
 
@@ -94,18 +95,18 @@ export function VodPlayerControls({ status, busy, onCommand, onRetry }: {
       </label>
 
       <div className="vod-player-actions">
-        <button type="button" className="preview-tool-button" onClick={() => command({ type: "seek", seconds: Math.max(0, status.positionSeconds - 10) })} disabled={controlsDisabled} data-tooltip={t("preview.vodPlayer.rewind")} aria-label={t("preview.vodPlayer.rewind")}>
+        <UiButton iconOnly variant="ghost" type="button" className="preview-tool-button" onClick={() => command({ type: "seek", seconds: Math.max(0, status.positionSeconds - 10) })} disabled={controlsDisabled} data-tooltip={t("preview.vodPlayer.rewind")} aria-label={t("preview.vodPlayer.rewind")}>
           <RotateCcw aria-hidden="true" size={15} />
-        </button>
-        <button type="button" className="preview-tool-button is-primary" onClick={() => command({ type: isPlaying ? "pause" : "resume" })} disabled={controlsDisabled} aria-busy={busy || undefined} data-tooltip={isPlaying ? t("preview.vodPlayer.pause") : t("preview.vodPlayer.resume")} aria-label={isPlaying ? t("preview.vodPlayer.pause") : t("preview.vodPlayer.resume")}>
+        </UiButton>
+        <UiButton iconOnly variant="primary" type="button" className="preview-tool-button is-primary" onClick={() => command({ type: isPlaying ? "pause" : "resume" })} disabled={controlsDisabled} aria-busy={busy || undefined} data-tooltip={isPlaying ? t("preview.vodPlayer.pause") : t("preview.vodPlayer.resume")} aria-label={isPlaying ? t("preview.vodPlayer.pause") : t("preview.vodPlayer.resume")}>
           {busy ? <LoaderCircle className="is-spinning" aria-hidden="true" size={15} /> : isPlaying ? <Pause aria-hidden="true" size={15} /> : <Play aria-hidden="true" size={15} />}
-        </button>
-        <button type="button" className="preview-tool-button" onClick={() => command({ type: "seek", seconds: status.positionSeconds + 10 })} disabled={controlsDisabled} data-tooltip={t("preview.vodPlayer.forward")} aria-label={t("preview.vodPlayer.forward")}>
+        </UiButton>
+        <UiButton iconOnly variant="ghost" type="button" className="preview-tool-button" onClick={() => command({ type: "seek", seconds: status.positionSeconds + 10 })} disabled={controlsDisabled} data-tooltip={t("preview.vodPlayer.forward")} aria-label={t("preview.vodPlayer.forward")}>
           <RotateCw aria-hidden="true" size={15} />
-        </button>
-        <button type="button" className="preview-tool-button" onClick={() => command({ type: "stop" })} disabled={busy || !sessionId || status.state === "stopped" || status.state === "idle"} data-tooltip={t("preview.vodPlayer.stop")} aria-label={t("preview.vodPlayer.stop")}>
+        </UiButton>
+        <UiButton iconOnly variant="ghost" type="button" className="preview-tool-button" onClick={() => command({ type: "stop" })} disabled={busy || !sessionId || status.state === "stopped" || status.state === "idle"} data-tooltip={t("preview.vodPlayer.stop")} aria-label={t("preview.vodPlayer.stop")}>
           <Square aria-hidden="true" size={14} />
-        </button>
+        </UiButton>
         <label className="vod-player-volume">
           <span className="visually-hidden">{t("preview.vodPlayer.volume")}</span>
           {status.volume === 0 ? <VolumeX aria-hidden="true" size={15} /> : <Volume2 aria-hidden="true" size={15} />}

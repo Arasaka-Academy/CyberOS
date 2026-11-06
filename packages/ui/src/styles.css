@@ -1,0 +1,17 @@
+@layer theme, base, legacy, components, app, utilities;
+@import './vendor/styles.css';
+@import './vendor/button.module.css';
+@import './vendor/panel.module.css';
+@import './vendor/field.module.css';
+@import './controls.css';
+@import './sections.css';
+@import './feedback.css';
+@import './dialog.css';
+
+@layer app {
+  .cyberos-ui-root, [data-cyberui-portal] { --cyber-font-body: var(--cyberos-font-body); --cyber-font-display: var(--cyberos-font-ui); --cyber-font-mono: var(--cyberos-font-mono); }
+  .cyberos-ui-root { display: contents; font-size: inherit; line-height: inherit; color: inherit; background: none; }
+  .appearance-picker { display: grid; gap: 18px; }
+  .appearance-schemes, .appearance-modes { display: flex; flex-wrap: wrap; gap: 10px; }
+  [data-theme-swatch] { min-width: 102px; }
+}

@@ -21,36 +21,6 @@
   text-transform: none;
 }
 
-.settings-section-card {
-  display: grid;
-  gap: 16px;
-  min-width: 0;
-  padding: 16px;
-  border: 1px solid var(--line-soft);
-  border-radius: 6px;
-  background: var(--channel-bg);
-}
-
-.settings-section-card > header {
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: 14px;
-  min-width: 0;
-}
-
-.settings-section-card h3 {
-  margin: 0;
-  font-size: 15px;
-}
-
-.settings-section-card p {
-  margin: 5px 0 0;
-  color: var(--muted);
-  font-size: 12.5px;
-  line-height: 1.45;
-}
-
 .settings-media-loading {
   display: flex;
   align-items: center;
@@ -162,7 +132,7 @@
 }
 
 .settings-credential-status[data-configured="true"] {
-  border-left: 2px solid var(--cyber-cyan);
+  border-left: 2px solid var(--hud-cyan);
   color: var(--success-text);
 }
 

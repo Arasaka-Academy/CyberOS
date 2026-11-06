@@ -1,3 +1,4 @@
+import { Button as UiButton } from "@cyberos/ui";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { MusicFilterOptions } from "@cyberos/shared";
@@ -78,9 +79,9 @@ export function MusicMetadataFilters({ sourceId, revision, year, genre, onYearCh
       ) : options === null ? (
         <div className="music-inline-state music-filter-feedback" role="alert">
           <span>{t("music.filterOptionsFailed")}</span>
-          <button type="button" onClick={() => setAttempt((value) => value + 1)} className="plain-button">
+          <UiButton variant="plain" type="button" onClick={() => setAttempt((value) => value + 1)} className="plain-button">
             {t("music.retryFilterOptions")}
-          </button>
+          </UiButton>
         </div>
       ) : null}
     </>

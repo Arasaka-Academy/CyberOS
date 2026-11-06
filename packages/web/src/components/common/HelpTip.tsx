@@ -1,3 +1,4 @@
+import { Button as UiButton } from "@cyberos/ui";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Info } from "lucide-react";
@@ -106,7 +107,7 @@ export function HelpTip({ label, content, id: providedId }: { label: string; con
 
   return (
     <span className="help-tip">
-      <button
+      <UiButton iconOnly variant="ghost"
         ref={triggerRef}
         type="button"
         className="help-tip-trigger"
@@ -127,7 +128,7 @@ export function HelpTip({ label, content, id: providedId }: { label: string; con
             setOpen(!touchOpen.current);
           } else show();
         }}
-      ><Info aria-hidden="true" size={14} /></button>
+      ><Info aria-hidden="true" size={14} /></UiButton>
       {portalRoot ? createPortal(tip, portalRoot) : tip}
     </span>
   );

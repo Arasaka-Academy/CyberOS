@@ -1,3 +1,4 @@
+import { Button as UiButton, StatusBadge } from "@cyberos/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArchiveRestore, Check, Clock3, FolderInput, FolderPlus, FolderUp, LoaderCircle, RotateCcw, Square, Trash2, Upload, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -115,7 +116,7 @@ export function ActivityMenu({
 
   return (
     <div ref={menuRef} className="activity-menu">
-      <button
+      <UiButton variant="ghost" iconOnly
         type="button"
         className={
           hasNewActivity || hasUploadActivity || hasFileBatchActivity
@@ -136,7 +137,7 @@ export function ActivityMenu({
             aria-hidden="true"
           />
         ) : null}
-      </button>
+      </UiButton>
 
       {open ? (
         <section className="activity-popover" role="dialog" aria-label={t("workspace.recentOperations")}>
@@ -202,9 +203,9 @@ export function ActivityMenu({
                       <div className="activity-upload-body">
                         <div className="activity-upload-head">
                           <strong data-tooltip={fileCountLabel}>{fileCountLabel}</strong>
-                          <span className="management-status-pill activity-upload-status" data-state={statusTone}>
+                          <StatusBadge className="management-status-pill activity-upload-status" data-state={statusTone}>
                             {statusLabel}
-                          </span>
+                          </StatusBadge>
                         </div>
                         <small>
                           {t("workspace.uploadTo", { path: targetLabel })}
@@ -227,7 +228,7 @@ export function ActivityMenu({
                         </div>
                       </div>
                       {isActive ? (
-                        <button
+                        <UiButton iconOnly variant="ghost"
                           type="button"
                           className="activity-upload-cancel"
                           onClick={() => onCancelUploadBatch(batch.id)}
@@ -235,7 +236,7 @@ export function ActivityMenu({
                           aria-label={t("workspace.cancelUpload")}
                         >
                           <X aria-hidden="true" size={14} />
-                        </button>
+                        </UiButton>
                       ) : null}
                     </li>
                   );
@@ -297,7 +298,7 @@ export function ActivityMenu({
                         </div>
                       </div>
                       {active ? (
-                        <button
+                        <UiButton iconOnly variant="ghost"
                           type="button"
                           className="activity-upload-cancel"
                           onClick={() => onCancelFileBatch(batch.id)}
@@ -305,7 +306,7 @@ export function ActivityMenu({
                           aria-label={t("workspace.batch.cancel")}
                         >
                           <X aria-hidden="true" size={14} />
-                        </button>
+                        </UiButton>
                       ) : null}
                     </li>
                   );
@@ -350,9 +351,9 @@ export function ActivityMenu({
                       </small>
                     </span>
                     {canRollback ? (
-                      <button type="button" onClick={() => onRollback(operation)} aria-label={t("common.actions.rollback")} data-tooltip={t("common.actions.rollback")}>
+                      <UiButton iconOnly variant="ghost" type="button" onClick={() => onRollback(operation)} aria-label={t("common.actions.rollback")} data-tooltip={t("common.actions.rollback")}>
                         <RotateCcw aria-hidden="true" size={14} />
-                      </button>
+                      </UiButton>
                     ) : null}
                   </li>
                 );

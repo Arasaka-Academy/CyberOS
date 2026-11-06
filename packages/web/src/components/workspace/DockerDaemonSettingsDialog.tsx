@@ -1,3 +1,4 @@
+import { Button as UiButton, DialogActions, DialogHeader, Field, Textarea } from "@cyberos/ui";
 import { ModalPortal } from "../common/ModalPortal.js";
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, LoaderCircle, RotateCw, Save, X } from "lucide-react";
@@ -146,12 +147,7 @@ export function DockerDaemonSettingsDialog({
         aria-labelledby="docker-daemon-settings-title"
         tabIndex={-1}
       >
-        <header>
-          <div>
-            <span className="eyebrow">{t("workspace.management.docker.daemon.eyebrow")}</span>
-            <h2 id="docker-daemon-settings-title">{t("workspace.management.docker.daemon.title")}</h2>
-          </div>
-          <button
+        <DialogHeader title={t("workspace.management.docker.daemon.title")} eyebrow={<>{t("workspace.management.docker.daemon.eyebrow")}</>} headingId="docker-daemon-settings-title" actions={<><UiButton variant="ghost" iconOnly
             type="button"
             className="management-icon-action"
             onClick={onClose}
@@ -160,8 +156,7 @@ export function DockerDaemonSettingsDialog({
             data-tooltip={t("common.actions.close")}
           >
             <X aria-hidden="true" size={17} />
-          </button>
-        </header>
+          </UiButton></>} />
 
         {phase === "confirm" ? (
           <div className="docker-daemon-confirmation">
@@ -205,9 +200,9 @@ export function DockerDaemonSettingsDialog({
             ) : null}
             {error ? <p className="docker-daemon-error">{error}</p> : null}
 
-            <label className="docker-daemon-editor-field">
-              <span>{t("workspace.management.docker.daemon.editorLabel")}</span>
-              <textarea
+            <Field className="docker-daemon-editor-field" label={t("workspace.management.docker.daemon.editorLabel")}>
+
+              <Textarea
                 value={content}
                 onChange={(event) => {
                   setContent(event.target.value);
@@ -217,7 +212,7 @@ export function DockerDaemonSettingsDialog({
                 spellCheck={false}
                 aria-describedby="docker-daemon-validation"
               />
-            </label>
+            </Field>
             <div
               id="docker-daemon-validation"
               className="docker-daemon-validation"
@@ -229,35 +224,35 @@ export function DockerDaemonSettingsDialog({
           </div>
         )}
 
-        <footer className="docker-daemon-settings-footer">
+        <DialogActions className="docker-daemon-settings-footer">
           {phase === "confirm" ? (
             <>
-              <button type="button" onClick={() => setPhase("edit")} disabled={submitting} className="secondary-button">
+              <UiButton variant="secondary" type="button" onClick={() => setPhase("edit")} disabled={submitting} className="secondary-button">
                 {t("common.actions.cancel")}
-              </button>
-              <button type="button" className="danger-button" onClick={() => void submit(true)} disabled={submitting} aria-busy={submitting || undefined}>
+              </UiButton>
+              <UiButton variant="danger" type="button" className="danger-button" onClick={() => void submit(true)} disabled={submitting} aria-busy={submitting || undefined}>
                 {submitting ? <LoaderCircle aria-hidden="true" size={15} /> : <RotateCw aria-hidden="true" size={15} />}
                 <span>{t("workspace.management.docker.daemon.confirmRestart")}</span>
-              </button>
+              </UiButton>
             </>
           ) : (
             <>
-              <button type="button" onClick={onClose} disabled={submitting} className="secondary-button">
+              <UiButton variant="secondary" type="button" onClick={onClose} disabled={submitting} className="secondary-button">
                 {t("common.actions.cancel")}
-              </button>
+              </UiButton>
               <div>
-                <button type="button" onClick={() => void submit(false)} disabled={!canSave} aria-busy={submitting || undefined} className="secondary-button">
+                <UiButton variant="secondary" type="button" onClick={() => void submit(false)} disabled={!canSave} aria-busy={submitting || undefined} className="secondary-button">
                   {submitting ? <LoaderCircle aria-hidden="true" size={15} /> : <Save aria-hidden="true" size={15} />}
                   <span>{t("workspace.management.docker.daemon.save")}</span>
-                </button>
-                <button type="button" className="primary-button" onClick={() => setPhase("confirm")} disabled={!canRestart}>
+                </UiButton>
+                <UiButton variant="primary" type="button" className="primary-button" onClick={() => setPhase("confirm")} disabled={!canRestart}>
                   <RotateCw aria-hidden="true" size={15} />
                   <span>{t("workspace.management.docker.daemon.saveRestart")}</span>
-                </button>
+                </UiButton>
               </div>
             </>
           )}
-        </footer>
+        </DialogActions>
       </section>
     </ModalPortal>
   );

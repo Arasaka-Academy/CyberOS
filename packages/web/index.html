@@ -1,6 +1,9 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script>(function(){try{var p=JSON.parse(localStorage.getItem('cyberos:appearance:v1')||'null');var s=['neon','mono','graphite','synthwave','bloodline','terminal','amber'];if(!p||s.indexOf(p.scheme)<0||(p.mode!=='dark'&&p.mode!=='light'))p={scheme:'neon',mode:'dark'};document.documentElement.dataset.cyberScheme=p.scheme;document.documentElement.dataset.cyberMode=p.mode;document.documentElement.dataset.theme=p.mode;document.documentElement.style.colorScheme=p.mode}catch(e){document.documentElement.dataset.cyberScheme='neon';document.documentElement.dataset.cyberMode='dark';document.documentElement.dataset.theme='dark'}})();</script>
+    <link rel="stylesheet" href="../shared/src/appearance.css" />
+    <link rel="stylesheet" href="../ui/src/fonts.css" />
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/cyberos-icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -22,16 +25,16 @@
     </script>
     <style>
       :root {
-        --boot-bg: #fcee0a;
-        --boot-panel: #050a0e;
-        --boot-line: #050a0e;
-        --boot-text: #050a0e;
-        --boot-inverse: #fcee0a;
-        --boot-muted: #3f3e00;
-        --boot-muted-2: #5a5700;
-        --boot-accent: #ff003c;
-        --boot-info: #00f0ff;
-        --boot-danger: #ff003c;
+        --boot-bg: var(--cyber-bg);
+        --boot-panel: var(--cyber-soft);
+        --boot-line: var(--cyber-line);
+        --boot-text: var(--cyber-ink);
+        --boot-inverse: var(--cyber-ink);
+        --boot-muted: var(--cyber-muted);
+        --boot-muted-2: var(--cyber-muted);
+        --boot-accent: var(--cyber-accent);
+        --boot-info: var(--cyber-accent2);
+        --boot-danger: var(--cyber-danger);
       }
 
       html,
@@ -53,11 +56,7 @@
         display: grid;
         place-items: center;
         color: var(--boot-text);
-        background:
-          linear-gradient(90deg, rgb(5 10 14 / 8%) 1px, transparent 1px),
-          linear-gradient(rgb(5 10 14 / 6%) 1px, transparent 1px),
-          var(--boot-bg);
-        background-size: 32px 32px;
+        background: var(--boot-bg);
         opacity: 1;
         transition: opacity 260ms cubic-bezier(.2, .72, .2, 1), visibility 260ms linear;
       }
@@ -99,7 +98,7 @@
         align-items: center;
         gap: 9px;
         color: var(--boot-inverse);
-        font: 700 32px/1 Rajdhani, sans-serif;
+        font: 700 32px/1 var(--cyberos-font-ui);
         letter-spacing: 0;
       }
 
@@ -109,24 +108,26 @@
         filter: invert(1);
       }
 
+      html[data-cyber-mode="light"] .cyberos-boot-brand img { filter: none; }
+
       .cyberos-boot-copy {
         display: grid;
         gap: 6px;
         margin-top: 38px;
         padding-top: 14px;
-        border-top: 1px solid rgb(252 238 10 / 42%);
+        border-top: 1px solid var(--cyber-line);
       }
 
       .cyberos-boot-copy strong {
         color: var(--boot-inverse);
-        font: 700 28px/1.05 Rajdhani, sans-serif;
+        font: 700 28px/1.05 var(--cyberos-font-ui);
         text-transform: uppercase;
         letter-spacing: 0;
       }
 
       .cyberos-boot-copy span {
         color: var(--boot-info);
-        font: 600 12px/1.5 Rajdhani, sans-serif;
+        font: 600 12px/1.5 var(--cyberos-font-ui);
         text-transform: uppercase;
       }
 
@@ -135,14 +136,14 @@
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 1px;
         margin-top: 20px;
-        background: rgb(252 238 10 / 28%);
+        background: var(--cyber-line);
       }
 
       .cyberos-boot-sequence span {
         padding: 7px 8px;
         color: var(--boot-inverse);
         background: var(--boot-panel);
-        font: 600 10px/1.2 Rajdhani, sans-serif;
+        font: 600 10px/1.2 var(--cyberos-font-ui);
       }
 
       .cyberos-boot-sequence span::before {
@@ -159,7 +160,7 @@
         height: 3px;
         margin-top: 24px;
         overflow: hidden;
-        background: rgb(252 238 10 / 22%);
+        background: var(--cyber-line);
       }
 
       .cyberos-boot-progress span {
@@ -172,8 +173,8 @@
 
       .cyberos-boot-footer {
         margin-top: 16px;
-        color: rgb(252 238 10 / 64%);
-        font: 600 10px/1.4 Rajdhani, sans-serif;
+        color: var(--cyber-muted);
+        font: 600 10px/1.4 var(--cyberos-font-ui);
         text-align: right;
         text-transform: uppercase;
       }
@@ -193,10 +194,10 @@
         padding: 0 16px;
         border: 1px solid var(--boot-accent);
         border-radius: 0;
-        color: var(--boot-panel);
+        color: var(--cyber-on-accent);
         background: var(--boot-accent);
         cursor: pointer;
-        font: 700 12px/1 Rajdhani, sans-serif;
+        font: 700 12px/1 var(--cyberos-font-ui);
         clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
       }
 

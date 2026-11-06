@@ -3,7 +3,7 @@
   isolation: isolate;
   color: var(--text);
   background:
-    linear-gradient(115deg, rgb(255 0 60 / 4%), transparent 36%),
+    linear-gradient(115deg, color-mix(in srgb, var(--cyberos-color-danger) 4%, transparent), transparent 36%),
     var(--cyberos-hud-grid),
     var(--app-bg);
   background-size: auto, 28px 28px, auto;
@@ -16,7 +16,7 @@
   right: 0;
   left: 0;
   height: 2px;
-  background: linear-gradient(90deg, var(--cyber-red) 0 12%, transparent 12% 76%, var(--cyber-yellow) 76% 88%, var(--cyber-cyan) 88%);
+  background: linear-gradient(90deg, var(--hud-red) 0 12%, transparent 12% 76%, var(--hud-yellow) 76% 88%, var(--hud-cyan) 88%);
   pointer-events: none;
   content: "";
 }

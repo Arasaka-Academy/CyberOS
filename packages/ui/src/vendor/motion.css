@@ -1,0 +1,14 @@
+/* Generated from packages/react/src/motion.css. Regenerate in CyberUI with pnpm registry:build; after installation, edit this file freely. */
+/* Animation values stay global through custom properties, including in CSS Modules. */
+:is([data-cyberui], [data-cyberui-portal]) {
+  --cyber-motion-spin: cyber-spin var(--cyber-spin-duration) linear infinite;
+  --cyber-motion-pulse: cyber-pulse var(--cyber-pulse-duration) ease-in-out infinite alternate;
+  --cyber-motion-appear: cyber-appear var(--cyber-enter-duration) ease-out;
+  --cyber-motion-overlay: cyber-appear var(--cyber-state-duration) ease-out;
+  --cyber-motion-lift: cyber-lift var(--cyber-enter-duration) ease-out;
+}
+
+@keyframes cyber-spin { to { transform: rotate(360deg); } }
+@keyframes cyber-pulse { to { opacity: .45; } }
+@keyframes cyber-appear { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cyber-lift { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }

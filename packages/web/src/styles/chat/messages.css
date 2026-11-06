@@ -6,7 +6,7 @@
 }
 
 .message:hover {
-  background: rgb(255 255 255 / 2%);
+  background: color-mix(in srgb, var(--cyberos-color-text) 2%, transparent);
 }
 
 .avatar {
@@ -90,7 +90,7 @@
 .message-text,
 .message-markdown {
   margin: 4px 0 0;
-  color: #dbdee1;
+  color: var(--cyberos-color-text);
   font-size: 13px;
   line-height: 1.48;
   overflow-wrap: anywhere;
@@ -145,12 +145,12 @@
 }
 
 .message-markdown a {
-  color: #9fb2ff;
+  color: var(--cyberos-color-focus);
   text-decoration: none;
 }
 
 .message-markdown a:hover {
-  color: #c6d0ff;
+  color: var(--cyberos-color-focus);
   text-decoration: underline;
 }
 
@@ -160,13 +160,13 @@
 
 .message-markdown blockquote {
   padding-left: 10px;
-  border-left: 2px solid rgb(255 255 255 / 16%);
+  border-left: 2px solid color-mix(in srgb, var(--cyberos-color-text) 16%, transparent);
   color: var(--muted);
 }
 
 .message-markdown code {
   padding: 1px 4px;
-  border: 1px solid rgb(255 255 255 / 8%);
+  border: 1px solid color-mix(in srgb, var(--cyberos-color-text) 8%, transparent);
   border-radius: 4px;
   background: var(--code-bg);
   color: var(--code-text);
@@ -179,7 +179,7 @@
   max-width: 100%;
   margin: 0;
   padding: 1px 4px;
-  border: 1px solid rgb(255 255 255 / 10%);
+  border: 1px solid color-mix(in srgb, var(--cyberos-color-text) 10%, transparent);
   border-radius: 0;
   background: var(--code-bg);
   color: var(--code-text);
@@ -200,9 +200,9 @@
 }
 
 .message-path-button:hover {
-  border-color: rgb(159 178 255 / 52%);
-  background: rgb(159 178 255 / 10%);
-  color: #c6d0ff;
+  border-color: color-mix(in srgb, var(--cyberos-color-focus) 52%, transparent);
+  background: color-mix(in srgb, var(--cyberos-color-focus) 10%, transparent);
+  color: var(--cyberos-color-focus);
 }
 
 .message-path-button:focus-visible {
@@ -214,7 +214,7 @@
   max-width: 100%;
   padding: 10px;
   overflow: auto;
-  border: 1px solid rgb(255 255 255 / 8%);
+  border: 1px solid color-mix(in srgb, var(--cyberos-color-text) 8%, transparent);
   border-radius: 6px;
   background: var(--code-bg);
 }
@@ -237,21 +237,21 @@
 .message-markdown th,
 .message-markdown td {
   padding: 5px 7px;
-  border: 1px solid rgb(255 255 255 / 10%);
+  border: 1px solid color-mix(in srgb, var(--cyberos-color-text) 10%, transparent);
   text-align: left;
   white-space: nowrap;
 }
 
 .message-markdown th {
   color: var(--text);
-  background: rgb(255 255 255 / 6%);
+  background: color-mix(in srgb, var(--cyberos-color-text) 6%, transparent);
 }
 
 .message-markdown hr {
   height: 1px;
   margin: 10px 0 0;
   border: 0;
-  background: rgb(255 255 255 / 10%);
+  background: color-mix(in srgb, var(--cyberos-color-text) 10%, transparent);
 }
 
 .message-markdown input[type="checkbox"] {
@@ -282,8 +282,8 @@
   border: 1px solid var(--line-soft);
   border-radius: 6px;
   background:
-    linear-gradient(135deg, rgb(255 255 255 / 5%), transparent 56%),
-    #292b37;
+    linear-gradient(135deg, color-mix(in srgb, var(--cyberos-color-text) 5%, transparent), transparent 56%),
+    var(--cyberos-color-surface-raised);
   box-shadow: 0 12px 30px rgb(0 0 0 / 16%);
   transition:
     border-color 140ms ease,

@@ -1,3 +1,4 @@
+import { Button as UiButton, Notice, Section } from "@cyberos/ui";
 import { useEffect, useState, type FormEvent } from "react";
 import { LoaderCircle, RefreshCw, Settings2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -72,13 +73,8 @@ export function SettingsDockerPage({
     <form className="settings-form" onSubmit={onSubmit}>
       <div className="settings-content-body">
         <div className="settings-page-grid settings-docker-grid">
-          <section className="settings-section-card">
-            <header>
-              <div>
-                <h3>{t("settings.docker.runtimeTitle")}</h3>
-                <p>{t("settings.docker.runtimeDescription")}</p>
-              </div>
-            </header>
+          <Section className="settings-section-card" title={t("settings.docker.runtimeTitle")} description={t("settings.docker.runtimeDescription")}>
+
             <fieldset className="settings-field-grid settings-docker-runtime-grid" disabled={loading || saving}>
               <span className="help-label settings-field-wide">
                 <Switch
@@ -89,9 +85,9 @@ export function SettingsDockerPage({
                 <HelpTip label={t("settings.docker.enabledField")} content={t("settings.docker.socketNote")} />
               </span>
             </fieldset>
-            {daemonError ? <p className="settings-inline-error" role="alert">{daemonError}</p> : null}
+            {daemonError ? <Notice className="settings-inline-error" role="alert" tone="danger">{daemonError}</Notice> : null}
             <div className="settings-card-actions">
-              <button
+              <UiButton variant="secondary"
                 className="secondary-button"
                 type="button"
                 onClick={() => setDaemonSettingsOpen(true)}
@@ -100,26 +96,26 @@ export function SettingsDockerPage({
               >
                 {daemonLoading ? <LoaderCircle aria-hidden="true" size={15} className="is-spinning" /> : <Settings2 aria-hidden="true" size={15} />}
                 {t("workspace.management.docker.daemon.title")}
-              </button>
+              </UiButton>
               {daemonError ? (
-                <button className="secondary-button" type="button" disabled={daemonLoading} onClick={() => void refreshSummary().catch(() => {})}>
+                <UiButton variant="secondary" className="secondary-button" type="button" disabled={daemonLoading} onClick={() => void refreshSummary().catch(() => {})}>
                   <RefreshCw aria-hidden="true" size={15} />
                   {t("common.actions.refresh")}
-                </button>
+                </UiButton>
               ) : null}
             </div>
-          </section>
+          </Section>
         </div>
       </div>
       <footer className="settings-actions">
         <span role="status">{saving ? t("common.actions.saving") : null}</span>
         <div>
-          <button className="secondary-button" type="button" onClick={onClose}>
+          <UiButton variant="secondary" className="secondary-button" type="button" onClick={onClose}>
             {t("common.actions.cancel")}
-          </button>
-          <button className="primary-button" type="submit" disabled={loading || saving} aria-busy={loading || saving || undefined}>
+          </UiButton>
+          <UiButton variant="primary" className="primary-button" type="submit" disabled={loading || saving} aria-busy={loading || saving || undefined}>
             {saving ? t("common.actions.saving") : t("common.actions.saveChanges")}
-          </button>
+          </UiButton>
         </div>
       </footer>
       {daemonSettingsOpen ? (

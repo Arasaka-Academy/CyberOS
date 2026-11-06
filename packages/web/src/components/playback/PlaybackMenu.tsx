@@ -1,3 +1,4 @@
+import { Button as UiButton } from "@cyberos/ui";
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Play, X } from "lucide-react";
@@ -74,18 +75,18 @@ export function PlaybackMenu({ onOpenBluetoothSettings }: { onOpenBluetoothSetti
 
   const label = `${c.t("playback.open")} · ${c.t(`playback.state.${c.state}`)}`;
   return <>
-    <button ref={triggerRef} type="button" className="settings-button agent-settings-button agent-playback-button"
+    <UiButton iconOnly variant="ghost" ref={triggerRef} type="button" className="settings-button agent-settings-button agent-playback-button"
       data-playback-state={c.state} aria-label={label} data-tooltip={label} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? id : undefined}
       onClick={() => setOpen((current) => !current)}>
       <Play size={18} aria-hidden="true" />
-    </button>
+    </UiButton>
     <PlaybackDetails c={c} onOpenBluetoothSettings={onOpenBluetoothSettings} />
     {open ? createPortal(
       <section id={id} ref={menuRef} tabIndex={-1} className="playback-menu" role="dialog" aria-label={c.t("playback.nowPlaying")} style={layout}>
         <header>
           <PlaybackTargetSelect />
           <span className="playback-menu-state" data-playback-state={c.state}>{c.t(`playback.state.${c.state}`)}</span>
-          <button className="icon-button" type="button" aria-label={c.t("common.actions.close")} data-tooltip={c.t("common.actions.close")} onClick={() => close(true)}><X size={18} aria-hidden="true" /></button>
+          <UiButton variant="ghost" iconOnly className="icon-button" type="button" aria-label={c.t("common.actions.close")} data-tooltip={c.t("common.actions.close")} onClick={() => close(true)}><X size={18} aria-hidden="true" /></UiButton>
         </header>
         <PlaybackControls c={c} variant="menu" beforeDetails={() => close(true)} />
       </section>, document.querySelector(".app-shell") ?? document.body

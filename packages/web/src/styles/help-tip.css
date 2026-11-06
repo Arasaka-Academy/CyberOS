@@ -47,12 +47,12 @@ button.help-tip-trigger {
 button.help-tip-trigger:hover,
 button.help-tip-trigger[aria-expanded="true"] {
   border-color: var(--line);
-  color: var(--cyber-yellow);
+  color: var(--hud-yellow);
   background: var(--surface-hover);
 }
 
 button.help-tip-trigger:focus-visible {
-  outline: 2px solid var(--cyber-cyan);
+  outline: 2px solid var(--hud-cyan);
   outline-offset: 2px;
 }
 

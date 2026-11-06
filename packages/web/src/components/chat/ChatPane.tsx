@@ -1,3 +1,4 @@
+import { Button as UiButton, Checkbox, DialogActions, DialogHeader, EmptyState, Input } from "@cyberos/ui";
 import { ModalPortal } from "../common/ModalPortal.js";
 import { Fragment, FormEvent, KeyboardEvent, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import ReactMarkdown from "react-markdown";
@@ -165,7 +166,7 @@ function SessionList({
           : baseLabel;
 
         return (
-          <button
+          <UiButton variant="ghost"
             key={item.id}
             type="button"
             className={item.id === activeSessionId ? "session-item is-active" : "session-item"}
@@ -180,7 +181,7 @@ function SessionList({
                 {item.pendingApprovalCount > 9 ? "9+" : item.pendingApprovalCount}
               </span>
             ) : null}
-          </button>
+          </UiButton>
         );
       })}
     </nav>
@@ -415,7 +416,7 @@ function ChatPaneContent({
           </dl>
         </div>
         <div className="approval-actions">
-          <button
+          <UiButton variant="ghost"
             type="button"
             className="approval-approve"
             onClick={(event) => {
@@ -429,8 +430,8 @@ function ChatPaneContent({
           >
             <Check aria-hidden="true" size={15} />
             <span>{t("common.actions.approve")}</span>
-          </button>
-          <button
+          </UiButton>
+          <UiButton variant="ghost"
             type="button"
             className="approval-reject"
             onClick={() => onRejectCapability(approval)}
@@ -438,7 +439,7 @@ function ChatPaneContent({
           >
             <X aria-hidden="true" size={15} />
             <span>{t("common.actions.reject")}</span>
-          </button>
+          </UiButton>
         </div>
       </article>
     );
@@ -453,14 +454,14 @@ function ChatPaneContent({
         </div>
 
         <div className="agent-list-head">
-          <button
+          <UiButton iconOnly variant="ghost"
             type="button"
             onClick={onCreateAgent}
             data-tooltip={t("common.actions.newAgent")}
             aria-label={t("common.actions.newAgent")}
           >
             <Plus aria-hidden="true" size={18} />
-          </button>
+          </UiButton>
         </div>
 
         <SessionList
@@ -482,7 +483,7 @@ function ChatPaneContent({
           >
             <span aria-hidden="true" />
           </div>
-          <button
+          <UiButton variant="ghost"
             className="agent-notification-button"
             type="button"
             onClick={onOpenNotifications}
@@ -495,11 +496,11 @@ function ChatPaneContent({
                 {notificationUnreadCount > 99 ? "99+" : notificationUnreadCount}
               </span>
             ) : null}
-          </button>
+          </UiButton>
           {voiceEntry}
           {playbackEntry}
           {/* Keep focus on the trigger while loading so the dialog can restore it on close. */}
-          <button
+          <UiButton iconOnly variant="ghost"
             className="settings-button agent-settings-button"
             type="button"
             onClick={() => { if (!settingsLoading) onOpenSettings(); }}
@@ -509,7 +510,7 @@ function ChatPaneContent({
             aria-label={t("common.actions.systemSettings")}
           >
             {settingsLoading ? <LoaderCircle aria-hidden="true" className="spin" size={18} /> : <Settings aria-hidden="true" size={18} />}
-          </button>
+          </UiButton>
           <PowerControl onRequest={onRequestSystemPower} />
         </div>
       </aside> : null}
@@ -531,7 +532,7 @@ function ChatPaneContent({
           <div className="chat-header-copy">
             <h2 ref={headingRef} tabIndex={compact ? -1 : undefined}>{activeSessionTitle}</h2>
           </div>
-          <button
+          <UiButton variant="ghost" iconOnly
             type="button"
             className="icon-button chat-delete-session-button"
             onClick={() => setDeleteConfirmOpen(true)}
@@ -540,7 +541,7 @@ function ChatPaneContent({
             aria-label={t("chat.deleteSession")}
           >
             <Trash2 aria-hidden="true" size={17} />
-          </button>
+          </UiButton>
         </header>}
 
         <div
@@ -605,11 +606,11 @@ function ChatPaneContent({
               ) : null}
             </>
           ) : transcriptPhase === "ready" ? (
-            <div className="empty-state">
-              <Bot aria-hidden="true" size={22} />
-              <strong>{t("chat.emptyTitle")}</strong>
+            <EmptyState className="empty-state" icon={<Bot aria-hidden="true" size={22} />} title={t("chat.emptyTitle")}>
+
+
               <span>{t("chat.emptyBody")}</span>
-            </div>
+            </EmptyState>
           ) : null}
           </div>
         </div>
@@ -631,7 +632,7 @@ function ChatPaneContent({
                 <MessageSquarePlus aria-hidden="true" size={15} />
                 <code data-tooltip={composerPath}>{composerPath}</code>
               </div>
-              <button
+              <UiButton iconOnly variant="ghost"
                 type="button"
                 className="composer-path-remove"
                 onClick={onClearComposerPath}
@@ -639,7 +640,7 @@ function ChatPaneContent({
                 aria-label={t("common.actions.removePath")}
               >
                 <X aria-hidden="true" size={14} />
-              </button>
+              </UiButton>
             </div>
           ) : null}
           <textarea
@@ -672,7 +673,7 @@ function ChatPaneContent({
             <div className="composer-actions">
               {activeAgentTurn ? (
                 <div className="composer-delivery" role="group" aria-label={t("chat.deliveryMode")}>
-                  <button
+                  <UiButton variant="ghost"
                     type="button"
                     className={deliveryMode === "steer" ? "is-active" : ""}
                     aria-pressed={deliveryMode === "steer"}
@@ -682,8 +683,8 @@ function ChatPaneContent({
                   >
                     <CornerDownLeft aria-hidden="true" size={15} />
                     <span className="visually-hidden">{t("chat.steer")}</span>
-                  </button>
-                  <button
+                  </UiButton>
+                  <UiButton variant="ghost"
                     type="button"
                     className={deliveryMode === "follow_up" ? "is-active" : ""}
                     aria-pressed={deliveryMode === "follow_up"}
@@ -693,11 +694,11 @@ function ChatPaneContent({
                   >
                     <ListEnd aria-hidden="true" size={15} />
                     <span className="visually-hidden">{t("chat.followUp")}</span>
-                  </button>
+                  </UiButton>
                 </div>
               ) : null}
               {retryJobId ? (
-                <button
+                <UiButton variant="secondary"
                   className="secondary-button"
                   type="button"
                   onClick={onRetryInterruptedJob}
@@ -707,9 +708,9 @@ function ChatPaneContent({
                 >
                   <RotateCcw aria-hidden="true" size={16} />
                   <span>{t("chat.retry")}</span>
-                </button>
+                </UiButton>
               ) : null}
-              <button
+              <UiButton variant="secondary"
                 className="secondary-button"
                 type="button"
                 onClick={onCancelActiveJob}
@@ -719,8 +720,8 @@ function ChatPaneContent({
               >
                 <CircleStop aria-hidden="true" size={16} />
                 <span>{t("common.actions.stop")}</span>
-              </button>
-              <button
+              </UiButton>
+              <UiButton variant="primary"
                 className="primary-button"
                 type="submit"
                 disabled={
@@ -737,13 +738,13 @@ function ChatPaneContent({
               >
                 <ComposerIcon aria-hidden="true" className={composerIconClass} size={16} />
                 <span>{t("common.actions.send")}</span>
-              </button>
+              </UiButton>
             </div>
           </div>
         </form>
       </section> : null}
 
-      {compact && sessionsOpen ? <ModalPortal className="mobile-sessions-backdrop" onRequestClose={() => setSessionsOpen(false)} onMouseDown={() => setSessionsOpen(false)}><section ref={sessionsRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="mobile-sessions-title" className="mobile-sessions-dialog" onMouseDown={(event) => event.stopPropagation()}><header><h2 id="mobile-sessions-title">{t("mobile.sessions")}</h2><button type="button" onClick={() => setSessionsOpen(false)} aria-label={t("common.actions.close")}><X size={20} aria-hidden="true" /></button></header><button type="button" className="secondary-button" onClick={() => { onCreateAgent(); setSessionsOpen(false); }}><Plus size={18} aria-hidden="true" />{t("common.actions.newAgent")}</button><SessionList sessions={sessions} activeSessionId={activeSessionId} workspaceAgentTitle={workspaceAgentTitle} locale={locale} ariaLabel={t("chat.agentSessions")} onSelectSession={(item) => { onSelectSession(item); setSessionsOpen(false); }} /></section></ModalPortal> : null}
+      {compact && sessionsOpen ? <ModalPortal className="mobile-sessions-backdrop" onRequestClose={() => setSessionsOpen(false)} onMouseDown={() => setSessionsOpen(false)}><section ref={sessionsRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="mobile-sessions-title" className="mobile-sessions-dialog" onMouseDown={(event) => event.stopPropagation()}><DialogHeader title={t("mobile.sessions")} headingId="mobile-sessions-title" actions={<><UiButton iconOnly variant="ghost" type="button" onClick={() => setSessionsOpen(false)} aria-label={t("common.actions.close")}><X size={20} aria-hidden="true" /></UiButton></>} /><UiButton variant="secondary" type="button" className="secondary-button" onClick={() => { onCreateAgent(); setSessionsOpen(false); }}><Plus size={18} aria-hidden="true" />{t("common.actions.newAgent")}</UiButton><SessionList sessions={sessions} activeSessionId={activeSessionId} workspaceAgentTitle={workspaceAgentTitle} locale={locale} ariaLabel={t("chat.agentSessions")} onSelectSession={(item) => { onSelectSession(item); setSessionsOpen(false); }} /></section></ModalPortal> : null}
 
       {deleteConfirmOpen ? (
         <ModalPortal className="session-delete-backdrop" role="presentation" onRequestClose={() => setDeleteConfirmOpen(false)}>
@@ -755,16 +756,13 @@ function ChatPaneContent({
             aria-modal="true"
             aria-labelledby="session-delete-title"
           >
-            <header>
-              <span className="eyebrow">{t("chat.deleteSessionEyebrow")}</span>
-              <h2 id="session-delete-title">{t("chat.deleteSessionTitle")}</h2>
-            </header>
+            <DialogHeader title={t("chat.deleteSessionTitle")} eyebrow={<>{t("chat.deleteSessionEyebrow")}</>} headingId="session-delete-title" />
             <p>{t("chat.deleteSessionBody", { title: activeSessionTitle })}</p>
-            <footer>
-              <button type="button" className="secondary-button" onClick={() => setDeleteConfirmOpen(false)}>
+            <DialogActions>
+              <UiButton variant="secondary" type="button" className="secondary-button" onClick={() => setDeleteConfirmOpen(false)}>
                 {t("common.actions.cancel")}
-              </button>
-              <button
+              </UiButton>
+              <UiButton variant="danger"
                 type="button"
                 className="danger-button"
                 disabled={deleteDisabled}
@@ -775,8 +773,8 @@ function ChatPaneContent({
               >
                 <Trash2 aria-hidden="true" size={15} />
                 <span>{t("chat.confirmDeleteSession")}</span>
-              </button>
-            </footer>
+              </UiButton>
+            </DialogActions>
           </section>
         </ModalPortal>
       ) : null}
@@ -814,15 +812,12 @@ function ChatPaneContent({
               });
             }}
           >
-            <header>
-              <span className="eyebrow">{t("chat.capabilityApproval.kicker")}</span>
-              <h2 id="approval-secret-title">{t("chat.capabilityApproval.localConfirmation")}</h2>
-            </header>
+            <DialogHeader title={t("chat.capabilityApproval.localConfirmation")} eyebrow={<>{t("chat.capabilityApproval.kicker")}</>} headingId="approval-secret-title" />
             <p>{typeof approvalDialog.proposal.summary === "string" ? approvalDialog.proposal.summary : t("chat.capabilityApproval.detail")}</p>
             {capabilitySecretRequirements(approvalDialog).map((requirement) => (
               <label key={requirement.name} className="approval-secret-field">
                 <span>{requirement.label}</span>
-                <input
+                <Input
                   type="password"
                   name={requirement.name}
                   required
@@ -835,19 +830,19 @@ function ChatPaneContent({
             ))}
             {approvalDialog.requiresConfirmation ? (
               <label className="approval-strong-confirmation">
-                <input type="checkbox" required />
+                <Checkbox  required />
                 <span>{t("chat.capabilityApproval.confirm")}</span>
               </label>
             ) : null}
-            <footer>
-              <button type="button" className="secondary-button" onClick={closeApprovalDialog}>
+            <DialogActions>
+              <UiButton variant="secondary" type="button" className="secondary-button" onClick={closeApprovalDialog}>
                 {t("common.actions.cancel")}
-              </button>
-              <button type="submit" className={approvalDialog.risk === "high" || approvalDialog.risk === "critical" ? "danger-button" : "primary-button"}>
+              </UiButton>
+              <UiButton variant={approvalDialog.risk === "high" || approvalDialog.risk === "critical" ? "danger" : "primary"} type="submit" className={approvalDialog.risk === "high" || approvalDialog.risk === "critical" ? "danger-button" : "primary-button"}>
                 <Check aria-hidden="true" size={15} />
                 <span>{t("common.actions.approve")}</span>
-              </button>
-            </footer>
+              </UiButton>
+            </DialogActions>
           </form>
         </ModalPortal>
       ) : null}
@@ -998,7 +993,7 @@ function WorkspacePathButton({
   onOpenWorkspacePath: (path: string) => void;
 }) {
   return (
-    <button
+    <UiButton variant="ghost"
       type="button"
       className="message-path-button"
       data-workspace-path={workspacePath}
@@ -1006,7 +1001,7 @@ function WorkspacePathButton({
       onClick={() => onOpenWorkspacePath(workspacePath)}
     >
       {children}
-    </button>
+    </UiButton>
   );
 }
 

@@ -32,7 +32,7 @@
 .share-protocol-share-toggle { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11.5px; white-space: nowrap; }
 .share-protocol-share-tools { display: flex; align-items: center; gap: 6px; padding-left: 12px; border-left: 1px solid var(--line); }
 .share-protocol-share-actions .management-icon-action { min-height: 32px; border: 1px solid var(--line); color: var(--muted); background: var(--surface); }
-.share-protocol-share-actions .management-icon-action:hover:not(:disabled) { border-color: var(--cyber-cyan); color: var(--cyber-cyan); background: var(--surface-hover); }
+.share-protocol-share-actions .management-icon-action:hover:not(:disabled) { border-color: var(--hud-cyan); color: var(--hud-cyan); background: var(--surface-hover); }
 .share-protocol-share-actions .management-icon-action.is-danger:not(:disabled) { color: var(--danger-ui-text); }
 .share-protocol-share-actions .management-icon-action.is-danger:hover:not(:disabled) { border-color: var(--danger-ui-text); color: var(--danger-ui-text); background: var(--danger-bg-soft); }
 @container share-protocol (max-width: 520px) {

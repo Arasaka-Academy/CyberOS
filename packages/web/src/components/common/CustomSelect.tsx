@@ -1,4 +1,5 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type Ref } from "react";
+import { Button as UiButton, useFieldControl } from "@cyberos/ui";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type AriaAttributes, type KeyboardEvent, type Ref } from "react";
 import { Check, ChevronDown } from "lucide-react";
 import { createPortal } from "react-dom";
 import { usePopoverBack } from "./ModalPortal.js";
@@ -23,6 +24,8 @@ interface CustomSelectProps<T extends string = string> {
   required?: boolean;
   triggerRef?: Ref<HTMLButtonElement>;
   ariaBusy?: boolean;
+  "aria-describedby"?: AriaAttributes["aria-describedby"];
+  "aria-invalid"?: AriaAttributes["aria-invalid"];
 }
 
 function firstEnabledIndex<T extends string>(options: CustomSelectOption<T>[]) {
@@ -72,10 +75,13 @@ export function CustomSelect<T extends string = string>({
   className,
   required = false,
   triggerRef: externalTriggerRef,
-  ariaBusy
+  ariaBusy,
+  "aria-describedby": describedBy,
+  "aria-invalid": invalid
 }: CustomSelectProps<T>) {
   const generatedId = useId();
-  const triggerId = id ?? generatedId;
+  const field = useFieldControl({ id, "aria-describedby": describedBy, "aria-invalid": invalid });
+  const triggerId = field.id ?? generatedId;
   const listboxId = `${triggerId}-listbox`;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -182,7 +188,7 @@ export function CustomSelect<T extends string = string>({
     }
 
     setOpen(false);
-    requestAnimationFrame(() => triggerRef.current?.focus());
+    triggerRef.current?.focus();
   }
 
   function handleTriggerKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
@@ -247,7 +253,7 @@ export function CustomSelect<T extends string = string>({
         }
       }}
     >
-      <button
+      <UiButton variant="ghost"
         id={triggerId}
         ref={(element) => {
           triggerRef.current = element;
@@ -262,8 +268,8 @@ export function CustomSelect<T extends string = string>({
         aria-controls={open ? listboxId : undefined}
         aria-activedescendant={activeOptionId}
         aria-busy={ariaBusy || undefined}
-        aria-invalid={validationError ? true : undefined}
-        aria-describedby={validationError ? errorId : undefined}
+        aria-invalid={validationError ? true : field["aria-invalid"]}
+        aria-describedby={[field["aria-describedby"], validationError ? errorId : undefined].filter(Boolean).join(" ") || undefined}
         disabled={disabled || options.length === 0}
         onClick={() => {
           setActiveIndex(fallbackActiveIndex);
@@ -273,7 +279,7 @@ export function CustomSelect<T extends string = string>({
       >
         <span className="custom-select-value">{selectedOption?.label ?? placeholder}</span>
         <ChevronDown aria-hidden="true" size={16} />
-      </button>
+      </UiButton>
       {required ? <input
         className="custom-select-validation"
         type="text"

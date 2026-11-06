@@ -1,0 +1,11 @@
+/* Generated from packages/react/src/badge.module.css. Regenerate in CyberUI with pnpm registry:build; after installation, edit this file freely. */
+@layer theme, base, components, utilities;
+@reference './tailwind-theme.css';
+
+@layer components {
+.badge { @apply tw:inline-flex tw:items-center tw:gap-cyber-sm; font: 12px/1.5 var(--cyber-font-mono); @apply tw:tracking-[.04em] tw:p-[3px_9px]; background: var(--cyber-soft); @apply tw:text-cyber-ink tw:wrap-anywhere; }
+.badge[data-tone='accent'] { @apply tw:text-cyber-on-accent; background: var(--cyber-accent); }
+.badge[data-tone='success'] { @apply tw:text-cyber-success; }
+.badge[data-tone='warning'] { @apply tw:text-cyber-warning; }
+.badge[data-tone='danger'] { @apply tw:text-cyber-danger; }
+}

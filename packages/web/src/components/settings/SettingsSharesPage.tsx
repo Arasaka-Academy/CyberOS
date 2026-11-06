@@ -1,3 +1,4 @@
+import { Button as UiButton, Field, Input, Notice } from "@cyberos/ui";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Check, KeyRound, LoaderCircle, Share2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -172,7 +173,7 @@ export function SettingsSharesContent({
 
   return (
     <div className="settings-content-body">
-      {error ? <p className="settings-inline-error" role="alert">{error}</p> : null}
+      {error ? <Notice className="settings-inline-error" role="alert" tone="danger">{error}</Notice> : null}
       <div className="settings-page-grid settings-shares-grid">
         <form className="settings-section-card settings-field-wide" onSubmit={onPublishingSubmit}>
           <header>
@@ -192,7 +193,7 @@ export function SettingsSharesContent({
             />
           </div>
           <div className="settings-card-actions">
-            <button
+            <UiButton variant="primary"
               className="primary-button"
               type="submit"
               disabled={disabled || !publishingChanged}
@@ -202,7 +203,7 @@ export function SettingsSharesContent({
                 ? <LoaderCircle className="is-spinning" aria-hidden="true" size={15} />
                 : <Check aria-hidden="true" size={15} />}
               {t("common.actions.saveChanges")}
-            </button>
+            </UiButton>
           </div>
         </form>
 
@@ -226,17 +227,17 @@ export function SettingsSharesContent({
           </div>
 
           <fieldset className="settings-field-grid" disabled={disabled}>
-            <label className="settings-field-wide">
-              <span>{t("settings.shares.username")}</span>
-              <input
+            <Field className="settings-field-wide" label={t("settings.shares.username")}>
+
+              <Input
                 value={username}
                 autoComplete="username"
                 onChange={(event) => onUsernameChange(event.target.value)}
               />
-            </label>
-            <label>
-              <span>{t("settings.shares.newPassword")}</span>
-              <input
+            </Field>
+            <Field label={t("settings.shares.newPassword")}>
+
+              <Input
                 type="password"
                 value={password}
                 autoComplete="new-password"
@@ -245,26 +246,26 @@ export function SettingsSharesContent({
                   : t("settings.shares.passwordPlaceholder")}
                 onChange={(event) => onPasswordChange(event.target.value)}
               />
-            </label>
-            <label>
-              <span>{t("settings.shares.confirmPassword")}</span>
-              <input
+            </Field>
+            <Field label={t("settings.shares.confirmPassword")}>
+
+              <Input
                 type="password"
                 value={passwordConfirmation}
                 autoComplete="new-password"
                 onChange={(event) => onPasswordConfirmationChange(event.target.value)}
               />
-            </label>
+            </Field>
           </fieldset>
 
           {validationError && accountChanged ? (
-            <p className="settings-inline-error" role="alert">
+            <Notice className="settings-inline-error" role="alert" tone="danger">
               {t(`settings.shares.${validationError}`)}
-            </p>
+            </Notice>
           ) : null}
 
           <div className="settings-card-actions">
-            <button
+            <UiButton variant="primary"
               className="primary-button"
               type="submit"
               disabled={disabled || !accountChanged || Boolean(validationError)}
@@ -274,7 +275,7 @@ export function SettingsSharesContent({
                 ? <LoaderCircle className="is-spinning" aria-hidden="true" size={15} />
                 : <Check aria-hidden="true" size={15} />}
               {t("common.actions.save")}
-            </button>
+            </UiButton>
           </div>
         </form>
       </div>

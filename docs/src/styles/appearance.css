@@ -1,0 +1,29 @@
+.docs-appearance { position: relative; }
+.docs-appearance summary { display: grid; place-items: center; width: 36px; height: 36px; color: var(--cyber-ink); cursor: pointer; list-style: none; }
+.docs-appearance summary::-webkit-details-marker { display: none; }
+.docs-appearance-panel { position: absolute; z-index: 100; right: 0; top: calc(100% + 12px); width: min(320px, calc(100vw - 32px)); padding: 18px; color: var(--cyber-ink); background: var(--cyber-bg); border: 1px solid var(--cyber-line); box-shadow: 4px 4px 0 var(--cyber-soft); }
+.docs-appearance-panel > span { display: block; margin-bottom: 8px; font-size: 12px; color: var(--cyber-muted); }
+.docs-appearance-panel > div { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.docs-appearance-panel > div:last-child { margin-bottom: 0; }
+.docs-appearance-panel button { padding: 7px 10px; font: inherit; font-size: 12px; color: var(--cyber-ink); background: var(--cyber-bg); border: 1px solid var(--cyber-line); cursor: pointer; }
+.docs-appearance-panel button[aria-pressed='true'] { color: var(--cyber-on-accent); background: var(--cyber-accent); border-color: var(--cyber-accent); }
+html { background: var(--cyber-bg); }
+.site-title img { filter: var(--cyberos-logo-filter); }
+:root { --sl-color-text-invert: var(--cyber-on-accent); }
+
+/* Diagram geometry is rendered by Mermaid; semantic paint follows the palette. */
+.sl-markdown-content pre.mermaid { background: var(--cyber-bg) !important; }
+.sl-markdown-content pre.mermaid:not([data-processed]) { background: var(--cyber-soft) !important; }
+.sl-markdown-content pre.mermaid svg { color: var(--cyber-ink) !important; }
+.sl-markdown-content pre.mermaid .node :is(rect, polygon, circle, ellipse, path),
+.sl-markdown-content pre.mermaid :is(.actor, .labelBox, .activation0, .activation1, .activation2) { fill: var(--cyber-soft) !important; stroke: var(--cyber-line) !important; }
+.sl-markdown-content pre.mermaid .cluster rect { fill: var(--cyber-bg) !important; stroke: var(--cyber-line) !important; }
+.sl-markdown-content pre.mermaid :is(.nodeLabel, .cluster-label, .edgeLabel, .label, text, tspan, .messageText, .noteText) { color: var(--cyber-ink) !important; fill: var(--cyber-ink) !important; }
+.sl-markdown-content pre.mermaid .edgeLabel :is(p, span) { color: var(--cyber-ink) !important; background: var(--cyber-bg) !important; }
+.sl-markdown-content pre.mermaid :is(.flowchart-link, .actor-line, .messageLine0, .messageLine1) { stroke: var(--cyber-accent2) !important; }
+.sl-markdown-content pre.mermaid marker path { fill: var(--cyber-accent2) !important; stroke: var(--cyber-accent2) !important; }
+@media (max-width: 49.999rem) {
+  .docs-appearance summary { width: 44px; height: 44px; }
+  .docs-appearance-panel { position: fixed; top: calc(var(--sl-nav-height) + 16px); left: 16px; right: 16px; width: auto; max-height: calc(100dvh - var(--sl-nav-height) - 32px); overflow-y: auto; }
+  .docs-appearance-panel button { min-height: 44px; }
+}

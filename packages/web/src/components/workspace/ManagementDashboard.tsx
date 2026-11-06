@@ -1,3 +1,4 @@
+import { Button as UiButton } from "@cyberos/ui";
 import { useCallback, useEffect, useMemo, useState, type ComponentType, type KeyboardEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, GripVertical, PanelsTopLeft, RotateCcw } from "lucide-react";
@@ -282,7 +283,7 @@ function DashboardWidget({
     <div className="management-dashboard-widget" data-widget-id={item.id} data-editing={editable || undefined}>
       {editable ? (
         <div className="management-widget-chrome">
-          <button
+          <UiButton iconOnly variant="ghost"
             type="button"
             className="management-widget-drag-handle"
             onKeyDown={handleKeyDown}
@@ -291,7 +292,7 @@ function DashboardWidget({
             aria-describedby={`${dashboard.dashboardId}-layout-instructions`}
           >
             <GripVertical aria-hidden="true" size={15} />
-          </button>
+          </UiButton>
           <span>{item.title}</span>
         </div>
       ) : null}

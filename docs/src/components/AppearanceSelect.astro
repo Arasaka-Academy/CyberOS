@@ -1,0 +1,44 @@
+---
+import { appearanceSchemes } from '@cyberos/shared/appearance';
+---
+<details class="docs-appearance">
+  <summary aria-label="界面外观" data-tooltip="界面外观"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/><path fill="currentColor" d="M12 3a9 9 0 0 1 0 18Z"/></svg></summary>
+  <div class="docs-appearance-panel">
+    <span>配色</span>
+    <div role="group" aria-label="配色">{appearanceSchemes.map(scheme => <button type="button" data-scheme-choice={scheme} aria-pressed="false">{scheme}</button>)}</div>
+    <span>显示模式</span>
+    <div role="group" aria-label="显示模式"><button type="button" data-mode-choice="dark" aria-pressed="false">深色</button><button type="button" data-mode-choice="light" aria-pressed="false">浅色</button></div>
+  </div>
+</details>
+
+<script>
+  import { getAppearance, mountAppearance, setAppearance } from '../../../packages/ui/src/theme';
+  import { APPEARANCE_EVENT } from '@cyberos/shared/appearance';
+  mountAppearance();
+  function refreshChoices() {
+    const current = getAppearance();
+    document.querySelectorAll<HTMLElement>('[data-scheme-choice]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.schemeChoice === current.scheme)));
+    document.querySelectorAll<HTMLElement>('[data-mode-choice]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.modeChoice === current.mode)));
+  }
+  document.addEventListener('click', event => {
+    const button = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-scheme-choice], [data-mode-choice]') : null;
+    if (button) setAppearance({ ...getAppearance(), ...(button.dataset.schemeChoice ? { scheme: button.dataset.schemeChoice as ReturnType<typeof getAppearance>['scheme'] } : { mode: button.dataset.modeChoice === 'light' ? 'light' : 'dark' }) });
+    for (const details of document.querySelectorAll<HTMLDetailsElement>('.docs-appearance[open]')) {
+      if (event.target instanceof Node && !details.contains(event.target)) details.open = false;
+    }
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    const opened = document.querySelectorAll<HTMLDetailsElement>('.docs-appearance[open]');
+    if (!opened.length) return;
+    event.preventDefault();
+    event.stopPropagation();
+    for (const details of opened) {
+      details.open = false;
+      details.querySelector('summary')?.focus();
+    }
+  });
+  window.addEventListener(APPEARANCE_EVENT, refreshChoices);
+  document.addEventListener('astro:page-load', refreshChoices);
+  refreshChoices();
+</script>

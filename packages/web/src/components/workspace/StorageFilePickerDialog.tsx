@@ -1,3 +1,4 @@
+import { Button as UiButton, DialogActions, DialogHeader, Input, Notice } from "@cyberos/ui";
 import { ModalPortal } from "../common/ModalPortal.js";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from "react";
 import {
@@ -353,28 +354,15 @@ export function StorageFilePickerDialog({
         tabIndex={-1}
         onKeyDown={handleDialogKeyDown}
       >
-        <header className="storage-file-picker-header">
-          <div className="storage-file-picker-heading">
-            <span className="create-form-icon" aria-hidden="true">{mode === "directory" ? <FolderOpen size={20} /> : mode === "files" ? <File size={20} /> : <Disc3 size={20} />}</span>
-            <div>
-              <span className="eyebrow">
+        <DialogHeader className="storage-file-picker-header" title={mode === "directory"
+                  ? directoryCopy.title
+                  : activeFileCopy.title} description={mode === "directory"
+                  ? directoryCopy.description
+                  : activeFileCopy.description} headingLevel={3} headingId="storage-file-picker-title" actions={<><span className="create-form-icon" aria-hidden="true">{mode === "directory" ? <FolderOpen size={20} /> : mode === "files" ? <File size={20} /> : <Disc3 size={20} />}</span><span className="eyebrow">
                 {mode === "directory"
                   ? directoryCopy.eyebrow
                   : activeFileCopy.eyebrow}
-              </span>
-              <h3 id="storage-file-picker-title">
-                {mode === "directory"
-                  ? directoryCopy.title
-                  : activeFileCopy.title}
-              </h3>
-              <p>
-                {mode === "directory"
-                  ? directoryCopy.description
-                  : activeFileCopy.description}
-              </p>
-            </div>
-          </div>
-          <button
+              </span><UiButton variant="ghost" iconOnly
             type="button"
             className="management-icon-action"
             onClick={onCancel}
@@ -386,8 +374,7 @@ export function StorageFilePickerDialog({
               : t("workspace.management.virtualMachines.isoPickerClose")}
           >
             <X aria-hidden="true" size={16} />
-          </button>
-        </header>
+          </UiButton></>} />
 
         <div className="storage-file-picker-layout">
           <aside className="storage-file-picker-pools">
@@ -403,7 +390,7 @@ export function StorageFilePickerDialog({
                 </div>
               ) : (
                 availablePools.map((pool) => (
-                  <button
+                  <UiButton variant="ghost"
                     key={pool.id}
                     type="button"
                     className={`storage-file-picker-pool${selectedPoolId === pool.id ? " is-selected" : ""}`}
@@ -420,7 +407,7 @@ export function StorageFilePickerDialog({
                       {pool.status === "ready" ? t("workspace.storagePoolStates.ready") : pool.status === "warning" ? t("workspace.storagePoolStates.warning") : t("workspace.storagePoolStates.unknown")}
                     </span>
                     {selectedPoolId === pool.id ? <Check aria-hidden="true" size={14} /> : null}
-                  </button>
+                  </UiButton>
                 ))
               )}
             </div>
@@ -432,15 +419,15 @@ export function StorageFilePickerDialog({
                 <span>{mode === "directory" ? directoryCopy.eyebrow : activeFileCopy.list}</span>
                 <nav className="storage-file-picker-breadcrumbs" aria-label={t("workspace.breadcrumbs")}>
                   {selectedPool ? (
-                    <button type="button" onClick={() => openDirectory(pickerRootPath)}>
+                    <UiButton variant="ghost" type="button" onClick={() => openDirectory(pickerRootPath)}>
                       <HardDrive aria-hidden="true" size={13} />
                       <span>{selectedPool.name}</span>
-                    </button>
+                    </UiButton>
                   ) : null}
                   {breadcrumbs.map((crumb) => (
-                    <button key={crumb.path} type="button" onClick={() => openDirectory(crumb.path)}>
+                    <UiButton variant="ghost" key={crumb.path} type="button" onClick={() => openDirectory(crumb.path)}>
                       <span>{crumb.name}</span>
-                    </button>
+                    </UiButton>
                   ))}
                 </nav>
               </div>
@@ -448,7 +435,7 @@ export function StorageFilePickerDialog({
                 {mode === "directory" && onRequestCreateFolder ? (
                   createFolderOpen ? (
                     <form className="storage-file-picker-create-folder" onSubmit={(event) => void submitCreateFolder(event)}>
-                      <input
+                      <Input
                         autoFocus
                         value={createFolderName}
                         onChange={(event) => setCreateFolderName(event.target.value)}
@@ -456,21 +443,21 @@ export function StorageFilePickerDialog({
                         aria-label={t("workspace.actions.folderName")}
                         disabled={createFolderSubmitting}
                       />
-                      <button type="submit" disabled={createFolderSubmitting || !createFolderName.trim()} aria-busy={createFolderSubmitting || undefined} data-tooltip={t("workspace.downloads.requestCreateFolder")} aria-label={t("workspace.downloads.requestCreateFolder")}>
+                      <UiButton iconOnly variant="ghost" type="submit" disabled={createFolderSubmitting || !createFolderName.trim()} aria-busy={createFolderSubmitting || undefined} data-tooltip={t("workspace.downloads.requestCreateFolder")} aria-label={t("workspace.downloads.requestCreateFolder")}>
                         {createFolderSubmitting ? <LoaderCircle className="is-spinning" aria-hidden="true" size={14} /> : <Check aria-hidden="true" size={14} />}
-                      </button>
-                      <button type="button" onClick={() => { setCreateFolderOpen(false); setCreateFolderName(""); }} disabled={createFolderSubmitting} data-tooltip={t("common.actions.cancel")} aria-label={t("common.actions.cancel")}>
+                      </UiButton>
+                      <UiButton iconOnly variant="ghost" type="button" onClick={() => { setCreateFolderOpen(false); setCreateFolderName(""); }} disabled={createFolderSubmitting} data-tooltip={t("common.actions.cancel")} aria-label={t("common.actions.cancel")}>
                         <X aria-hidden="true" size={14} />
-                      </button>
+                      </UiButton>
                     </form>
                   ) : (
-                    <button type="button" className="storage-file-picker-create-folder-trigger" onClick={() => setCreateFolderOpen(true)} disabled={!selectedPool || loading} data-tooltip={t("workspace.downloads.newFolder")} aria-label={t("workspace.downloads.newFolder")}>
+                    <UiButton variant="ghost" type="button" className="storage-file-picker-create-folder-trigger" onClick={() => setCreateFolderOpen(true)} disabled={!selectedPool || loading} data-tooltip={t("workspace.downloads.newFolder")} aria-label={t("workspace.downloads.newFolder")}>
                       <FolderPlus aria-hidden="true" size={15} />
                       <span>{t("workspace.downloads.newFolder")}</span>
-                    </button>
+                    </UiButton>
                   )
                 ) : null}
-                <button
+                <UiButton iconOnly variant="ghost"
                   type="button"
                   className="storage-file-picker-up"
                   onClick={() => selectedPool && openDirectory(parentPickerPath(pickerRootPath, currentPath))}
@@ -479,7 +466,7 @@ export function StorageFilePickerDialog({
                   aria-label={t("common.actions.up")}
                 >
                   <ArrowUp aria-hidden="true" size={15} />
-                </button>
+                </UiButton>
               </div>
             </div>
 
@@ -493,10 +480,10 @@ export function StorageFilePickerDialog({
               {loading ? (
                 <div className="storage-file-picker-state"><LoaderCircle className="is-spinning" aria-hidden="true" size={19} /><span>{t("common.states.loading")}</span></div>
               ) : error ? (
-                <div className="storage-file-picker-state storage-file-picker-error">
+                <Notice className="storage-file-picker-state storage-file-picker-error" tone="danger" actions={<><UiButton variant="ghost" type="button" onClick={() => void loadDirectory()}><RefreshCw aria-hidden="true" size={14} />{t("common.actions.refresh")}</UiButton></>}>
                   <span>{error}</span>
-                  <button type="button" onClick={() => void loadDirectory()}><RefreshCw aria-hidden="true" size={14} />{t("common.actions.refresh")}</button>
-                </div>
+
+                </Notice>
               ) : !selectedPool ? (
                 <div className="storage-file-picker-state"><HardDrive aria-hidden="true" size={19} /><span>{t("workspace.management.virtualMachines.isoPickerNoPools")}</span></div>
               ) : entries.length === 0 ? (
@@ -511,7 +498,7 @@ export function StorageFilePickerDialog({
                     ? multiSelection.some((candidate) => candidate.path === entry.path)
                     : selection?.path === entry.path;
                   return (
-                    <button
+                    <UiButton variant="ghost"
                       key={entry.path}
                       type="button"
                       className={`storage-file-picker-row${isSelected ? " is-selected" : ""}`}
@@ -541,7 +528,7 @@ export function StorageFilePickerDialog({
                           : formatBytes(entry.sizeBytes, locale)}
                       </span>
                       {isSelected ? <Check aria-hidden="true" size={15} /> : null}
-                    </button>
+                    </UiButton>
                   );
                 })
               )}
@@ -549,7 +536,7 @@ export function StorageFilePickerDialog({
           </section>
         </div>
 
-        <footer className="storage-file-picker-footer">
+        <DialogActions className="storage-file-picker-footer">
           {mode === "directory" ? (
             <span data-tooltip={currentPath}>{currentPath}</span>
           ) : (
@@ -560,8 +547,8 @@ export function StorageFilePickerDialog({
               : selection?.name ?? fileCopy.none}</span>
           )}
           <div>
-            <button type="button" onClick={onCancel} className="secondary-button">{t("common.actions.cancel")}</button>
-            <button
+            <UiButton variant="secondary" type="button" onClick={onCancel} className="secondary-button">{t("common.actions.cancel")}</UiButton>
+            <UiButton variant="primary"
               type="button"
               className="primary-button create-form-submit"
               onClick={confirmSelection}
@@ -569,9 +556,9 @@ export function StorageFilePickerDialog({
               data-tooltip={currentDirectoryDisabled ? directorySelectionDisabledReason : undefined}
             >
               {mode === "directory" ? directoryCopy.select : activeFileCopy.select}
-            </button>
+            </UiButton>
           </div>
-        </footer>
+        </DialogActions>
       </div>
     </ModalPortal>
   );

@@ -97,7 +97,7 @@
   .composer {
     margin: 0 8px 9px;
     padding: 10px;
-    box-shadow: 4px 4px 0 rgb(255 51 95 / 28%);
+    box-shadow: 4px 4px 0 color-mix(in srgb, var(--cyberos-color-danger) 28%, transparent);
   }
 
   .files-header-actions {

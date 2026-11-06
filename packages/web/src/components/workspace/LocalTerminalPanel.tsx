@@ -1,3 +1,5 @@
+import { Button as UiButton, DialogActions, DialogHeader, Field, Input } from "@cyberos/ui";
+import { APPEARANCE_EVENT } from "@cyberos/shared/appearance";
 import { ModalPortal } from "../common/ModalPortal.js";
 import {
   useCallback,
@@ -415,28 +417,28 @@ export function LocalTerminalPanel({
             <div className="workspace-terminal-notice" role="status">
               <strong>{t("workspace.terminal.takenOverTitle")}</strong>
               <span>{t("workspace.terminal.takenOverBody")}</span>
-              <button type="button" className="secondary-button" onClick={() => reconnect(activeTab.id)}>
+              <UiButton variant="secondary" type="button" className="secondary-button" onClick={() => reconnect(activeTab.id)}>
                 <RefreshCw aria-hidden="true" size={14} />
                 <span>{t("workspace.terminal.takeOver")}</span>
-              </button>
+              </UiButton>
             </div>
           ) : activeTab && activeViewState?.status === "exited" ? (
             <div className="workspace-terminal-notice" role="status">
               <strong>{t("workspace.terminal.exitedTitle")}</strong>
               <span>{t("workspace.terminal.exitedBody")}</span>
-              <button type="button" className="secondary-button" onClick={() => void restartTab(activeTab.id)} disabled={Boolean(pendingAction)}>
+              <UiButton variant="secondary" type="button" className="secondary-button" onClick={() => void restartTab(activeTab.id)} disabled={Boolean(pendingAction)}>
                 <RefreshCw aria-hidden="true" size={14} />
                 <span>{t("workspace.terminal.restart")}</span>
-              </button>
+              </UiButton>
             </div>
           ) : null}
 
           {actionError ? (
             <div className="workspace-terminal-error" role="alert">
               <span>{actionError}</span>
-              <button type="button" onClick={() => setActionError(null)} aria-label={t("common.actions.close")} data-tooltip={t("common.actions.close")}>
+              <UiButton iconOnly variant="ghost" type="button" onClick={() => setActionError(null)} aria-label={t("common.actions.close")} data-tooltip={t("common.actions.close")}>
                 <X aria-hidden="true" size={14} />
-              </button>
+              </UiButton>
             </div>
           ) : null}
         </div>
@@ -445,28 +447,25 @@ export function LocalTerminalPanel({
       {renameCandidate ? (
         <ModalPortal className="file-action-backdrop" role="presentation" onRequestClose={() => setRenameCandidate(null)} closeDisabled={Boolean(pendingAction)} onMouseDown={(event) => event.currentTarget === event.target && setRenameCandidate(null)}>
           <form className="file-action-dialog" role="dialog" aria-modal="true" aria-labelledby="terminal-rename-title" onSubmit={(event) => void submitRename(event)}>
-            <header>
-              <span className="eyebrow">{t("workspace.terminal.rename")}</span>
-              <h2 id="terminal-rename-title">{terminalTabLabel(renameCandidate, t)}</h2>
-            </header>
-            <label className="file-action-field">
-              <span>{t("workspace.terminal.tabName")}</span>
-              <input
+            <DialogHeader title={terminalTabLabel(renameCandidate, t)} eyebrow={<>{t("workspace.terminal.rename")}</>} headingId="terminal-rename-title" />
+            <Field className="file-action-field" label={t("workspace.terminal.tabName")}>
+
+              <Input
                 autoFocus
                 value={renameValue}
                 maxLength={64}
                 onChange={(event) => setRenameValue(event.target.value)}
                 aria-describedby="terminal-rename-hint"
               />
-            </label>
+            </Field>
             <p id="terminal-rename-hint" className="file-action-hint">{t("workspace.terminal.renameHint")}</p>
             {actionError ? <p className="file-action-error" role="alert">{actionError}</p> : null}
-            <footer>
-              <button type="button" className="secondary-button" onClick={() => setRenameCandidate(null)} disabled={Boolean(pendingAction)}>{t("common.actions.cancel")}</button>
-              <button type="submit" className="primary-button" disabled={Boolean(pendingAction)} aria-busy={pendingAction === "rename" || undefined}>
+            <DialogActions>
+              <UiButton variant="secondary" type="button" className="secondary-button" onClick={() => setRenameCandidate(null)} disabled={Boolean(pendingAction)}>{t("common.actions.cancel")}</UiButton>
+              <UiButton variant="primary" type="submit" className="primary-button" disabled={Boolean(pendingAction)} aria-busy={pendingAction === "rename" || undefined}>
                 {pendingAction === "rename" ? t("common.actions.saving") : t("workspace.terminal.saveName")}
-              </button>
-            </footer>
+              </UiButton>
+            </DialogActions>
           </form>
         </ModalPortal>
       ) : null}
@@ -474,18 +473,15 @@ export function LocalTerminalPanel({
       {closeCandidate ? (
         <ModalPortal className="file-action-backdrop" role="presentation" onRequestClose={() => setCloseCandidate(null)} closeDisabled={Boolean(pendingAction)}>
           <section className="file-action-dialog" role="dialog" aria-modal="true" aria-labelledby="terminal-close-title">
-            <header>
-              <span className="eyebrow">{t("workspace.terminal.close")}</span>
-              <h2 id="terminal-close-title">{terminalTabLabel(closeCandidate, t)}</h2>
-            </header>
+            <DialogHeader title={terminalTabLabel(closeCandidate, t)} eyebrow={<>{t("workspace.terminal.close")}</>} headingId="terminal-close-title" />
             <p className="file-action-copy">{t("workspace.terminal.closeConfirm")}</p>
             {actionError ? <p className="file-action-error" role="alert">{actionError}</p> : null}
-            <footer>
-              <button type="button" className="secondary-button" onClick={() => setCloseCandidate(null)} disabled={Boolean(pendingAction)}>{t("common.actions.cancel")}</button>
-              <button type="button" className="danger-button" onClick={() => void closeTab()} disabled={Boolean(pendingAction)} aria-busy={pendingAction === "close" || undefined}>
+            <DialogActions>
+              <UiButton variant="secondary" type="button" className="secondary-button" onClick={() => setCloseCandidate(null)} disabled={Boolean(pendingAction)}>{t("common.actions.cancel")}</UiButton>
+              <UiButton variant="danger" type="button" className="danger-button" onClick={() => void closeTab()} disabled={Boolean(pendingAction)} aria-busy={pendingAction === "close" || undefined}>
                 {pendingAction === "close" ? t("workspace.terminal.closing") : t("workspace.terminal.closeAndStop")}
-              </button>
-            </footer>
+              </UiButton>
+            </DialogActions>
           </section>
         </ModalPortal>
       ) : null}
@@ -538,7 +534,7 @@ export function TerminalTabBar({
         {tabs.map((tab) => {
           const selected = tab.id === activeTabId;
           return (
-            <button
+            <UiButton variant="ghost"
               key={tab.id}
               ref={(element) => {
                 if (element) tabRefs.current.set(tab.id, element);
@@ -557,11 +553,11 @@ export function TerminalTabBar({
             >
               <TerminalSquare aria-hidden="true" size={14} />
               <span>{terminalTabLabel(tab, t)}</span>
-            </button>
+            </UiButton>
           );
         })}
       </div>
-      <button
+      <UiButton iconOnly variant="ghost"
         type="button"
         className="workspace-terminal-new-tab"
         onClick={onCreate}
@@ -570,7 +566,7 @@ export function TerminalTabBar({
         aria-label={t("workspace.terminal.newTab")}
       >
         <Plus aria-hidden="true" size={15} />
-      </button>
+      </UiButton>
     </div>
   );
 }
@@ -664,6 +660,12 @@ function TerminalSessionView({
       }, 0);
     }
   }, [active]);
+
+  useEffect(() => {
+    const update = () => { if (terminalRef.current && hostRef.current) applyTerminalOptions(terminalRef.current, hostRef.current); };
+    window.addEventListener(APPEARANCE_EVENT, update);
+    return () => window.removeEventListener(APPEARANCE_EVENT, update);
+  }, []);
 
   useEffect(() => {
     if (!active) {
@@ -817,10 +819,10 @@ function TerminalEmptyState({
       <strong>{title}</strong>
       {detail ? <span>{detail}</span> : null}
       {actionLabel && onAction ? (
-        <button type="button" className="secondary-button" onClick={onAction} disabled={disabled} aria-busy={disabled || undefined}>
+        <UiButton variant="secondary" type="button" className="secondary-button" onClick={onAction} disabled={disabled} aria-busy={disabled || undefined}>
           {disabled ? <LoaderCircle className="is-spinning" aria-hidden="true" size={14} /> : <Plus aria-hidden="true" size={14} />}
           <span>{actionLabel}</span>
-        </button>
+        </UiButton>
       ) : null}
     </div>
   );

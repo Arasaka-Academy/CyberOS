@@ -1,3 +1,4 @@
+import { Button as UiButton, Checkbox, DialogHeader, EmptyState, Field, Input, InputGroup, Notice } from "@cyberos/ui";
 import { ModalPortal } from "../common/ModalPortal.js";
 import { useAppScroll, useAppViewState, useMobileBack } from "../../mobile/MobileNavigation.js";
 import { CustomSelect } from "../common/CustomSelect.js";
@@ -138,6 +139,8 @@ export function VideoLibraryPanel({
   const panelRef = useRef<HTMLDivElement | null>(null);
   const returnFocus = useRef<{ element: HTMLElement; scroll: number; poster: number; titleId: string; regionIndex: number } | null>(null);
   const collectionFocus = useRef<string | null>(null);
+  const restoreCollectionFocus = useRef(false);
+  const restorePosterFocus = useRef(false);
   const activeDetailId = detailId ?? detail?.id;
   const reload = useCallback(() => setVersion((v) => v + 1), []);
   useEffect(() => {
@@ -232,6 +235,33 @@ export function VideoLibraryPanel({
     searching ||
     !!query.collectionId;
   const loading = listMode ? listLoading : homeLoading;
+  useEffect(() => {
+    if (!tv || !restoreCollectionFocus.current || view !== "collections" || query.collectionId || loading || activeDetailId) return;
+    const frame = window.requestAnimationFrame(() => {
+      const buttons = [...(panelRef.current?.querySelectorAll<HTMLElement>("[data-tv-collection]") ?? [])];
+      const target = buttons.find(button => button.dataset.tvCollection === collectionFocus.current) ?? buttons[0];
+      if (target) {
+        target.focus();
+        restoreCollectionFocus.current = false;
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [tv, view, query.collectionId, loading, activeDetailId, collections]);
+  useEffect(() => {
+    if (!tv || !restorePosterFocus.current || loading || activeDetailId) return;
+    const frame = window.requestAnimationFrame(() => {
+      const target = returnFocus.current;
+      const region = target ? panelRef.current?.querySelectorAll<HTMLElement>('[data-tv-region="grid"]')[target.regionIndex] : null;
+      const byTitle = [...(region?.querySelectorAll<HTMLElement>("[data-tv-title]") ?? [])].find(element => element.dataset.tvTitle === target?.titleId);
+      const element = target?.element.isConnected ? target.element : byTitle ?? (target ? panelRef.current?.querySelectorAll<HTMLElement>(".video-poster")[target.poster] : null);
+      if (element) {
+        if (contentRef.current) contentRef.current.scrollTop = target?.scroll ?? 0;
+        element.focus({ preventScroll: true });
+      } else panelRef.current?.querySelector<HTMLElement>('.video-navigation button[aria-pressed="true"]')?.focus();
+      restorePosterFocus.current = false;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [tv, loading, activeDetailId, page, home]);
   useEffect(() => {
     if (!listMode) return;
     const controller = new AbortController();
@@ -328,21 +358,12 @@ export function VideoLibraryPanel({
   };
   const closeDetail = useCallback((restoreSearch = true) => {
     detailSequence.current++;
+    restorePosterFocus.current = tv && restoreSearch && !requestedTitleId;
     setDetail(null);
     setDetailId(null);
     setMatching(false);
     setBusy(false);
     if (requestedTitleId) onCloseRequestedTitle?.(restoreSearch);
-    if (tv && restoreSearch && !requestedTitleId) window.requestAnimationFrame(() => {
-      const target = returnFocus.current;
-      const region = target ? panelRef.current?.querySelectorAll<HTMLElement>('[data-tv-region="grid"]')[target.regionIndex] : null;
-      const byTitle = [...(region?.querySelectorAll<HTMLElement>("[data-tv-title]") ?? [])].find(element => element.dataset.tvTitle === target?.titleId);
-      const element = target?.element.isConnected ? target.element : byTitle ?? (target ? panelRef.current?.querySelectorAll<HTMLElement>(".video-poster")[target.poster] : null);
-      if (element) {
-        if (contentRef.current) contentRef.current.scrollTop = target?.scroll ?? 0;
-        element.focus({ preventScroll: true });
-      } else panelRef.current?.querySelector<HTMLElement>('.video-navigation button[aria-pressed="true"]')?.focus();
-    });
   }, [tv, requestedTitleId, onCloseRequestedTitle, setDetailId]);
   useEffect(() => {
     if (!tv || !detail) return;
@@ -379,11 +400,8 @@ export function VideoLibraryPanel({
     const back = () => {
       if (detail || detailId || busy) { closeDetail(); return; }
       if (query.collectionId) {
+        restoreCollectionFocus.current = true;
         setQuery(({ collectionId: _collection, ...rest }) => rest);
-        window.requestAnimationFrame(() => {
-          const buttons = [...(panelRef.current?.querySelectorAll<HTMLElement>("[data-tv-collection]") ?? [])];
-          (buttons.find(button => button.dataset.tvCollection === collectionFocus.current) ?? buttons[0])?.focus();
-        });
       } else {
         setView("home");
         setQuery({ sort: "title" });
@@ -391,6 +409,7 @@ export function VideoLibraryPanel({
       }
     };
     const home = () => {
+      restoreCollectionFocus.current = false;
       closeDetail(false);
       setView("home");
       setQuery({ sort: "title" });
@@ -555,9 +574,9 @@ export function VideoLibraryPanel({
       />
       {!detail ? (
         <div className="library-search-toolbar" data-tv-region="filters">
-          {tv ? <button type="button" className="plain-button tv-library-search" data-tv-focusable onClick={onSearch}><Search size={22} aria-hidden="true" />{t("video.search")}</button> : <form className="search" onSubmit={(event) => event.preventDefault()}>
-            <Search size={17} aria-hidden="true" />
-            <input
+          {tv ? <UiButton variant="ghost" type="button" className="plain-button tv-library-search" data-tv-focusable onClick={onSearch}><Search size={22} aria-hidden="true" />{t("video.search")}</UiButton> : <form className="search" onSubmit={(event) => event.preventDefault()}><InputGroup leading={<Search size={17} aria-hidden="true" />}>
+
+            <Input
               data-tv-focusable
               type="search"
               aria-label={t("video.search")}
@@ -565,7 +584,7 @@ export function VideoLibraryPanel({
               value={query.query ?? ""}
               onChange={(event) => setQuery((current) => ({ ...current, query: event.target.value }))}
             />
-          </form>}
+          </InputGroup></form>}
           <SearchFilterPopover
             label={t("video.filter")}
             active={Boolean(query.sourceId || query.year || query.genre || query.favorite || query.watched !== undefined || (query.sort && query.sort !== "title"))}
@@ -601,7 +620,7 @@ export function VideoLibraryPanel({
                   disabled={filterState !== "ready"}
                   options={[{ value: "", label: t("video.all") }, ...filterOptions.years.map(year => ({ value: String(year), label: String(year) }))]}
                   onChange={year => setDraftFilters(current => ({ ...current, year: year ? Number(year) : undefined }))}
-                /> : <input
+                /> : <Input
                   aria-label={t("video.year")}
                   data-tv-focusable
                   type="number"
@@ -622,7 +641,7 @@ export function VideoLibraryPanel({
                   disabled={filterState !== "ready"}
                   options={[{ value: "", label: t("video.all") }, ...filterOptions.genres.map(genre => ({ value: genre, label: genre }))]}
                   onChange={genre => setDraftFilters(current => ({ ...current, genre: genre || undefined }))}
-                /> : <input
+                /> : <Input
                   aria-label={t("video.genre")}
                   data-tv-focusable
                   value={draftFilters.genre ?? ""}
@@ -631,7 +650,7 @@ export function VideoLibraryPanel({
               </div>
               {tv && filterState !== "ready" ? <div className="video-filter-status" role={filterState === "error" ? "alert" : "status"}>
                 {t(filterState === "error" ? "tv.filtersFailed" : "tv.loadingFilters")}
-                {filterState === "error" ? <button onClick={() => setFilterRetry(v => v + 1)} className="plain-button">{t("tv.retry")}</button> : null}
+                {filterState === "error" ? <UiButton variant="plain" onClick={() => setFilterRetry(v => v + 1)} className="plain-button">{t("tv.retry")}</UiButton> : null}
               </div> : null}
               <div className="workspace-search-field">
                 <span>{t("video.sort")}</span>
@@ -663,9 +682,9 @@ export function VideoLibraryPanel({
               </div>
             </div>
             <label className="workspace-search-filter-check">
-              <input
+              <Checkbox
                 data-tv-focusable
-                type="checkbox"
+
                 checked={draftFilters.favorite ?? false}
                 onChange={(event) => setDraftFilters((current) => ({ ...current, favorite: event.target.checked || undefined }))}
               />
@@ -677,7 +696,7 @@ export function VideoLibraryPanel({
       <nav className="video-navigation" data-tv-region="navigation" aria-label={t("video.library")}>
         {(["home", "movie", "series", "collections", "watchlist"] as const).map(
           (tab) => (
-            <button
+            <UiButton variant="plain"
               data-tv-focusable
               key={tab}
               aria-pressed={view === tab && !detail}
@@ -691,22 +710,22 @@ export function VideoLibraryPanel({
               }} className="plain-button"
             >
               {t(`video.${tab}`)}
-            </button>
+            </UiButton>
           ),
         )}
       </nav>
       {error ? (
-        <p className="video-error" role="alert">
+        <Notice className="video-error" role="alert" tone="danger">
           {error}
-        </p>
+        </Notice>
       ) : null}
       <div ref={contentRef} className="video-content">
         {detail ? (
           <article className="video-detail">
-            <button className="plain-button video-back" data-tv-focusable onClick={() => closeDetail()}>
+            <UiButton variant="plain" className="plain-button video-back" data-tv-focusable onClick={() => closeDetail()}>
               <ArrowLeft size={17} />
               {t("video.back")}
-            </button>
+            </UiButton>
             <div className="video-detail-main">
               <VideoArtwork title={detail} />
               <div data-tv-region="detail">
@@ -727,7 +746,7 @@ export function VideoLibraryPanel({
                 </p>
                 <p>{detail.overview ?? t("video.noOverview")}</p>
                 <div className="video-actions">
-                  <button
+                  <UiButton variant="plain"
                     data-tv-focusable
                     disabled={busy}
                     aria-pressed={detail.personal.favorite}
@@ -737,8 +756,8 @@ export function VideoLibraryPanel({
                   >
                     <Heart size={17} />
                     {t("video.favorites")}
-                  </button>
-                  <button
+                  </UiButton>
+                  <UiButton variant="plain"
                     data-tv-focusable
                     disabled={busy}
                     aria-pressed={detail.personal.watchlist}
@@ -748,8 +767,8 @@ export function VideoLibraryPanel({
                   >
                     <ListPlus size={17} />
                     {t("video.watchlist")}
-                  </button>
-                  <button
+                  </UiButton>
+                  <UiButton variant="plain"
                     data-tv-focusable
                     disabled={busy}
                     aria-pressed={detail.watched}
@@ -757,12 +776,12 @@ export function VideoLibraryPanel({
                   >
                     <Check size={17} />
                     {t("video.watched")}
-                  </button>
+                  </UiButton>
                 </div>
                 <div className="video-actions">
                   {file ? (
                     <>
-                      <button
+                      <UiButton variant="primary"
                         className="primary-button"
                         data-tv-detail-primary={tv || undefined}
                         data-tv-focusable
@@ -771,16 +790,16 @@ export function VideoLibraryPanel({
                       >
                         <Play size={17} />
                         {tv ? t("video.playTv") : t("video.playBrowser")}
-                      </button>
+                      </UiButton>
                       {!tv ? (
-                        <button
+                        <UiButton variant="plain"
                           data-tv-focusable
                           disabled={busy}
                           onClick={() => play(file, true)} className="plain-button"
                         >
                           <MonitorPlay size={17} />
                           {t("video.playTv")}
-                        </button>
+                        </UiButton>
                       ) : null}
                     </>
                   ) : (
@@ -830,14 +849,14 @@ export function VideoLibraryPanel({
               <section className="video-seasons" data-tv-region="episodes">
                 <nav data-tv-region="seasons">
                   {detail.seasons.map((s) => (
-                    <button
+                    <UiButton variant="ghost"
                       data-tv-focusable
                       key={s.id}
                       aria-pressed={season === s.seasonNumber}
                       onClick={() => setSeason(s.seasonNumber)} className="plain-button"
                     >
                       {s.name ?? `${t("video.season")} ${s.seasonNumber}`}
-                    </button>
+                    </UiButton>
                   ))}
                 </nav>
                 {detail.seasons
@@ -847,7 +866,7 @@ export function VideoLibraryPanel({
                       key={e.id}
                       className={`video-episode${e.files.some((f) => f.id === selected) ? " is-selected" : ""}`}
                     >
-                      <button
+                      <UiButton variant="ghost"
                         data-tv-focusable
                         disabled={busy || !e.files.length}
                         onClick={() => {
@@ -866,8 +885,8 @@ export function VideoLibraryPanel({
                           <small>{e.overview}</small>
                         </span>
                         <Play size={17} />
-                      </button>
-                      <button
+                      </UiButton>
+                      <UiButton iconOnly variant="plain"
                         data-tv-focusable
                         disabled={busy}
                         aria-label={t("video.watched")}
@@ -894,7 +913,7 @@ export function VideoLibraryPanel({
                         } className="plain-button"
                       >
                         <Check size={17} />
-                      </button>
+                      </UiButton>
                     </div>
                   ))}
               </section>
@@ -911,8 +930,8 @@ export function VideoLibraryPanel({
             ) : null}
             {!tv ? (
               <div className="video-management">
-                <label>
-                  {t("video.addCollection")}
+                <Field label={t("video.addCollection")}>
+
                   <CustomSelect
                     value={""}
                     disabled={busy}
@@ -931,14 +950,14 @@ export function VideoLibraryPanel({
                     options={[{ value: "", label: t("video.choose") }, ...(collections
                       .filter((c) => c.kind === "manual").map((c) => ({ value: c.id, label: `${c.name}${c.titleIds.includes(detail.id) ? " ✓" : ""}` })))]}
                   />
-                </label>
+                </Field>
                 {collections
                   .filter(
                     (c) =>
                       c.kind === "manual" && c.titleIds.includes(detail.id),
                   )
                   .map((c) => (
-                    <button
+                    <UiButton variant="plain"
                       key={c.id}
                       disabled={busy}
                       onClick={() =>
@@ -952,11 +971,11 @@ export function VideoLibraryPanel({
                       } className="plain-button"
                     >
                       {t("video.removeCollection")} · {c.name}
-                    </button>
+                    </UiButton>
                   ))}
-                <button onClick={() => setMatching((v) => !v)} className="plain-button">
+                <UiButton variant="plain" onClick={() => setMatching((v) => !v)} className="plain-button">
                   {t("video.correctMatch")}
-                </button>
+                </UiButton>
                 {matching ? (
                   <div>
                     <form
@@ -978,15 +997,15 @@ export function VideoLibraryPanel({
                         );
                       }}
                     >
-                      <input
+                      <Input
                         name="query"
                         defaultValue={detail.title}
                         aria-label={t("video.search")}
                       />
-                      <button disabled={busy} className="plain-button">{t("video.search")}</button>
+                      <UiButton variant="plain" disabled={busy} className="plain-button">{t("video.search")}</UiButton>
                     </form>
                     {candidates.map((c) => (
-                      <button
+                      <UiButton variant="plain"
                         key={c.tmdbId}
                         disabled={busy}
                         onClick={() =>
@@ -1001,7 +1020,7 @@ export function VideoLibraryPanel({
                         } className="plain-button"
                       >
                         {c.title} · {c.year}
-                      </button>
+                      </UiButton>
                     ))}
                   </div>
                 ) : null}
@@ -1014,12 +1033,12 @@ export function VideoLibraryPanel({
           <>
             {posters(page.titles)}
             {!page.titles.length ? (
-              <p className="video-empty">{t("video.empty")}</p>
+              <EmptyState className="video-empty">{t("video.empty")}</EmptyState>
             ) : null}
             {page.nextCursor ? (
-              <button data-tv-focusable disabled={busy} onClick={more} className="plain-button">
+              <UiButton variant="plain" data-tv-focusable disabled={busy} onClick={more} className="plain-button">
                 {t("video.loadMore")}
-              </button>
+              </UiButton>
             ) : null}
           </>
         ) : view === "collections" ? (
@@ -1027,15 +1046,15 @@ export function VideoLibraryPanel({
             <header>
               <h3>{t("video.collections")}</h3>
               {!tv ? (
-                <button onClick={() => setCollectionOpen(true)} className="plain-button">
+                <UiButton variant="plain" onClick={() => setCollectionOpen(true)} className="plain-button">
                   <Plus size={17} />
                   {t("video.newCollection")}
-                </button>
+                </UiButton>
               ) : null}
             </header>
             {collections.map((c) => (
               <div key={c.id}>
-                <button
+                <UiButton variant="ghost"
                   data-tv-focusable
                   data-tv-collection={c.id}
                   onClick={() => {
@@ -1046,23 +1065,23 @@ export function VideoLibraryPanel({
                   <Film size={24} />
                   <strong>{c.name}</strong>
                   <span>{c.titleIds.length}</span>
-                </button>
+                </UiButton>
                 {!tv && c.kind === "manual" ? (
                   <>
-                    <button
+                    <UiButton iconOnly variant="plain"
                       aria-label={t("video.rename")}
                       data-tooltip={t("video.rename")}
                       onClick={() => setEditingCollection(c)} className="plain-button"
                     >
                       <Pencil size={17} />
-                    </button>
-                    <button
+                    </UiButton>
+                    <UiButton iconOnly variant="plain"
                       aria-label={t("video.delete")}
                       data-tooltip={t("video.delete")}
                       onClick={() => setDeletingCollection(c)} className="plain-button"
                     >
                       <Trash2 size={17} />
-                    </button>
+                    </UiButton>
                   </>
                 ) : null}
               </div>
@@ -1091,13 +1110,13 @@ export function VideoLibraryPanel({
               ) : null,
             )}
             {!home.recentlyAdded.length ? (
-              <div className="video-empty">
-                <Film size={42} />
-                <h3>{t("video.empty")}</h3>
+              <EmptyState className="video-empty" icon={<Film size={42} />} title={t("video.empty")}>
+
+
                 {onManage && !tv ? (
-                  <button onClick={onManage} className="plain-button">{t("video.manage")}</button>
+                  <UiButton variant="plain" onClick={onManage} className="plain-button">{t("video.manage")}</UiButton>
                 ) : null}
-              </div>
+              </EmptyState>
             ) : null}
           </>
         ) : null}
@@ -1186,7 +1205,7 @@ function VideoPoster({
   onOpen: () => void;
 }) {
   return (
-    <button data-tv-focusable data-tv-title={title.id} className="plain-button video-poster" onClick={onOpen}>
+    <UiButton variant="ghost" data-tv-focusable data-tv-title={title.id} className="plain-button video-poster" onClick={onOpen}>
       <VideoArtwork title={title} />
       <strong>{title.title}</strong>
       <small>
@@ -1200,7 +1219,7 @@ function VideoPoster({
           aria-label={title.title}
         />
       ) : null}
-    </button>
+    </UiButton>
   );
 }
 function CollectionDialog({
@@ -1226,29 +1245,26 @@ function CollectionDialog({
         tabIndex={-1}
         ref={ref}
       >
-        <header>
-          <h2>{t(initialName ? "video.rename" : "video.newCollection")}</h2>
-          <button onClick={onClose} aria-label={t("video.close")} data-tooltip={t("video.close")} className="plain-button">
+        <DialogHeader title={t(initialName ? "video.rename" : "video.newCollection")} actions={<><UiButton iconOnly variant="plain" onClick={onClose} aria-label={t("video.close")} data-tooltip={t("video.close")} className="plain-button">
             <X size={20} />
-          </button>
-        </header>
+          </UiButton></>} />
         <form
           onSubmit={(e) => {
             e.preventDefault();
             onSave(String(new FormData(e.currentTarget).get("name") ?? ""));
           }}
         >
-          <input
+          <Input
             name="name"
             defaultValue={initialName}
             required
             maxLength={120}
             aria-label={t("video.name")}
           />
-          <button className="primary-button" disabled={busy}>
+          <UiButton variant="primary" className="primary-button" disabled={busy}>
             <Plus size={16} />
             {t(initialName ? "video.save" : "video.create")}
-          </button>
+          </UiButton>
         </form>
       </section>
     </ModalPortal>
@@ -1278,22 +1294,19 @@ function DeleteCollectionDialog({
         aria-label={t("video.delete")}
         tabIndex={-1}
       >
-        <header>
-          <h2>{collection.name}</h2>
-          <button
+        <DialogHeader title={collection.name} actions={<><UiButton iconOnly variant="plain"
             disabled={busy}
             onClick={onClose}
             aria-label={t("video.close")}
             data-tooltip={t("video.close")} className="plain-button"
           >
             <X size={20} />
-          </button>
-        </header>
+          </UiButton></>} />
         <p>{t("video.deleteConfirm")}</p>
-        <button disabled={busy} onClick={onConfirm} className="plain-button">
+        <UiButton variant="plain" disabled={busy} onClick={onConfirm} className="plain-button">
           <Trash2 size={17} />
           {t("video.delete")}
-        </button>
+        </UiButton>
       </section>
     </ModalPortal>
   );

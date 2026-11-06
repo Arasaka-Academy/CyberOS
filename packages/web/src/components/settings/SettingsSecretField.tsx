@@ -1,7 +1,8 @@
+import { Button as UiButton, Field, Input, InputGroup } from "@cyberos/ui";
 import { useRef } from "react";
 import { Undo2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { HelpLabel } from "../common/HelpTip.js";
+import { HelpTip } from "../common/HelpTip.js";
 
 export function SettingsSecretField({
   id,
@@ -31,20 +32,8 @@ export function SettingsSecretField({
     : configured ? clearLabel : t("common.actions.clear");
 
   return (
-    <div className="settings-field-wide settings-secret-field">
-      {help ? <HelpLabel htmlFor={id} label={label} content={help} /> : <label htmlFor={id}><span>{label}</span></label>}
-      <div className="settings-secret-input" data-clear-pending={clearSaved || undefined}>
-        <input
-          ref={inputRef}
-          id={id}
-          type="password"
-          autoComplete="new-password"
-          spellCheck={false}
-          value={value}
-          placeholder={clearSaved ? t("settings.secretInput.clearOnSave") : placeholder}
-          onChange={(event) => onChange(event.target.value, false)}
-        />
-        <button
+    <Field className="settings-field-wide settings-secret-field" htmlFor={id} label={label} help={help ? <HelpTip label={label} content={help} /> : null}>
+      <InputGroup className="settings-secret-input" data-clear-pending={clearSaved || undefined} trailing={<UiButton variant="ghost" iconOnly
           className="settings-icon-button settings-secret-action"
           type="button"
           aria-label={actionLabel}
@@ -57,8 +46,19 @@ export function SettingsSecretField({
           }}
         >
           {clearSaved ? <Undo2 aria-hidden="true" size={16} /> : <X aria-hidden="true" size={16} />}
-        </button>
-      </div>
-    </div>
+        </UiButton>}>
+        <Input
+          ref={inputRef}
+          id={id}
+          type="password"
+          autoComplete="new-password"
+          spellCheck={false}
+          value={value}
+          placeholder={clearSaved ? t("settings.secretInput.clearOnSave") : placeholder}
+          onChange={(event) => onChange(event.target.value, false)}
+        />
+
+      </InputGroup>
+    </Field>
   );
 }

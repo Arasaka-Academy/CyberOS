@@ -1,0 +1,48 @@
+/* Generated from packages/react/src/styles.css. Regenerate in CyberUI with pnpm registry:build; after installation, edit this file freely. */
+@layer theme, base, components, utilities;
+@import './tailwind-theme.css';
+@import 'tailwindcss/utilities.css' layer(utilities) prefix(tw) source(none);
+@source './*.tsx';
+@import './tokens.css' layer(base);
+@import './motion.css' layer(base);
+
+/* Host adaptation: baseline stays below CyberOS's structural control rules. */
+@layer base {
+/* Explicit, scoped baseline. Font loading is opt-in via @cyberui/react/fonts.css. */
+:is([data-cyberui], [data-cyberui-portal]) {
+  --cyber-bg: #1e1517; --cyber-ink: #93e4ea; --cyber-muted: #c9a19c;
+  --cyber-line: #5a3a3c; --cyber-soft: #3e2729; --cyber-accent: #e0574b;
+  --cyber-accent2: #93e4ea; --cyber-on-accent: #000; --cyber-on-accent2: #000;
+  --cyber-accent-text: #93e4ea; --cyber-on-ink: #1e1517; --cyber-success: #8ee3aa; --cyber-warning: #ffc36a;
+  --cyber-danger: #ff9389; --cyber-info: #93e4ea;
+  --cyber-font-body: 'Oxanium', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --cyber-font-display: 'Oxanium', 'PingFang SC', sans-serif;
+  --cyber-font-mono: 'ShareTechMono', 'PingFang SC', monospace;
+  @apply tw:text-cyber-ink; background: var(--cyber-bg);
+  font: 400 16px/1.6 var(--cyber-font-body);
+  color-scheme: dark; accent-color: var(--cyber-accent);
+}
+:is([data-cyberui], [data-cyberui-portal])[data-mode='light'] { color-scheme: light; }
+:where(:is([data-cyberui], [data-cyberui-portal]), :is([data-cyberui], [data-cyberui-portal]) *) { box-sizing: border-box; }
+:is([data-cyberui], [data-cyberui-portal]) :where(button,input,select,textarea) { font: inherit; }
+:is([data-cyberui], [data-cyberui-portal]) :where(button,[role='button'],a,input,select,textarea,[tabindex]):focus-visible {
+  outline: 2px solid var(--cyber-accent2); outline-offset: 4px;
+}
+:is([data-cyberui], [data-cyberui-portal]) [data-focus-visible] { outline: 2px solid var(--cyber-accent2); outline-offset: 4px; }
+:is([data-cyberui], [data-cyberui-portal]) :where(button,[role='button'],[role='option']) { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+:is([data-cyberui], [data-cyberui-portal]) :where(button:not(:disabled),[role='button']:not([aria-disabled='true']),select) { @apply tw:cursor-pointer; }
+:is([data-cyberui], [data-cyberui-portal]) :where(button:disabled,[aria-disabled='true']) { @apply tw:cursor-not-allowed; }
+:is([data-cyberui], [data-cyberui-portal]) :where(a) { @apply tw:text-inherit; text-underline-offset: 4px; }
+:is([data-cyberui], [data-cyberui-portal]) :where(h1,h2,h3,h4,p) { @apply tw:mt-[0]; }
+:is([data-cyberui], [data-cyberui-portal]) :where(h1,h2,h3,h4) { @apply tw:font-cyber-display; @apply tw:leading-[1.25] tw:text-balance; }
+:is([data-cyberui], [data-cyberui-portal]) :where(img,svg) { @apply tw:align-middle; }
+:is([data-cyberui], [data-cyberui-portal]) :where(input,textarea,select) { @apply tw:max-w-full; }
+:is([data-cyberui], [data-cyberui-portal]) :where(code,kbd,pre) { @apply tw:font-cyber-mono; }
+:is([data-cyberui], [data-cyberui-portal]) ::selection { background: var(--cyber-accent); @apply tw:text-cyber-on-accent; }
+@media (prefers-reduced-motion: reduce) {
+  :is([data-cyberui], [data-cyberui-portal]) *, :is([data-cyberui], [data-cyberui-portal]) *::before, :is([data-cyberui], [data-cyberui-portal]) *::after {
+    animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important; scroll-behavior: auto !important;
+  }
+}
+}

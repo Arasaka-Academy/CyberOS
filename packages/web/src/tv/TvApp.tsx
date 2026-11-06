@@ -1,5 +1,7 @@
+import { AppearanceDialog, useNativeAppearance } from "./AppearanceDialog.js";
+import { AppearanceProvider, Button as UiButton, Notice } from "@cyberos/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Clock3, Search } from "lucide-react";
+import { Clock3, Search, Palette } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PlaybackProvider, usePlayback } from "../components/playback/PlaybackProvider.js";
 import { PlaybackBar } from "../components/playback/PlaybackBar.js";
@@ -10,12 +12,14 @@ import { gamepadConnectionTransition, isActiveVodPlayback } from "./player-contr
 import { SearchOverlay } from "./SearchOverlay.js";
 import { useRemoteNavigation } from "./remote-navigation.js";
 
-export function TvApp() { return <PlaybackProvider><MusicProvider><TvLibrary /></MusicProvider></PlaybackProvider>; }
+export function TvApp() { const { i18n } = useTranslation(); return <AppearanceProvider locale={i18n.resolvedLanguage === "en" ? "en" : "zh-CN"}><PlaybackProvider><MusicProvider><TvLibrary /></MusicProvider></PlaybackProvider></AppearanceProvider>; }
 function TvLibrary() {
   const { t, i18n } = useTranslation();
   const playback = usePlayback();
   const music = useMusicRemote();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
+  const nativeAppearance = useNativeAppearance(playback.nas?.serviceInstanceId);
   const [titleId, setTitleId] = useState<string | null>(new URL(window.location.href).searchParams.get("title"));
   const [clock, setClock] = useState(new Date());
   const [notice, setNotice] = useState<string | null>(null);
@@ -51,6 +55,7 @@ function TvLibrary() {
   const navigateHome = useCallback(() => {
     titleFromSearch.current = false;
     setSearchOpen(false);
+    setAppearanceOpen(false);
     setTitleId(null);
     window.dispatchEvent(new Event("cyberos:video-home"));
   }, []);
@@ -94,12 +99,13 @@ function TvLibrary() {
   useRemoteNavigation({ onBack: back, onHome: home, onSearch: openSearch, onTransport: key => void transport(key) });
   return <div className="tv-app tv-library-shell">
     <header className="tv-header" data-tv-region="header">
-      <button className="tv-brand" data-tv-focusable onClick={home}><img src="/cyberos-icon.svg" alt="" /><span>CyberOS</span></button>
-      <div className="tv-header-actions"><button className="tv-icon-button" data-tv-focusable onClick={openSearch} aria-label={t("tv.search")} data-tooltip={t("tv.search")}><Search /></button><span className="tv-clock"><Clock3 />{new Intl.DateTimeFormat(i18n.resolvedLanguage ?? "zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }).format(clock)}</span></div>
+      <UiButton variant="ghost" className="tv-brand" data-tv-focusable onClick={home}><img src="/cyberos-icon.svg" alt="" /><span>CyberOS</span></UiButton>
+      <div className="tv-header-actions"><UiButton variant="ghost" iconOnly className="tv-icon-button" data-tv-focusable aria-label={t("settings.appearance.title")} data-tooltip={t("settings.appearance.title")} onClick={() => setAppearanceOpen(true)}><Palette /></UiButton><UiButton variant="ghost" iconOnly className="tv-icon-button tv-search-button" data-tv-focusable onClick={openSearch} aria-label={t("tv.search")} data-tooltip={t("tv.search")}><Search /></UiButton><span className="tv-clock"><Clock3 />{new Intl.DateTimeFormat(i18n.resolvedLanguage ?? "zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }).format(clock)}</span></div>
     </header>
     <VideoLibraryPanel tv requestedTitleId={titleId} onSearch={openSearch} onCloseRequestedTitle={closeRequestedTitle} />
     <PlaybackBar onOpenBluetoothSettings={() => setNotice(t("video.manage"))} />
     <SearchOverlay open={searchOpen} onClose={closeSearch} onOpen={title => { titleFromSearch.current = true; setTitleId(title.id); setSearchOpen(false); }} />
-    {notice ? <div className="tv-notice" role="status">{notice}</div> : null}
+    {appearanceOpen ? <AppearanceDialog onClose={() => setAppearanceOpen(false)} error={nativeAppearance.error} onRetry={nativeAppearance.retry} /> : null}
+    {notice ? <Notice className="tv-notice" role="status">{notice}</Notice> : null}
   </div>;
 }

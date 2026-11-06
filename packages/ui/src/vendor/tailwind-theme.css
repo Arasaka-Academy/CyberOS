@@ -1,0 +1,45 @@
+/* Generated from packages/react/src/tailwind-theme.css. Regenerate in CyberUI with pnpm registry:build; after installation, edit this file freely. */
+/* Shared authoring theme. Import from an application entry; reference from modules. */
+@import 'tailwindcss/theme.css' layer(theme) prefix(tw);
+
+@theme inline {
+  --color-cyber-bg: var(--cyber-bg);
+  --color-cyber-ink: var(--cyber-ink);
+  --color-cyber-muted: var(--cyber-muted);
+  --color-cyber-line: var(--cyber-line);
+  --color-cyber-soft: var(--cyber-soft);
+  --color-cyber-accent: var(--cyber-accent);
+  --color-cyber-accent2: var(--cyber-accent2);
+  --color-cyber-on-accent: var(--cyber-on-accent);
+  --color-cyber-on-accent2: var(--cyber-on-accent2);
+  --color-cyber-accent-text: var(--cyber-accent-text);
+  --color-cyber-on-ink: var(--cyber-on-ink);
+  --color-cyber-success: var(--cyber-success);
+  --color-cyber-warning: var(--cyber-warning);
+  --color-cyber-danger: var(--cyber-danger);
+  --color-cyber-info: var(--cyber-info);
+  --spacing-cyber-xs: var(--cyber-space-xs);
+  --spacing-cyber-sm: var(--cyber-space-sm);
+  --spacing-cyber-md: var(--cyber-space-md);
+  --spacing-cyber-lg: var(--cyber-space-lg);
+  --spacing-cyber-xl: var(--cyber-space-xl);
+  --spacing-cyber-2xl: var(--cyber-space-2xl);
+  --spacing-cyber-3xl: var(--cyber-space-3xl);
+  --spacing-cyber-4xl: var(--cyber-space-4xl);
+  --spacing-cyber-5xl: var(--cyber-space-5xl);
+  --spacing-cyber-touch: var(--cyber-touch);
+  --font-cyber-body: var(--cyber-font-body);
+  --font-cyber-display: var(--cyber-font-display);
+  --font-cyber-mono: var(--cyber-font-mono);
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+  --font-weight-black: 900;
+  --animate-cyber-spin: var(--cyber-motion-spin);
+  --animate-cyber-pulse: var(--cyber-motion-pulse);
+  --animate-cyber-appear: var(--cyber-motion-appear);
+  --animate-cyber-overlay: var(--cyber-motion-overlay);
+  --animate-cyber-lift: var(--cyber-motion-lift);
+}

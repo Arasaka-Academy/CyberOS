@@ -62,7 +62,7 @@
 
 .photo-lightbox-body {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) 38px minmax(210px, 260px);
+  grid-template-columns: 44px minmax(0, 1fr) 44px minmax(210px, 260px);
   min-width: 0;
   min-height: 0;
   background: var(--input-deep-bg);
@@ -249,26 +249,6 @@
     overflow-x: auto;
   }
 
-  .photo-lightbox-body {
-    grid-template-columns: 34px minmax(0, 1fr) 34px;
-    grid-template-rows: minmax(0, 1fr) auto;
-  }
-
-  .photo-lightbox-meta {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: start;
-    gap: 12px;
-    max-height: 190px;
-    border-top: 1px solid var(--line-soft);
-    border-left: 0;
-  }
-
-  .photo-lightbox-meta dl {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin: 0;
-  }
 }
 
 @container workspace-stage (max-width: 520px) {
@@ -350,7 +330,33 @@
   .photo-name {
     opacity: 1;
   }
+}
 
+/* ModalPortal is outside workspace-stage; its layout follows the viewport. */
+@media (max-width: 760px) {
+  .photo-lightbox-body {
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .photo-lightbox-meta {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 12px;
+    max-height: min(190px, 32dvh);
+    border-top: 1px solid var(--line-soft);
+    border-left: 0;
+  }
+
+  .photo-lightbox-meta dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0;
+  }
+}
+
+@media (max-width: 520px) {
   .photo-lightbox-backdrop {
     padding: 0;
   }
@@ -366,7 +372,12 @@
     align-items: flex-start;
     flex-direction: column;
     gap: 7px;
-    padding: 10px;
+    padding: max(10px, env(safe-area-inset-top)) 10px 10px;
+  }
+
+  .photo-lightbox-header .ui-dialog-heading,
+  .photo-lightbox-header .ui-dialog-header-actions {
+    align-self: stretch;
   }
 
   .photo-lightbox-tools {
@@ -374,14 +385,9 @@
     justify-content: flex-end;
   }
 
-  .photo-lightbox-body {
-    grid-template-rows: minmax(220px, 1fr) auto;
-  }
-
   .photo-lightbox-meta {
-    grid-template-columns: minmax(0, 1fr);
-    max-height: 230px;
-    padding: 10px;
+    max-height: min(230px, 32dvh);
+    padding: 10px 10px max(10px, env(safe-area-inset-bottom));
   }
 
   .photo-lightbox-meta dl {

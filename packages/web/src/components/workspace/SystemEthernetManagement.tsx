@@ -1,3 +1,4 @@
+import { Button as UiButton, DialogActions, DialogHeader, EmptyState, Field, Input, SectionHeader, StatusBadge } from "@cyberos/ui";
 import { ModalDepthContext, ModalPortal } from "../common/ModalPortal.js";
 import { useMobileBack } from "../../mobile/MobileNavigation.js";
 import {
@@ -181,20 +182,14 @@ export function SystemEthernetManagement({
   return (
     <>
       <section className="management-section system-ethernet-section">
-        <header className="management-section-header system-ethernet-header">
-          <div>
-            <h3>{t("workspace.management.network.ethernet.title")}</h3>
-            <p>{t("workspace.management.network.ethernet.description")}</p>
-          </div>
-          <div className="system-ethernet-actions">
-            {reconnecting ? <span className="management-status-pill" data-state="warning">{t("workspace.management.network.ethernet.states.reconnecting")}</span> : null}
-            {pending.length ? <span className="management-status-pill" data-state="warning">{t("workspace.management.network.ethernet.pendingCount", { count: pending.length })}</span> : null}
-            <button type="button" className="is-primary" onClick={() => setConfirmApply(true)} disabled={!canManageEthernet || pending.length === 0 || metricConflict || busy || applying || reconnecting}>
+        <SectionHeader className="management-section-header system-ethernet-header" title={t("workspace.management.network.ethernet.title")} description={t("workspace.management.network.ethernet.description")} actions={<><div className="system-ethernet-actions">
+            {reconnecting ? <StatusBadge className="management-status-pill" data-state="warning">{t("workspace.management.network.ethernet.states.reconnecting")}</StatusBadge> : null}
+            {pending.length ? <StatusBadge className="management-status-pill" data-state="warning">{t("workspace.management.network.ethernet.pendingCount", { count: pending.length })}</StatusBadge> : null}
+            <UiButton variant="primary" type="button" className="is-primary" onClick={() => setConfirmApply(true)} disabled={!canManageEthernet || pending.length === 0 || metricConflict || busy || applying || reconnecting}>
               <Check aria-hidden="true" size={14} />
               <span>{t("workspace.management.network.ethernet.apply")}</span>
-            </button>
-          </div>
-        </header>
+            </UiButton>
+          </div></>} />
 
         {error ? <p className="system-ethernet-error" role="alert">{error}</p> : null}
         {metricConflict ? <p className="system-ethernet-error" role="alert">{t("workspace.management.network.ethernet.errors.metricConflict")}</p> : null}
@@ -217,12 +212,12 @@ export function SystemEthernetManagement({
                   <div>
                     <div className="system-ethernet-device-title">
                       <strong>{device.name}</strong>
-                      <span className="management-status-pill" data-state={systemEthernetDeviceTone(device.state, reconnecting)}>
+                      <StatusBadge className="management-status-pill" data-state={systemEthernetDeviceTone(device.state, reconnecting)}>
                         {t(`workspace.management.network.ethernet.states.${reconnecting ? "reconnecting" : device.state}`)}
-                      </span>
-                      <span className="management-status-pill" data-state={device.managementState === "managed" ? "ready" : device.managementState === "external" ? "neutral" : device.managementState === "external_unsupported" ? "offline" : "warning"}>
+                      </StatusBadge>
+                      <StatusBadge className="management-status-pill" data-state={device.managementState === "managed" ? "ready" : device.managementState === "external" ? "neutral" : device.managementState === "external_unsupported" ? "offline" : "warning"}>
                         {t(`workspace.management.network.ethernet.management.${device.managementState}`)}
-                      </span>
+                      </StatusBadge>
                     </div>
                     <small>{device.driver ?? t("common.dash")} · {device.permanentMac}</small>
                     {device.warnings.map((warning) => <p key={warning} className="system-ethernet-device-warning"><AlertTriangle aria-hidden="true" size={12} /><span>{formatEthernetWarning(warning, translate)}</span></p>)}
@@ -236,14 +231,14 @@ export function SystemEthernetManagement({
                 </dl>
                 <div className="system-ethernet-device-actions">
                   {device.needsApply ? <span>{t("workspace.management.network.ethernet.needsApply")}</span> : null}
-                  <button type="button" className="management-icon-action" onClick={() => openEditor(device, setEditor)} disabled={!device.desiredConfig || device.managementState === "external_unsupported" || busy || applying || reconnecting} aria-label={t(`workspace.management.network.ethernet.${device.managementState === "external" ? "takeover" : "edit"}`, { name: device.name })} data-tooltip={t(`workspace.management.network.ethernet.${device.managementState === "external" ? "takeover" : "edit"}`, { name: device.name })}>
+                  <UiButton variant="ghost" iconOnly type="button" className="management-icon-action" onClick={() => openEditor(device, setEditor)} disabled={!device.desiredConfig || device.managementState === "external_unsupported" || busy || applying || reconnecting} aria-label={t(`workspace.management.network.ethernet.${device.managementState === "external" ? "takeover" : "edit"}`, { name: device.name })} data-tooltip={t(`workspace.management.network.ethernet.${device.managementState === "external" ? "takeover" : "edit"}`, { name: device.name })}>
                     <Settings2 aria-hidden="true" size={15} />
-                  </button>
+                  </UiButton>
                 </div>
               </article>
             ))}
           </div>
-        ) : <p className="management-empty">{t("workspace.management.network.ethernet.noDevices")}</p>}
+        ) : <EmptyState className="management-empty">{t("workspace.management.network.ethernet.noDevices")}</EmptyState>}
       </section>
 
       {editor ? (
@@ -307,10 +302,7 @@ function EthernetEditor({ state, busy, unavailable, t, onChange, onClose, onSave
   return (
     <ModalPortal className="management-modal-backdrop system-ethernet-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
       <section ref={dialog} className="management-modal system-ethernet-dialog" onKeyDown={handleKeyDown} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
-        <header>
-          <div><span className="eyebrow">{t("workspace.management.network.ethernet.dialogEyebrow")}</span><h2 id={titleId}>{state.device.name}</h2><p>{state.device.permanentMac}</p>{state.device.managementState === "external" ? <p>{t("workspace.management.network.ethernet.takeoverDescription")}</p> : null}</div>
-          <button type="button" className="management-icon-action" onClick={onClose} disabled={busy} aria-label={t("common.actions.close")} data-tooltip={t("common.actions.close")}><X aria-hidden="true" size={17} /></button>
-        </header>
+        <DialogHeader title={state.device.name} description={state.device.permanentMac} eyebrow={<>{t("workspace.management.network.ethernet.dialogEyebrow")}</>} headingId={titleId} actions={<>{state.device.managementState === "external" ? <p>{t("workspace.management.network.ethernet.takeoverDescription")}</p> : null}<UiButton variant="ghost" iconOnly type="button" className="management-icon-action" onClick={onClose} disabled={busy} aria-label={t("common.actions.close")} data-tooltip={t("common.actions.close")}><X aria-hidden="true" size={17} /></UiButton></>} />
         <form onSubmit={(event: FormEvent) => { event.preventDefault(); onSave(); }}>
           <div className="system-ethernet-form">
             <Switch className="system-ethernet-toggle" checked={state.config.enabled} onCheckedChange={(enabled) => updateConfig({ ...state.config, enabled })} disabled={busy || unavailable} label={t("workspace.management.network.ethernet.fields.enabled")} />
@@ -318,7 +310,7 @@ function EthernetEditor({ state, busy, unavailable, t, onChange, onClose, onSave
             <FamilyFields family="ipv6" config={state.config} busy={busy || unavailable} t={t} onChange={updateConfig} />
             {errors.length ? <p className="system-ethernet-form-error" role="alert">{t("workspace.management.network.ethernet.errors.invalid")}</p> : null}
           </div>
-          <footer className="system-ethernet-dialog-actions"><button type="button" onClick={onClose} disabled={busy}>{t("common.actions.cancel")}</button><button type="submit" className="is-primary" disabled={busy || unavailable || errors.length > 0} aria-busy={busy || undefined}>{busy ? <LoaderCircle className="is-spinning" aria-hidden="true" size={14} /> : <Save aria-hidden="true" size={14} />}<span>{t(state.device.managementState === "external" ? "workspace.management.network.ethernet.saveTakeover" : "common.actions.save")}</span></button></footer>
+          <DialogActions className="system-ethernet-dialog-actions"><UiButton variant="ghost" type="button" onClick={onClose} disabled={busy}>{t("common.actions.cancel")}</UiButton><UiButton variant="primary" type="submit" className="is-primary" disabled={busy || unavailable || errors.length > 0} aria-busy={busy || undefined}>{busy ? <LoaderCircle className="is-spinning" aria-hidden="true" size={14} /> : <Save aria-hidden="true" size={14} />}<span>{t(state.device.managementState === "external" ? "workspace.management.network.ethernet.saveTakeover" : "common.actions.save")}</span></UiButton></DialogActions>
         </form>
       </section>
     </ModalPortal>
@@ -341,8 +333,8 @@ function FamilyFields({ family, config, busy, t, onChange }: {
     <fieldset className="system-ethernet-family" disabled={disabled}>
       <legend>{family.toUpperCase()}</legend>
       <div className="system-ethernet-form-grid">
-        <div className="system-ethernet-select-field">
-          <label htmlFor={`${fieldId}-mode`}>{t("workspace.management.network.ethernet.fields.mode")}</label>
+        <Field className="system-ethernet-select-field" label={t("workspace.management.network.ethernet.fields.mode")} htmlFor={`${fieldId}-mode`}>
+
           <CustomSelect<typeof value.mode>
             id={`${fieldId}-mode`}
             value={value.mode}
@@ -354,14 +346,14 @@ function FamilyFields({ family, config, busy, t, onChange }: {
             ]}
             onChange={(mode) => update({ ...value, mode, address: null, prefixLength: null, gateway: null })}
           />
-        </div>
+        </Field>
         {value.mode === "static" ? <>
-          <label><span>{t("workspace.management.network.ethernet.fields.address")}</span><input value={value.address ?? ""} onChange={(event) => update({ ...value, address: event.target.value || null })} /></label>
-          <label><span>{t("workspace.management.network.ethernet.fields.prefix")}</span><input type="number" min="0" max={family === "ipv4" ? 32 : 128} value={value.prefixLength ?? ""} onChange={(event) => update({ ...value, prefixLength: event.target.value ? Number(event.target.value) : null })} /></label>
-          <label><span>{t("workspace.management.network.ethernet.fields.gateway")}</span><input value={value.gateway ?? ""} onChange={(event) => update({ ...value, gateway: event.target.value || null })} /></label>
+          <Field label={t("workspace.management.network.ethernet.fields.address")}><Input value={value.address ?? ""} onChange={(event) => update({ ...value, address: event.target.value || null })} /></Field>
+          <Field label={t("workspace.management.network.ethernet.fields.prefix")}><Input type="number" min="0" max={family === "ipv4" ? 32 : 128} value={value.prefixLength ?? ""} onChange={(event) => update({ ...value, prefixLength: event.target.value ? Number(event.target.value) : null })} /></Field>
+          <Field label={t("workspace.management.network.ethernet.fields.gateway")}><Input value={value.gateway ?? ""} onChange={(event) => update({ ...value, gateway: event.target.value || null })} /></Field>
         </> : null}
-        <div className="system-ethernet-select-field">
-          <label htmlFor={`${fieldId}-dns-mode`}>{t("workspace.management.network.ethernet.fields.dnsMode")}</label>
+        <Field className="system-ethernet-select-field" label={t("workspace.management.network.ethernet.fields.dnsMode")} htmlFor={`${fieldId}-dns-mode`}>
+
           <CustomSelect<typeof value.dnsMode>
             id={`${fieldId}-dns-mode`}
             value={value.dnsMode}
@@ -372,10 +364,10 @@ function FamilyFields({ family, config, busy, t, onChange }: {
             ]}
             onChange={(dnsMode) => update({ ...value, dnsMode, dns: dnsMode === "automatic" ? [] : value.dns })}
           />
-        </div>
-        {value.dnsMode === "manual" ? <label className="is-wide"><span>{t("workspace.management.network.ethernet.fields.dns")}</span><input value={value.dns.join(", ")} onChange={(event) => update({ ...value, dns: event.target.value.split(",").map((item) => item.trim()).filter(Boolean).slice(0, 3) })} /></label> : null}
+        </Field>
+        {value.dnsMode === "manual" ? <Field className="is-wide" label={t("workspace.management.network.ethernet.fields.dns")}><Input value={value.dns.join(", ")} onChange={(event) => update({ ...value, dns: event.target.value.split(",").map((item) => item.trim()).filter(Boolean).slice(0, 3) })} /></Field> : null}
         <Switch className="system-ethernet-toggle" checked={value.useDefaultRoute} onCheckedChange={(useDefaultRoute) => update({ ...value, useDefaultRoute })} disabled={value.mode === "disabled"} label={t("workspace.management.network.ethernet.fields.defaultRoute")} />
-        <label><span>{t("workspace.management.network.ethernet.fields.metric")}</span><input type="number" min="1" max="65535" value={value.routeMetric} onChange={(event) => update({ ...value, routeMetric: Number(event.target.value) })} /></label>
+        <Field label={t("workspace.management.network.ethernet.fields.metric")}><Input type="number" min="1" max="65535" value={value.routeMetric} onChange={(event) => update({ ...value, routeMetric: Number(event.target.value) })} /></Field>
       </div>
     </fieldset>
   );
@@ -385,14 +377,14 @@ function ApplyConfirmation({ busy, count, t, onCancel, onConfirm }: { busy: bool
   const titleId = useId();
   const dialog = useRef<HTMLElement | null>(null);
   const handleKeyDown = useDialogFocus(dialog, busy ? undefined : onCancel);
-  return <ModalPortal className="management-modal-backdrop system-ethernet-modal-backdrop"><section ref={dialog} className="management-modal system-ethernet-confirm-dialog" onKeyDown={handleKeyDown} role="alertdialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}><header><div><span className="eyebrow">{t("workspace.management.network.ethernet.confirm.eyebrow")}</span><h2 id={titleId}>{t("workspace.management.network.ethernet.confirm.title")}</h2></div><button type="button" className="management-icon-action" onClick={onCancel} disabled={busy} aria-label={t("common.actions.close")} data-tooltip={t("common.actions.close")}><X aria-hidden="true" size={17} /></button></header><div className="system-ethernet-confirm-body"><AlertTriangle aria-hidden="true" size={24} /><p>{t("workspace.management.network.ethernet.confirm.description", { count })}</p></div><footer><button type="button" onClick={onCancel} disabled={busy}>{t("common.actions.cancel")}</button><button type="button" className="is-danger" onClick={onConfirm} disabled={busy} aria-busy={busy || undefined}>{busy ? <LoaderCircle className="is-spinning" aria-hidden="true" size={14} /> : <Check aria-hidden="true" size={14} />}<span>{t("workspace.management.network.ethernet.confirm.apply")}</span></button></footer></section></ModalPortal>;
+  return <ModalPortal className="management-modal-backdrop system-ethernet-modal-backdrop"><section ref={dialog} className="management-modal system-ethernet-confirm-dialog" onKeyDown={handleKeyDown} role="alertdialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}><DialogHeader title={t("workspace.management.network.ethernet.confirm.title")} eyebrow={<>{t("workspace.management.network.ethernet.confirm.eyebrow")}</>} headingId={titleId} actions={<><UiButton variant="ghost" iconOnly type="button" className="management-icon-action" onClick={onCancel} disabled={busy} aria-label={t("common.actions.close")} data-tooltip={t("common.actions.close")}><X aria-hidden="true" size={17} /></UiButton></>} /><div className="system-ethernet-confirm-body"><AlertTriangle aria-hidden="true" size={24} /><p>{t("workspace.management.network.ethernet.confirm.description", { count })}</p></div><DialogActions><UiButton variant="ghost" type="button" onClick={onCancel} disabled={busy}>{t("common.actions.cancel")}</UiButton><UiButton variant="danger" type="button" className="is-danger" onClick={onConfirm} disabled={busy} aria-busy={busy || undefined}>{busy ? <LoaderCircle className="is-spinning" aria-hidden="true" size={14} /> : <Check aria-hidden="true" size={14} />}<span>{t("workspace.management.network.ethernet.confirm.apply")}</span></UiButton></DialogActions></section></ModalPortal>;
 }
 
 function ApplyCountdown({ transaction, seconds, busy, t, onConfirm, onRollback }: { transaction: EthernetApplyTransaction; seconds: number; busy: boolean; t: Translate; onConfirm: () => void; onRollback: () => void }) {
   const titleId = useId();
   const dialog = useRef<HTMLElement | null>(null);
   const handleKeyDown = useDialogFocus(dialog);
-  return <ModalPortal className="management-modal-backdrop system-ethernet-modal-backdrop"><section ref={dialog} className="management-modal system-ethernet-countdown-dialog" onKeyDown={handleKeyDown} role="alertdialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}><header><div><span className="eyebrow">{t("workspace.management.network.ethernet.transaction.eyebrow")}</span><h2 id={titleId}>{t("workspace.management.network.ethernet.transaction.title")}</h2></div><span className="system-ethernet-countdown" aria-live="polite">{seconds}s</span></header><div className="system-ethernet-confirm-body"><Cable aria-hidden="true" size={24} /><p>{t("workspace.management.network.ethernet.transaction.description", { count: transaction.deviceIds.length })}</p></div><footer><button type="button" className="is-danger" onClick={onRollback} disabled={busy} aria-busy={busy || undefined}>{busy ? <LoaderCircle className="is-spinning" aria-hidden="true" size={14} /> : <RotateCcw aria-hidden="true" size={14} />}<span>{t("workspace.management.network.ethernet.transaction.rollback")}</span></button><button type="button" className="is-primary" onClick={onConfirm} disabled={busy || seconds <= 0} aria-busy={busy || undefined}>{busy ? <LoaderCircle className="is-spinning" aria-hidden="true" size={14} /> : <Check aria-hidden="true" size={14} />}<span>{t("workspace.management.network.ethernet.transaction.keep")}</span></button></footer></section></ModalPortal>;
+  return <ModalPortal className="management-modal-backdrop system-ethernet-modal-backdrop"><section ref={dialog} className="management-modal system-ethernet-countdown-dialog" onKeyDown={handleKeyDown} role="alertdialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}><DialogHeader title={t("workspace.management.network.ethernet.transaction.title")} eyebrow={<>{t("workspace.management.network.ethernet.transaction.eyebrow")}</>} headingId={titleId} actions={<><span className="system-ethernet-countdown" aria-live="polite">{seconds}s</span></>} /><div className="system-ethernet-confirm-body"><Cable aria-hidden="true" size={24} /><p>{t("workspace.management.network.ethernet.transaction.description", { count: transaction.deviceIds.length })}</p></div><DialogActions><UiButton variant="danger" type="button" className="is-danger" onClick={onRollback} disabled={busy} aria-busy={busy || undefined}>{busy ? <LoaderCircle className="is-spinning" aria-hidden="true" size={14} /> : <RotateCcw aria-hidden="true" size={14} />}<span>{t("workspace.management.network.ethernet.transaction.rollback")}</span></UiButton><UiButton variant="primary" type="button" className="is-primary" onClick={onConfirm} disabled={busy || seconds <= 0} aria-busy={busy || undefined}>{busy ? <LoaderCircle className="is-spinning" aria-hidden="true" size={14} /> : <Check aria-hidden="true" size={14} />}<span>{t("workspace.management.network.ethernet.transaction.keep")}</span></UiButton></DialogActions></section></ModalPortal>;
 }
 
 function useDialogFocus(dialog: RefObject<HTMLElement | null>, onEscape?: () => void) {

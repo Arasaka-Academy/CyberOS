@@ -116,15 +116,6 @@
     justify-self: end;
   }
 
-  .settings-tv-components > div {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .settings-tv-components small {
-    grid-column: 1 / -1;
-    white-space: normal;
-  }
-
   .settings-operations-task-main dl {
     grid-template-columns: 1fr;
   }
@@ -203,16 +194,6 @@
 
   .settings-content-body {
     padding: 14px;
-  }
-
-  .settings-section-card {
-    gap: 14px;
-    padding: 14px;
-  }
-
-  .settings-section-card > header {
-    align-items: flex-start;
-    flex-direction: column;
   }
 
   .settings-field-grid,

@@ -12,7 +12,7 @@
 }
 
 .message:hover {
-  background: linear-gradient(90deg, rgb(255 51 95 / 6%), transparent 68%);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--cyberos-color-danger) 6%, transparent), transparent 68%);
 }
 
 .message .avatar {
@@ -21,14 +21,14 @@
   border-color: var(--hud-cyan);
   color: var(--hud-cyan);
   background: var(--hud-void);
-  box-shadow: 3px 3px 0 rgb(51 230 242 / 36%);
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--cyberos-color-focus) 36%, transparent);
 }
 
 .message-user .avatar {
   border-color: var(--hud-red);
   color: var(--hud-void);
   background: var(--hud-red);
-  box-shadow: 3px 3px 0 rgb(255 51 95 / 35%);
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--cyberos-color-danger) 35%, transparent);
 }
 
 .message > div:last-child,
@@ -105,9 +105,9 @@
   border: 1px solid var(--hud-line);
   color: var(--hud-muted);
   background:
-    linear-gradient(135deg, rgb(255 51 95 / 8%), transparent 48%),
+    linear-gradient(135deg, color-mix(in srgb, var(--cyberos-color-danger) 8%, transparent), transparent 48%),
     var(--hud-panel);
-  box-shadow: 6px 6px 0 rgb(255 51 95 / 24%);
+  box-shadow: 6px 6px 0 color-mix(in srgb, var(--cyberos-color-danger) 24%, transparent);
 }
 
 .chat-pane .empty-state > svg {
@@ -131,14 +131,14 @@
 .agent-tool-activity > div {
   border-color: var(--hud-line-soft);
   color: var(--hud-muted);
-  background: rgb(22 13 18 / 78%);
+  background: color-mix(in srgb, var(--cyberos-color-surface-raised) 78%, transparent);
 }
 
 .chat-pane .approval-card {
   border-color: var(--hud-line);
   color: var(--hud-text);
   background: var(--hud-panel);
-  box-shadow: 4px 4px 0 rgb(255 51 95 / 25%);
+  box-shadow: 4px 4px 0 color-mix(in srgb, var(--cyberos-color-danger) 25%, transparent);
 }
 
 .chat-pane .approval-card :where(strong, p, dd) {

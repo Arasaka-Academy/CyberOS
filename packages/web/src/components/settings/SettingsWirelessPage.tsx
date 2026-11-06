@@ -1,3 +1,4 @@
+import { EmptyState } from "@cyberos/ui";
 import type { NetworkSummary, WifiStatus } from "../../api.js";
 import { useTranslation } from "react-i18next";
 import { SystemWifiManagement } from "../workspace/SystemWifiManagement.js";
@@ -29,7 +30,7 @@ export function SettingsWirelessPage({
           onNotifyError={onNotifyError}
         />
       ) : (
-        <p className="management-empty">{t("settings.wireless.statusUnavailable")}</p>
+        <EmptyState className="management-empty">{t("settings.wireless.statusUnavailable")}</EmptyState>
       )}
     </div>
   );

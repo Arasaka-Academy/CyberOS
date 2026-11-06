@@ -11,6 +11,8 @@ before(async () => {
   server = await createServer({
     configFile: fileURLToPath(new URL("../packages/web/vite.config.ts", import.meta.url)),
     root: fileURLToPath(new URL("../packages/web", import.meta.url)),
+    cacheDir: fileURLToPath(new URL("../packages/web/node_modules/.vite-styles-browser", import.meta.url)),
+    optimizeDeps: { include: ["react", "react-dom/client"] },
     server: { host: "127.0.0.1", port: 0 }
   });
   await server.listen();
@@ -36,12 +38,14 @@ async function fixture(t, render, options = {}) {
       globalThis.window.$RefreshReg$ = () => {};
       globalThis.window.$RefreshSig$ = () => type => type;
       globalThis.window.__vite_plugin_react_preamble_installed__ = true;
-      const R = await import("/node_modules/.vite/deps/react.js");
+      const R = await import("/node_modules/.vite-styles-browser/deps/react.js");
       const React = R.default ?? R;
-      const D = await import("/node_modules/.vite/deps/react-dom_client.js");
+      const D = await import("/node_modules/.vite-styles-browser/deps/react-dom_client.js");
       const createRoot = D.createRoot ?? D.default.createRoot;
       const { CustomSelect } = await import("/src/components/common/CustomSelect.tsx");
       const { ModalPortal } = await import("/src/components/common/ModalPortal.tsx");
+      const { Button, IconButton, Field, Input, InputGroup, Textarea, Checkbox, Section, DialogHeader, DialogActions } = await import("/@fs/${fileURLToPath(new URL("../packages/ui/src/index.ts", import.meta.url))}");
+      await import("/@fs/${fileURLToPath(new URL("../packages/ui/src/styles.css", import.meta.url))}");
       const { useModalDialog } = await import("/src/components/workspace/useModalDialog.ts");
       ${render}
       globalThis.window.__fixtureReady = true;
@@ -53,6 +57,113 @@ async function fixture(t, render, options = {}) {
   return page;
 }
 
+async function themeColor(page, token) {
+  return page.evaluate(token => {
+    const probe = globalThis.document.createElement("span"); probe.style.color = `var(${token})`;
+    globalThis.document.body.append(probe); const value = globalThis.getComputedStyle(probe).color; probe.remove(); return value;
+  }, token);
+}
+
+test("explicit command variants own geometry without feature classes and preserve native form semantics", async t => {
+  const page = await fixture(t, `
+    globalThis.window.__submissions = 0;
+    function Form() {
+      const ref = React.useRef(null);
+      React.useEffect(() => { globalThis.window.__buttonRef = ref.current; }, []);
+      return React.createElement("form", { onSubmit: event => { event.preventDefault(); globalThis.window.__submissions++; } },
+        React.createElement("input", { "aria-label": "Name", required: true }),
+        React.createElement(Button, { variant: "primary", type: "submit", ref }, "Save"),
+        React.createElement(Button, { variant: "secondary", type: "button" }, "Cancel"),
+        React.createElement(Button, { variant: "danger", type: "button" }, "Remove"));
+    }
+    createRoot(document.getElementById("root")).render(React.createElement(Form));
+  `);
+  const save = page.getByRole("button", { name: "Save", exact: true });
+  assert.equal(await save.evaluate(node => node === globalThis.window.__buttonRef), true);
+  assert.equal(await save.evaluate(node => globalThis.getComputedStyle(node).minHeight), "34px");
+  assert.equal(await save.evaluate(node => globalThis.getComputedStyle(node).color), await themeColor(page, "--cyber-on-accent"));
+  await save.click();
+  assert.equal(await page.evaluate(() => globalThis.window.__submissions), 0);
+  await page.getByRole("textbox", { name: "Name" }).fill("NAS");
+  await save.click();
+  assert.equal(await page.evaluate(() => globalThis.window.__submissions), 1);
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  assert.equal(await page.evaluate(() => globalThis.window.__submissions), 1);
+  const remove = page.getByRole("button", { name: "Remove", exact: true });
+  assert.equal(await remove.evaluate(node => globalThis.getComputedStyle(node).color), await themeColor(page, "--cyber-danger"));
+});
+
+test("fields associate native and custom controls with labels, help and errors without losing existing descriptions", async t => {
+  const page = await fixture(t, `
+    function Form() {
+      const [value, setValue] = React.useState("one");
+      return React.createElement("form", null,
+        React.createElement("p", { id: "existing-help" }, "Existing description"),
+        React.createElement(Field, { label: "Name", hint: "NAS name", error: "Name is reserved", help: React.createElement(Button, { variant: "plain", type: "button", "aria-label": "Name help" }, "?") },
+          React.createElement(Input, { "aria-describedby": "existing-help", defaultValue: "cyberos" })),
+        React.createElement(Field, { label: "Pool", hint: "Choose storage", error: "Pool is unavailable" },
+          React.createElement(CustomSelect, { value, onChange: setValue, "aria-describedby": "existing-help", options: [{ value: "one", label: "One" }, { value: "two", label: "Two" }] })),
+        React.createElement(Field, { label: "Notes" }, React.createElement(Textarea)),
+        React.createElement(Field, { label: "Include snapshots" }, React.createElement(Checkbox)));
+    }
+    createRoot(document.getElementById("root")).render(React.createElement(Form));
+  `);
+  for (const control of [page.getByRole("textbox", { name: "Name", exact: true }), page.getByRole("button", { name: "Pool", exact: true })]) {
+    assert.equal(await control.getAttribute("aria-invalid"), "true");
+    const ids = (await control.getAttribute("aria-describedby")).split(/\s+/);
+    assert.equal(ids.length, 3);
+    assert.equal(ids[0], "existing-help");
+    for (const id of ids) assert.equal(await page.locator(`[id="${id}"]`).count(), 1);
+  }
+  await page.getByText("Name", { exact: true }).click();
+  assert.equal(await page.getByRole("textbox", { name: "Name", exact: true }).evaluate(node => node === globalThis.document.activeElement), true);
+  await page.getByRole("button", { name: "Name help", exact: true }).click();
+  assert.equal(await page.getByRole("checkbox", { name: "Include snapshots" }).isChecked(), false);
+  const select = page.getByRole("button", { name: "Pool", exact: true });
+  await select.focus();
+  await select.press("ArrowDown");
+  await select.press("End");
+  await select.press("Enter");
+  assert.equal(await select.textContent(), "Two");
+  await select.press("Enter");
+  await select.press("Escape");
+  assert.equal(await page.getByRole("listbox").count(), 0);
+  assert.equal(await select.evaluate(node => node === globalThis.document.activeElement), true);
+  assert.equal(await page.getByRole("textbox", { name: "Notes" }).count(), 1);
+});
+
+test("input affixes reserve text space at desktop and touch widths and retain native submit", async t => {
+  const page = await fixture(t, `
+    globalThis.window.__submissions = 0;
+    function Search() {
+      const [value, setValue] = React.useState("query");
+      return React.createElement("form", { onSubmit: event => { event.preventDefault(); globalThis.window.__submissions++; } },
+        React.createElement(InputGroup, {
+          leading: React.createElement(IconButton, { variant: "ghost", type: "submit", label: "Search" }, "S"),
+          trailing: React.createElement(IconButton, { variant: "ghost", type: "button", label: "Clear", onClick: () => setValue("") }, "X")
+        }, React.createElement(Input, { "aria-label": "Query", value, onChange: event => setValue(event.target.value) })));
+    }
+    createRoot(document.getElementById("root")).render(React.createElement(Search));
+  `);
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    const bounds = await page.locator(".ui-input-group").evaluate(group => {
+      const input = group.querySelector("input"), style = globalThis.getComputedStyle(input), rect = input.getBoundingClientRect();
+      const leading = group.querySelector(".ui-input-leading button").getBoundingClientRect();
+      const trailing = group.querySelector(".ui-input-trailing button").getBoundingClientRect();
+      return { textLeft: rect.left + parseFloat(style.paddingLeft), textRight: rect.right - parseFloat(style.paddingRight), leadingRight: leading.right, trailingLeft: trailing.left, target: leading.height };
+    });
+    assert.ok(bounds.textLeft >= bounds.leadingRight);
+    assert.ok(bounds.textRight <= bounds.trailingLeft);
+    assert.ok(bounds.target >= (width < 1040 ? 44 : 32));
+  }
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  assert.equal(await page.evaluate(() => globalThis.window.__submissions), 1);
+  await page.getByRole("button", { name: "Clear", exact: true }).click();
+  assert.equal(await page.getByRole("textbox", { name: "Query", exact: true }).inputValue(), "");
+  assert.equal(await page.evaluate(() => globalThis.window.__submissions), 1);
+});
+
 test("required custom select blocks form submission and focuses its trigger", async t => {
   const page = await fixture(t, `
     globalThis.window.__submissions = 0;
@@ -61,7 +172,7 @@ test("required custom select blocks form submission and focuses its trigger", as
       return React.createElement("form", { onSubmit: event => { event.preventDefault(); globalThis.window.__submissions++; } },
         React.createElement(CustomSelect, { required: true, ariaLabel: "Storage pool", value, onChange: setValue,
           options: [{ value: "", label: "Choose a pool" }, { value: "pool-1", label: "Pool one" }] }),
-        React.createElement("button", { type: "submit", className: "primary-button" }, "Save"));
+        React.createElement(Button, { variant: "primary", type: "submit", className: "primary-button" }, "Save"));
     }
     createRoot(globalThis.document.getElementById("root")).render(React.createElement(Form));
   `);
@@ -76,6 +187,33 @@ test("required custom select blocks form submission and focuses its trigger", as
   assert.equal(await page.evaluate(() => globalThis.window.__submissions), 1);
 });
 
+test("busy navigation controls remain readable in every appearance", async t => {
+  const page = await fixture(t, `
+    createRoot(document.getElementById("root")).render(React.createElement(Button, {
+      variant: "ghost",
+      className: "settings-button agent-settings-button", "aria-label": "Loading settings",
+      "aria-busy": true, "aria-disabled": true
+    }, "Loading"));
+  `);
+  for (const scheme of ["neon", "mono", "graphite", "synthwave", "bloodline", "terminal", "amber"]) {
+    for (const mode of ["dark", "light"]) {
+      await page.evaluate(({ scheme, mode }) => {
+        globalThis.document.documentElement.dataset.cyberScheme = scheme;
+        globalThis.document.documentElement.dataset.cyberMode = mode;
+      }, { scheme, mode });
+      const ratio = await page.getByRole("button", { name: "Loading settings" }).evaluate(element => {
+        const style = globalThis.getComputedStyle(element);
+        const luminance = color => color.match(/[\d.]+/g).slice(0, 3).map(Number)
+          .map(channel => channel / 255).map(channel => channel <= .04045 ? channel / 12.92 : ((channel + .055) / 1.055) ** 2.4)
+          .reduce((sum, channel, index) => sum + channel * [.2126, .7152, .0722][index], 0);
+        const foreground = luminance(style.color), background = luminance(style.backgroundColor);
+        return (Math.max(foreground, background) + .05) / (Math.min(foreground, background) + .05);
+      });
+      assert.ok(ratio >= 4.5, `${scheme}/${mode}: busy navigation contrast ${ratio}`);
+    }
+  }
+});
+
 test("command geometry, disabled, busy and keyboard focus agree across feature containers", async t => {
   const page = await fixture(t, `
     const contexts = ["standard", "music-panel", "music-dialog", "video-panel", "create-form-dialog-footer",
@@ -85,7 +223,7 @@ test("command geometry, disabled, busy and keyboard focus agree across feature c
       ...contexts.map(context => React.createElement("section", { key: context, className: context, "data-context": context,
         style: { display: "flex", flexWrap: "wrap", gap: 12, height: "auto", width: "auto", padding: 20 } },
         ...["primary-button", "secondary-button", "danger-button"].flatMap(className =>
-          ["default", "disabled", "busy"].map(state => React.createElement("button", { key: className + state, className,
+          ["default", "disabled", "busy"].map(state => React.createElement(Button, { key: className + state, className, variant: className.replace("-button", ""),
             disabled: state !== "default", "aria-busy": state === "busy" || undefined,
             "data-state": state }, "Save")))))));
   `);
@@ -105,18 +243,18 @@ test("command geometry, disabled, busy and keyboard focus agree across feature c
   await command.focus();
   assert.deepEqual(await command.evaluate(element => {
     const s = globalThis.getComputedStyle(element); return [s.outlineWidth, s.outlineColor, s.outlineOffset];
-  }), ["2px", "rgb(0, 240, 255)", "3px"]);
+  }), ["2px", await themeColor(page, "--cyber-accent2"), "3px"]);
 });
 
 test("management icon actions share quiet surfaces and target sizes inside modal portals", async t => {
   for (const { tv, width, size } of [
     { tv: false, width: 1440, size: 32 },
     { tv: false, width: 390, size: 44 },
-    { tv: true, width: 1920, size: 44 }
+    { tv: true, width: 1920, size: 48 }
   ]) {
     const page = await fixture(t, `
-      const action = (state, key) => React.createElement("button", {
-        key, className: "management-icon-action", "aria-label": key,
+      const action = (state, key) => React.createElement(Button, {
+        key, variant: "ghost", iconOnly: true, className: "management-icon-action", "aria-label": key,
         disabled: state !== "default", "aria-busy": state === "busy" || undefined,
         "data-state": state
       }, "×");
@@ -162,9 +300,9 @@ test("hover preserves the focused field appearance in workspaces and modal edito
       });
       assert.equal(actual.focused, true);
       assert.equal(actual.hovered, true);
-      assert.equal(actual.border, "rgb(0, 240, 255)", `${width}px ${modal ? "modal" : "workspace"}`);
-      assert.equal(actual.shadow, "rgb(0, 240, 255) 3px 0px 0px 0px inset");
-      assert.deepEqual(actual.outline, ["2px", "rgb(0, 240, 255)", "3px"]);
+      assert.equal(actual.border, await themeColor(page, "--cyber-accent2"), `${width}px ${modal ? "modal" : "workspace"}`);
+      assert.equal(actual.shadow, `${await themeColor(page, "--cyber-accent2")} 3px 0px 0px 0px inset`);
+      assert.deepEqual(actual.outline, ["2px", await themeColor(page, "--cyber-accent2"), "3px"]);
     }
   }
 });
@@ -187,7 +325,7 @@ test("Web and TV share menu surfaces and states while retaining TV target size",
     assert.equal(await page.getByRole("option").first().evaluate(el => el.getBoundingClientRect().height), tv ? 48 : 32);
   }
   assert.deepEqual(results[1], results[0]);
-  assert.equal(results[0][0], "rgb(22, 13, 18)");
+  assert.notEqual(results[0][0], "rgba(0, 0, 0, 0)");
   assert.notEqual(results[0][2], "none");
 });
 
@@ -220,8 +358,8 @@ test("numeric options, disabled options and disabled fieldsets preserve form sem
           React.createElement(CustomSelect, { required: true, ariaLabel: "Window", value: String(value),
             onChange: v => { globalThis.window.__value = Number(v); setValue(Number(v)); },
             options: [{ value: "60", label: "1m" }, { value: "300", label: "5m", disabled: true }, { value: "900", label: "15m" }] })),
-        React.createElement("button", { type: "button", onClick: () => setDisabled(!disabled) }, "Toggle disabled"),
-        React.createElement("button", { type: "submit" }, "Save"));
+        React.createElement(Button, { type: "button", onClick: () => setDisabled(!disabled) }, "Toggle disabled"),
+        React.createElement(Button, { type: "submit" }, "Save"));
     }
     createRoot(globalThis.document.getElementById("root")).render(React.createElement(Form));
   `);
@@ -266,7 +404,7 @@ test("shared fields and disabled commands retain their geometry and contrast in 
         React.createElement(CustomSelect, { value: "one", ariaLabel: context, onChange: () => undefined,
           options: [{ value: "one", label: "One" }] }))),
       ...footers.map(context => React.createElement("footer", { key: context, className: context },
-        React.createElement("button", { disabled: true, className: "secondary-button" }, "Save")))));
+        React.createElement(Button, { disabled: true, className: "secondary-button" }, "Save")))));
   `);
   for (const input of await page.locator("input").all()) {
     assert.equal(await input.evaluate(e => e.getBoundingClientRect().height), 40);
@@ -346,6 +484,67 @@ test("Docker network form uses shared options and retains conditional driver mod
   assert.equal(await page.getByRole("option", { name: "passthru", exact: true }).count(), 0);
 });
 
+test("the offline photo map fills its canvas after the map library stylesheet loads", async t => {
+  const page = await fixture(t, `
+    await import("/src/components/workspace/PhotoMapView.tsx");
+    createRoot(document.getElementById("root")).render(React.createElement("div", { className: "photo-map-view", style: { height: "500px" } },
+      React.createElement("div", { className: "photo-map-toolbar" }, "Offline map"),
+      React.createElement("div", { className: "photo-map-canvas" }, React.createElement("div", { className: "photo-maplibre maplibregl-map" },
+        React.createElement("div", { className: "maplibregl-canvas-container" }, React.createElement("canvas", { className: "maplibregl-canvas" }))))));
+  `, { viewport: { width: 390, height: 900 } });
+  const canvas = await page.locator(".photo-map-canvas").boundingBox();
+  const host = await page.locator(".photo-maplibre").boundingBox();
+  assert.ok(canvas.height >= 300, `Map canvas must be usable: ${JSON.stringify(canvas)}`);
+  assert.ok(host.height >= canvas.height - 1, `Map library must fill its canvas: ${JSON.stringify({ canvas, host })}`);
+});
+
+test("photo filters retain a readable dialog surface in dark and light themes", async t => {
+  const page = await fixture(t, `
+    const { PhotoSearchFilterMenu } = await import("/src/components/workspace/PhotoSearchFilterMenu.tsx");
+    createRoot(document.getElementById("root")).render(React.createElement(PhotoSearchFilterMenu, { filters: {}, facets: null, metadataFields: [], onApply: () => undefined }));
+  `);
+  await page.locator(".photo-filter-trigger").click();
+  for (const mode of ["dark", "light"]) {
+    await page.evaluate(mode => { globalThis.document.documentElement.dataset.theme = mode; globalThis.document.documentElement.dataset.cyberScheme = "neon"; }, mode);
+    const paint = await page.locator(".photo-filter-menu").evaluate(node => ({ background: globalThis.getComputedStyle(node).backgroundColor, foreground: globalThis.getComputedStyle(node).color }));
+    assert.equal(paint.background, await themeColor(page, "--dialog-bg"), mode);
+    assert.equal(paint.foreground, await themeColor(page, "--text"), mode);
+  }
+});
+
+test("the photo viewer keeps its image and controls visible when portalled outside the workspace container", async t => {
+  const page = await fixture(t, `
+    const image = "data:image/svg+xml;base64," + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480"><rect width="640" height="480" fill="gray"/></svg>');
+    const e = React.createElement;
+    const actions = e("div", { className: "photo-lightbox-tools" }, ...["Zoom out", "Reset", "Zoom in", "Close"].map(label =>
+      e(Button, { key: label, variant: "ghost", iconOnly: true, "aria-label": label }, label.slice(0, 1))));
+    const metadata = e("aside", { className: "photo-lightbox-meta" }, e("dl", null, ...Array.from({ length: 12 }, (_, i) =>
+      e("div", { key: i }, e("dt", null, "Metadata " + i), e("dd", null, "Long technical value ".repeat(5))))));
+    const body = e("div", { className: "photo-lightbox-body" },
+      e(Button, { className: "photo-lightbox-nav is-previous", variant: "ghost", iconOnly: true, "aria-label": "Previous" }, "<"),
+      e("div", { className: "photo-lightbox-canvas" }, e("img", { src: image, alt: "Photo", style: { width: "100%" } })),
+      e(Button, { className: "photo-lightbox-nav is-next", variant: "ghost", iconOnly: true, "aria-label": "Next" }, ">"), metadata);
+    const viewer = e("div", { className: "photo-lightbox", role: "dialog", "aria-label": "Photo" },
+      e(DialogHeader, { className: "photo-lightbox-header", title: "长照片文件名-photo-with-metadata.png", eyebrow: "PHOTO", actions }), body);
+    createRoot(document.getElementById("root")).render(e("section", { className: "workspace-stage" },
+      e(ModalPortal, { className: "photo-lightbox-backdrop" }, viewer)));
+  `);
+  for (const [width, height] of [[1440, 900], [820, 900], [560, 900], [390, 900], [320, 900], [320, 420]]) {
+    await page.setViewportSize({ width, height });
+    const media = await page.locator(".photo-lightbox-canvas img").boundingBox();
+    const canvas = await page.locator(".photo-lightbox-canvas").boundingBox();
+    assert.ok(media && media.width >= 140, `${width}x${height}: photo has usable width: ${JSON.stringify(media)}`);
+    assert.ok(canvas.height >= Math.min(180, height * .25), `${width}x${height}: photo has usable height: ${JSON.stringify(canvas)}`);
+    const dialog = await page.getByRole("dialog").boundingBox();
+    const close = await page.getByRole("button", { name: "Close", exact: true }).boundingBox();
+    assert.ok(dialog.x >= 0 && dialog.x + dialog.width <= width && dialog.y >= 0 && dialog.y + dialog.height <= height);
+    assert.ok(close.x >= 0 && close.x + close.width <= width && close.y >= 0 && close.y + close.height <= height);
+    const overflow = await page.getByRole("dialog").evaluate(node => ({ width: node.clientWidth, height: node.clientHeight, scrollWidth: node.scrollWidth, scrollHeight: node.scrollHeight,
+      overflowingChildren: [...node.children].flatMap(child => [...child.children]).filter(child => child.getBoundingClientRect().right > node.getBoundingClientRect().right).map(child => ({ class: child.className, width: child.getBoundingClientRect().width })) }));
+    assert.ok(overflow.scrollWidth <= overflow.width && overflow.scrollHeight <= overflow.height, `${width}x${height}: dialog contains its content: ${JSON.stringify(overflow)}`);
+  }
+});
+
 test("Escape dismisses a select, then the nested modal, and restores focus at each level", async t => {
   const page = await fixture(t, `
     function Dialog({ inner = false, onClose }) {
@@ -355,12 +554,12 @@ test("Escape dismisses a select, then the nested modal, and restores focus at ea
         React.createElement("section", { ref, tabIndex: -1, className: "management-dialog", role: "dialog", "aria-modal": true, "aria-label": inner ? "Inner" : "Outer" },
           React.createElement(CustomSelect, { required: true, ariaLabel: inner ? "Inner choice" : "Outer choice", value: "one", onChange: () => undefined,
             options: [{ value: "one", label: "One" }, { value: "two", label: "Two" }] }),
-          !inner && React.createElement("button", { className: "secondary-button", onClick: () => setNested(true) }, "Open inner"),
-          React.createElement("button", { className: "secondary-button", onClick: onClose }, "Close"),
+          !inner && React.createElement(Button, { variant: "secondary", className: "secondary-button", onClick: () => setNested(true) }, "Open inner"),
+          React.createElement(Button, { variant: "secondary", className: "secondary-button", onClick: onClose }, "Close"),
           nested && React.createElement(Dialog, { inner: true, onClose: () => setNested(false) })));
     }
     function App() { const [open, setOpen] = React.useState(false); return React.createElement(React.Fragment, null,
-      React.createElement("button", { className: "primary-button", onClick: () => setOpen(true) }, "Open outer"),
+      React.createElement(Button, { variant: "primary", className: "primary-button", onClick: () => setOpen(true) }, "Open outer"),
       open && React.createElement(Dialog, { onClose: () => setOpen(false) })); }
     createRoot(globalThis.document.getElementById("root")).render(React.createElement(App));
   `);
@@ -390,14 +589,14 @@ for (const locale of ["zh-CN", "en-US"]) for (const width of [1440, 820, 560, 39
       const long = chinese ? "非常长的存储池名称与操作说明".repeat(5) : "Very long storage pool and operation description ".repeat(5);
       createRoot(globalThis.document.getElementById("root")).render(React.createElement(ModalPortal, { className: "management-dialog-backdrop" },
         React.createElement("form", { className: "management-dialog create-form-dialog", role: "dialog", "aria-label": "Create" },
-          React.createElement("header", { className: "create-form-dialog-header" }, React.createElement("h2", { style: { overflowWrap: "anywhere", margin: 0 } }, long)),
+          React.createElement(DialogHeader, { className: "create-form-dialog-header", title: long }),
           React.createElement("div", { className: "create-form-dialog-body" },
-            React.createElement("label", { className: "create-form-field" }, React.createElement("span", null, chinese ? "存储池" : "Storage pool"),
+            React.createElement(Field, { className: "create-form-field", label: chinese ? "存储池" : "Storage pool" },
               React.createElement(CustomSelect, { required: true, value: "one", ariaLabel: "Pool", onChange: () => undefined,
                 options: [{ value: "one", label: long }, ...Array.from({ length: 30 }, (_, i) => ({ value: String(i), label: long + i }))] }))),
-          React.createElement("footer", { className: "create-form-dialog-footer" }, React.createElement("div", null,
-            React.createElement("button", { type: "button", className: "secondary-button" }, chinese ? "取消" : "Cancel"),
-            React.createElement("button", { type: "button", className: "primary-button" }, chinese ? "创建" : "Create"))))));
+          React.createElement(DialogActions, { className: "create-form-dialog-footer" }, React.createElement("div", null,
+            React.createElement(Button, { type: "button", className: "secondary-button" }, chinese ? "取消" : "Cancel"),
+            React.createElement(Button, { variant: "primary", type: "button", className: "primary-button" }, chinese ? "创建" : "Create"))))));
     `, { viewport: { width, height: 420 }, locale });
     const trigger = page.getByRole("button", { name: "Pool", exact: true });
     await trigger.click();

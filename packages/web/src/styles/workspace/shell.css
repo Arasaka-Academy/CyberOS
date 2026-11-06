@@ -78,7 +78,7 @@
 }
 
 .workspace-panel-tab.is-active {
-  border-color: rgb(255 255 255 / 11%);
+  border-color: color-mix(in srgb, var(--cyberos-color-text) 11%, transparent);
   box-shadow: inset 0 3px 0 var(--accent);
 }
 

@@ -1,3 +1,4 @@
+import { Button as UiButton, DialogActions } from "@cyberos/ui";
 import { ModalPortal } from "../common/ModalPortal.js";
 import {
   createContext,
@@ -252,19 +253,19 @@ export function MusicTakeoverDialog({
       >
         <h2 id="music-takeover-title">{title}</h2>
         <p>{body}</p>
-        <footer>
-          <button type="button" disabled={busy} onClick={onCancel} className="plain-button">
+        <DialogActions>
+          <UiButton variant="plain" type="button" disabled={busy} onClick={onCancel} className="plain-button">
             {t("common.actions.cancel")}
-          </button>
-          <button
+          </UiButton>
+          <UiButton variant="primary"
             className="primary-button"
             type="button"
             disabled={busy}
             onClick={onConfirm}
           >
             {t("music.switchPlayback")}
-          </button>
-        </footer>
+          </UiButton>
+        </DialogActions>
       </section>
     </ModalPortal>
   );

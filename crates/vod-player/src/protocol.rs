@@ -53,6 +53,7 @@ fn validate_command_fields(value: &serde_json::Value) -> Result<(), VodError> {
         .ok_or_else(|| VodError::protocol("Invalid VOD player command"))?;
     let allowed: &[&str] = match command_type {
         "status" => &["type"],
+        "set-ui-theme" => &["type", "scheme", "mode"],
         "audio-focus" => &["type", "leaseId", "action"],
         "play" => &[
             "type",
@@ -102,6 +103,10 @@ fn validate_command_fields(value: &serde_json::Value) -> Result<(), VodError> {
 #[serde(tag = "type", rename_all = "kebab-case", deny_unknown_fields)]
 pub enum Command {
     Status,
+    SetUiTheme {
+        scheme: String,
+        mode: String,
+    },
     AudioFocus {
         #[serde(rename = "leaseId")]
         lease_id: String,
@@ -216,6 +221,9 @@ impl Command {
     fn validate(&self) -> Result<(), VodError> {
         match self {
             Self::Status => Ok(()),
+            Self::SetUiTheme { scheme, mode } => crate::tv_controls::theme_palette(scheme, mode)
+                .map(|_| ())
+                .ok_or_else(|| VodError::protocol("Invalid native player theme")),
             Self::AudioFocus { lease_id, action } => {
                 validate_id(lease_id)?;
                 if !["acquire", "renew", "release"].contains(&action.as_str()) {
@@ -602,6 +610,32 @@ mod tests {
         RequestEnvelope::export_all(&config).unwrap();
         SuccessResponse::<'static>::export_all(&config).unwrap();
         ErrorResponse::<'static>::export_all(&config).unwrap();
+    }
+
+    #[test]
+    fn accepts_only_the_fourteen_native_ui_themes() {
+        for scheme in [
+            "neon",
+            "mono",
+            "graphite",
+            "synthwave",
+            "bloodline",
+            "terminal",
+            "amber",
+        ] {
+            for mode in ["dark", "light"] {
+                let frame = serde_json::json!({"version":3,"id":"theme","command":{"type":"set-ui-theme","scheme":scheme,"mode":mode}});
+                assert!(RequestEnvelope::parse(frame.to_string().as_bytes()).is_ok());
+            }
+        }
+        for command in [
+            serde_json::json!({"type":"set-ui-theme","scheme":"unknown","mode":"dark"}),
+            serde_json::json!({"type":"set-ui-theme","scheme":"neon","mode":"system"}),
+            serde_json::json!({"type":"set-ui-theme","scheme":"neon","mode":"light","sessionId":"unexpected"}),
+        ] {
+            let frame = serde_json::json!({"version":3,"id":"theme","command":command});
+            assert!(RequestEnvelope::parse(frame.to_string().as_bytes()).is_err());
+        }
     }
 
     #[test]

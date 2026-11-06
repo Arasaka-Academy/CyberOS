@@ -19,17 +19,17 @@
 }
 
 .settings-search input {
-  border-color: rgb(252 238 10 / 52%) !important;
-  color: var(--cyber-yellow) !important;
+  border-color: color-mix(in srgb, var(--cyberos-color-command) 52%, transparent) !important;
+  color: var(--hud-yellow) !important;
   background: transparent !important;
 }
 
 .settings-search input::placeholder {
-  color: rgb(252 238 10 / 45%);
+  color: color-mix(in srgb, var(--cyberos-color-command) 45%, transparent);
 }
 
 .settings-search svg {
-  color: var(--cyber-cyan);
+  color: var(--hud-cyan);
 }
 
 .settings-nav button {
@@ -39,31 +39,30 @@
 }
 
 .settings-nav button:hover {
-  border-color: var(--cyber-cyan);
+  border-color: var(--hud-cyan);
 }
 
 .settings-nav button.is-active {
-  border-color: var(--cyber-yellow);
+  border-color: var(--hud-yellow);
 }
 
 .settings-rail-footer {
-  border-top-color: rgb(252 238 10 / 34%);
-  color: rgb(252 238 10 / 56%);
+  border-top-color: color-mix(in srgb, var(--cyberos-color-command) 34%, transparent);
+  color: color-mix(in srgb, var(--cyberos-color-command) 56%, transparent);
 }
 
 .settings-content-header {
   padding: 25px 32px 19px;
-  border-bottom: 2px solid var(--cyber-ink);
+  border-bottom: 2px solid var(--hud-ink);
 }
 
 .settings-content-header p,
-.settings-section-card p,
 .settings-preference-field small {
   color: var(--muted);
 }
 
 .settings-content-header button {
-  border: 1px solid var(--cyber-ink);
+  border: 1px solid var(--hud-ink);
 }
 
 .settings-content-body {
@@ -75,38 +74,16 @@
   gap: 12px;
 }
 
-.settings-section-card {
-  position: relative;
-  gap: 18px;
-  padding: 20px;
-  border: 1px solid var(--cyber-ink);
-}
-
-.settings-section-card::after {
-  position: absolute;
-  top: -1px;
-  right: 16px;
-  width: 48px;
-  height: 3px;
-  background: var(--cyber-red);
-  content: "";
-}
-
-.settings-section-card h3 {
-  font-size: 17px;
-  text-transform: uppercase;
-}
-
 .settings-actions {
-  border-top: 2px solid var(--cyber-ink);
-  background: #d8cc00;
+  border-top: 2px solid var(--hud-ink);
+  background: var(--cyberos-color-warning);
 }
 
 .settings-area-list em,
 .settings-metric-grid article,
 .settings-policy-row,
 .approval-card-details div {
-  border: 1px solid var(--cyber-ink);
+  border: 1px solid var(--hud-ink);
   border-radius: 0;
-  background: rgb(5 10 14 / 7%);
+  background: color-mix(in srgb, var(--cyberos-color-surface-raised) 7%, transparent);
 }

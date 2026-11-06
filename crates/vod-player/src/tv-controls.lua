@@ -1,5 +1,6 @@
 local mp = require("mp")
 local assdraw = require("mp.assdraw")
+local utils = require("mp.utils")
 
 local overlay = mp.create_osd_overlay("ass-events")
 local visible = false
@@ -10,14 +11,10 @@ local menu = nil
 local render
 local timer
 local colors = {
-    background = "0E0A05",
-    panel = "120D16",
-    text = "E7ECF4",
-    muted = "ADA8BD",
-    yellow = "0AEEFC",
-    red = "3C00FF",
-    cyan = "FFF000",
+    background = "17151E", panel = "29273E", text = "EAE493", muted = "9CA1C9",
+    yellow = "4B57E0", red = "4B57E0", cyan = "EAE493",
 }
+
 local languages = {
     zho = "中文", chi = "中文", zh = "中文", eng = "英语", en = "英语",
     jpn = "日语", ja = "日语", yue = "粤语", kor = "韩语", ko = "韩语",
@@ -274,3 +271,18 @@ end)
 for _, property in ipairs({ "track-list", "aid", "sid", "osd-dimensions" }) do
     mp.observe_property(property, "native", function() if visible then render() end end)
 end
+
+-- Only a validated palette from the VOD protocol reaches this message.
+mp.register_script_message("cyberos-ui-theme", function(raw)
+    local palette = utils.parse_json(raw)
+    if type(palette) ~= "table" then return end
+    local keys = { background = "bg", panel = "soft", text = "ink", muted = "muted", yellow = "accent", red = "accent", cyan = "accent2" }
+    local next_colors = {}
+    for role, key in pairs(keys) do
+        local hex = palette[key]
+        if type(hex) ~= "string" or not hex:match("^#%x%x%x%x%x%x$") then return end
+        next_colors[role] = hex:sub(6, 7) .. hex:sub(4, 5) .. hex:sub(2, 3)
+    end
+    colors = next_colors
+    if visible then render() end
+end)

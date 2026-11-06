@@ -74,7 +74,7 @@ describe("Photo offline map states", () => {
       busy: true,
       onDownload: () => undefined
     }));
-    expect(busyHtml).toContain('class="primary-button"');
+    expect(busyHtml).toMatch(/class="[^"]*\bprimary-button\b[^"]*"/u);
     expect(busyHtml).toContain('disabled=""');
     expect(busyHtml).toContain('aria-busy="true"');
 
@@ -176,7 +176,7 @@ describe("photo timeline grouping", () => {
 
     expect(html).toContain("Photo library is not configured");
     expect(html).toContain("Configure photo library");
-    expect(html).toContain('class="primary-button"');
+    expect(html).toMatch(/class="[^"]*\bprimary-button\b[^"]*"/u);
   });
 
   it("toggles multiple values within one facet as an OR set", () => {

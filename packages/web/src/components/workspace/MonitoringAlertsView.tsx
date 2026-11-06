@@ -1,3 +1,4 @@
+import { Button as UiButton, DialogActions, DialogHeader, Field, Input } from "@cyberos/ui";
 import { CustomSelect } from "../common/CustomSelect.js";
 import { ModalPortal } from "../common/ModalPortal.js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -206,12 +207,12 @@ function RulesView() {
       <header className="monitoring-alert-page-header">
         <div><h3>{t("workspace.monitoring.alerts.rules.title")}</h3><p>{t("workspace.monitoring.alerts.rules.description")}</p></div>
         <div>
-          <button className="icon-button" type="button" onClick={() => void refresh()} data-tooltip={t("common.actions.refresh")} aria-label={t("common.actions.refresh")}>
+          <UiButton variant="ghost" iconOnly className="icon-button" type="button" onClick={() => void refresh()} data-tooltip={t("common.actions.refresh")} aria-label={t("common.actions.refresh")}>
             <RefreshCw aria-hidden="true" size={16} />
-          </button>
-          <button className="primary-button monitoring-alert-add" type="button" onClick={() => beginEdit("new")}>
+          </UiButton>
+          <UiButton variant="primary" className="primary-button monitoring-alert-add" type="button" onClick={() => beginEdit("new")}>
             <Plus aria-hidden="true" size={15} />{t("workspace.monitoring.alerts.rules.add")}
-          </button>
+          </UiButton>
         </div>
       </header>
       {error ? <div className="monitoring-alert-error" role="alert"><CircleAlert size={16} />{error}</div> : null}
@@ -232,8 +233,8 @@ function RulesView() {
                 <td><span className="monitoring-alert-severity" data-severity={rule.severity}>{t(`workspace.monitoring.alerts.severity.${rule.severity}`)}</span></td>
                 <td><Switch className="monitoring-alert-switch" compact checked={rule.enabled} disabled={busyId === rule.id} label={rule.enabled ? t("workspace.monitoring.alerts.enabled") : t("workspace.monitoring.alerts.disabled")} onCheckedChange={() => void toggleRule(rule)} /></td>
                 <td><div className="monitoring-alert-row-actions">
-                  <button type="button" onClick={() => beginEdit(rule)} data-tooltip={t("common.actions.edit")} aria-label={t("common.actions.edit")}><Pencil size={15} /></button>
-                  {!rule.builtin ? <button type="button" data-danger="true" disabled={busyId === rule.id} onClick={() => void removeRule(rule)} data-tooltip={t("common.actions.delete")} aria-label={t("common.actions.delete")}><Trash2 size={15} /></button> : null}
+                  <UiButton iconOnly variant="ghost" type="button" onClick={() => beginEdit(rule)} data-tooltip={t("common.actions.edit")} aria-label={t("common.actions.edit")}><Pencil size={15} /></UiButton>
+                  {!rule.builtin ? <UiButton iconOnly variant="ghost" type="button" data-danger="true" disabled={busyId === rule.id} onClick={() => void removeRule(rule)} data-tooltip={t("common.actions.delete")} aria-label={t("common.actions.delete")}><Trash2 size={15} /></UiButton> : null}
                 </div></td>
               </tr>
             ))}</tbody>
@@ -265,9 +266,9 @@ function RuleEditor({ draft, selectorText, metrics, policies, busy, builtin, err
       {error ? <div className="monitoring-alert-error" role="alert"><CircleAlert size={16} />{error}</div> : null}
       <form className="monitoring-alert-form" onSubmit={(event) => { event.preventDefault(); onSave(); }}>
         <fieldset disabled={busy}>
-          <label className="span-2"><span>{t("workspace.monitoring.alerts.fields.name")}</span><input required maxLength={120} value={draft.name} onChange={(event) => onChange({ ...draft, name: event.target.value })} /></label>
-          <label>
-            <span>{t("workspace.monitoring.alerts.fields.metric")}</span>
+          <Field className="span-2" label={t("workspace.monitoring.alerts.fields.name")}><Input required maxLength={120} value={draft.name} onChange={(event) => onChange({ ...draft, name: event.target.value })} /></Field>
+          <Field label={t("workspace.monitoring.alerts.fields.metric")}>
+
             <CustomSelect
               value={draft.metric}
               onChange={(selectedValue) => {
@@ -278,22 +279,22 @@ function RuleEditor({ draft, selectorText, metrics, policies, busy, builtin, err
               ariaLabel={t("workspace.monitoring.alerts.fields.metric")}
               options={metrics.map((item) => ({ value: item.name, label: item.name }))}
             />
-          </label>
-          <label><span>{t("workspace.monitoring.alerts.fields.selector")}</span><input className="is-mono" value={selectorText} onChange={(event) => onSelectorChange(event.target.value)} placeholder="{}" /></label>
-          <label><span>{t("workspace.monitoring.alerts.fields.transform")}</span><CustomSelect value={draft.transform} disabled={metric?.kind === "counter"} onChange={(selectedValue) => onChange({ ...draft, transform: selectedValue as "value" | "rate" })} ariaLabel={t("workspace.monitoring.alerts.fields.transform")} options={[{ value: "value", label: "value" }, { value: "rate", label: "rate" }]} /></label>
-          <label><span>{t("workspace.monitoring.alerts.fields.aggregation")}</span><CustomSelect value={draft.aggregation} onChange={(selectedValue) => onChange({ ...draft, aggregation: selectedValue as MonitoringAlertRuleInput["aggregation"] })} ariaLabel={t("workspace.monitoring.alerts.fields.aggregation")} options={["last", "avg", "min", "max"].map((item) => ({ value: item, label: item }))} /></label>
-          <label><span>{t("workspace.monitoring.alerts.fields.window")}</span><CustomSelect value={String(draft.windowSeconds)} onChange={(selectedValue) => onChange({ ...draft, windowSeconds: Number(selectedValue) as MonitoringAlertRuleInput["windowSeconds"] })} ariaLabel={t("workspace.monitoring.alerts.fields.window")} options={[60, 300, 900, 1800, 3600].map((value) => ({ value: String(value), label: `${value / 60}m` }))} /></label>
-          <label><span>{t("workspace.monitoring.alerts.fields.comparator")}</span><CustomSelect value={draft.comparator} onChange={(selectedValue) => onChange({ ...draft, comparator: selectedValue as MonitoringAlertRuleInput["comparator"] })} ariaLabel={t("workspace.monitoring.alerts.fields.comparator")} options={[">", ">=", "<", "<="].map((item) => ({ value: item, label: item }))} /></label>
+          </Field>
+          <Field label={t("workspace.monitoring.alerts.fields.selector")}><Input className="is-mono" value={selectorText} onChange={(event) => onSelectorChange(event.target.value)} placeholder="{}" /></Field>
+          <Field label={t("workspace.monitoring.alerts.fields.transform")}><CustomSelect value={draft.transform} disabled={metric?.kind === "counter"} onChange={(selectedValue) => onChange({ ...draft, transform: selectedValue as "value" | "rate" })} ariaLabel={t("workspace.monitoring.alerts.fields.transform")} options={[{ value: "value", label: "value" }, { value: "rate", label: "rate" }]} /></Field>
+          <Field label={t("workspace.monitoring.alerts.fields.aggregation")}><CustomSelect value={draft.aggregation} onChange={(selectedValue) => onChange({ ...draft, aggregation: selectedValue as MonitoringAlertRuleInput["aggregation"] })} ariaLabel={t("workspace.monitoring.alerts.fields.aggregation")} options={["last", "avg", "min", "max"].map((item) => ({ value: item, label: item }))} /></Field>
+          <Field label={t("workspace.monitoring.alerts.fields.window")}><CustomSelect value={String(draft.windowSeconds)} onChange={(selectedValue) => onChange({ ...draft, windowSeconds: Number(selectedValue) as MonitoringAlertRuleInput["windowSeconds"] })} ariaLabel={t("workspace.monitoring.alerts.fields.window")} options={[60, 300, 900, 1800, 3600].map((value) => ({ value: String(value), label: `${value / 60}m` }))} /></Field>
+          <Field label={t("workspace.monitoring.alerts.fields.comparator")}><CustomSelect value={draft.comparator} onChange={(selectedValue) => onChange({ ...draft, comparator: selectedValue as MonitoringAlertRuleInput["comparator"] })} ariaLabel={t("workspace.monitoring.alerts.fields.comparator")} options={[">", ">=", "<", "<="].map((item) => ({ value: item, label: item }))} /></Field>
           <NumberField label={String(t("workspace.monitoring.alerts.fields.triggerThreshold"))} value={draft.triggerThreshold} onChange={(value) => onChange({ ...draft, triggerThreshold: value })} />
           <NumberField label={String(t("workspace.monitoring.alerts.fields.recoveryThreshold"))} value={draft.recoveryThreshold} onChange={(value) => onChange({ ...draft, recoveryThreshold: value })} />
           <NumberField label={String(t("workspace.monitoring.alerts.fields.triggerDuration"))} value={draft.triggerDurationSeconds} min={0} max={86400} onChange={(value) => onChange({ ...draft, triggerDurationSeconds: value })} />
           <NumberField label={String(t("workspace.monitoring.alerts.fields.recoveryDuration"))} value={draft.recoveryDurationSeconds} min={0} max={86400} onChange={(value) => onChange({ ...draft, recoveryDurationSeconds: value })} />
-          <label><span>{t("workspace.monitoring.alerts.fields.severity")}</span><CustomSelect value={draft.severity} onChange={(selectedValue) => onChange({ ...draft, severity: selectedValue as MonitoringAlertRuleInput["severity"] })} ariaLabel={t("workspace.monitoring.alerts.fields.severity")} options={[{ value: "warning", label: t("workspace.monitoring.alerts.severity.warning") }, { value: "critical", label: t("workspace.monitoring.alerts.severity.critical") }]} /></label>
-          <label><span>{t("workspace.monitoring.alerts.fields.noData")}</span><CustomSelect value={draft.noDataPolicy} onChange={(selectedValue) => onChange({ ...draft, noDataPolicy: selectedValue as MonitoringAlertRuleInput["noDataPolicy"] })} ariaLabel={t("workspace.monitoring.alerts.fields.noData")} options={[{ value: "ignore", label: "ignore" }, { value: "firing", label: "firing" }]} /></label>
-          <label className="span-2"><span>{t("workspace.monitoring.alerts.fields.policy")}</span><CustomSelect value={draft.escalationPolicyId ?? ""} onChange={(selectedValue) => onChange({ ...draft, escalationPolicyId: selectedValue || null })} ariaLabel={t("workspace.monitoring.alerts.fields.policy")} options={[{ value: "", label: t("workspace.monitoring.alerts.noPolicy") }, ...(policies.map((policy) => ({ value: policy.id, label: policy.name })))]} /></label>
+          <Field label={t("workspace.monitoring.alerts.fields.severity")}><CustomSelect value={draft.severity} onChange={(selectedValue) => onChange({ ...draft, severity: selectedValue as MonitoringAlertRuleInput["severity"] })} ariaLabel={t("workspace.monitoring.alerts.fields.severity")} options={[{ value: "warning", label: t("workspace.monitoring.alerts.severity.warning") }, { value: "critical", label: t("workspace.monitoring.alerts.severity.critical") }]} /></Field>
+          <Field label={t("workspace.monitoring.alerts.fields.noData")}><CustomSelect value={draft.noDataPolicy} onChange={(selectedValue) => onChange({ ...draft, noDataPolicy: selectedValue as MonitoringAlertRuleInput["noDataPolicy"] })} ariaLabel={t("workspace.monitoring.alerts.fields.noData")} options={[{ value: "ignore", label: "ignore" }, { value: "firing", label: "firing" }]} /></Field>
+          <Field className="span-2" label={t("workspace.monitoring.alerts.fields.policy")}><CustomSelect value={draft.escalationPolicyId ?? ""} onChange={(selectedValue) => onChange({ ...draft, escalationPolicyId: selectedValue || null })} ariaLabel={t("workspace.monitoring.alerts.fields.policy")} options={[{ value: "", label: t("workspace.monitoring.alerts.noPolicy") }, ...(policies.map((policy) => ({ value: policy.id, label: policy.name })))]} /></Field>
           <Switch className="monitoring-alert-check span-2" checked={draft.enabled} onCheckedChange={(enabled) => onChange({ ...draft, enabled })} label={`${t("workspace.monitoring.alerts.enabled")}${builtin ? ` · ${t("workspace.monitoring.alerts.builtin")}` : ""}`} />
         </fieldset>
-        <footer><button className="secondary-button" type="button" onClick={onCancel}><X size={15} />{t("common.actions.cancel")}</button><button className="primary-button" type="submit" disabled={busy} aria-busy={busy || undefined}>{busy ? <LoaderCircle className="is-spinning" size={15} /> : <Check size={15} />}{t("common.actions.save")}</button></footer>
+        <footer><UiButton variant="secondary" className="secondary-button" type="button" onClick={onCancel}><X size={15} />{t("common.actions.cancel")}</UiButton><UiButton variant="primary" className="primary-button" type="submit" disabled={busy} aria-busy={busy || undefined}>{busy ? <LoaderCircle className="is-spinning" size={15} /> : <Check size={15} />}{t("common.actions.save")}</UiButton></footer>
       </form>
     </div>
   );
@@ -427,10 +428,10 @@ function IncidentsView({ locale }: { locale: SupportedLocale }) {
     <div className="monitoring-alert-page" role="tabpanel">
       <header className="monitoring-alert-page-header">
         <div><h3>{t("workspace.monitoring.alerts.incidents.title")}</h3><p>{t("workspace.monitoring.alerts.incidents.description", counts)}</p></div>
-        <button className="icon-button" type="button" onClick={() => void refresh()} data-tooltip={t("common.actions.refresh")} aria-label={t("common.actions.refresh")}><RefreshCw size={16} /></button>
+        <UiButton variant="ghost" iconOnly className="icon-button" type="button" onClick={() => void refresh()} data-tooltip={t("common.actions.refresh")} aria-label={t("common.actions.refresh")}><RefreshCw size={16} /></UiButton>
       </header>
       <div className="monitoring-alert-filters" role="group" aria-label={t("workspace.monitoring.alerts.incidents.filterLabel")}>
-        {(["all", "firing", "resolved"] as const).map((item) => <button key={item} type="button" aria-pressed={filter === item} className={filter === item ? "is-active" : ""} onClick={() => setFilter(item)}>{t(`workspace.monitoring.alerts.incidents.filters.${item}`)}</button>)}
+        {(["all", "firing", "resolved"] as const).map((item) => <UiButton variant="ghost" key={item} type="button" aria-pressed={filter === item} className={filter === item ? "is-active" : ""} onClick={() => setFilter(item)}>{t(`workspace.monitoring.alerts.incidents.filters.${item}`)}</UiButton>)}
       </div>
       {error ? <div className="monitoring-alert-error" role="alert"><CircleAlert size={16} />{error}</div> : null}
       {loading ? <LoadingState /> : incidents.length === 0 ? <EmptyState text={String(t("workspace.monitoring.alerts.incidents.empty"))} /> : (
@@ -443,10 +444,10 @@ function IncidentsView({ locale }: { locale: SupportedLocale }) {
               <time dateTime={incident.firingAt}>{formatDate(incident.firingAt, locale)}</time>
             </div>
             <div className="monitoring-alert-row-actions">
-              {incident.readAt === null ? <button type="button" disabled={busyId === incident.id} onClick={() => void apply(incident, "read")} data-tooltip={t("workspace.monitoring.alerts.incidents.markRead")} aria-label={t("workspace.monitoring.alerts.incidents.markRead")}><Check size={15} /></button> : null}
-              {incident.status === "firing" && incident.acknowledgedAt === null ? <button type="button" disabled={busyId === incident.id} onClick={() => void apply(incident, "ack")} data-tooltip={t("workspace.monitoring.alerts.incidents.acknowledge")} aria-label={t("workspace.monitoring.alerts.incidents.acknowledge")}><CheckCheck size={15} /></button> : null}
-              <button type="button" disabled={busyId === incident.id} onClick={() => void openDetail(incident)} data-tooltip={t("workspace.monitoring.alerts.incidents.details")} aria-label={t("workspace.monitoring.alerts.incidents.details")}><Eye size={15} /></button>
-              {incident.status === "firing" && incident.ruleId ? <button type="button" disabled={busyId === incident.id} onClick={() => void openDetail(incident, true)} data-tooltip={t("workspace.monitoring.alerts.incidents.silence")} aria-label={t("workspace.monitoring.alerts.incidents.silence")}><BellOff size={15} /></button> : null}
+              {incident.readAt === null ? <UiButton iconOnly variant="ghost" type="button" disabled={busyId === incident.id} onClick={() => void apply(incident, "read")} data-tooltip={t("workspace.monitoring.alerts.incidents.markRead")} aria-label={t("workspace.monitoring.alerts.incidents.markRead")}><Check size={15} /></UiButton> : null}
+              {incident.status === "firing" && incident.acknowledgedAt === null ? <UiButton iconOnly variant="ghost" type="button" disabled={busyId === incident.id} onClick={() => void apply(incident, "ack")} data-tooltip={t("workspace.monitoring.alerts.incidents.acknowledge")} aria-label={t("workspace.monitoring.alerts.incidents.acknowledge")}><CheckCheck size={15} /></UiButton> : null}
+              <UiButton iconOnly variant="ghost" type="button" disabled={busyId === incident.id} onClick={() => void openDetail(incident)} data-tooltip={t("workspace.monitoring.alerts.incidents.details")} aria-label={t("workspace.monitoring.alerts.incidents.details")}><Eye size={15} /></UiButton>
+              {incident.status === "firing" && incident.ruleId ? <UiButton iconOnly variant="ghost" type="button" disabled={busyId === incident.id} onClick={() => void openDetail(incident, true)} data-tooltip={t("workspace.monitoring.alerts.incidents.silence")} aria-label={t("workspace.monitoring.alerts.incidents.silence")}><BellOff size={15} /></UiButton> : null}
             </div>
           </article>
         ))}</div>
@@ -522,10 +523,7 @@ function IncidentDetailDialog({
 
   return <ModalPortal className="management-modal-backdrop monitoring-incident-detail-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
     <section ref={dialogRef} tabIndex={-1} className="management-modal monitoring-incident-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="monitoring-incident-detail-title">
-      <header>
-        <div><span className="eyebrow">{t("workspace.monitoring.alerts.incidents.detailEyebrow")}</span><h2 id="monitoring-incident-detail-title">{incident.title}</h2></div>
-        <button type="button" className="management-icon-action" onClick={onClose} disabled={busy} data-tooltip={t("common.actions.close")} aria-label={t("common.actions.close")}><X size={16} /></button>
-      </header>
+      <DialogHeader title={incident.title} eyebrow={<>{t("workspace.monitoring.alerts.incidents.detailEyebrow")}</>} headingId="monitoring-incident-detail-title" actions={<><UiButton variant="ghost" iconOnly type="button" className="management-icon-action" onClick={onClose} disabled={busy} data-tooltip={t("common.actions.close")} aria-label={t("common.actions.close")}><X size={16} /></UiButton></>} />
       <div className="monitoring-incident-detail-body">
         {error ? <div className="monitoring-alert-error" role="alert"><CircleAlert size={16} />{error}</div> : null}
         {loading ? <LoadingState /> : detail ? <>
@@ -556,20 +554,20 @@ function IncidentDetailDialog({
           {showSilence && incident.ruleId ? <form className="monitoring-incident-silence-form" onSubmit={(event) => { event.preventDefault(); if (validSilence) onCreateSilence({ scope, startsAt: new Date(startsAt).toISOString(), endsAt: new Date(endsAt).toISOString(), reason: reason.trim() }); }}>
             <h3>{t("workspace.monitoring.alerts.incidents.createSilence")}</h3>
             <div className="monitoring-incident-silence-grid">
-              <label><span>{t("workspace.monitoring.alerts.incidents.silenceScope")}</span><CustomSelect triggerRef={silenceScopeRef} value={scope} onChange={(selectedValue) => setScope(selectedValue as "series" | "rule")} ariaLabel={t("workspace.monitoring.alerts.incidents.silenceScope")} options={[{ value: "series", label: t("workspace.monitoring.alerts.incidents.scopeSeries") }, { value: "rule", label: t("workspace.monitoring.alerts.incidents.scopeRule") }]} /></label>
-              <label><span>{t("workspace.monitoring.alerts.incidents.silenceStarts")}</span><input type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} /></label>
-              <label><span>{t("workspace.monitoring.alerts.incidents.silenceEnds")}</span><input type="datetime-local" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} /></label>
-              <label className="span-2"><span>{t("workspace.monitoring.alerts.incidents.silenceReason")}</span><input value={reason} maxLength={500} onChange={(event) => setReason(event.target.value)} /></label>
+              <Field label={t("workspace.monitoring.alerts.incidents.silenceScope")}><CustomSelect triggerRef={silenceScopeRef} value={scope} onChange={(selectedValue) => setScope(selectedValue as "series" | "rule")} ariaLabel={t("workspace.monitoring.alerts.incidents.silenceScope")} options={[{ value: "series", label: t("workspace.monitoring.alerts.incidents.scopeSeries") }, { value: "rule", label: t("workspace.monitoring.alerts.incidents.scopeRule") }]} /></Field>
+              <Field label={t("workspace.monitoring.alerts.incidents.silenceStarts")}><Input type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} /></Field>
+              <Field label={t("workspace.monitoring.alerts.incidents.silenceEnds")}><Input type="datetime-local" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} /></Field>
+              <Field className="span-2" label={t("workspace.monitoring.alerts.incidents.silenceReason")}><Input value={reason} maxLength={500} onChange={(event) => setReason(event.target.value)} /></Field>
             </div>
-            <div className="monitoring-incident-detail-actions"><button type="button" className="secondary-button" disabled={busy} onClick={() => onShowSilence(false)}>{t("common.actions.cancel")}</button><button type="submit" className="primary-button" disabled={busy || !validSilence} aria-busy={busy || undefined}>{busy ? <LoaderCircle className="is-spinning" size={15} /> : <BellOff size={15} />}{t("workspace.monitoring.alerts.incidents.silence")}</button></div>
+            <div className="monitoring-incident-detail-actions"><UiButton variant="secondary" type="button" className="secondary-button" disabled={busy} onClick={() => onShowSilence(false)}>{t("common.actions.cancel")}</UiButton><UiButton variant="primary" type="submit" className="primary-button" disabled={busy || !validSilence} aria-busy={busy || undefined}>{busy ? <LoaderCircle className="is-spinning" size={15} /> : <BellOff size={15} />}{t("workspace.monitoring.alerts.incidents.silence")}</UiButton></div>
           </form> : null}
         </> : null}
       </div>
-      <footer className="monitoring-incident-detail-footer">
-        {incident.readAt === null ? <button type="button" className="secondary-button" disabled={busy} onClick={() => onRead(incident)}><Check size={15} />{t("workspace.monitoring.alerts.incidents.markRead")}</button> : null}
-        {incident.status === "firing" && incident.acknowledgedAt === null ? <button type="button" className="secondary-button" disabled={busy} onClick={() => onAcknowledge(incident)}><CheckCheck size={15} />{t("workspace.monitoring.alerts.incidents.acknowledge")}</button> : null}
-        {incident.status === "firing" && incident.ruleId && !showSilence ? <button ref={silenceTriggerRef} type="button" className="primary-button" disabled={busy} onClick={() => onShowSilence(true)}><BellOff size={15} />{t("workspace.monitoring.alerts.incidents.silence")}</button> : null}
-      </footer>
+      <DialogActions className="monitoring-incident-detail-footer">
+        {incident.readAt === null ? <UiButton variant="secondary" type="button" className="secondary-button" disabled={busy} onClick={() => onRead(incident)}><Check size={15} />{t("workspace.monitoring.alerts.incidents.markRead")}</UiButton> : null}
+        {incident.status === "firing" && incident.acknowledgedAt === null ? <UiButton variant="secondary" type="button" className="secondary-button" disabled={busy} onClick={() => onAcknowledge(incident)}><CheckCheck size={15} />{t("workspace.monitoring.alerts.incidents.acknowledge")}</UiButton> : null}
+        {incident.status === "firing" && incident.ruleId && !showSilence ? <UiButton variant="primary" ref={silenceTriggerRef} type="button" className="primary-button" disabled={busy} onClick={() => onShowSilence(true)}><BellOff size={15} />{t("workspace.monitoring.alerts.incidents.silence")}</UiButton> : null}
+      </DialogActions>
     </section>
   </ModalPortal>;
 }
@@ -580,7 +578,7 @@ function localDateTime(value: Date): string {
 }
 
 function NumberField({ label, value, min, max, onChange }: { label: string; value: number; min?: number; max?: number; onChange: (value: number) => void }) {
-  return <label><span>{label}</span><input type="number" step="any" value={value} min={min} max={max} onChange={(event) => onChange(Number(event.target.value))} /></label>;
+  return <Field label={label}><Input type="number" step="any" value={value} min={min} max={max} onChange={(event) => onChange(Number(event.target.value))} /></Field>;
 }
 
 function LoadingState() {

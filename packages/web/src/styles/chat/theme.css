@@ -4,7 +4,7 @@
 .workspace-header,
 .panel-header,
 .management-header {
-  border-bottom: 2px solid var(--cyber-ink);
+  border-bottom: 2px solid var(--hud-ink);
 }
 
 .chat-header h2,
@@ -23,23 +23,23 @@
 .settings-content-header h2::before,
 .notification-drawer-header h2::before {
   margin-right: 7px;
-  color: var(--cyber-red);
+  color: var(--hud-red);
   content: "//";
 }
 
 .panel-header-action,
 .workspace-header .icon-button,
 .chat-header .icon-button {
-  border: 1px solid var(--cyber-ink);
-  color: var(--cyber-ink);
+  border: 1px solid var(--hud-ink);
+  color: var(--hud-ink);
   background: transparent;
 }
 
 .panel-header-action:hover:not(:disabled),
 .workspace-header .icon-button:hover:not(:disabled),
 .chat-header .icon-button:hover:not(:disabled) {
-  color: var(--cyber-yellow);
-  background: var(--cyber-ink);
+  color: var(--hud-yellow);
+  background: var(--hud-ink);
 }
 
 .transcript {
@@ -54,11 +54,11 @@
 .avatar {
   width: 30px;
   height: 30px;
-  border: 1px solid var(--cyber-ink);
+  border: 1px solid var(--hud-ink);
   border-radius: 0;
-  color: var(--cyber-yellow);
-  background: var(--cyber-ink);
-  box-shadow: 3px 3px 0 var(--cyber-red);
+  color: var(--hud-yellow);
+  background: var(--hud-ink);
+  box-shadow: 3px 3px 0 var(--hud-red);
 }
 
 .message > div:last-child,
@@ -72,7 +72,7 @@
 .message-text,
 .message-markdown,
 .message p {
-  color: var(--cyber-ink);
+  color: var(--hud-ink);
 }
 
 .message-markdown {
@@ -89,32 +89,32 @@
 
 .message-markdown a,
 .markdown-preview a {
-  color: #005f67;
+  color: var(--cyberos-color-focus);
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
 }
 
 .message-markdown blockquote {
-  border-left: 3px solid var(--cyber-red);
-  color: #3e3d00;
+  border-left: 3px solid var(--hud-red);
+  color: var(--cyberos-color-surface-raised);
 }
 
 .message-markdown code,
 .message-path-button,
 .message-code-block,
 .markdown-code-block {
-  border-color: var(--cyber-ink);
-  color: var(--cyber-yellow);
-  background: var(--cyber-ink);
+  border-color: var(--hud-ink);
+  color: var(--hud-yellow);
+  background: var(--hud-ink);
 }
 
 .message-markdown :where(th, td) {
-  border-color: var(--cyber-ink);
+  border-color: var(--hud-ink);
 }
 
 .message-markdown th {
-  color: var(--cyber-yellow);
-  background: var(--cyber-ink);
+  color: var(--hud-yellow);
+  background: var(--hud-ink);
 }
 
 .composer {
@@ -135,7 +135,7 @@
 }
 
 .composer-path-block {
-  border: 1px solid var(--cyber-cyan);
+  border: 1px solid var(--hud-cyan);
   border-radius: 0;
 }
 
@@ -150,11 +150,11 @@
 }
 
 .risk-pill[data-risk="low"] {
-  color: var(--cyber-cyan);
-  background: rgb(0 240 255 / 9%);
+  color: var(--hud-cyan);
+  background: color-mix(in srgb, var(--cyberos-color-focus) 9%, transparent);
 }
 
 .risk-pill[data-risk="high"] {
-  color: var(--cyber-ink);
-  background: var(--cyber-red);
+  color: var(--hud-ink);
+  background: var(--hud-red);
 }

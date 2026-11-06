@@ -1,3 +1,4 @@
+import { Button as UiButton, SectionHeader, StatusBadge } from "@cyberos/ui";
 import { Settings, Wifi, WifiOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { NetworkSummary, WifiStatus } from "../../api.js";
@@ -44,18 +45,12 @@ export function SystemWifiReadonly({
 
   return (
     <section className="management-section">
-      <header className="management-section-header">
-        <div>
-          <h3>{t("workspace.management.network.wifi.title")}</h3>
-          <p>{t("workspace.management.network.wifi.readOnlyDescription")}</p>
-        </div>
-        <div className="management-section-header-actions">
-          <button type="button" className="secondary-button" onClick={onOpenSettings}>
+      <SectionHeader className="management-section-header" title={t("workspace.management.network.wifi.title")} description={t("workspace.management.network.wifi.readOnlyDescription")} actions={<><div className="management-section-header-actions">
+          <UiButton variant="secondary" type="button" className="secondary-button" onClick={onOpenSettings}>
             <Settings aria-hidden="true" size={14} />
             <span>{t("workspace.management.network.wifi.openSettings")}</span>
-          </button>
-        </div>
-      </header>
+          </UiButton>
+        </div></>} />
       <div className="system-wifi-readonly-body" data-state={tone} role="status" aria-live="polite">
         <div className="system-wifi-readonly-identity">
           <div className="system-wifi-readonly-icon" data-state={tone}>
@@ -63,9 +58,9 @@ export function SystemWifiReadonly({
           </div>
           <div>
             <strong>{networkName}</strong>
-            <span className="management-status-pill" data-state={tone}>
+            <StatusBadge className="management-status-pill" data-state={tone}>
               {t(`workspace.management.network.wifi.states.${state}`)}
-            </span>
+            </StatusBadge>
           </div>
         </div>
         <div className="system-wifi-readonly-signal">

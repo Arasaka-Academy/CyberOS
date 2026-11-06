@@ -1,18 +1,17 @@
 @import "@cyberos/shared/hud-tokens.css";
 @import "../../../packages/web/src/styles/tooltip.css";
 @import "@fontsource-variable/noto-sans-sc/wght.css";
-@import "@fontsource/rajdhani/400.css";
-@import "@fontsource/rajdhani/500.css";
-@import "@fontsource/rajdhani/600.css";
-@import "@fontsource/rajdhani/700.css";
+@import "../../../packages/ui/src/fonts.css";
+@import "@cyberos/shared/appearance.css";
 @import "./layout.css";
 @import "./content.css";
 @import "./home.css";
 @import "./search.css";
+@import "./appearance.css";
 
 :root,
 :root[data-theme="dark"] {
-  color-scheme: dark;
+  color-scheme: inherit;
   --cyberos-doc-font-ui: var(--cyberos-font-ui);
   --cyberos-doc-font-body: var(--cyberos-font-body);
   --cyberos-doc-font-mono: var(--cyberos-font-mono);
@@ -37,7 +36,7 @@
   --sl-color-hairline-light: var(--cyberos-hud-line-neutral);
   --sl-color-text: var(--cyberos-hud-text);
   --sl-color-text-accent: var(--cyberos-hud-cyan);
-  --sl-color-text-invert: var(--cyberos-hud-void);
+  --sl-color-text-invert: var(--cyber-on-accent);
   --sl-sidebar-width: 16rem;
   --sl-content-width: 45rem;
   --sl-text-h1: 1.625rem;

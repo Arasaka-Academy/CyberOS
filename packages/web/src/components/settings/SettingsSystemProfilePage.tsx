@@ -1,3 +1,4 @@
+import { Button as UiButton, Field, Input, Notice, Section } from "@cyberos/ui";
 import { useEffect, useState, type FormEvent } from "react";
 import { Check, LoaderCircle, UserRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -73,21 +74,21 @@ export function SettingsSystemProfileContent({
   const { t } = useTranslation();
   return (
     <form className="settings-content-body" onSubmit={onSubmit}>
-      {error ? <p className="settings-inline-error" role="alert">{error}</p> : null}
+      {error ? <Notice className="settings-inline-error" role="alert" tone="danger">{error}</Notice> : null}
       <div className="settings-page-grid">
-        <section className="settings-section-card">
-          <header><div><h3>{t("settings.systemProfile.title")}</h3><p>{t("settings.systemProfile.description")}</p></div><UserRound size={18} aria-hidden="true" /></header>
-          <label className="settings-field-wide">
-            <span>{t("settings.systemProfile.adminDisplayName")}</span>
-            <input required maxLength={80} value={displayName} onChange={(event) => onDisplayNameChange(event.target.value)} />
-          </label>
+        <Section className="settings-section-card" title={t("settings.systemProfile.title")} description={t("settings.systemProfile.description")} icon={<UserRound size={18} aria-hidden="true" />}>
+
+          <Field className="settings-field-wide" label={t("settings.systemProfile.adminDisplayName")}>
+
+            <Input required maxLength={80} value={displayName} onChange={(event) => onDisplayNameChange(event.target.value)} />
+          </Field>
           <div className="settings-card-actions">
-            <button className="primary-button" type="submit" disabled={busy || !displayName.trim()} aria-busy={busy || undefined}>
+            <UiButton variant="primary" className="primary-button" type="submit" disabled={busy || !displayName.trim()} aria-busy={busy || undefined}>
               {busy ? <LoaderCircle className="is-spinning" size={15} /> : <Check size={15} />}
               {t("common.actions.saveChanges")}
-            </button>
+            </UiButton>
           </div>
-        </section>
+        </Section>
       </div>
     </form>
   );

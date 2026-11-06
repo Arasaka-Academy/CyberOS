@@ -1,3 +1,4 @@
+import { Button as UiButton, Checkbox, Field, Input } from "@cyberos/ui";
 import { Plus, SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -84,7 +85,7 @@ export function PhotoSearchFilterMenu({
 
   return (
     <div ref={containerRef} className="photo-filter-popover">
-      <button
+      <UiButton iconOnly variant="ghost"
         ref={triggerRef}
         type="button"
         className={`photo-filter-trigger${active ? " is-active" : ""}`}
@@ -99,7 +100,7 @@ export function PhotoSearchFilterMenu({
         }}
       >
         <SlidersHorizontal aria-hidden="true" size={15} />
-      </button>
+      </UiButton>
 
       {open ? (
         <div className="photo-filter-menu" role="dialog" aria-label={t("workspace.photos.filters")}>
@@ -131,16 +132,16 @@ export function PhotoSearchFilterMenu({
             <label>
               <span>{t("workspace.photos.takenAt")}</span>
               <div className="photo-range-inputs">
-                <input type="date" value={draft.capturedAt?.from?.slice(0, 10) ?? ""} aria-label={t("workspace.photos.min")} onChange={(event) => updateFilter("capturedAt", dateRange(event.target.value, draft.capturedAt?.to))} />
-                <input type="date" value={draft.capturedAt?.to?.slice(0, 10) ?? ""} aria-label={t("workspace.photos.max")} onChange={(event) => updateFilter("capturedAt", dateRange(draft.capturedAt?.from, event.target.value))} />
+                <Input type="date" value={draft.capturedAt?.from?.slice(0, 10) ?? ""} aria-label={t("workspace.photos.min")} onChange={(event) => updateFilter("capturedAt", dateRange(event.target.value, draft.capturedAt?.to))} />
+                <Input type="date" value={draft.capturedAt?.to?.slice(0, 10) ?? ""} aria-label={t("workspace.photos.max")} onChange={(event) => updateFilter("capturedAt", dateRange(draft.capturedAt?.from, event.target.value))} />
               </div>
             </label>
             <NumberRangeFilter label="ISO" min={draft.iso?.min} max={draft.iso?.max} onChange={(value) => updateFilter("iso", value)} />
             <NumberRangeFilter label={t("workspace.photos.aperture")} min={draft.aperture?.min} max={draft.aperture?.max} step="0.1" onChange={(value) => updateFilter("aperture", value)} />
             <NumberRangeFilter label={t("workspace.photos.shutter")} min={draft.exposureTimeSeconds?.min} max={draft.exposureTimeSeconds?.max} step="any" onChange={(value) => updateFilter("exposureTimeSeconds", value)} />
             <NumberRangeFilter label={t("workspace.photos.focalLength")} min={draft.focalLengthMm?.min} max={draft.focalLengthMm?.max} onChange={(value) => updateFilter("focalLengthMm", value)} />
-            <label>
-              <span>{t("workspace.photos.rating")}</span>
+            <Field label={t("workspace.photos.rating")}>
+
               <CustomSelect
                 value={draft.rating?.min?.toString() ?? ""}
                 options={[
@@ -154,9 +155,9 @@ export function PhotoSearchFilterMenu({
                 ariaLabel={t("workspace.photos.rating")}
                 className="control-compact photo-filter-select"
               />
-            </label>
+            </Field>
             <label className="photo-location-filter">
-              <input type="checkbox" checked={draft.hasLocation === true} onChange={(event) => updateFilter("hasLocation", event.target.checked ? true : undefined)} />
+              <Checkbox  checked={draft.hasLocation === true} onChange={(event) => updateFilter("hasLocation", event.target.checked ? true : undefined)} />
               <span>{t("workspace.photos.hasLocation")}</span>
             </label>
           </div>
@@ -166,9 +167,9 @@ export function PhotoSearchFilterMenu({
               {facets.keywords.slice(0, 12).map((item) => {
                 const selected = draft.keywords?.includes(item.value) ?? false;
                 return (
-                  <button key={item.value} type="button" aria-pressed={selected} onClick={() => updateFilter("keywords", selected ? draft.keywords?.filter((value) => value !== item.value) : [...(draft.keywords ?? []), item.value])}>
+                  <UiButton variant="ghost" key={item.value} type="button" aria-pressed={selected} onClick={() => updateFilter("keywords", selected ? draft.keywords?.filter((value) => value !== item.value) : [...(draft.keywords ?? []), item.value])}>
                     {item.value}<span>{item.count}</span>
-                  </button>
+                  </UiButton>
                 );
               })}
             </div>
@@ -177,12 +178,12 @@ export function PhotoSearchFilterMenu({
           <div className="photo-advanced-builder">
             <div className="photo-advanced-heading">
               <div className="photo-condition-mode" role="group" aria-label={t("workspace.photos.conditionMode")}>
-                <button type="button" aria-pressed={(draft.advanced?.mode ?? "all") === "all"} onClick={() => updateFilter("advanced", { mode: "all", conditions: draft.advanced?.conditions ?? [] })}>{t("workspace.photos.matchAll")}</button>
-                <button type="button" aria-pressed={draft.advanced?.mode === "any"} onClick={() => updateFilter("advanced", { mode: "any", conditions: draft.advanced?.conditions ?? [] })}>{t("workspace.photos.matchAny")}</button>
+                <UiButton variant="ghost" type="button" aria-pressed={(draft.advanced?.mode ?? "all") === "all"} onClick={() => updateFilter("advanced", { mode: "all", conditions: draft.advanced?.conditions ?? [] })}>{t("workspace.photos.matchAll")}</UiButton>
+                <UiButton variant="ghost" type="button" aria-pressed={draft.advanced?.mode === "any"} onClick={() => updateFilter("advanced", { mode: "any", conditions: draft.advanced?.conditions ?? [] })}>{t("workspace.photos.matchAny")}</UiButton>
               </div>
-              <button type="button" onClick={addAdvancedCondition} disabled={!metadataFields.length || (draft.advanced?.conditions.length ?? 0) >= 25}>
+              <UiButton variant="ghost" type="button" onClick={addAdvancedCondition} disabled={!metadataFields.length || (draft.advanced?.conditions.length ?? 0) >= 25}>
                 <Plus aria-hidden="true" size={14} />{t("workspace.photos.addCondition")}
-              </button>
+              </UiButton>
             </div>
             {(draft.advanced?.conditions ?? []).map((condition, index) => (
               <div className="photo-condition-row" key={`${index}:${condition.key}`}>
@@ -200,30 +201,30 @@ export function PhotoSearchFilterMenu({
                   onChange={(value) => updateAdvancedCondition(index, { operator: value })}
                   ariaLabel={t("workspace.photos.operator")}
                 />
-                {condition.operator !== "exists" && condition.operator !== "not_exists" ? <input className="photo-condition-value" value={String(Array.isArray(condition.value) ? condition.value.join(",") : condition.value ?? "")} onChange={(event) => updateAdvancedCondition(index, { value: condition.operator === "in" ? event.target.value.split(",").map((value) => value.trim()).filter(Boolean) : event.target.value })} aria-label={t("workspace.photos.value")} /> : <span className="photo-condition-value" />}
-                {condition.operator === "between" ? <input className="photo-condition-value-to" value={String(condition.valueTo ?? "")} onChange={(event) => updateAdvancedCondition(index, { valueTo: event.target.value })} aria-label={t("workspace.photos.max")} /> : <span className="photo-condition-value-to" />}
-                <button type="button" onClick={() => {
+                {condition.operator !== "exists" && condition.operator !== "not_exists" ? <Input className="photo-condition-value" value={String(Array.isArray(condition.value) ? condition.value.join(",") : condition.value ?? "")} onChange={(event) => updateAdvancedCondition(index, { value: condition.operator === "in" ? event.target.value.split(",").map((value) => value.trim()).filter(Boolean) : event.target.value })} aria-label={t("workspace.photos.value")} /> : <span className="photo-condition-value" />}
+                {condition.operator === "between" ? <Input className="photo-condition-value-to" value={String(condition.valueTo ?? "")} onChange={(event) => updateAdvancedCondition(index, { valueTo: event.target.value })} aria-label={t("workspace.photos.max")} /> : <span className="photo-condition-value-to" />}
+                <UiButton iconOnly variant="ghost" type="button" onClick={() => {
                   const remaining = draft.advanced?.conditions.filter((_, conditionIndex) => conditionIndex !== index) ?? [];
                   updateFilter("advanced", remaining.length ? { mode: draft.advanced?.mode ?? "all", conditions: remaining } : undefined);
                 }} data-tooltip={t("workspace.photos.removeCondition")} aria-label={t("workspace.photos.removeCondition")}>
                   <X aria-hidden="true" size={14} />
-                </button>
+                </UiButton>
               </div>
             ))}
           </div>
 
           <div className="photo-filter-actions">
-            <button type="button" className="secondary-button" onClick={() => {
+            <UiButton variant="secondary" type="button" className="secondary-button" onClick={() => {
               const reset = photoFiltersWithTextOnly(filters);
               setDraft(reset);
               onApply(reset);
               closeAndRestoreFocus();
-            }}>{t("workspace.photos.resetFilters")}</button>
-            <button type="button" className="primary-button" onClick={() => {
+            }}>{t("workspace.photos.resetFilters")}</UiButton>
+            <UiButton variant="primary" type="button" className="primary-button" onClick={() => {
               const next = mergePhotoFilterDraft(draft, filters);
               onApply(next);
               closeAndRestoreFocus();
-            }}>{t("workspace.photos.applyFilters")}</button>
+            }}>{t("workspace.photos.applyFilters")}</UiButton>
           </div>
         </div>
       ) : null}
@@ -252,8 +253,8 @@ function PhotoFacetSelect({
       ? selected[0]!
       : selectedLabel(selected.length);
   return (
-    <label className="photo-facet-filter">
-      <span>{label}</span>
+    <Field className="photo-facet-filter" label={label}>
+
       <CustomSelect
         value=""
         selectedValues={selected}
@@ -269,7 +270,7 @@ function PhotoFacetSelect({
           else if (value) onChange(togglePhotoFacetValue(selected, value));
         }}
       />
-    </label>
+    </Field>
   );
 }
 
@@ -291,8 +292,8 @@ function NumberRangeFilter({
     <label>
       <span>{label}</span>
       <div className="photo-range-inputs">
-        <input type="number" min="0" step={step} value={min ?? ""} placeholder={t("workspace.photos.min")} onChange={(event) => onChange(numberRange(event.target.value, max))} />
-        <input type="number" min="0" step={step} value={max ?? ""} placeholder={t("workspace.photos.max")} onChange={(event) => onChange(numberRange(min, event.target.value))} />
+        <Input type="number" min="0" step={step} value={min ?? ""} placeholder={t("workspace.photos.min")} onChange={(event) => onChange(numberRange(event.target.value, max))} />
+        <Input type="number" min="0" step={step} value={max ?? ""} placeholder={t("workspace.photos.max")} onChange={(event) => onChange(numberRange(min, event.target.value))} />
       </div>
     </label>
   );

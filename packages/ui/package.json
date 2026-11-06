@@ -1,0 +1,19 @@
+{
+  "name": "@cyberos/ui",
+  "version": "2.3.5",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./theme": "./src/theme.ts",
+    "./styles.css": "./src/styles.css",
+    "./fonts.css": "./src/fonts.css"
+  },
+  "dependencies": {
+    "@cyberos/shared": "2.3.5",
+    "react-aria": "3.53.1",
+    "react-aria-components": "^1.22.1",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  }
+}

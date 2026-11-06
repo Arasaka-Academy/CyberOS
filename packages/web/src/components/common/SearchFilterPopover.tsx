@@ -1,3 +1,4 @@
+import { Button as UiButton } from "@cyberos/ui";
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -93,7 +94,7 @@ export function SearchFilterPopover({
         closeAndRestoreFocus();
       }}
     >
-      <button
+      <UiButton iconOnly variant="ghost"
         ref={triggerRef}
         type="button"
         className={`workspace-search-filter-trigger${active ? " is-active" : ""}`}
@@ -108,7 +109,7 @@ export function SearchFilterPopover({
         }}
       >
         <SlidersHorizontal aria-hidden="true" size={16} />
-      </button>
+      </UiButton>
       {open ? (
         <div
           ref={menuRef}
@@ -120,14 +121,14 @@ export function SearchFilterPopover({
         >
           {children}
           <div className="workspace-search-filter-actions">
-            <button type="button" className="secondary-button" onClick={() => {
+            <UiButton variant="secondary" type="button" className="secondary-button" onClick={() => {
               onReset();
               closeAndRestoreFocus();
-            }}>{t("workspace.search.reset")}</button>
-            <button type="button" className="primary-button" onClick={() => {
+            }}>{t("workspace.search.reset")}</UiButton>
+            <UiButton variant="primary" type="button" className="primary-button" onClick={() => {
               onApply();
               closeAndRestoreFocus();
-            }}>{t("workspace.search.apply")}</button>
+            }}>{t("workspace.search.apply")}</UiButton>
           </div>
         </div>
       ) : null}

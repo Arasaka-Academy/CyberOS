@@ -36,7 +36,7 @@
   border: 1px solid var(--line-soft);
   border-radius: 0;
   color: var(--muted);
-  background: rgb(255 255 255 / 4%);
+  background: color-mix(in srgb, var(--cyberos-color-text) 4%, transparent);
   cursor: pointer;
   transition:
     color 140ms ease,
@@ -47,30 +47,30 @@
 
 .file-action-button:hover:not(:disabled) {
   color: var(--text);
-  border-color: rgb(255 255 255 / 14%);
+  border-color: color-mix(in srgb, var(--cyberos-color-text) 14%, transparent);
   background: var(--surface-hover);
 }
 
 .file-action-button-send {
   color: var(--accent-soft-text);
-  border-color: rgb(88 101 242 / 24%);
+  border-color: color-mix(in srgb, var(--cyberos-color-focus) 24%, transparent);
   background: var(--accent-soft-bg);
 }
 
 .file-action-button-send:hover:not(:disabled) {
   color: white;
-  border-color: rgb(142 161 255 / 52%);
+  border-color: color-mix(in srgb, var(--cyberos-color-focus) 52%, transparent);
   background: var(--accent);
 }
 
 .file-action-button.is-danger {
-  color: #ff9da1;
-  background: rgb(218 55 60 / 12%);
+  color: var(--cyberos-color-danger);
+  background: color-mix(in srgb, var(--cyberos-color-danger) 12%, transparent);
 }
 
 .file-action-button.is-danger:hover:not(:disabled) {
   color: white;
-  border-color: rgb(218 55 60 / 45%);
+  border-color: color-mix(in srgb, var(--cyberos-color-danger) 45%, transparent);
   background: var(--red);
 }
 
@@ -226,7 +226,7 @@
 }
 
 .file-action-copy {
-  color: #dbdee1;
+  color: var(--cyberos-color-text);
 }
 
 .file-action-dialog footer {

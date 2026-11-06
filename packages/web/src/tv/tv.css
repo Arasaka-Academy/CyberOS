@@ -1,6 +1,10 @@
-@import "./styles/imports.css";
-@import "./styles/foundation.css";
-@import "./styles/shell.css";
-@import "./styles/media.css";
-@import "./styles/remote.css";
-@import "./styles/overlays.css";
+@layer theme, base, legacy, components, app, utilities;
+@import "./styles/imports.css" layer(legacy);
+@import "./styles/foundation.css" layer(legacy);
+@import "./styles/shell.css" layer(legacy);
+@import "./styles/media.css" layer(legacy);
+@import "./styles/remote.css" layer(legacy);
+@import "./styles/overlays.css" layer(legacy);
+
+@import "@cyberos/shared/appearance.css";
+@import "../styles/cyberui.css";

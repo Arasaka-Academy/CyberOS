@@ -1,3 +1,4 @@
+import { Button as UiButton, DialogActions, DialogHeader, Field, Input, Notice, Section, Textarea } from "@cyberos/ui";
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { AlertTriangle, CheckCircle2, KeyRound, LoaderCircle, Pencil, Plus, RefreshCw, Server, Trash2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -189,33 +190,27 @@ export function SettingsMcpPage() {
 
   return (
     <div className="settings-content-body settings-resource-page">
-      {error && !editing ? <p className="settings-inline-alert" role="alert"><AlertTriangle aria-hidden="true" size={16} />{error}</p> : null}
+      {error && !editing ? <Notice className="settings-inline-alert" role="alert" tone="danger" icon={<AlertTriangle aria-hidden="true" size={16} />}>{error}</Notice> : null}
 
-      <section className="settings-section-card settings-resource-primary">
-        <header>
-          <div><h3>{t("settings.mcp.builtInTitle")}</h3><p>{t("settings.mcp.builtInDescription")}</p></div>
-          <Switch
+      <Section className="settings-section-card settings-resource-primary" title={t("settings.mcp.builtInTitle")} description={t("settings.mcp.builtInDescription")} actions={<><Switch
             checked={settings?.builtIn.enabled ?? false}
             onCheckedChange={(checked) => void toggleBuiltIn(checked)}
             ariaLabel={t("settings.mcp.builtInToggle")}
             compact
             busy={busyId === "builtin"}
             disabled={!settings?.builtIn.available}
-          />
-        </header>
+          /></>}>
+
         <ResourceStatus
           status={settings?.builtIn.status ?? "unavailable"}
           label={settings?.builtIn.paired ? t("settings.mcp.paired") : t("settings.mcp.needsRepair")}
         />
-      </section>
+      </Section>
 
-      <section className="settings-section-card">
-        <header>
-          <div><h3>{t("settings.mcp.externalTitle")}</h3><p>{t("settings.mcp.externalDescription")}</p></div>
-          <button className="settings-resource-command" type="button" onClick={() => openEditor()} disabled={busyId !== null}>
+      <Section className="settings-section-card" title={t("settings.mcp.externalTitle")} description={t("settings.mcp.externalDescription")} icon={<Plus aria-hidden="true" size={15} />} actions={<><UiButton variant="ghost" className="settings-resource-command" type="button" onClick={() => openEditor()} disabled={busyId !== null}>
             <Plus aria-hidden="true" size={15} />{t("settings.mcp.addServer")}
-          </button>
-        </header>
+          </UiButton></>}>
+
         <div className="settings-resource-list">
           {settings?.servers.length ? settings.servers.map((server) => (
             <article className="settings-resource-row" key={server.id} data-state={server.testStatus}>
@@ -228,10 +223,10 @@ export function SettingsMcpPage() {
               </div>
               <ResourceStatus status={server.testStatus} label={t(`settings.mcp.testStatus.${server.testStatus}`)} />
               <div className="settings-resource-actions">
-                <button type="button" data-tooltip={t("settings.mcp.test")} aria-label={t("settings.mcp.test")} onClick={() => void testConnection(server)} disabled={busyId === server.id}><RefreshCw aria-hidden="true" size={15} /></button>
-                <button type="button" data-tooltip={t("common.actions.edit")} aria-label={t("common.actions.edit")} onClick={() => openEditor(server)} disabled={busyId === server.id}><Pencil aria-hidden="true" size={15} /></button>
-                {server.authMode !== "none" && server.credentialsConfigured ? <button type="button" data-tooltip={t("settings.mcp.clearCredentials")} aria-label={t("settings.mcp.clearCredentials")} onClick={() => void clearCredentials(server)} disabled={busyId === server.id}><KeyRound aria-hidden="true" size={15} /></button> : null}
-                <button className="is-danger" type="button" data-tooltip={t("common.actions.delete")} aria-label={t("common.actions.delete")} onClick={() => void removeServer(server)} disabled={busyId === server.id}><Trash2 aria-hidden="true" size={15} /></button>
+                <UiButton iconOnly variant="ghost" type="button" data-tooltip={t("settings.mcp.test")} aria-label={t("settings.mcp.test")} onClick={() => void testConnection(server)} disabled={busyId === server.id}><RefreshCw aria-hidden="true" size={15} /></UiButton>
+                <UiButton iconOnly variant="ghost" type="button" data-tooltip={t("common.actions.edit")} aria-label={t("common.actions.edit")} onClick={() => openEditor(server)} disabled={busyId === server.id}><Pencil aria-hidden="true" size={15} /></UiButton>
+                {server.authMode !== "none" && server.credentialsConfigured ? <UiButton iconOnly variant="ghost" type="button" data-tooltip={t("settings.mcp.clearCredentials")} aria-label={t("settings.mcp.clearCredentials")} onClick={() => void clearCredentials(server)} disabled={busyId === server.id}><KeyRound aria-hidden="true" size={15} /></UiButton> : null}
+                <UiButton iconOnly variant="danger" className="is-danger" type="button" data-tooltip={t("common.actions.delete")} aria-label={t("common.actions.delete")} onClick={() => void removeServer(server)} disabled={busyId === server.id}><Trash2 aria-hidden="true" size={15} /></UiButton>
               </div>
               <Switch
                 checked={server.enabled}
@@ -246,7 +241,7 @@ export function SettingsMcpPage() {
             </article>
           )) : <div className="settings-resource-empty"><Server aria-hidden="true" size={20} /><span>{t("settings.mcp.empty")}</span></div>}
         </div>
-      </section>
+      </Section>
 
       {editing ? (
         <ModalPortal className="management-modal-backdrop" role="presentation" onMouseDown={closeEditor}>
@@ -260,32 +255,26 @@ export function SettingsMcpPage() {
             tabIndex={-1}
             onMouseDown={(event) => event.stopPropagation()}
           >
-            <header>
-              <div className="help-label">
-                <h3 id={editorTitleId}><Server aria-hidden="true" size={18} />{editing === "new" ? t("settings.mcp.addServer") : t("settings.mcp.editServer")}</h3>
-                <HelpTip label={editing === "new" ? t("settings.mcp.addServer") : t("settings.mcp.editServer")} content={t("settings.mcp.securityNotice")} id={editorDescriptionId} />
-              </div>
-              <button type="button" data-tooltip={t("common.actions.close")} aria-label={t("common.actions.close")} onClick={closeEditor} disabled={busyId !== null}><X aria-hidden="true" size={16} /></button>
-            </header>
+            <DialogHeader title={editing === "new" ? t("settings.mcp.addServer") : t("settings.mcp.editServer")} icon={<Server aria-hidden="true" size={18} />} headingLevel={3} headingId={editorTitleId} actions={<><HelpTip label={editing === "new" ? t("settings.mcp.addServer") : t("settings.mcp.editServer")} content={t("settings.mcp.securityNotice")} id={editorDescriptionId} /><UiButton iconOnly variant="ghost" type="button" data-tooltip={t("common.actions.close")} aria-label={t("common.actions.close")} onClick={closeEditor} disabled={busyId !== null}><X aria-hidden="true" size={16} /></UiButton></>} />
             <form className="settings-mcp-form" onSubmit={(event) => void submit(event)} aria-busy={busyId !== null || undefined}>
               <div className="settings-mcp-body">
-                {error ? <p className="settings-inline-alert" role="alert"><AlertTriangle aria-hidden="true" size={16} />{error}</p> : null}
+                {error ? <Notice className="settings-inline-alert" role="alert" tone="danger" icon={<AlertTriangle aria-hidden="true" size={16} />}>{error}</Notice> : null}
                 <fieldset className="settings-field-grid settings-resource-fields" disabled={busyId !== null}>
-                  <label><span>{t("settings.mcp.name")}</span><input value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} required maxLength={63} pattern="[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?" /></label>
-                  <label><span>{t("settings.mcp.url")}</span><input type="url" value={draft.url} onChange={(event) => setDraft((current) => ({ ...current, url: event.target.value }))} required /></label>
-                  <label className="settings-field-wide"><span>{t("settings.mcp.description")}</span><input value={draft.description} onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))} /></label>
-                  <label><span>{t("settings.mcp.exposureLabel")}</span><CustomSelect value={draft.exposure} options={EXPOSURE_OPTIONS.map((value) => ({ value, label: t(`settings.mcp.exposure.${value}`) }))} onChange={(exposure) => setDraft((current) => ({ ...current, exposure }))} ariaLabel={t("settings.mcp.exposureLabel")} /></label>
-                  <label><span>{t("settings.mcp.authLabel")}</span><CustomSelect value={draft.authMode} options={AUTH_OPTIONS.map((value) => ({ value, label: t(`settings.mcp.auth.${value}`) }))} onChange={(authMode) => setDraft((current) => ({ ...current, authMode }))} ariaLabel={t("settings.mcp.authLabel")} /></label>
-                  <label><span>{t("settings.mcp.timeout")}</span><input type="number" min={1} max={300} value={draft.timeoutSeconds} onChange={(event) => setDraft((current) => ({ ...current, timeoutSeconds: Number(event.target.value) }))} /></label>
+                  <Field label={t("settings.mcp.name")}><Input value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} required maxLength={63} pattern="[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?" /></Field>
+                  <Field label={t("settings.mcp.url")}><Input type="url" value={draft.url} onChange={(event) => setDraft((current) => ({ ...current, url: event.target.value }))} required /></Field>
+                  <Field className="settings-field-wide" label={t("settings.mcp.description")}><Input value={draft.description} onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))} /></Field>
+                  <Field label={t("settings.mcp.exposureLabel")}><CustomSelect value={draft.exposure} options={EXPOSURE_OPTIONS.map((value) => ({ value, label: t(`settings.mcp.exposure.${value}`) }))} onChange={(exposure) => setDraft((current) => ({ ...current, exposure }))} ariaLabel={t("settings.mcp.exposureLabel")} /></Field>
+                  <Field label={t("settings.mcp.authLabel")}><CustomSelect value={draft.authMode} options={AUTH_OPTIONS.map((value) => ({ value, label: t(`settings.mcp.auth.${value}`) }))} onChange={(authMode) => setDraft((current) => ({ ...current, authMode }))} ariaLabel={t("settings.mcp.authLabel")} /></Field>
+                  <Field label={t("settings.mcp.timeout")}><Input type="number" min={1} max={300} value={draft.timeoutSeconds} onChange={(event) => setDraft((current) => ({ ...current, timeoutSeconds: Number(event.target.value) }))} /></Field>
                   <span className="help-label"><Switch checked={draft.allowInsecureHttp} onCheckedChange={(allowInsecureHttp) => setDraft((current) => ({ ...current, allowInsecureHttp }))} label={t("settings.mcp.allowHttp")} /><HelpTip label={t("settings.mcp.allowHttp")} content={t("settings.mcp.allowHttpHelp")} /></span>
-                  {draft.authMode === "bearer" ? <label className="settings-field-wide"><span>{t("settings.mcp.bearerToken")}</span><input type="password" autoComplete="new-password" value={draft.bearerToken} onChange={(event) => setDraft((current) => ({ ...current, bearerToken: event.target.value }))} placeholder={editing === "new" ? "" : t("settings.mcp.keepCredential")} /></label> : null}
-                  {draft.authMode === "headers" ? <label className="settings-field-wide"><span>{t("settings.mcp.secretHeaders")}</span><textarea value={draft.secretHeaders} onChange={(event) => setDraft((current) => ({ ...current, secretHeaders: event.target.value }))} placeholder={t("settings.mcp.secretHeadersPlaceholder")} /></label> : null}
+                  {draft.authMode === "bearer" ? <Field className="settings-field-wide" label={t("settings.mcp.bearerToken")}><Input type="password" autoComplete="new-password" value={draft.bearerToken} onChange={(event) => setDraft((current) => ({ ...current, bearerToken: event.target.value }))} placeholder={editing === "new" ? "" : t("settings.mcp.keepCredential")} /></Field> : null}
+                  {draft.authMode === "headers" ? <Field className="settings-field-wide" label={t("settings.mcp.secretHeaders")}><Textarea value={draft.secretHeaders} onChange={(event) => setDraft((current) => ({ ...current, secretHeaders: event.target.value }))} placeholder={t("settings.mcp.secretHeadersPlaceholder")} /></Field> : null}
                 </fieldset>
               </div>
-              <footer className="settings-inline-actions">
-                <button type="button" className="secondary-button" onClick={closeEditor} disabled={busyId !== null}>{t("common.actions.cancel")}</button>
-                <button type="submit" className="primary-button" disabled={busyId !== null}>{busyId !== null ? <LoaderCircle aria-hidden="true" size={14} className="is-spinning" /> : null}{t("common.actions.saveChanges")}</button>
-              </footer>
+              <DialogActions className="settings-inline-actions">
+                <UiButton variant="secondary" type="button" className="secondary-button" onClick={closeEditor} disabled={busyId !== null}>{t("common.actions.cancel")}</UiButton>
+                <UiButton variant="primary" type="submit" className="primary-button" disabled={busyId !== null}>{busyId !== null ? <LoaderCircle aria-hidden="true" size={14} className="is-spinning" /> : null}{t("common.actions.saveChanges")}</UiButton>
+              </DialogActions>
             </form>
           </section>
         </ModalPortal>

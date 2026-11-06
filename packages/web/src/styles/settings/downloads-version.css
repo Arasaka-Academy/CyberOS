@@ -98,7 +98,7 @@
   align-items: end;
   gap: 4px 18px;
   padding: 16px;
-  border: 1px solid rgb(255 255 255 / 5%);
+  border: 1px solid color-mix(in srgb, var(--cyberos-color-text) 5%, transparent);
   border-radius: 5px;
   background: rgb(0 0 0 / 14%);
 }
@@ -181,7 +181,7 @@
 }
 
 .settings-version-details dd[data-dirty="true"] {
-  color: #ffd37a;
+  color: var(--cyberos-color-warning);
 }
 
 .settings-version-copy {
@@ -204,13 +204,13 @@
 }
 
 .settings-version-copy[data-state="copied"] {
-  color: #78d89d;
+  color: var(--cyberos-color-success);
 }
 
 .settings-version-error {
   overflow-wrap: anywhere;
   padding: 10px 12px;
-  border-left: 3px solid #ffd37a;
+  border-left: 3px solid var(--cyberos-color-warning);
   color: var(--muted);
-  background: rgb(240 178 50 / 8%);
+  background: color-mix(in srgb, var(--cyberos-color-command) 8%, transparent);
 }

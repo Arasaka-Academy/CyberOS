@@ -23,7 +23,7 @@
 }
 
 @keyframes cyber-track-shift {
-  from { box-shadow: inset 0 0 0 var(--cyber-red); }
+  from { box-shadow: inset 0 0 0 var(--hud-red); }
 }
 
 @media (max-width: 860px) {
@@ -36,11 +36,11 @@
     grid-template-rows: auto auto minmax(0, auto);
     padding: 12px 8px;
     border-right: 0;
-    border-bottom: 2px solid var(--cyber-red);
+    border-bottom: 2px solid var(--hud-red);
   }
 
   .settings-nav button.is-active {
-    box-shadow: inset 0 -4px 0 var(--cyber-red);
+    box-shadow: inset 0 -4px 0 var(--hud-red);
   }
 
   .settings-content-header {
@@ -60,7 +60,7 @@
   .composer {
     margin: 0 0 11px 10px;
     padding: 9px;
-    box-shadow: 3px 3px 0 var(--cyber-red);
+    box-shadow: 3px 3px 0 var(--hud-red);
   }
 
   .message {
@@ -83,7 +83,7 @@
 
   .settings-section-card {
     padding: 15px;
-    box-shadow: 3px 3px 0 var(--cyber-ink);
+    box-shadow: 3px 3px 0 var(--hud-ink);
   }
 
   .management-body {

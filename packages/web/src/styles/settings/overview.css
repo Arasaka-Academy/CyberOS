@@ -7,38 +7,6 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
-.settings-overview .settings-overview-card-header {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
-  align-items: center;
-  justify-content: start;
-  column-gap: 10px;
-  row-gap: 4px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--line-soft);
-}
-
-.settings-overview-card-icon {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  color: var(--accent);
-}
-
-.settings-overview-card-header h3 {
-  min-width: 0;
-  line-height: 24px;
-  overflow-wrap: anywhere;
-}
-
-.settings-overview-card-header p {
-  grid-column: 2;
-  min-width: 0;
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
 .settings-metric-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -52,7 +20,7 @@
 .settings-metric-grid article {
   min-width: 0;
   padding: 12px;
-  border: 1px solid rgb(255 255 255 / 5%);
+  border: 1px solid color-mix(in srgb, var(--cyberos-color-text) 5%, transparent);
   border-radius: 5px;
   background: rgb(0 0 0 / 14%);
 }
@@ -136,7 +104,7 @@
   margin: 0;
   padding: 10px 12px;
   border: 1px solid var(--focus-ring-soft);
-  color: var(--cyber-cyan);
+  color: var(--hud-cyan);
   background: var(--teal-bg);
   overflow-wrap: anywhere;
 }

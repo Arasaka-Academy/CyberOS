@@ -3,16 +3,16 @@
 .file-preview-dialog,
 .editor-modal,
 .photo-lightbox {
-  border: 2px solid var(--cyber-yellow);
-  color: var(--cyber-white);
-  background: var(--cyber-ink);
-  box-shadow: 8px 8px 0 var(--cyber-red);
+  border: 2px solid var(--hud-yellow);
+  color: var(--hud-white);
+  background: var(--hud-ink);
+  box-shadow: 8px 8px 0 var(--hud-red);
 }
 
 .file-preview-dialog:focus-visible,
 .editor-modal:focus-visible,
 .photo-lightbox:focus-visible {
-  outline: 2px solid var(--cyber-cyan);
+  outline: 2px solid var(--hud-cyan);
   outline-offset: 3px;
 }
 
@@ -24,8 +24,8 @@
 .media-preview,
 .pdf-preview,
 .office-preview {
-  color: var(--cyber-white);
-  background: var(--cyber-ink);
+  color: var(--hud-white);
+  background: var(--hud-ink);
 }
 
 .text-preview-toolbar,
@@ -33,56 +33,56 @@
 .editor-header,
 .editor-footer,
 .photo-lightbox-header {
-  border-color: rgb(252 238 10 / 38%);
-  color: var(--cyber-yellow);
-  background: var(--cyber-ink);
+  border-color: color-mix(in srgb, var(--cyberos-color-command) 38%, transparent);
+  color: var(--hud-yellow);
+  background: var(--hud-ink);
 }
 
 .preview-mode-switch {
-  border: 1px solid rgb(252 238 10 / 42%);
+  border: 1px solid color-mix(in srgb, var(--cyberos-color-command) 42%, transparent);
   background: transparent;
 }
 
 .preview-mode-switch button {
-  color: rgb(252 238 10 / 60%);
+  color: color-mix(in srgb, var(--cyberos-color-command) 60%, transparent);
 }
 
 .preview-mode-switch button.is-active {
-  color: var(--cyber-ink);
-  background: var(--cyber-yellow);
-  box-shadow: inset 0 -3px 0 var(--cyber-red);
+  color: var(--hud-ink);
+  background: var(--hud-yellow);
+  box-shadow: inset 0 -3px 0 var(--hud-red);
 }
 
 .markdown-preview code {
-  color: var(--cyber-yellow);
-  background: #101920;
+  color: var(--hud-yellow);
+  background: var(--cyberos-color-surface-raised);
 }
 
 .markdown-preview :where(th, td),
 .table-preview :where(th, td) {
-  border-color: rgb(252 238 10 / 28%);
+  border-color: color-mix(in srgb, var(--cyberos-color-command) 28%, transparent);
 }
 
 .markdown-preview th,
 .table-preview th {
-  color: var(--cyber-ink);
-  background: var(--cyber-yellow);
+  color: var(--hud-ink);
+  background: var(--hud-yellow);
 }
 
 .editor-code-surface {
-  border: 1px solid rgb(252 238 10 / 30%);
+  border: 1px solid color-mix(in srgb, var(--cyberos-color-command) 30%, transparent);
 }
 
 .editor-highlight,
 .editor-textarea {
-  color: var(--cyber-white);
-  caret-color: var(--cyber-cyan);
+  color: var(--hud-white);
+  caret-color: var(--hud-cyan);
 }
 
 .editor-textarea::selection {
-  color: var(--cyber-ink);
+  color: var(--hud-ink);
 }
 
 .editor-status[data-state="error"] {
-  background: var(--cyber-red);
+  background: var(--hud-red);
 }

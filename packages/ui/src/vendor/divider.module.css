@@ -1,0 +1,7 @@
+/* Generated from packages/react/src/divider.module.css. Regenerate in CyberUI with pnpm registry:build; after installation, edit this file freely. */
+@layer theme, base, components, utilities;
+@reference './tailwind-theme.css';
+
+@layer components {
+.divider { border: 0; border-top: 1px solid var(--cyber-line); @apply tw:m-[22px_0] tw:w-full; }
+}

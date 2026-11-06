@@ -1,3 +1,4 @@
+import { Button as UiButton, DialogActions, DialogHeader, EmptyState, Field, Input, Notice, SectionHeader, StatusBadge } from "@cyberos/ui";
 import { CustomSelect } from "../common/CustomSelect.js";
 import { useModalDialog } from "./useModalDialog.js";
 import { ModalPortal } from "../common/ModalPortal.js";
@@ -421,9 +422,9 @@ export function WorkspaceManagementPanel({
           </div>
           <div className="management-command-copy">
             <div>
-              <span className="management-status-pill" data-state={config.statusState}>
+              <StatusBadge className="management-status-pill" data-state={config.statusState}>
                 {t(config.statusKey)}
-              </span>
+              </StatusBadge>
               <h3>{t(config.titleKey)}</h3>
               <p>{t(config.statusDetailKey)}</p>
             </div>
@@ -453,7 +454,7 @@ export function WorkspaceManagementPanel({
         </div>
 
         <section className="management-section management-table-section">
-          <SectionHeader title={t(config.tableTitleKey)} description={t(config.tableDescriptionKey)} />
+          <SectionHeader className="management-section-header" title={t(config.tableTitleKey)} description={t(config.tableDescriptionKey)} />
           <div className="management-table-wrap">
             <table className={`management-table management-table-${panel}`}>
               <thead>
@@ -478,7 +479,7 @@ export function WorkspaceManagementPanel({
 
         <div className="management-lower-grid">
           <section className="management-section">
-            <SectionHeader title={t(config.gaugeTitleKey)} description={t(config.gaugeDescriptionKey)} />
+            <SectionHeader className="management-section-header" title={t(config.gaugeTitleKey)} description={t(config.gaugeDescriptionKey)} />
             <div className="management-resource-list">
               {config.gauges.map((gauge) => (
                 <ResourceGauge key={gauge.id} gauge={gauge} />
@@ -677,7 +678,7 @@ function VirtualMachineManagementPanel({
                   <section className="management-command-panel">
                     <div className="management-emblem" aria-hidden="true"><MonitorCog size={31} /></div>
                     <div className="management-command-copy">
-                      <div><span className="management-status-pill" data-state={statusTone}>{vmDisabled ? t("workspace.management.virtualMachines.disabled") : host?.kvmAvailable ? "KVM" : t("workspace.management.virtualMachines.kvmMissing")}</span><h3>{host?.libvirtVersion ? `libvirt ${host.libvirtVersion}` : t("workspace.management.virtualMachines.hypervisor")}</h3><p>{vmDisabled ? t("workspace.management.virtualMachines.disabledDetail") : host?.error ?? host?.issues?.[0] ?? t("workspace.management.virtualMachines.readyDetail")}</p></div>
+                      <div><StatusBadge className="management-status-pill" data-state={statusTone}>{vmDisabled ? t("workspace.management.virtualMachines.disabled") : host?.kvmAvailable ? "KVM" : t("workspace.management.virtualMachines.kvmMissing")}</StatusBadge><h3>{host?.libvirtVersion ? `libvirt ${host.libvirtVersion}` : t("workspace.management.virtualMachines.hypervisor")}</h3><p>{vmDisabled ? t("workspace.management.virtualMachines.disabledDetail") : host?.error ?? host?.issues?.[0] ?? t("workspace.management.virtualMachines.readyDetail")}</p></div>
                       <dl className="management-fact-list">
                         <div><dt>{t("workspace.management.virtualMachines.facts.storage")}</dt><dd>{host?.storagePath ?? "-"}</dd></div>
                         <div><dt>{t("workspace.management.virtualMachines.facts.network")}</dt><dd>{host?.networkName ?? "-"}</dd></div>
@@ -697,14 +698,14 @@ function VirtualMachineManagementPanel({
                 title: String(t("workspace.management.virtualMachines.instancesTitle")),
                 content: (
                   <section className="management-section management-table-section">
-                    <SectionHeader title={t("workspace.management.virtualMachines.instancesTitle")} description={t("workspace.management.virtualMachines.instancesDescription")} />
-                    {error ? <p className="management-empty management-table-empty-state">{error}</p> : summary?.instances.length ? (
+                    <SectionHeader className="management-section-header" title={t("workspace.management.virtualMachines.instancesTitle")} description={t("workspace.management.virtualMachines.instancesDescription")} />
+                    {error ? <Notice className="management-empty management-table-empty-state" tone="danger">{error}</Notice> : summary?.instances.length ? (
                       <div className="management-table-wrap"><table className="management-table management-table-virtualMachines">
                         <thead><tr><th>{t("workspace.management.columns.name")}</th><th>{t("workspace.management.columns.status")}</th><th>{t("workspace.management.columns.cpu")}</th><th>{t("workspace.management.columns.memory")}</th><th>{t("workspace.management.virtualMachines.columns.disk")}</th><th>{t("workspace.management.columns.network")}</th></tr></thead>
                         <tbody>{summary.instances.map((vm) => (
                           <tr key={vm.id}>
                             <td data-tooltip={vm.name}>
-                              <button
+                              <UiButton variant="ghost"
                                 type="button"
                                 className="docker-container-name-trigger vm-instance-name-trigger"
                                 onClick={() => setSelectedVmId(vm.id)}
@@ -712,13 +713,13 @@ function VirtualMachineManagementPanel({
                               >
                                 <span>{vm.name}</span>
                                 <ArrowUpRight aria-hidden="true" size={13} />
-                              </button>
+                              </UiButton>
                             </td>
-                            <td><span className="management-row-status" data-state={vmStateTone(vm.state)}>{vmStateLabel(vm.state, t)}</span></td><td>{vm.vcpu ?? "-"}</td><td>{vm.memoryBytes ? formatBytes(vm.memoryBytes, locale) : "-"}</td><td>{formatBytes(vmDiskCapacity(vm), locale)}</td><td>{vm.networks.map((network) => network.name || network.source || "-").join(", ") || "-"}</td>
+                            <td><StatusBadge className="management-row-status" data-state={vmStateTone(vm.state)}>{vmStateLabel(vm.state, t)}</StatusBadge></td><td>{vm.vcpu ?? "-"}</td><td>{vm.memoryBytes ? formatBytes(vm.memoryBytes, locale) : "-"}</td><td>{formatBytes(vmDiskCapacity(vm), locale)}</td><td>{vm.networks.map((network) => network.name || network.source || "-").join(", ") || "-"}</td>
                           </tr>
                         ))}</tbody>
                       </table></div>
-                    ) : <p className="management-empty management-table-empty-state">{host?.status === "unavailable" ? t("workspace.management.virtualMachines.unavailableDetail") : t("workspace.management.virtualMachines.noInstances")}</p>}
+                    ) : <EmptyState className="management-empty management-table-empty-state">{host?.status === "unavailable" ? t("workspace.management.virtualMachines.unavailableDetail") : t("workspace.management.virtualMachines.noInstances")}</EmptyState>}
                   </section>
                 )
               }
@@ -741,20 +742,10 @@ function VirtualMachineManagementPanel({
       {createOpen ? (
         <ModalPortal className="management-dialog-backdrop" role="presentation" onRequestClose={() => setCreateOpen(false)} closeDisabled={Boolean(pendingAction)} onMouseDown={(event) => event.currentTarget === event.target && setCreateOpen(false)}>
           <form ref={createDialogRef} tabIndex={-1} className="management-dialog create-form-dialog" onSubmit={(event) => void createVm(event)} role="dialog" aria-modal="true" aria-labelledby="create-form-title">
-            <header className="create-form-dialog-header">
-              <div className="create-form-heading">
-                <span className="create-form-icon" aria-hidden="true"><MonitorCog size={20} /></span>
-                <div>
-                  <span className="eyebrow">{t("workspace.management.virtualMachines.eyebrow")}</span>
-                  <h3 id="create-form-title">{t("workspace.management.virtualMachines.create")}</h3>
-                  <p>{t("workspace.management.virtualMachines.createDescription")}</p>
-                </div>
-              </div>
-              <button type="button" className="management-icon-action" onClick={() => setCreateOpen(false)} aria-label={String(t("editor.close"))} data-tooltip={String(t("editor.close"))}><X size={16} /></button>
-            </header>
+            <DialogHeader className="create-form-dialog-header" title={t("workspace.management.virtualMachines.create")} description={t("workspace.management.virtualMachines.createDescription")} headingLevel={3} headingId="create-form-title" actions={<><span className="create-form-icon" aria-hidden="true"><MonitorCog size={20} /></span><span className="eyebrow">{t("workspace.management.virtualMachines.eyebrow")}</span><UiButton variant="ghost" iconOnly type="button" className="management-icon-action" onClick={() => setCreateOpen(false)} aria-label={String(t("editor.close"))} data-tooltip={String(t("editor.close"))}><X size={16} /></UiButton></>} />
             <div className="create-form-dialog-body">
               <div className="create-form-host-strip">
-                <span className="management-status-pill" data-state="ready"><CircleCheck size={13} />{t("workspace.management.virtualMachines.readyDetail")}</span>
+                <StatusBadge className="management-status-pill" data-state="ready"><CircleCheck size={13} />{t("workspace.management.virtualMachines.readyDetail")}</StatusBadge>
                 <span><Cpu size={14} />{host?.cpuCount ?? "-"} {t("workspace.management.virtualMachines.createHostCpu")}</span>
                 <span><Server size={14} />{host?.architecture ?? "-"} {t("workspace.management.virtualMachines.createArchitecture")}</span>
                 <span><Network size={14} />{summary?.networks.length ?? 0} {t("workspace.management.virtualMachines.createNetworks")}</span>
@@ -763,7 +754,7 @@ function VirtualMachineManagementPanel({
                 {["createIdentity", "createResources", "createStorageNetwork", "createAdvanced"].map((key, index) => {
                   const step = index + 1;
                   const state = step === createStep ? "current" : step < createStep || step <= furthestCreateStep ? "complete" : "upcoming";
-                  return <button key={key} type="button" data-state={state} aria-current={step === createStep ? "step" : undefined} disabled={step > furthestCreateStep} onClick={() => { setCreateStep(step); setWizardError(null); }}><span>{step < createStep || step < furthestCreateStep ? <CircleCheck size={13} /> : step}</span><strong>{String(t(`workspace.management.virtualMachines.${key}` as never))}</strong></button>;
+                  return <UiButton variant="ghost" key={key} type="button" data-state={state} aria-current={step === createStep ? "step" : undefined} disabled={step > furthestCreateStep} onClick={() => { setCreateStep(step); setWizardError(null); }}><span>{step < createStep || step < furthestCreateStep ? <CircleCheck size={13} /> : step}</span><strong>{String(t(`workspace.management.virtualMachines.${key}` as never))}</strong></UiButton>;
                 })}
               </nav>
 
@@ -771,8 +762,8 @@ function VirtualMachineManagementPanel({
                 <section className="create-form-section create-form-stage">
                   <div className="create-form-section-heading"><span>01</span><div><h4>{t("workspace.management.virtualMachines.createIdentity")}</h4><p>{t("workspace.management.virtualMachines.createIdentityDetail")}</p></div></div>
                   <div className="create-form-field-grid create-form-field-grid-two">
-                    <label className="create-form-field">{t("workspace.management.virtualMachines.name")}<input value={form.name} onChange={(event) => updateCreateForm("name", event.target.value)} pattern="[A-Za-z0-9][A-Za-z0-9_.-]{0,62}" placeholder="home-lab" autoFocus /><small>{t("workspace.management.virtualMachines.createNameHint")}</small></label>
-                    <label className="create-form-field">{t("workspace.management.virtualMachines.osVariant")}<input value={form.osVariant} onChange={(event) => updateCreateForm("osVariant", event.target.value)} placeholder="ubuntu24.04" /><small>{t("workspace.management.virtualMachines.osVariantHint")}</small></label>
+                    <Field className="create-form-field" label={t("workspace.management.virtualMachines.name")} hint={t("workspace.management.virtualMachines.createNameHint")}><Input value={form.name} onChange={(event) => updateCreateForm("name", event.target.value)} pattern="[A-Za-z0-9][A-Za-z0-9_.-]{0,62}" placeholder="home-lab" autoFocus /></Field>
+                    <Field className="create-form-field" label={t("workspace.management.virtualMachines.osVariant")} hint={t("workspace.management.virtualMachines.osVariantHint")}><Input value={form.osVariant} onChange={(event) => updateCreateForm("osVariant", event.target.value)} placeholder="ubuntu24.04" /></Field>
                   </div>
                 </section>
               ) : null}
@@ -781,14 +772,14 @@ function VirtualMachineManagementPanel({
                 <section className="create-form-section create-form-stage">
                   <div className="create-form-section-heading"><span>02</span><div><h4>{t("workspace.management.virtualMachines.createResources")}</h4><p>{t("workspace.management.virtualMachines.createResourcesDetail")}</p></div></div>
                   <div className="create-form-field-grid">
-                    <label className="create-form-field"><span>{t("workspace.management.virtualMachines.createVcpu")}</span><input type="number" min="1" max="128" value={form.vcpu} onChange={(event) => updateCreateForm("vcpu", event.target.value)} /><small>{t("workspace.management.virtualMachines.createVcpuHint")}</small></label>
-                    <label className="create-form-field"><span>{t("workspace.management.virtualMachines.memory")} <em>GiB</em></span><input type="number" min="0.25" max="1024" step="0.25" value={form.memoryGiB} onChange={(event) => updateCreateForm("memoryGiB", event.target.value)} /><small>{t("workspace.management.virtualMachines.createMemoryHint")}</small></label>
-                    <label className="create-form-field">{t("workspace.management.virtualMachines.cpuMode")}<CustomSelect value={form.cpuMode} onChange={(selectedValue) => updateCreateForm("cpuMode", selectedValue as VmCreateForm["cpuMode"])} ariaLabel={t("workspace.management.virtualMachines.cpuMode")} options={[{ value: "host-model", label: "host-model" }, { value: "host-passthrough", label: "host-passthrough" }, { value: "custom", label: t("workspace.management.virtualMachines.custom") }]} /><small>{t("workspace.management.virtualMachines.cpuModeHint")}</small></label>
-                    {form.cpuMode === "custom" ? <label className="create-form-field">{t("workspace.management.virtualMachines.cpuModel")}<input value={form.cpuModel} onChange={(event) => updateCreateForm("cpuModel", event.target.value)} placeholder="Skylake-Client" /><small>{t("workspace.management.virtualMachines.cpuModelHint")}</small></label> : null}
-                    <label className="create-form-field">{t("workspace.management.virtualMachines.memoryBacking")}<CustomSelect value={form.memoryBacking} onChange={(selectedValue) => updateCreateForm("memoryBacking", selectedValue as VmCreateForm["memoryBacking"])} ariaLabel={t("workspace.management.virtualMachines.memoryBacking")} options={[{ value: "default", label: t("workspace.management.virtualMachines.systemDefault") }, { value: "hugepages", label: "HugePages" }]} /><small>{t("workspace.management.virtualMachines.memoryBackingHint")}</small></label>
+                    <Field className="create-form-field" label={t("workspace.management.virtualMachines.createVcpu")} hint={t("workspace.management.virtualMachines.createVcpuHint")}><Input type="number" min="1" max="128" value={form.vcpu} onChange={(event) => updateCreateForm("vcpu", event.target.value)} /></Field>
+                    <Field className="create-form-field" label={<>{t("workspace.management.virtualMachines.memory")} <em>GiB</em></>} hint={t("workspace.management.virtualMachines.createMemoryHint")}><Input type="number" min="0.25" max="1024" step="0.25" value={form.memoryGiB} onChange={(event) => updateCreateForm("memoryGiB", event.target.value)} /></Field>
+                    <Field className="create-form-field" label={t("workspace.management.virtualMachines.cpuMode")} hint={t("workspace.management.virtualMachines.cpuModeHint")}><CustomSelect value={form.cpuMode} onChange={(selectedValue) => updateCreateForm("cpuMode", selectedValue as VmCreateForm["cpuMode"])} ariaLabel={t("workspace.management.virtualMachines.cpuMode")} options={[{ value: "host-model", label: "host-model" }, { value: "host-passthrough", label: "host-passthrough" }, { value: "custom", label: t("workspace.management.virtualMachines.custom") }]} /></Field>
+                    {form.cpuMode === "custom" ? <Field className="create-form-field" label={t("workspace.management.virtualMachines.cpuModel")} hint={t("workspace.management.virtualMachines.cpuModelHint")}><Input value={form.cpuModel} onChange={(event) => updateCreateForm("cpuModel", event.target.value)} placeholder="Skylake-Client" /></Field> : null}
+                    <Field className="create-form-field" label={t("workspace.management.virtualMachines.memoryBacking")} hint={t("workspace.management.virtualMachines.memoryBackingHint")}><CustomSelect value={form.memoryBacking} onChange={(selectedValue) => updateCreateForm("memoryBacking", selectedValue as VmCreateForm["memoryBacking"])} ariaLabel={t("workspace.management.virtualMachines.memoryBacking")} options={[{ value: "default", label: t("workspace.management.virtualMachines.systemDefault") }, { value: "hugepages", label: "HugePages" }]} /></Field>
                   </div>
                   <Switch className="create-form-toggle" checked={form.customTopology} onCheckedChange={(customTopology) => updateCreateForm("customTopology", customTopology)} label={<strong>{t("workspace.management.virtualMachines.customTopology")}</strong>} description={t("workspace.management.virtualMachines.customTopologyHint")} />
-                  {form.customTopology ? <div className="create-form-field-grid create-form-topology"><label className="create-form-field">{t("workspace.management.virtualMachines.sockets")}<input type="number" min="1" max="16" value={form.sockets} onChange={(event) => updateCreateForm("sockets", event.target.value)} /></label><label className="create-form-field">{t("workspace.management.virtualMachines.cores")}<input type="number" min="1" max="128" value={form.cores} onChange={(event) => updateCreateForm("cores", event.target.value)} /></label><label className="create-form-field">{t("workspace.management.virtualMachines.threads")}<input type="number" min="1" max="16" value={form.threads} onChange={(event) => updateCreateForm("threads", event.target.value)} /></label></div> : null}
+                  {form.customTopology ? <div className="create-form-field-grid create-form-topology"><Field className="create-form-field" label={t("workspace.management.virtualMachines.sockets")}><Input type="number" min="1" max="16" value={form.sockets} onChange={(event) => updateCreateForm("sockets", event.target.value)} /></Field><Field className="create-form-field" label={t("workspace.management.virtualMachines.cores")}><Input type="number" min="1" max="128" value={form.cores} onChange={(event) => updateCreateForm("cores", event.target.value)} /></Field><Field className="create-form-field" label={t("workspace.management.virtualMachines.threads")}><Input type="number" min="1" max="16" value={form.threads} onChange={(event) => updateCreateForm("threads", event.target.value)} /></Field></div> : null}
                 </section>
               ) : null}
 
@@ -796,28 +787,28 @@ function VirtualMachineManagementPanel({
                 <section className="create-form-section create-form-stage">
                   <div className="create-form-section-heading"><span>03</span><div><h4>{t("workspace.management.virtualMachines.createStorageNetwork")}</h4><p>{t("workspace.management.virtualMachines.createStorageNetworkDetail")}</p></div></div>
                   <div className="create-form-segmented" role="tablist" aria-label={String(t("workspace.management.virtualMachines.createSource"))}>
-                    <button type="button" role="tab" aria-selected={form.mediaMode === "iso"} className={form.mediaMode === "iso" ? "is-active" : ""} onClick={() => updateCreateForm("mediaMode", "iso")}><HardDrive size={15} /><span><strong>{t("workspace.management.virtualMachines.createIsoSource")}</strong><small>{t("workspace.management.virtualMachines.createIsoSourceDetail")}</small></span></button>
-                    <button type="button" role="tab" aria-selected={form.mediaMode === "disk"} className={form.mediaMode === "disk" ? "is-active" : ""} onClick={() => updateCreateForm("mediaMode", "disk")}><Database size={15} /><span><strong>{t("workspace.management.virtualMachines.createDiskSource")}</strong><small>{t("workspace.management.virtualMachines.createDiskSourceDetail")}</small></span></button>
+                    <UiButton variant="ghost" type="button" role="tab" aria-selected={form.mediaMode === "iso"} className={form.mediaMode === "iso" ? "is-active" : ""} onClick={() => updateCreateForm("mediaMode", "iso")}><HardDrive size={15} /><span><strong>{t("workspace.management.virtualMachines.createIsoSource")}</strong><small>{t("workspace.management.virtualMachines.createIsoSourceDetail")}</small></span></UiButton>
+                    <UiButton variant="ghost" type="button" role="tab" aria-selected={form.mediaMode === "disk"} className={form.mediaMode === "disk" ? "is-active" : ""} onClick={() => updateCreateForm("mediaMode", "disk")}><Database size={15} /><span><strong>{t("workspace.management.virtualMachines.createDiskSource")}</strong><small>{t("workspace.management.virtualMachines.createDiskSourceDetail")}</small></span></UiButton>
                   </div>
-                  {form.mediaMode === "iso" ? <div className="create-form-field-grid create-form-field-grid-two create-form-path-field"><div className="create-form-field"><span id="create-form-iso-label">{t("workspace.management.virtualMachines.createIsoPath")}</span><div className="create-form-file-control"><input value={form.isoPath} readOnly aria-labelledby="create-form-iso-label" placeholder={String(t("workspace.management.virtualMachines.isoPickerPlaceholder"))} onClick={() => setIsoPickerOpen(true)} /><button type="button" onClick={() => setIsoPickerOpen(true)}><FolderOpen aria-hidden="true" size={15} /><span>{t("workspace.management.virtualMachines.isoPickerBrowse")}</span></button></div><small>{t("workspace.management.virtualMachines.createIsoPathHint")}</small></div><label className="create-form-field"><span>{t("workspace.management.virtualMachines.disk")} <em>GiB</em></span><input type="number" min="1" max="65536" value={form.diskGiB} onChange={(event) => updateCreateForm("diskGiB", event.target.value)} /><small>{t("workspace.management.virtualMachines.createDiskHint")}</small></label></div> : <label className="create-form-field create-form-path-field">{t("workspace.management.virtualMachines.createDiskPath")}<input value={form.diskPath} onChange={(event) => updateCreateForm("diskPath", event.target.value)} placeholder="/cyberos/vm/existing.qcow2" /><small>{t("workspace.management.virtualMachines.createDiskPathHint")}</small></label>}
-                  <div className="create-form-subsection"><h5>{t("workspace.management.virtualMachines.diskOptions")}</h5><div className="create-form-field-grid"><label className="create-form-field">{t("workspace.management.virtualMachines.diskBus")}<CustomSelect value={form.diskBus} onChange={(selectedValue) => updateCreateForm("diskBus", selectedValue as VmCreateForm["diskBus"])} ariaLabel={t("workspace.management.virtualMachines.diskBus")} options={["virtio", "scsi", "sata", "ide"].map((value) => ({ value: value, label: value }))} /></label><label className="create-form-field">{t("workspace.management.virtualMachines.diskCache")}<CustomSelect value={form.diskCache} onChange={(selectedValue) => updateCreateForm("diskCache", selectedValue as VmCreateForm["diskCache"])} ariaLabel={t("workspace.management.virtualMachines.diskCache")} options={["none", "writeback", "writethrough", "directsync", "unsafe"].map((value) => ({ value: value, label: value }))} /></label><label className="create-form-field">Discard<CustomSelect value={form.diskDiscard} onChange={(selectedValue) => updateCreateForm("diskDiscard", selectedValue as VmCreateForm["diskDiscard"])} ariaLabel={"Discard"} options={[{ value: "ignore", label: "ignore" }, { value: "unmap", label: "unmap" }]} /></label></div></div>
-                  <div className="create-form-subsection"><h5>{t("workspace.management.virtualMachines.createNetwork")}</h5><div className="create-form-field-grid"><label className="create-form-field">{t("workspace.management.virtualMachines.network")}<CustomSelect value={form.network} onChange={(selectedValue) => updateCreateForm("network", selectedValue)} ariaLabel={t("workspace.management.virtualMachines.network")} options={(summary?.networks.length ? summary.networks : [{ name: "default", state: "unknown", mode: "nat" as const }]).map((network) => ({ value: network.name, label: `${network.name} · ${network.mode} · ${network.state}` }))} /></label><label className="create-form-field">{t("workspace.management.virtualMachines.networkModel")}<CustomSelect value={form.networkModel} onChange={(selectedValue) => updateCreateForm("networkModel", selectedValue as VmCreateForm["networkModel"])} ariaLabel={t("workspace.management.virtualMachines.networkModel")} options={[{ value: "virtio", label: "virtio" }, { value: "e1000", label: "e1000" }, { value: "rtl8139", label: "rtl8139" }]} /></label><label className="create-form-field">{t("workspace.management.virtualMachines.macAddress")}<input value={form.macAddress} onChange={(event) => updateCreateForm("macAddress", event.target.value)} placeholder="52:54:00:12:34:56" /><small>{t("workspace.management.virtualMachines.macAddressHint")}</small></label></div></div>
+                  {form.mediaMode === "iso" ? <div className="create-form-field-grid create-form-field-grid-two create-form-path-field"><div className="create-form-field"><span id="create-form-iso-label">{t("workspace.management.virtualMachines.createIsoPath")}</span><div className="create-form-file-control"><Input value={form.isoPath} readOnly aria-labelledby="create-form-iso-label" placeholder={String(t("workspace.management.virtualMachines.isoPickerPlaceholder"))} onClick={() => setIsoPickerOpen(true)} /><UiButton variant="ghost" type="button" onClick={() => setIsoPickerOpen(true)}><FolderOpen aria-hidden="true" size={15} /><span>{t("workspace.management.virtualMachines.isoPickerBrowse")}</span></UiButton></div><small>{t("workspace.management.virtualMachines.createIsoPathHint")}</small></div><Field className="create-form-field" label={<>{t("workspace.management.virtualMachines.disk")} <em>GiB</em></>} hint={t("workspace.management.virtualMachines.createDiskHint")}><Input type="number" min="1" max="65536" value={form.diskGiB} onChange={(event) => updateCreateForm("diskGiB", event.target.value)} /></Field></div> : <Field className="create-form-field create-form-path-field" label={t("workspace.management.virtualMachines.createDiskPath")} hint={t("workspace.management.virtualMachines.createDiskPathHint")}><Input value={form.diskPath} onChange={(event) => updateCreateForm("diskPath", event.target.value)} placeholder="/cyberos/vm/existing.qcow2" /></Field>}
+                  <div className="create-form-subsection"><h5>{t("workspace.management.virtualMachines.diskOptions")}</h5><div className="create-form-field-grid"><Field className="create-form-field" label={t("workspace.management.virtualMachines.diskBus")}><CustomSelect value={form.diskBus} onChange={(selectedValue) => updateCreateForm("diskBus", selectedValue as VmCreateForm["diskBus"])} ariaLabel={t("workspace.management.virtualMachines.diskBus")} options={["virtio", "scsi", "sata", "ide"].map((value) => ({ value: value, label: value }))} /></Field><Field className="create-form-field" label={t("workspace.management.virtualMachines.diskCache")}><CustomSelect value={form.diskCache} onChange={(selectedValue) => updateCreateForm("diskCache", selectedValue as VmCreateForm["diskCache"])} ariaLabel={t("workspace.management.virtualMachines.diskCache")} options={["none", "writeback", "writethrough", "directsync", "unsafe"].map((value) => ({ value: value, label: value }))} /></Field><Field className="create-form-field" label={<>Discard</>}><CustomSelect value={form.diskDiscard} onChange={(selectedValue) => updateCreateForm("diskDiscard", selectedValue as VmCreateForm["diskDiscard"])} ariaLabel={"Discard"} options={[{ value: "ignore", label: "ignore" }, { value: "unmap", label: "unmap" }]} /></Field></div></div>
+                  <div className="create-form-subsection"><h5>{t("workspace.management.virtualMachines.createNetwork")}</h5><div className="create-form-field-grid"><Field className="create-form-field" label={t("workspace.management.virtualMachines.network")}><CustomSelect value={form.network} onChange={(selectedValue) => updateCreateForm("network", selectedValue)} ariaLabel={t("workspace.management.virtualMachines.network")} options={(summary?.networks.length ? summary.networks : [{ name: "default", state: "unknown", mode: "nat" as const }]).map((network) => ({ value: network.name, label: `${network.name} · ${network.mode} · ${network.state}` }))} /></Field><Field className="create-form-field" label={t("workspace.management.virtualMachines.networkModel")}><CustomSelect value={form.networkModel} onChange={(selectedValue) => updateCreateForm("networkModel", selectedValue as VmCreateForm["networkModel"])} ariaLabel={t("workspace.management.virtualMachines.networkModel")} options={[{ value: "virtio", label: "virtio" }, { value: "e1000", label: "e1000" }, { value: "rtl8139", label: "rtl8139" }]} /></Field><Field className="create-form-field" label={t("workspace.management.virtualMachines.macAddress")} hint={t("workspace.management.virtualMachines.macAddressHint")}><Input value={form.macAddress} onChange={(event) => updateCreateForm("macAddress", event.target.value)} placeholder="52:54:00:12:34:56" /></Field></div></div>
                 </section>
               ) : null}
 
               {createStep === 4 ? (
                 <section className="create-form-section create-form-stage">
                   <div className="create-form-section-heading"><span>04</span><div><h4>{t("workspace.management.virtualMachines.createAdvanced")}</h4><p>{t("workspace.management.virtualMachines.createAdvancedDetail")}</p></div></div>
-                  <div className="create-form-field-grid"><label className="create-form-field">{t("workspace.management.virtualMachines.firmware")}<CustomSelect value={form.firmware} onChange={(selectedValue) => updateCreateForm("firmware", selectedValue as VmCreateForm["firmware"])} ariaLabel={`${t("workspace.management.virtualMachines.firmware")}${isArmHost ? <small>{t("workspace.management.virtualMachines.firmwareArmHint")}</small> : null}`} options={[{ value: "bios", label: "BIOS", disabled: isArmHost }, { value: "uefi", label: "UEFI" }]} />{isArmHost ? <small>{t("workspace.management.virtualMachines.firmwareArmHint")}</small> : null}</label><label className="create-form-field">{t("workspace.management.virtualMachines.machineType")}<input value={form.machineType} onChange={(event) => updateCreateForm("machineType", event.target.value)} placeholder="q35" /><small>{t("workspace.management.virtualMachines.machineTypeHint")}</small></label><label className="create-form-field">{t("workspace.management.virtualMachines.graphics")}<CustomSelect value={form.graphics} onChange={(selectedValue) => updateCreateForm("graphics", selectedValue as VmCreateForm["graphics"])} ariaLabel={t("workspace.management.virtualMachines.graphics")} options={[{ value: "none", label: "none" }, { value: "spice", label: "SPICE" }, { value: "vnc", label: "VNC" }]} /></label><label className="create-form-field">{t("workspace.management.virtualMachines.videoModel")}<CustomSelect value={form.videoModel} onChange={(selectedValue) => updateCreateForm("videoModel", selectedValue as VmCreateForm["videoModel"])} ariaLabel={t("workspace.management.virtualMachines.videoModel")} options={["none", "virtio", "qxl", "vga"].map((value) => ({ value: value, label: value }))} /></label></div>
+                  <div className="create-form-field-grid"><label className="create-form-field">{t("workspace.management.virtualMachines.firmware")}<CustomSelect value={form.firmware} onChange={(selectedValue) => updateCreateForm("firmware", selectedValue as VmCreateForm["firmware"])} ariaLabel={`${t("workspace.management.virtualMachines.firmware")}${isArmHost ? <small>{t("workspace.management.virtualMachines.firmwareArmHint")}</small> : null}`} options={[{ value: "bios", label: "BIOS", disabled: isArmHost }, { value: "uefi", label: "UEFI" }]} />{isArmHost ? <small>{t("workspace.management.virtualMachines.firmwareArmHint")}</small> : null}</label><Field className="create-form-field" label={t("workspace.management.virtualMachines.machineType")} hint={t("workspace.management.virtualMachines.machineTypeHint")}><Input value={form.machineType} onChange={(event) => updateCreateForm("machineType", event.target.value)} placeholder="q35" /></Field><Field className="create-form-field" label={t("workspace.management.virtualMachines.graphics")}><CustomSelect value={form.graphics} onChange={(selectedValue) => updateCreateForm("graphics", selectedValue as VmCreateForm["graphics"])} ariaLabel={t("workspace.management.virtualMachines.graphics")} options={[{ value: "none", label: "none" }, { value: "spice", label: "SPICE" }, { value: "vnc", label: "VNC" }]} /></Field><Field className="create-form-field" label={t("workspace.management.virtualMachines.videoModel")}><CustomSelect value={form.videoModel} onChange={(selectedValue) => updateCreateForm("videoModel", selectedValue as VmCreateForm["videoModel"])} ariaLabel={t("workspace.management.virtualMachines.videoModel")} options={["none", "virtio", "qxl", "vga"].map((value) => ({ value: value, label: value }))} /></Field></div>
                   <div className="create-form-toggle-grid"><Switch className="create-form-toggle" checked={form.bootMenu} onCheckedChange={(bootMenu) => updateCreateForm("bootMenu", bootMenu)} label={<strong>{t("workspace.management.virtualMachines.bootMenu")}</strong>} description={t("workspace.management.virtualMachines.bootMenuHint")} /><Switch className="create-form-toggle" checked={form.autostart} onCheckedChange={(autostart) => updateCreateForm("autostart", autostart)} label={<strong>{t("workspace.management.virtualMachines.autostart")}</strong>} description={t("workspace.management.virtualMachines.autostartHint")} /></div>
                   <div className="create-form-summary"><div><span>{t("workspace.management.virtualMachines.name")}</span><strong>{form.name}</strong></div><div><span>{t("workspace.management.virtualMachines.createResources")}</span><strong>{form.vcpu} vCPU · {form.memoryGiB} GiB</strong></div><div><span>{t("workspace.management.virtualMachines.createSource")}</span><strong data-tooltip={form.mediaMode === "iso" ? form.isoPath : form.diskPath}>{form.mediaMode === "iso" ? form.isoPath : form.diskPath}</strong></div><div><span>{t("workspace.management.virtualMachines.network")}</span><strong>{form.network} · {form.networkModel}</strong></div><div><span>{t("workspace.management.virtualMachines.firmware")}</span><strong>{form.firmware.toUpperCase()} · {form.graphics}</strong></div></div>
                   <div className="create-form-review"><Info size={16} /><div><strong>{t("workspace.management.virtualMachines.createDirectTitle")}</strong><p>{t("workspace.management.virtualMachines.createDirectDetail")}</p></div></div>
                 </section>
               ) : null}
 
-              {wizardError ? <p className="create-form-error" role="alert"><CircleAlert size={14} />{wizardError}</p> : null}
+              {wizardError ? <Notice className="create-form-error" role="alert" tone="danger" icon={<CircleAlert size={14} />}>{wizardError}</Notice> : null}
             </div>
-            <footer className="create-form-dialog-footer"><span>{t("workspace.management.virtualMachines.stepCounter", { current: createStep, total: 4 })} · {form.name || t("workspace.management.virtualMachines.createReviewPlaceholder")}</span><div><button type="button" onClick={() => setCreateOpen(false)} disabled={pendingAction !== null} className="secondary-button">{t("common.actions.cancel")}</button>{createStep > 1 ? <button type="button" onClick={retreatWizard} disabled={pendingAction !== null} className="secondary-button"><ChevronLeft size={14} />{t("workspace.management.virtualMachines.previous")}</button> : null}{createStep < 4 ? <button type="button" className="primary-button create-form-submit" onClick={(event) => { event.preventDefault(); advanceWizard(); }}><span>{t("workspace.management.virtualMachines.next")}</span><ChevronRight size={14} /></button> : <button type="submit" className="primary-button create-form-submit" disabled={pendingAction !== null} aria-busy={pendingAction === `create:${form.name.trim()}` || undefined}>{pendingAction === `create:${form.name.trim()}` ? <><LoaderCircle className="spin" size={14} />{t("workspace.management.virtualMachines.creating")}</> : <><Settings2 size={14} />{t("workspace.management.virtualMachines.createNow")}</>}</button>}</div></footer>
+            <DialogActions className="create-form-dialog-footer"><span>{t("workspace.management.virtualMachines.stepCounter", { current: createStep, total: 4 })} · {form.name || t("workspace.management.virtualMachines.createReviewPlaceholder")}</span><div><UiButton variant="secondary" type="button" onClick={() => setCreateOpen(false)} disabled={pendingAction !== null} className="secondary-button">{t("common.actions.cancel")}</UiButton>{createStep > 1 ? <UiButton variant="secondary" type="button" onClick={retreatWizard} disabled={pendingAction !== null} className="secondary-button"><ChevronLeft size={14} />{t("workspace.management.virtualMachines.previous")}</UiButton> : null}{createStep < 4 ? <UiButton variant="primary" type="button" className="primary-button create-form-submit" onClick={(event) => { event.preventDefault(); advanceWizard(); }}><span>{t("workspace.management.virtualMachines.next")}</span><ChevronRight size={14} /></UiButton> : <UiButton variant="primary" type="submit" className="primary-button create-form-submit" disabled={pendingAction !== null} aria-busy={pendingAction === `create:${form.name.trim()}` || undefined}>{pendingAction === `create:${form.name.trim()}` ? <><LoaderCircle className="spin" size={14} />{t("workspace.management.virtualMachines.creating")}</> : <><Settings2 size={14} />{t("workspace.management.virtualMachines.createNow")}</>}</UiButton>}</div></DialogActions>
           </form>
         </ModalPortal>
       ) : null}
@@ -900,24 +891,14 @@ export function VmInstanceDetailsDialog({
           }
         }}
       >
-        <header className="docker-container-detail-header">
-          <div className="docker-container-detail-heading">
-            <div className="docker-container-detail-icon" aria-hidden="true">
+        <DialogHeader className="docker-container-detail-header" title={vm.name} description={vm.uuid ?? vm.id} headingId="vm-instance-detail-title" actions={<><div className="docker-container-detail-icon" aria-hidden="true">
               <MonitorCog size={18} />
-            </div>
-            <div>
-              <span className="eyebrow">{t("workspace.management.virtualMachines.detailsEyebrow")}</span>
-              <h2 id="vm-instance-detail-title">{vm.name}</h2>
-              <p data-tooltip={vm.uuid ?? vm.id}>{vm.uuid ?? vm.id}</p>
-            </div>
-          </div>
-          <div className="docker-container-detail-header-actions">
-            <span className="management-row-status" data-state={vmStateTone(vm.state)}>{vmStateLabel(vm.state, t)}</span>
-            <button type="button" className="management-icon-action" onClick={onClose} data-tooltip={String(t("common.actions.close"))} aria-label={String(t("common.actions.close"))}>
+            </div><span className="eyebrow">{t("workspace.management.virtualMachines.detailsEyebrow")}</span><div className="docker-container-detail-header-actions">
+            <StatusBadge className="management-row-status" data-state={vmStateTone(vm.state)}>{vmStateLabel(vm.state, t)}</StatusBadge>
+            <UiButton variant="ghost" iconOnly type="button" className="management-icon-action" onClick={onClose} data-tooltip={String(t("common.actions.close"))} aria-label={String(t("common.actions.close"))}>
               <X aria-hidden="true" size={15} />
-            </button>
-          </div>
-        </header>
+            </UiButton>
+          </div></>} />
 
         <div className="docker-container-detail-body">
           <section className="docker-container-detail-section docker-container-detail-overview">
@@ -984,7 +965,7 @@ export function VmInstanceDetailsDialog({
                     </div>
                   ))}
                 </div>
-              ) : <p className="management-empty">{t("workspace.management.virtualMachines.noInterfaces")}</p>}
+              ) : <EmptyState className="management-empty">{t("workspace.management.virtualMachines.noInterfaces")}</EmptyState>}
             </section>
           </div>
 
@@ -1005,11 +986,11 @@ export function VmInstanceDetailsDialog({
                   </div>
                 ))}
               </div>
-            ) : <p className="management-empty">{t("workspace.management.virtualMachines.noDisks")}</p>}
+            ) : <EmptyState className="management-empty">{t("workspace.management.virtualMachines.noDisks")}</EmptyState>}
           </section>
         </div>
 
-        <footer className="docker-container-detail-actions">
+        <DialogActions className="docker-container-detail-actions">
           <div className="docker-container-detail-action-note">
             <Info aria-hidden="true" size={14} />
             <span>{t("workspace.management.virtualMachines.actionsNote")}</span>
@@ -1022,7 +1003,7 @@ export function VmInstanceDetailsDialog({
             onRequest={onRequest}
             onRequestConsole={onRequestConsole}
           />
-        </footer>
+        </DialogActions>
       </section>
     </ModalPortal>
   );
@@ -1435,9 +1416,9 @@ function DockerManagementPanel({
           </div>
           <div className="management-command-copy">
             <div>
-              <span className="management-status-pill" data-state={daemonStatus ? dockerDaemonTone(daemonStatus.state) : "neutral"}>
+              <StatusBadge className="management-status-pill" data-state={daemonStatus ? dockerDaemonTone(daemonStatus.state) : "neutral"}>
                 {dockerStatusLabel(daemonStatus, loading, t)}
-              </span>
+              </StatusBadge>
               <h3>{t("workspace.management.docker.title")}</h3>
               <p>{dockerStatusDetail(summary, loading, error, t)}</p>
             </div>
@@ -1481,10 +1462,10 @@ function DockerManagementPanel({
                 id: "containers",
                 title: String(t("workspace.management.docker.containersTitle")),
                 content: <section className="management-section management-table-section">
-          <SectionHeader
+          <SectionHeader className="management-section-header"
             title={t("workspace.management.docker.containersTitle")}
             description={t("workspace.management.docker.containersDescription")}
-            action={renderCreateAction("container")}
+            actions={renderCreateAction("container")}
           />
           {containers.length || pendingContainerCreates.length ? (
             <div className="management-table-wrap">
@@ -1519,14 +1500,14 @@ function DockerManagementPanel({
                   {containers.map((container) => (
                     <tr key={container.id}>
                       <td data-tooltip={container.name}>
-                        <button
+                        <UiButton variant="ghost"
                           type="button"
                           className="docker-container-name-trigger"
                           onClick={() => void openContainerDetails(container)}
                         >
                           <span>{container.name}</span>
                           <ArrowUpRight aria-hidden="true" size={13} />
-                        </button>
+                        </UiButton>
                       </td>
                       <td>
                         <DockerContainerStatusIndicator
@@ -1544,7 +1525,7 @@ function DockerManagementPanel({
               </table>
             </div>
           ) : (
-            <p className="management-empty management-table-empty-state">{dockerEmptyState(dockerEnabled, loading, t)}</p>
+            <EmptyState className="management-empty management-table-empty-state">{dockerEmptyState(dockerEnabled, loading, t)}</EmptyState>
           )}
         </section>
               },
@@ -1580,10 +1561,10 @@ function DockerManagementPanel({
                 id: "compose",
                 title: String(t("workspace.management.docker.composeTitle")),
                 content: <section className="management-section docker-compose-section">
-          <SectionHeader
+          <SectionHeader className="management-section-header"
             title={t("workspace.management.docker.composeTitle")}
             description={t("workspace.management.docker.composeDescription")}
-            action={(
+            actions={(
               <PanelHeaderAction
                 label={t("workspace.management.docker.apps.createAction")}
                 type="button"
@@ -1626,7 +1607,7 @@ function DockerManagementPanel({
                 </article>
               ))
             ) : (
-              <p className="management-empty">{dockerComposeEmptyState(dockerEnabled, loading, t)}</p>
+              <EmptyState className="management-empty">{dockerComposeEmptyState(dockerEnabled, loading, t)}</EmptyState>
             )}
           </div>
         </section>
@@ -1722,7 +1703,7 @@ function ActionIconButton({
 }) {
   const ButtonIcon = pending ? LoaderCircle : Icon;
   return (
-    <button
+    <UiButton variant={danger ? "danger" : "ghost"} iconOnly
       type="button"
       className={danger ? "management-icon-action is-danger" : "management-icon-action"}
       disabled={disabled}
@@ -1732,7 +1713,7 @@ function ActionIconButton({
       onClick={() => void onClick()}
     >
       <ButtonIcon className={pending ? "spin" : undefined} aria-hidden="true" size={13} />
-    </button>
+    </UiButton>
   );
 }
 
@@ -1792,24 +1773,14 @@ export function DockerContainerDetailsDialog({
   return (
     <ModalPortal className="management-modal-backdrop" role="presentation" onRequestClose={onClose}>
       <section className="management-modal docker-container-detail-modal" role="dialog" aria-modal="true" aria-labelledby="docker-container-detail-title">
-        <header className="docker-container-detail-header">
-          <div className="docker-container-detail-heading">
-            <div className="docker-container-detail-icon" aria-hidden="true">
+        <DialogHeader className="docker-container-detail-header" title={container.name} description={<>{container.shortId} <span aria-hidden="true">·</span> {container.image}</>} headingId="docker-container-detail-title" actions={<><div className="docker-container-detail-icon" aria-hidden="true">
               <Container size={18} />
-            </div>
-            <div>
-              <span className="eyebrow">{t("workspace.management.docker.detailsEyebrow")}</span>
-              <h2 id="docker-container-detail-title">{container.name}</h2>
-              <p>{container.shortId} <span aria-hidden="true">·</span> {container.image}</p>
-            </div>
-          </div>
-          <div className="docker-container-detail-header-actions">
-            <span className="management-row-status" data-state={statusTone}>{container.state}</span>
-            <button type="button" className="management-icon-action" onClick={onClose} aria-label={t("common.actions.dismissNotification")} data-tooltip={t("common.actions.dismissNotification")}>
+            </div><span className="eyebrow">{t("workspace.management.docker.detailsEyebrow")}</span><div className="docker-container-detail-header-actions">
+            <StatusBadge className="management-row-status" data-state={statusTone}>{container.state}</StatusBadge>
+            <UiButton variant="ghost" iconOnly type="button" className="management-icon-action" onClick={onClose} aria-label={t("common.actions.dismissNotification")} data-tooltip={t("common.actions.dismissNotification")}>
               <X aria-hidden="true" size={15} />
-            </button>
-          </div>
-        </header>
+            </UiButton>
+          </div></>} />
 
         <div className="docker-container-detail-body">
           {state.error ? <p className="docker-container-detail-error"><CircleAlert aria-hidden="true" size={15} />{state.error}</p> : null}
@@ -1886,7 +1857,7 @@ export function DockerContainerDetailsDialog({
                   <span className="eyebrow">{t("workspace.management.docker.hostAccess.states.runtime")}</span>
                   <h3>{t("workspace.management.docker.hostAccess.title")}</h3>
                 </div>
-                <button
+                <UiButton variant="ghost" iconOnly
                   type="button"
                   className="management-icon-action"
                   onClick={() => void navigator.clipboard.writeText(hostAccessCoverageReport.join("\n")).then(() => {
@@ -1897,7 +1868,7 @@ export function DockerContainerDetailsDialog({
                   data-tooltip={t("workspace.management.docker.hostAccess.copyReport")}
                 >
                   {hostAccessCopied ? <Check aria-hidden="true" size={14} /> : <Copy aria-hidden="true" size={14} />}
-                </button>
+                </UiButton>
               </div>
               <div className="host-access-coverage">
                 {hostAccessCoverage.map((item) => (
@@ -1931,7 +1902,7 @@ export function DockerContainerDetailsDialog({
           ) : null}
         </div>
 
-        <footer className="docker-container-detail-actions">
+        <DialogActions className="docker-container-detail-actions">
           <div className="docker-container-detail-action-note">
             <Info aria-hidden="true" size={14} />
             <span>{t("workspace.management.docker.directActionsNote")}</span>
@@ -1967,7 +1938,7 @@ export function DockerContainerDetailsDialog({
               onClick={() => confirmAction("remove")}
             />
           </div>
-        </footer>
+        </DialogActions>
       </section>
     </ModalPortal>
   );
@@ -1990,10 +1961,10 @@ function ManagementDetailActionButton({
 }) {
   const ButtonIcon = pending ? LoaderCircle : Icon;
   return (
-    <button type="button" className={danger ? "docker-detail-action is-danger" : "docker-detail-action"} disabled={disabled} aria-busy={pending || undefined} onClick={onClick} data-tooltip={label}>
+    <UiButton variant={danger ? "danger" : "ghost"} type="button" className={danger ? "docker-detail-action is-danger" : "docker-detail-action"} disabled={disabled} aria-busy={pending || undefined} onClick={onClick} data-tooltip={label}>
       <ButtonIcon className={pending ? "spin" : undefined} aria-hidden="true" size={14} />
       <span>{label}</span>
-    </button>
+    </UiButton>
   );
 }
 
@@ -2008,15 +1979,9 @@ function DockerLogsDialog({
   return (
     <ModalPortal className="management-modal-backdrop" role="presentation" onRequestClose={onClose}>
       <section className="management-modal" role="dialog" aria-modal="true" aria-labelledby="docker-logs-title">
-        <header>
-          <div>
-            <span className="eyebrow">{t("workspace.management.docker.logsEyebrow")}</span>
-            <h2 id="docker-logs-title">{state.container.name}</h2>
-          </div>
-          <button type="button" className="management-icon-action" onClick={onClose} aria-label={t("common.actions.dismissNotification")} data-tooltip={t("common.actions.dismissNotification")}>
+        <DialogHeader title={state.container.name} eyebrow={<>{t("workspace.management.docker.logsEyebrow")}</>} headingId="docker-logs-title" actions={<><UiButton variant="ghost" iconOnly type="button" className="management-icon-action" onClick={onClose} aria-label={t("common.actions.dismissNotification")} data-tooltip={t("common.actions.dismissNotification")}>
             <X aria-hidden="true" size={14} />
-          </button>
-        </header>
+          </UiButton></>} />
         <pre className="management-log-output">
           {state.loading
             ? t("common.states.loading")
@@ -2150,15 +2115,9 @@ function DockerConsoleDialog({ session, onClose, kind = "docker" }: { session: D
   return (
     <ModalPortal className="management-modal-backdrop" role="presentation" onRequestClose={onClose}>
       <section className="management-modal management-console-modal" role="dialog" aria-modal="true" aria-labelledby="management-console-title">
-        <header>
-          <div>
-            <span className="eyebrow">{t("workspace.management.actions.console")}</span>
-            <h2 id="management-console-title">{session.containerId}</h2>
-          </div>
-          <button type="button" className="management-icon-action" onClick={onClose} aria-label={t("common.actions.dismissNotification")} data-tooltip={t("common.actions.dismissNotification")}>
+        <DialogHeader title={session.containerId} eyebrow={<>{t("workspace.management.actions.console")}</>} headingId="management-console-title" actions={<><UiButton variant="ghost" iconOnly type="button" className="management-icon-action" onClick={onClose} aria-label={t("common.actions.dismissNotification")} data-tooltip={t("common.actions.dismissNotification")}>
             <X aria-hidden="true" size={14} />
-          </button>
-        </header>
+          </UiButton></>} />
         <div ref={terminalRef} className="management-terminal" />
       </section>
     </ModalPortal>
@@ -2228,7 +2187,7 @@ function DockerRuntimePressure({
 
   return (
     <section className="management-section docker-pressure-section">
-      <SectionHeader
+      <SectionHeader className="management-section-header"
         title={String(t("workspace.management.docker.pressureTitle"))}
         description={String(t("workspace.management.docker.pressureDescription"))}
       />
@@ -2309,20 +2268,20 @@ function DockerNetworkInventory({
   const count = summary?.metrics.networks ?? 0;
   return (
     <section className="management-section docker-inventory-section">
-      <SectionHeader
+      <SectionHeader className="management-section-header"
         title={String(t("workspace.management.docker.networksTitle"))}
         description={String(t("workspace.management.docker.networksDescription"))}
-        action={action}
+        actions={action}
       />
       <div className="docker-inventory-list">
         {networks.length ? networks.map((network) => (
           <article className="docker-inventory-row" key={network.id}>
             <Network aria-hidden="true" size={16} />
             <div>
-              <button type="button" className="docker-inventory-name-trigger" data-tooltip={network.name} onClick={() => onOpen(network)}>
+              <UiButton variant="ghost" type="button" className="docker-inventory-name-trigger" data-tooltip={network.name} onClick={() => onOpen(network)}>
                 <span>{network.name}</span>
                 <ArrowUpRight aria-hidden="true" size={13} />
-              </button>
+              </UiButton>
               <span>{network.driver} · {network.scope}</span>
             </div>
             <dl>
@@ -2330,7 +2289,7 @@ function DockerNetworkInventory({
             </dl>
           </article>
         )) : (
-          <p className="management-empty">{String(t(count ? "workspace.management.docker.inventoryUnavailable" : "workspace.management.docker.noNetworks"))}</p>
+          <EmptyState className="management-empty">{String(t(count ? "workspace.management.docker.inventoryUnavailable" : "workspace.management.docker.noNetworks"))}</EmptyState>
         )}
       </div>
     </section>
@@ -2347,26 +2306,26 @@ function DockerStorageInventory({ summary, t, action, onOpen }: {
   const count = summary?.metrics.volumes ?? 0;
   return (
     <section className="management-section docker-inventory-section">
-      <SectionHeader
+      <SectionHeader className="management-section-header"
         title={String(t("workspace.management.docker.storageTitle"))}
         description={String(t("workspace.management.docker.storageDescription"))}
-        action={action}
+        actions={action}
       />
       <div className="docker-inventory-list">
         {volumes.length ? volumes.map((volume) => (
           <article className="docker-inventory-row docker-storage-row" key={volume.name}>
             <HardDrive aria-hidden="true" size={16} />
             <div>
-              <button type="button" className="docker-inventory-name-trigger" data-tooltip={volume.name} onClick={() => onOpen(volume)}>
+              <UiButton variant="ghost" type="button" className="docker-inventory-name-trigger" data-tooltip={volume.name} onClick={() => onOpen(volume)}>
                 <span>{volume.name}</span>
                 <ArrowUpRight aria-hidden="true" size={13} />
-              </button>
+              </UiButton>
               <span>{volume.driver} · {volume.scope}</span>
             </div>
             <small data-tooltip={volume.mountpoint}>{volume.mountpoint || String(t("common.dash"))}</small>
           </article>
         )) : (
-          <p className="management-empty">{String(t(count ? "workspace.management.docker.inventoryUnavailable" : "workspace.management.docker.noVolumes"))}</p>
+          <EmptyState className="management-empty">{String(t(count ? "workspace.management.docker.inventoryUnavailable" : "workspace.management.docker.noVolumes"))}</EmptyState>
         )}
       </div>
     </section>
@@ -2653,17 +2612,7 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function SectionHeader({ title, description, action }: { title: string; description: string; action?: ReactNode }) {
-  return (
-    <header className="management-section-header">
-      <div>
-        <h3>{title}</h3>
-        <p>{description}</p>
-      </div>
-      {action ? <div className="management-section-header-actions">{action}</div> : null}
-    </header>
-  );
-}
+
 
 function ResourceGauge({ gauge }: { gauge: ManagementGauge }) {
   const { t } = useTranslation();
@@ -2685,15 +2634,15 @@ function ResourceGauge({ gauge }: { gauge: ManagementGauge }) {
 function renderCell(row: ManagementRow, column: ManagementColumn, t: Translate) {
   if (column.id === "status") {
     return (
-      <span className="management-row-status" data-state={row.state}>
+      <StatusBadge className="management-row-status" data-state={row.state}>
         {String(t(row.statusKey))}
-      </span>
+      </StatusBadge>
     );
   }
 
   if (column.id === "actions") {
     return (
-      <button
+      <UiButton variant="ghost"
         type="button"
         className="management-row-action"
         disabled
@@ -2702,7 +2651,7 @@ function renderCell(row: ManagementRow, column: ManagementColumn, t: Translate) 
       >
         <TerminalSquare aria-hidden="true" size={13} />
         <span>{String(t(row.actionKey))}</span>
-      </button>
+      </UiButton>
     );
   }
 

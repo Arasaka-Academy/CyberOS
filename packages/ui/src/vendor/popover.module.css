@@ -1,0 +1,7 @@
+/* Generated from packages/react/src/popover.module.css. Regenerate in CyberUI with pnpm registry:build; after installation, edit this file freely. */
+@layer theme, base, components, utilities;
+@reference './tailwind-theme.css';
+
+@layer components {
+.popover { @apply tw:z-[60] tw:max-w-[min(420px,calc(100vw_-_32px))] tw:min-w-[var(--trigger-width,180px)] tw:p-cyber-sm; border: 1px solid var(--cyber-ink); background: var(--cyber-bg); @apply tw:text-cyber-ink; box-shadow: 5px 5px 0 var(--cyber-line); @apply tw:font-cyber-body tw:animate-cyber-appear; }
+}

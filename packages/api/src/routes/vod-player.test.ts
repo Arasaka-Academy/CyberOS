@@ -26,6 +26,19 @@ afterEach(async () => {
 });
 
 describe("VOD Player API", () => {
+  it("accepts a theme without a playback session and rejects unknown theme fields", async () => {
+    const { root } = await setup();
+    const calls: unknown[] = [];
+    const app = await buildServer({ config: testConfig(root, true), db: db!, system: storageSystem(root), vodPlayer: fakeRuntime(calls) });
+    const result = await app.inject({ method: "POST", url: "/api/vod-player/command", payload: { type: "set-ui-theme", scheme: "amber", mode: "light" } });
+    expect(result.statusCode).toBe(200);
+    expect(calls).toContainEqual({ type: "set-ui-theme", scheme: "amber", mode: "light" });
+    for (const payload of [{ type: "set-ui-theme", scheme: "neon", mode: "system" }, { type: "set-ui-theme", scheme: "neon", mode: "dark", path: "/etc/passwd" }]) {
+      expect((await app.inject({ method: "POST", url: "/api/vod-player/command", payload })).statusCode).toBe(400);
+    }
+    await app.close();
+  });
+
   it("passes only scoped identifiers and a relative path to the daemon", async () => {
     const { server, root } = await setup();
     const calls: unknown[] = [];

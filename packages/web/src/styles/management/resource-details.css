@@ -119,7 +119,7 @@
   padding: 10px 11px;
   border: 1px solid var(--line-soft);
   border-radius: 5px;
-  background: rgb(255 255 255 / 5%);
+  background: color-mix(in srgb, var(--cyberos-color-text) 5%, transparent);
 }
 
 .docker-container-detail-stat span,

@@ -8,7 +8,7 @@
 }
 
 .activity-menu-button.has-upload-activity {
-  border-color: rgb(240 178 50 / 38%);
+  border-color: color-mix(in srgb, var(--cyberos-color-command) 38%, transparent);
 }
 
 .activity-unread-dot {
@@ -20,7 +20,7 @@
   border: 2px solid var(--surface);
   border-radius: 50%;
   background: var(--red);
-  box-shadow: 0 0 0 2px rgb(218 55 60 / 18%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--cyberos-color-danger) 18%, transparent);
 }
 
 .activity-popover {
@@ -37,7 +37,7 @@
   overflow-y: auto;
   border: 1px solid var(--line-soft);
   border-radius: 6px;
-  background: #232631;
+  background: var(--cyberos-color-surface-raised);
   box-shadow: var(--shadow);
 }
 
@@ -50,7 +50,7 @@
   height: 10px;
   border-top: 1px solid var(--line-soft);
   border-left: 1px solid var(--line-soft);
-  background: #232631;
+  background: var(--cyberos-color-surface-raised);
   transform: rotate(45deg);
 }
 
@@ -129,20 +129,20 @@
   place-items: center;
   width: 30px;
   height: 30px;
-  border: 1px solid rgb(142 161 255 / 24%);
+  border: 1px solid color-mix(in srgb, var(--cyberos-color-focus) 24%, transparent);
   border-radius: 5px;
   color: var(--accent-soft-text);
   background: var(--accent-soft-bg);
 }
 
 .activity-upload-item[data-state="warning"] .activity-upload-icon {
-  border-color: rgb(240 178 50 / 28%);
+  border-color: color-mix(in srgb, var(--cyberos-color-command) 28%, transparent);
   color: var(--warning-text);
   background: var(--warning-bg);
 }
 
 .activity-upload-item[data-state="ready"] .activity-upload-icon {
-  border-color: rgb(35 165 89 / 28%);
+  border-color: color-mix(in srgb, var(--cyberos-color-success) 28%, transparent);
   color: var(--success-text);
   background: var(--success-bg);
 }
@@ -235,7 +235,7 @@
   margin-top: 3px;
   overflow: hidden;
   border-radius: 999px;
-  background: rgb(255 255 255 / 8%);
+  background: color-mix(in srgb, var(--cyberos-color-text) 8%, transparent);
 }
 
 .activity-upload-track span {
@@ -281,10 +281,10 @@
   gap: 8px;
   min-height: 42px;
   padding: 8px;
-  border: 1px solid rgb(255 255 255 / 5%);
+  border: 1px solid color-mix(in srgb, var(--cyberos-color-text) 5%, transparent);
   border-radius: 5px;
   color: var(--muted);
-  background: rgb(255 255 255 / 4%);
+  background: color-mix(in srgb, var(--cyberos-color-text) 4%, transparent);
 }
 
 .activity-popover li > svg {

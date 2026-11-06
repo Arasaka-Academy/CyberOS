@@ -1,3 +1,4 @@
+import { Button as UiButton, DialogActions, DialogHeader } from "@cyberos/ui";
 import { ModalPortal } from "../common/ModalPortal.js";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
@@ -85,7 +86,7 @@ export function PowerControl({
 
   return (
     <>
-      <button
+      <UiButton variant="secondary"
         ref={triggerRef}
         className={labelled ? "settings-power-button secondary-button" : "agent-power-button"}
         type="button"
@@ -97,7 +98,7 @@ export function PowerControl({
       >
         <Power aria-hidden="true" size={18} />
         {labelled ? <span>{t("power.open")}</span> : null}
-      </button>
+      </UiButton>
       {open ? (
         <PowerDialog
           dialogRef={dialogRef}
@@ -154,14 +155,7 @@ export function PowerDialog({
         aria-busy={busy || undefined}
         tabIndex={-1}
       >
-        <header className="power-dialog-header">
-          <div>
-            <span className="eyebrow">{t(action ? "power.confirmEyebrow" : "power.menuEyebrow")}</span>
-            <h2 id={titleId}>
-              {action ? t(`power.confirm.${action}.title`) : t("power.menuTitle")}
-            </h2>
-          </div>
-          <button
+        <DialogHeader className="power-dialog-header" title={action ? t(`power.confirm.${action}.title`) : t("power.menuTitle")} eyebrow={<>{t(action ? "power.confirmEyebrow" : "power.menuEyebrow")}</>} headingId={titleId} actions={<><UiButton variant="ghost" iconOnly
             type="button"
             className="icon-button"
             onClick={onClose}
@@ -170,8 +164,7 @@ export function PowerDialog({
             aria-label={t("common.actions.close")}
           >
             <X aria-hidden="true" size={17} />
-          </button>
-        </header>
+          </UiButton></>} />
 
         {action ? (
           <>
@@ -182,11 +175,11 @@ export function PowerDialog({
                 <span>{t("power.confirm.safetyNote")}</span>
               </div>
             </div>
-            <footer>
-              <button type="button" className="secondary-button" onClick={onBack} disabled={busy}>
+            <DialogActions>
+              <UiButton variant="secondary" type="button" className="secondary-button" onClick={onBack} disabled={busy}>
                 {t("power.back")}
-              </button>
-              <button
+              </UiButton>
+              <UiButton variant="danger"
                 type="button"
                 className="danger-button power-confirm-button"
                 onClick={onConfirm}
@@ -199,27 +192,27 @@ export function PowerDialog({
                   <Power aria-hidden="true" size={16} />
                 )}
                 <span>{t(busy ? `power.requesting.${action}` : `power.confirm.${action}.action`)}</span>
-              </button>
-            </footer>
+              </UiButton>
+            </DialogActions>
           </>
         ) : (
           <>
             <p id={descriptionId} className="power-dialog-copy">{t("power.menuBody")}</p>
             <div className="power-action-list">
-              <button type="button" className="power-action-option" data-action="reboot" onClick={() => onSelect("reboot")}>
+              <UiButton variant="ghost" type="button" className="power-action-option" data-action="reboot" onClick={() => onSelect("reboot")}>
                 <RotateCw aria-hidden="true" size={20} />
                 <span>
                   <strong>{t("power.reboot")}</strong>
                   <small>{t("power.rebootDescription")}</small>
                 </span>
-              </button>
-              <button type="button" className="power-action-option" data-action="shutdown" onClick={() => onSelect("shutdown")}>
+              </UiButton>
+              <UiButton variant="ghost" type="button" className="power-action-option" data-action="shutdown" onClick={() => onSelect("shutdown")}>
                 <Power aria-hidden="true" size={20} />
                 <span>
                   <strong>{t("power.shutdown")}</strong>
                   <small>{t("power.shutdownDescription")}</small>
                 </span>
-              </button>
+              </UiButton>
             </div>
           </>
         )}

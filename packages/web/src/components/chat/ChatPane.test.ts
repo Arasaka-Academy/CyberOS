@@ -228,7 +228,7 @@ describe("ChatMessageContent", () => {
       })
     );
 
-    expect(html).toContain('class="message-path-button"');
+    expect(html).toMatch(/class="[^"]*\bmessage-path-button\b[^"]*"/u);
     expect(html).toContain('data-workspace-path="docs/readme.md"');
     expect(html).toContain("/private/other/private.txt");
     expect(html).not.toContain('data-workspace-path="/private/other/private.txt"');
@@ -269,7 +269,7 @@ describe("ChatMessageContent", () => {
       })
     );
 
-    expect(html.match(/class="message-path-button"/gu)).toHaveLength(3);
+    expect(html.match(/class="[^"]*\bmessage-path-button\b[^"]*"/gu)).toHaveLength(3);
     expect(html).toContain('data-workspace-path="docs/readme.md"');
     expect(html).toContain('data-workspace-path="My Files/report.pdf"');
     expect(html).toContain('data-workspace-path="reports/latest.pdf"');
@@ -399,35 +399,35 @@ describe("ChatPane agent rail", () => {
     expect(html).toContain('class="chat-header app-titlebar"');
     expect(html).toContain('src="/cyberos-icon.svg"');
     expect(html).not.toContain("cyberos-banner");
-    expect(html).toContain('class="session-item is-active"');
+    expect(html).toMatch(/class="[^"]*\bsession-item is-active\b[^"]*"/u);
     expect(html).toContain('class="session-approval-badge"');
     expect(html).toContain("2 pending approvals");
     expect(html).toContain("How can I help with your NAS?");
     expect(html).not.toContain('class="chat-header-subtitle"');
     expect(html).not.toContain("Local NAS workspace");
-    expect(html).toContain('class="icon-button chat-delete-session-button"');
+    expect(html).toMatch(/class="[^"]*\bicon-button chat-delete-session-button\b[^"]*"/u);
     expect(html).toContain('aria-label="Delete session"');
     expect(html).toContain('class="chat-header-index" aria-hidden="true">01</span>');
     expect(html).not.toContain('class="chat-header-status"');
     expect(html).toContain('class="agent-status-indicator"');
-    expect(html).toContain('class="agent-notification-button"');
+    expect(html).toMatch(/class="[^"]*\bagent-notification-button\b[^"]*"/u);
     expect(html).toContain('class="notification-badge"');
-    expect(html).toContain('class="settings-button agent-settings-button"');
-    const settingsButton = html.match(/<button class="settings-button agent-settings-button"[\s\S]*?<\/button>/u)?.[0] ?? "";
+    const settingsButton = html.match(/<button\b(?=[^>]*class="[^"]*\bsettings-button agent-settings-button\b)[^>]*>[\s\S]*?<\/button>/u)?.[0] ?? "";
+    expect(settingsButton).not.toBe("");
     expect(settingsButton).toContain('aria-label="System settings"');
     expect(settingsButton.includes('aria-busy="true"')).toBe(settingsLoading);
     expect(settingsButton.includes('aria-disabled="true"')).toBe(settingsLoading);
     expect(settingsButton.includes("lucide-loader-circle")).toBe(settingsLoading);
     expect(settingsButton).not.toContain(" disabled=");
-    expect(html).toContain('class="agent-power-button"');
+    expect(html).toMatch(/class="[^"]*\bagent-power-button\b[^"]*"/u);
     expect(html).toContain('class="composer-model-config" role="status" aria-live="polite" aria-atomic="true" data-tooltip="Not loaded"');
     expect(html).not.toContain(">Model config</span>");
     expect(html.indexOf('class="session-list"')).toBeLessThan(html.indexOf('class="agent-footer"'));
-    expect(html.indexOf('class="agent-notification-button"')).toBeLessThan(html.indexOf('class="settings-button agent-settings-button"'));
+    expect(html.indexOf("agent-notification-button")).toBeLessThan(html.indexOf(settingsButton));
     expect(html).toContain('data-testid="playback-entry"');
-    expect(html.indexOf('class="agent-notification-button"')).toBeLessThan(html.indexOf('data-testid="playback-entry"'));
-    expect(html.indexOf('data-testid="playback-entry"')).toBeLessThan(html.indexOf('class="settings-button agent-settings-button"'));
-    expect(html.indexOf('class="settings-button agent-settings-button"')).toBeLessThan(html.indexOf('class="agent-power-button"'));
+    expect(html.indexOf("agent-notification-button")).toBeLessThan(html.indexOf('data-testid="playback-entry"'));
+    expect(html.indexOf('data-testid="playback-entry"')).toBeLessThan(html.indexOf(settingsButton));
+    expect(html.indexOf(settingsButton)).toBeLessThan(html.indexOf("agent-power-button"));
   });
 
   it.each([
@@ -489,7 +489,7 @@ describe("ChatPane agent rail", () => {
     expect(html).toContain('aria-busy="true"');
     expect(html).toContain('class="transcript-skeleton" aria-hidden="true"');
     expect(html.match(/class="transcript-skeleton-row/gu)).toHaveLength(4);
-    expect(html).not.toContain('class="empty-state"');
+    expect(html).not.toMatch(/class="[^"]*\bempty-state\b[^"]*"/u);
     expect(html).not.toContain("<textarea");
     expect(html).not.toContain("Partially loaded session title");
     expect(html).not.toContain("Partially loaded history");
@@ -515,16 +515,16 @@ describe("ChatPane agent rail", () => {
     expect(html).toContain('aria-label="Transcript" aria-busy="true"');
     expect(html).toContain('class="transcript-skeleton" aria-hidden="true"');
     expect(html).not.toContain("Previous session history");
-    expect(html).not.toContain('class="empty-state"');
+    expect(html).not.toMatch(/class="[^"]*\bempty-state\b[^"]*"/u);
     expect(html).toMatch(/<button[^>]*type="submit"[^>]*disabled=""/u);
-    expect(html).toMatch(/<button[^>]*chat-delete-session-button[^>]*disabled=""/u);
-    expect(html).toMatch(/<button[^>]*disabled=""[^>]*aria-label="Continue the interrupted turn"/u);
+    expect(html).toMatch(/<button\b(?=[^>]*chat-delete-session-button)(?=[^>]*disabled="")[^>]*>/u);
+    expect(html).toMatch(/<button\b(?=[^>]*disabled="")(?=[^>]*aria-label="Continue the interrupted turn")[^>]*>/u);
   });
 
   it("shows an empty conversation only after messages are ready", async () => {
     await initI18n();
     const html = renderSessionPane();
-    expect(html).toContain('class="empty-state"');
+    expect(html).toMatch(/class="[^"]*\bempty-state\b[^"]*"/u);
     expect(html).not.toContain('class="transcript-skeleton"');
     expect(html).toContain("Preserved draft");
     expect(html).not.toMatch(/<button[^>]*type="submit"[^>]*disabled=""/u);
@@ -537,7 +537,7 @@ describe("ChatPane agent rail", () => {
     expect(html).toContain("Switch target");
     expect(html).toContain("Preserved draft");
     expect(html).not.toContain('class="transcript-skeleton"');
-    expect(html).not.toContain('class="empty-state"');
+    expect(html).not.toMatch(/class="[^"]*\bempty-state\b[^"]*"/u);
   });
 
   it("renders first-party capability approval provenance and revision", async () => {

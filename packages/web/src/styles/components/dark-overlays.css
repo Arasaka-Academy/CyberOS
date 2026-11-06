@@ -1,17 +1,17 @@
 .notification-drawer {
-  border-left-color: var(--cyber-red);
+  border-left-color: var(--hud-red);
 }
 
 .notification-item[data-unread="true"] {
   background: var(--cyberos-hud-red-wash);
-  box-shadow: inset 4px 0 0 var(--cyber-red);
+  box-shadow: inset 4px 0 0 var(--hud-red);
 }
 
 .notification-unread-dot,
 .activity-unread-dot {
-  border-color: var(--cyber-ink);
-  background: var(--cyber-red);
-  box-shadow: 0 0 8px rgb(255 0 60 / 48%);
+  border-color: var(--hud-ink);
+  background: var(--hud-red);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--cyberos-color-danger) 48%, transparent);
 }
 
 .activity-popover::before {
@@ -31,7 +31,7 @@
   border-radius: 0;
   color: var(--text);
   background: var(--surface);
-  box-shadow: 5px 5px 0 rgb(255 0 60 / 38%), inset 4px 0 0 var(--red);
+  box-shadow: 5px 5px 0 color-mix(in srgb, var(--cyberos-color-danger) 38%, transparent), inset 4px 0 0 var(--red);
 }
 
 .editor-modal,
@@ -41,11 +41,11 @@
 }
 
 .editor-code-surface {
-  box-shadow: inset 4px 0 0 rgb(0 240 255 / 18%);
+  box-shadow: inset 4px 0 0 color-mix(in srgb, var(--cyberos-color-focus) 18%, transparent);
 }
 
 .editor-code-surface:focus-within {
-  box-shadow: inset 4px 0 0 var(--cyber-cyan);
+  box-shadow: inset 4px 0 0 var(--hud-cyan);
 }
 
 .editor-textarea::selection {

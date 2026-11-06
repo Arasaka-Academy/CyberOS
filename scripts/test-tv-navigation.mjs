@@ -49,7 +49,7 @@ async function openSearch(t, language) {
   await page.goto(`${baseUrl}tv/`);
   const movies = page.locator(".video-navigation button").nth(1);
   await movies.click();
-  await page.locator(".tv-header-actions button").click();
+  await page.locator(".tv-search-button").click();
   await page.locator(".tv-search").waitFor();
   await page.keyboard.press("Tab");
   await page.locator(".tv-search-input").focus();
@@ -71,7 +71,7 @@ for (const language of ["en-US", "zh-CN"]) {
       assert.equal(await remoteKey(page, key, keyCode), true);
       await page.locator(".tv-search").waitFor({ state: "detached", timeout: 3000 });
       assert.equal(await page.locator(".video-navigation button").nth(1).getAttribute("aria-pressed"), "true");
-      await page.waitForFunction(() => globalThis.document.activeElement === globalThis.document.querySelector(".tv-header-actions button"));
+      await page.waitForFunction(() => globalThis.document.activeElement === globalThis.document.querySelector(".tv-search-button"));
     });
   }
 

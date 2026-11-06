@@ -149,7 +149,7 @@
 .settings-icon-button:hover:not(:disabled),
 .settings-icon-button:focus-visible {
   color: var(--text);
-  border-color: rgb(255 255 255 / 13%);
+  border-color: color-mix(in srgb, var(--cyberos-color-text) 13%, transparent);
   background: var(--surface-hover);
 }
 
@@ -157,26 +157,6 @@
   display: grid;
   gap: 7px;
   min-width: 0;
-}
-
-.settings-secret-input {
-  position: relative;
-  min-width: 0;
-}
-
-.settings-secret-input > input[type="password"] {
-  padding-right: 46px;
-}
-
-.settings-secret-input > .settings-secret-action {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 0;
-  background: transparent;
 }
 
 .settings-secret-input[data-clear-pending] > input {
@@ -203,7 +183,7 @@
   min-height: 66px;
   padding: 14px 30px;
   border-top: 1px solid var(--line-soft);
-  background: #20222c;
+  background: var(--cyberos-color-surface-raised);
 }
 
 .settings-actions > span {

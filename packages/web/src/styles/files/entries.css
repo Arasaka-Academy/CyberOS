@@ -166,21 +166,21 @@
 .file-name .file-type-symlink,
 .file-type-label.file-type-directory,
 .file-type-label.file-type-symlink {
-  color: #8ea1ff;
+  color: var(--cyberos-color-focus);
 }
 
 .file-name .file-type-code,
 .file-name .file-type-shell,
 .file-type-label.file-type-code,
 .file-type-label.file-type-shell {
-  color: #6ed3f5;
+  color: var(--cyberos-color-focus);
 }
 
 .file-name .file-type-config,
 .file-name .file-type-package,
 .file-type-label.file-type-config,
 .file-type-label.file-type-package {
-  color: #f2c16b;
+  color: var(--cyberos-color-warning);
 }
 
 .file-name .file-type-json,
@@ -193,40 +193,40 @@
 .file-type-label.file-type-text,
 .file-type-label.file-type-document,
 .file-type-label.file-type-pdf {
-  color: #dbdee1;
+  color: var(--cyberos-color-text);
 }
 
 .file-name .file-type-image,
 .file-type-label.file-type-image {
-  color: #8ddc9a;
+  color: var(--cyberos-color-success);
 }
 
 .file-name .file-type-audio,
 .file-name .file-type-video,
 .file-type-label.file-type-audio,
 .file-type-label.file-type-video {
-  color: #cfa8ff;
+  color: var(--cyberos-color-focus);
 }
 
 .file-name .file-type-spreadsheet,
 .file-name .file-type-database,
 .file-type-label.file-type-spreadsheet,
 .file-type-label.file-type-database {
-  color: #78d8c8;
+  color: var(--cyberos-color-focus);
 }
 
 .file-name .file-type-archive,
 .file-name .file-type-font,
 .file-type-label.file-type-archive,
 .file-type-label.file-type-font {
-  color: #b5bac1;
+  color: var(--cyberos-color-text-muted);
 }
 
 .file-name .file-type-secure,
 .file-name .file-type-blocked,
 .file-type-label.file-type-secure,
 .file-type-label.file-type-blocked {
-  color: #ffb3b6;
+  color: var(--cyberos-color-danger);
 }
 
 .file-name .file-type-other,
@@ -314,7 +314,7 @@
   border: 1px solid var(--line-soft);
   border-radius: 5px;
   color: var(--muted-2);
-  background: rgb(255 255 255 / 4%);
+  background: color-mix(in srgb, var(--cyberos-color-text) 4%, transparent);
   font-size: 10px;
   font-family: var(--font-emphasis);
   font-weight: 900;
@@ -327,25 +327,25 @@
 }
 
 .git-file-status-staged {
-  color: #f2c16b;
-  border-color: rgb(242 193 107 / 30%);
-  background: rgb(242 193 107 / 8%);
+  color: var(--cyberos-color-warning);
+  border-color: color-mix(in srgb, var(--cyberos-color-warning) 30%, transparent);
+  background: color-mix(in srgb, var(--cyberos-color-warning) 8%, transparent);
 }
 
 .git-file-status-modified {
-  color: #ffcf7a;
-  border-color: rgb(255 207 122 / 32%);
-  background: rgb(255 207 122 / 9%);
+  color: var(--cyberos-color-warning);
+  border-color: color-mix(in srgb, var(--cyberos-color-warning) 32%, transparent);
+  background: color-mix(in srgb, var(--cyberos-color-warning) 9%, transparent);
 }
 
 .git-file-status-untracked {
-  color: #8ddc9a;
-  border-color: rgb(141 220 154 / 30%);
-  background: rgb(141 220 154 / 8%);
+  color: var(--cyberos-color-success);
+  border-color: color-mix(in srgb, var(--cyberos-color-success) 30%, transparent);
+  background: color-mix(in srgb, var(--cyberos-color-success) 8%, transparent);
 }
 
 .git-file-status-conflicted {
-  color: #ffb3b6;
-  border-color: rgb(255 179 182 / 34%);
-  background: rgb(255 179 182 / 9%);
+  color: var(--cyberos-color-danger);
+  border-color: color-mix(in srgb, var(--cyberos-color-danger) 34%, transparent);
+  background: color-mix(in srgb, var(--cyberos-color-danger) 9%, transparent);
 }

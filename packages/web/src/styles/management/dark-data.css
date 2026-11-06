@@ -11,8 +11,8 @@
 .monitoring-alert-table th,
 .file-row-head {
   border-color: var(--cyberos-hud-line);
-  color: var(--cyber-yellow);
-  background: var(--cyber-ink);
+  color: var(--hud-yellow);
+  background: var(--hud-ink);
   font-family: var(--font-mono);
   text-transform: uppercase;
 }
@@ -28,7 +28,7 @@
 .management-data-table tbody tr:hover,
 .monitoring-alert-table tbody tr:hover {
   background: var(--cyberos-hud-cyan-wash);
-  box-shadow: inset 3px 0 0 var(--cyber-cyan);
+  box-shadow: inset 3px 0 0 var(--hud-cyan);
 }
 
 .editor-status,
@@ -37,7 +37,7 @@
 .settings-area-list em {
   border: 1px solid currentColor;
   color: var(--muted);
-  background: rgb(244 236 231 / 4%);
+  background: color-mix(in srgb, var(--cyberos-color-text) 4%, transparent);
   font-family: var(--font-mono);
 }
 

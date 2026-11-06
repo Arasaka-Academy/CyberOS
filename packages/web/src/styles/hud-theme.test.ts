@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { readStylesheet } from "./test-utils.js";
 
 describe("shared HUD theme", () => {
-  it("keeps the Web shell on the shared single dark theme", async () => {
+  it("uses shared semantic theme roles without fixing a display mode", async () => {
     const [imports, base, workspaces] = await Promise.all([
       readFile(new URL("../styles.css", import.meta.url), "utf8"),
       readStylesheet(new URL("./base.css", import.meta.url)),
@@ -11,7 +11,8 @@ describe("shared HUD theme", () => {
     ]);
 
     expect(base).toContain('@import "@cyberos/shared/hud-tokens.css"');
-    expect(base).toContain("color-scheme: dark");
+    expect(base).not.toContain("color-scheme: dark");
+    expect(imports).toContain("@cyberos/shared/appearance.css");
     expect(base).toContain("--app-bg: var(--cyberos-color-canvas)");
     expect(imports).toContain('./styles/hud-workspaces.css');
     expect(imports).not.toContain("hud-sample.css");

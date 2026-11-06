@@ -240,13 +240,13 @@
   border: 1px solid var(--line);
   border-radius: 5px;
   background: var(--channel-bg);
-  box-shadow: 0 2px 7px rgb(15 23 42 / 5%);
+  box-shadow: 0 2px 7px color-mix(in srgb, var(--cyberos-color-surface-raised) 5%, transparent);
   transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
 }
 
 .share-protocol-card[data-enabled="true"] {
   border-color: var(--accent-soft-text);
-  box-shadow: 0 3px 12px rgb(67 83 216 / 10%);
+  box-shadow: 0 3px 12px color-mix(in srgb, var(--cyberos-color-focus) 10%, transparent);
 }
 
 .share-protocol-card[data-enabled="false"] {

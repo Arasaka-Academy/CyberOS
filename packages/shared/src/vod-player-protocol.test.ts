@@ -43,6 +43,14 @@ const status: VodPlayerStatus = {
 };
 
 describe("VOD player broker protocol", () => {
+  it("accepts native UI themes without a playback session and rejects arbitrary payloads", () => {
+    const frame = (command: unknown) => parseVodPlayerBrokerRequest(JSON.stringify({ version: VOD_PLAYER_PROTOCOL_VERSION, id: "theme", command }));
+    for (const scheme of ["neon", "mono", "graphite", "synthwave", "bloodline", "terminal", "amber"]) {
+      for (const mode of ["dark", "light"]) expect(frame({ type: "set-ui-theme", scheme, mode })).toMatchObject({ command: { type: "set-ui-theme", scheme, mode } });
+    }
+    for (const command of [{ type: "set-ui-theme", scheme: "injected", mode: "dark" }, { type: "set-ui-theme", scheme: "neon", mode: "system" }, { type: "set-ui-theme", scheme: "neon", mode: "light", path: "/etc/passwd" }]) expect(frame(command)).toBeNull();
+  });
+
   it("preserves an optional native Home request and rejects malformed requests", () => {
     const frame = (value: unknown) => parseVodPlayerBrokerResponse(JSON.stringify({ version: VOD_PLAYER_PROTOCOL_VERSION, id: "home", ok: true, status: { ...status, tvHomeRequestId: value } }));
     expect(frame("request-1")).toMatchObject({ ok: true, status: { tvHomeRequestId: "request-1" } });

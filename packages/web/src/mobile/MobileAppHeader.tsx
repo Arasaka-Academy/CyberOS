@@ -1,3 +1,4 @@
+import { Button as UiButton } from "@cyberos/ui";
 import { ChevronLeft, Grid2X2 } from "lucide-react";
 import { useEffect, useRef, type ReactNode, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,7 +22,7 @@ export function MobileAppControls({ control }: { control: "back" | "home" }) {
   const back = control === "back";
   const label = t(back ? "mobile.back" : "mobile.home");
   const Icon = back ? ChevronLeft : Grid2X2;
-  return <button
+  return <UiButton variant="ghost"
     type="button"
     className={back ? "mobile-app-back" : "mobile-app-home"}
     aria-label={label}
@@ -30,7 +31,7 @@ export function MobileAppControls({ control }: { control: "back" | "home" }) {
   >
     <Icon size={18} aria-hidden="true" />
     <span>{label}</span>
-  </button>;
+  </UiButton>;
 }
 
 export function MobileAppHeader({ icon, title, subtitle, actions, meta, className, headingRef, titleId }: {

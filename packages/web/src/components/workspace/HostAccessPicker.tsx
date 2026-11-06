@@ -1,3 +1,4 @@
+import { Button as UiButton, Checkbox, Input } from "@cyberos/ui";
 import { useEffect, useId, useMemo, useState } from "react";
 import { AlertTriangle, Check, Copy, HardDrive, LoaderCircle, ServerCog, ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -125,7 +126,7 @@ export function HostAccessPicker({
           <h3 id={`${fieldId}-title`}>{t("workspace.management.docker.hostAccess.title")}</h3>
           <p>{t("workspace.management.docker.hostAccess.description")}</p>
         </div>
-        <button
+        <UiButton variant="ghost" iconOnly
           type="button"
           className="management-icon-action"
           onClick={() => void copyCoverage()}
@@ -134,7 +135,7 @@ export function HostAccessPicker({
           data-tooltip={t("workspace.management.docker.hostAccess.copyReport")}
         >
           {copied ? <Check aria-hidden="true" size={14} /> : <Copy aria-hidden="true" size={14} />}
-        </button>
+        </UiButton>
       </div>
 
       {!catalog && !loadError ? (
@@ -196,7 +197,7 @@ export function HostAccessPicker({
 
       {degradedSelected ? (
         <label className="host-access-degraded-confirmation">
-          <input type="checkbox" checked={degradedAcknowledged} onChange={(event) => setDegradedAcknowledged(event.target.checked)} disabled={disabled} />
+          <Checkbox  checked={degradedAcknowledged} onChange={(event) => setDegradedAcknowledged(event.target.checked)} disabled={disabled} />
           <span>{t("workspace.management.docker.hostAccess.confirmDegraded")}</span>
         </label>
       ) : null}
@@ -242,7 +243,7 @@ function CapabilityRow({
   return (
     <div className="host-access-capability" data-availability={capability.availability.status}>
       <label htmlFor={id}>
-        <input id={id} type="checkbox" checked={checked} onChange={(event) => onToggle(event.target.checked)} disabled={unavailable && !checked} aria-describedby={reasonId} />
+        <Checkbox id={id}  checked={checked} onChange={(event) => onToggle(event.target.checked)} disabled={unavailable && !checked} aria-describedby={reasonId} />
         <span><strong>{label}</strong><small>{t(`workspace.management.docker.hostAccess.risk.${capability.risk}`)}</small></span>
       </label>
       <p id={reasonId}>
@@ -253,7 +254,7 @@ function CapabilityRow({
       {checked && defaultTarget ? (
         <label className="host-access-target">
           <span>{t("workspace.management.docker.hostAccess.target")}</span>
-          <input
+          <Input
             value={target ?? defaultTarget}
             onChange={(event) => onTarget(event.target.value)}
             spellCheck={false}

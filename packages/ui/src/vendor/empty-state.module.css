@@ -1,0 +1,9 @@
+/* Generated from packages/react/src/empty-state.module.css. Regenerate in CyberUI with pnpm registry:build; after installation, edit this file freely. */
+@layer theme, base, components, utilities;
+@reference './tailwind-theme.css';
+
+@layer components {
+.empty { @apply tw:grid; justify-items: center; @apply tw:text-center tw:gap-[12px] tw:p-[var(--cyber-space-4xl)_var(--cyber-space-2xl)]; }
+.empty h3 { @apply tw:m-[0] tw:text-[length:20px]; }
+.empty p { @apply tw:m-[0] tw:max-w-[360px] tw:text-cyber-muted tw:text-[length:14px]; }
+}

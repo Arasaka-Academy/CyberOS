@@ -2,7 +2,9 @@
   "extends": "./tsconfig.base.json",
   "include": [
     "packages/**/*.ts",
+    "packages/**/*.tsx",
     "packaging/**/*.ts",
+    "scripts/generate-appearance-assets.ts",
     "*.config.js",
     "*.config.ts"
   ]

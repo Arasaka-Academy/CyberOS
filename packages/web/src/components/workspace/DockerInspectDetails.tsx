@@ -1,3 +1,4 @@
+import { Button as UiButton, DescriptionList, DialogHeader } from "@cyberos/ui";
 import { ModalPortal } from "../common/ModalPortal.js";
 import type { ReactNode } from "react";
 import { CircleAlert, HardDrive, LoaderCircle, Network, X } from "lucide-react";
@@ -201,19 +202,9 @@ function DockerInspectDialog({
       if (event.target === event.currentTarget) onClose();
     }}>
       <section ref={dialogRef} tabIndex={-1} className="management-modal docker-container-detail-modal docker-inspect-detail-modal" role="dialog" aria-modal="true" aria-labelledby={titleId}>
-        <header className="docker-container-detail-header">
-          <div className="docker-container-detail-heading">
-            <div className="docker-container-detail-icon" aria-hidden="true"><Icon size={18} /></div>
-            <div>
-              <span className="eyebrow">{eyebrow}</span>
-              <h2 id={titleId}>{title}</h2>
-              <p>{subtitle}</p>
-            </div>
-          </div>
-          <button type="button" className="management-icon-action" onClick={onClose} data-tooltip={String(t("common.actions.close"))} aria-label={String(t("common.actions.close"))}>
+        <DialogHeader className="docker-container-detail-header" title={title} description={subtitle} headingId={titleId} actions={<><div className="docker-container-detail-icon" aria-hidden="true"><Icon size={18} /></div><span className="eyebrow">{eyebrow}</span><UiButton variant="ghost" iconOnly type="button" className="management-icon-action" onClick={onClose} data-tooltip={String(t("common.actions.close"))} aria-label={String(t("common.actions.close"))}>
             <X aria-hidden="true" size={15} />
-          </button>
-        </header>
+          </UiButton></>} />
         <div className="docker-container-detail-body">
           {error ? <p className="docker-container-detail-error"><CircleAlert aria-hidden="true" size={15} />{error}</p> : null}
           {loading ? <p className="docker-inspect-loading" role="status"><LoaderCircle className="is-spinning" aria-hidden="true" size={16} />{t("workspace.management.docker.inspect.loading")}</p> : null}
@@ -250,11 +241,7 @@ type InspectEntry = [label: string, value: string, mono?: boolean];
 
 function InspectList({ entries }: { entries: InspectEntry[] }) {
   return (
-    <dl className="docker-container-detail-list">
-      {entries.map(([label, value, mono]) => (
-        <div key={label}><dt>{label}</dt><dd className={mono ? "is-mono" : undefined} data-tooltip={value}>{value}</dd></div>
-      ))}
-    </dl>
+    <DescriptionList className="docker-container-detail-list" items={entries.map(([label, value, mono]) => ({ label, value, ...(mono ? { mono } : {}) }))} />
   );
 }
 

@@ -49,18 +49,18 @@
   border: 2px solid var(--server-bg);
   border-radius: 50%;
   background: var(--yellow);
-  box-shadow: 0 0 0 2px rgb(240 178 50 / 18%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--cyberos-color-command) 18%, transparent);
 }
 
 .agent-status-indicator[data-state="ready"] > span {
   background: var(--green);
-  box-shadow: 0 0 0 2px rgb(35 165 89 / 18%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--cyberos-color-success) 18%, transparent);
 }
 
 .agent-status-indicator[data-state="error"] > span,
 .agent-status-indicator[data-state="offline"] > span {
   background: var(--red);
-  box-shadow: 0 0 0 2px rgb(218 55 60 / 18%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--cyberos-color-danger) 18%, transparent);
 }
 
 .chat-main {
@@ -115,13 +115,13 @@
 
 .chat-delete-session-button {
   flex: 0 0 auto;
-  color: #ff9da1;
-  background: rgb(218 55 60 / 10%);
+  color: var(--cyberos-color-danger);
+  background: color-mix(in srgb, var(--cyberos-color-danger) 10%, transparent);
 }
 
 .chat-delete-session-button:hover:not(:disabled) {
   color: white;
-  border-color: rgb(218 55 60 / 42%);
+  border-color: color-mix(in srgb, var(--cyberos-color-danger) 42%, transparent);
   background: var(--red);
 }
 

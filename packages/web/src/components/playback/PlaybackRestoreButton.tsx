@@ -1,3 +1,4 @@
+import { Button as UiButton } from "@cyberos/ui";
 import { ChevronUp, CirclePlay } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { usePlayback } from "./PlaybackProvider.js";
@@ -8,7 +9,7 @@ export function PlaybackRestoreButton() {
   if (!p.dock.available) return null;
   const label = `${t("playback.nowPlaying")} · ${t(`playback.state.${p.dock.state}`)}`;
   return (
-    <button
+    <UiButton variant="ghost"
       type="button"
       className="playback-restore"
       data-playback-restore
@@ -24,6 +25,6 @@ export function PlaybackRestoreButton() {
       <span className="playback-restore-label">{t("playback.nowPlaying")}</span>
       <span className="playback-restore-state"><span className="playback-restore-dot" aria-hidden="true" />{t(`playback.state.${p.dock.state}`)}</span>
       <ChevronUp className="playback-restore-chevron" size={18} aria-hidden="true" />
-    </button>
+    </UiButton>
   );
 }
