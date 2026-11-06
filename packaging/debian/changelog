@@ -1,3 +1,9 @@
+cyberos (2.3.26) unstable; urgency=medium
+
+  * Keep terminal requests responsive while idle session cleanup waits for tmux.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:38:50 +0000
+
 cyberos (2.3.25) unstable; urgency=medium
 
   * Terminate tmux command clients when their deadline expires.
