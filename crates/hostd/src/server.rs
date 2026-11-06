@@ -84,6 +84,7 @@ impl HostdServer {
         let mut network_recovery = interval(Duration::from_secs(1));
         network_recovery.set_missed_tick_behavior(MissedTickBehavior::Skip);
         network_recovery.tick().await;
+        let mut network_task: Option<tokio::task::JoinHandle<()>> = None;
         let mut iscsi_reconciliation = interval(Duration::from_secs(30));
         iscsi_reconciliation.set_missed_tick_behavior(MissedTickBehavior::Skip);
         let mut iscsi_task: Option<tokio::task::JoinHandle<()>> = None;
@@ -93,6 +94,7 @@ impl HostdServer {
         let mut host_access_reconciliation = interval(Duration::from_secs(30));
         host_access_reconciliation.set_missed_tick_behavior(MissedTickBehavior::Skip);
         host_access_reconciliation.tick().await;
+        let mut host_access_task: Option<tokio::task::JoinHandle<()>> = None;
         loop {
             tokio::select! {
                 result = listener.accept(), if connections.len() < MAX_CONNECTIONS => {
@@ -111,9 +113,14 @@ impl HostdServer {
                     }
                 }
                 _ = network_recovery.tick() => {
-                    let _guard = self.state.network_lock.lock().await;
-                    if let Err(error) = crate::network_manager::recover_expired_transaction(self.state.runner.as_ref()).await {
-                        tracing::error!(code = ?error.code, message = %error.message, "could not recover expired Ethernet transaction");
+                    if network_task.as_ref().is_none_or(|task| task.is_finished()) {
+                        let state = Arc::clone(&self.state);
+                        network_task = Some(tokio::spawn(async move {
+                            let _guard = state.network_lock.lock().await;
+                            if let Err(error) = crate::network_manager::recover_expired_transaction(state.runner.as_ref()).await {
+                                tracing::error!(code = ?error.code, message = %error.message, "could not recover expired Ethernet transaction");
+                            }
+                        }));
                     }
                 }
                 _ = iscsi_reconciliation.tick() => {
@@ -139,13 +146,24 @@ impl HostdServer {
                     }
                 }
                 _ = host_access_reconciliation.tick() => {
-                    crate::host_access::reconcile_capacity_anchors(&self.state.data_root).await;
+                    if host_access_task.as_ref().is_none_or(|task| task.is_finished()) {
+                        let state = Arc::clone(&self.state);
+                        host_access_task = Some(tokio::spawn(async move {
+                            crate::host_access::reconcile_capacity_anchors(&state.data_root).await;
+                        }));
+                    }
                 }
                 result = shutdown_signal() => {
                     result?;
                     break;
                 }
             }
+        }
+        if let Some(task) = network_task {
+            task.abort();
+        }
+        if let Some(task) = host_access_task {
+            task.abort();
         }
         if let Some(task) = iscsi_task {
             task.abort();
@@ -475,6 +493,45 @@ mod tests {
         drop(first);
         let recovered = bind_socket(&path, "cyberos-nonexistent-test-group").await;
         assert!(recovered.is_ok(), "an abandoned socket should be recovered");
+    }
+
+    #[tokio::test]
+    async fn accepts_requests_while_network_recovery_waits_for_a_mutation() {
+        let directory = TempDir::new().unwrap();
+        let path = directory.path().join("hostd.sock");
+        let server = HostdServer::with_runner(
+            HostdConfig {
+                socket_path: path.clone(),
+                socket_group: "cyberos-nonexistent-test-group".into(),
+                allowed_uids: vec![nix::unistd::Uid::current().as_raw()],
+                data_root: directory.path().join("data"),
+            },
+            Arc::new(FakeRunner::default()),
+        );
+        let state = Arc::clone(&server.state);
+        let mutation = state.network_lock.lock().await;
+        let task = tokio::spawn(server.run());
+        let ready = timeout(Duration::from_secs(2), async {
+            while !path.exists() {
+                tokio::time::sleep(Duration::from_millis(5)).await;
+            }
+        })
+        .await;
+        if ready.is_err() {
+            task.abort();
+            panic!("hostd did not bind its socket");
+        }
+        tokio::time::sleep(Duration::from_millis(1_100)).await;
+        let response = timeout(Duration::from_secs(1), send_request(&path,
+            b"{\"version\":1,\"id\":\"67e55044-10b1-426f-9247-bb680e5fe0c8\",\"operation\":\"network.manager\",\"payload\":{\"action\":\"ping\"}}\n"
+        )).await;
+        task.abort();
+        let _ = task.await;
+        drop(mutation);
+
+        let response = response.expect("network maintenance must not block the accept loop");
+        assert_eq!(response["ok"], true);
+        assert_eq!(response["result"]["ready"], true);
     }
 
     #[derive(Default)]
