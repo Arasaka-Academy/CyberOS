@@ -224,6 +224,10 @@ async fn resolve_public_addresses(
     timeout: Duration,
     allow_private_ips: bool,
 ) -> Result<Vec<SocketAddr>, DownloadError> {
+    let host = host
+        .strip_prefix('[')
+        .and_then(|value| value.strip_suffix(']'))
+        .unwrap_or(host);
     let addresses: Vec<SocketAddr> = match host.parse::<IpAddr>() {
         Ok(address) => vec![SocketAddr::new(address, port)],
         Err(_) => tokio::time::timeout(timeout, lookup_host((host, port)))
@@ -388,6 +392,23 @@ mod tests {
             host_header(&Url::parse("https://[2606:4700:4700::1111]:8443/file").unwrap()),
             "[2606:4700:4700::1111]:8443"
         );
+    }
+
+    #[tokio::test]
+    async fn resolves_ipv6_literal_urls_without_dns() {
+        let url = parse_url("https://[2606:4700:4700::1111]:8443/file").unwrap();
+        let addresses =
+            resolve_public_addresses(url.host_str().unwrap(), 8443, Duration::from_secs(1), false)
+                .await
+                .unwrap();
+        assert_eq!(
+            addresses,
+            vec!["[2606:4700:4700::1111]:8443".parse().unwrap()]
+        );
+        let blocked = resolve_public_addresses("[::1]", 8443, Duration::from_secs(1), false)
+            .await
+            .unwrap_err();
+        assert_eq!(blocked.code, ErrorCode::SsrfBlocked);
     }
 
     #[tokio::test]

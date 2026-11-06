@@ -116,7 +116,7 @@ sudo /usr/lib/cyberos/scripts/cyberos-nas-acl.sh --apply --pool /cyberos/data/po
 
 对其他已挂载池分别执行。工具只接受 `/cyberos/data` 的直接子目录，只处理已挂载、没有嵌套挂载的池，保留现有所有者并为 `cyberos` 增加访问和默认 ACL；属于 `cyberos` 的私有文件无需新增 ACL，仍保持原有 mask。只读快照、ACL 不支持或路径失败会明确报错。预览会检查已有 ACL mask；若新增授权可能放宽其他身份的有效权限，会拒绝整池应用，须先逐路径审查，不能强行放宽 mask。每次成功进入 `--apply` 阶段都会将原 ACL 保存于输出所示的 `/cyberos/system-backups/permissions/acl.*/acl.dump`，应先查明原因，再在停止写入的状态下以 `setfacl --restore=<exact-backup-path>` 回滚；不要对池运行递归 `chown`。
 
-共享服务只在启用的共享路径获得 ACL。hostd 应用共享设置时备份受影响路径的 ACL，服务重载失败会恢复；可写 NFS 客户端被映射为 `cyberos-nfs`，不继承客户端 UID。
+共享服务只在启用的共享路径获得 ACL。hostd 应用共享设置时备份受影响路径的 ACL，服务重载失败会恢复；NFS 客户端统一映射为 `cyberos-nfs`，只读和可写共享分别授予相应 ACL，不继承客户端 UID。
 
 完成挂载和 ACL 验证后启动服务：
 

@@ -886,29 +886,71 @@ impl Db {
         }).await
     }
 
+    pub async fn renew_media_scan_lease(
+        &self,
+        task: &MediaScanTask,
+        worker_id: &str,
+    ) -> DbResult<bool> {
+        let task = task.clone();
+        let worker_id = worker_id.to_owned();
+        self.call(move |connection| {
+            let now = now_iso();
+            Ok(connection
+                .execute(
+                    "UPDATE media_scan_runs SET lease_expires_at = ?, updated_at = ? \
+                 WHERE id = ? AND generation = ? AND status = 'running' AND worker_id = ? \
+                 AND lease_expires_at > ?",
+                    params![
+                        future_iso(Duration::from_secs(30)),
+                        now,
+                        task.id,
+                        task.generation,
+                        worker_id,
+                        now
+                    ],
+                )
+                .map_err(IndexerError::database)?
+                == 1)
+        })
+        .await
+    }
+
     pub async fn update_media_scan_progress(
         &self,
-        task_id: &str,
+        task: &MediaScanTask,
         worker_id: &str,
         scanned: u64,
         unmatched: u64,
         current_path: Option<&str>,
     ) -> DbResult<bool> {
         let values = (
-            task_id.to_owned(),
+            task.clone(),
             worker_id.to_owned(),
             current_path.map(str::to_owned),
         );
         self.call(move |connection| {
-            Ok(connection.execute(
-                "UPDATE media_scan_runs SET scanned = ?, unmatched = ?, current_path = ?, \
-                 lease_expires_at = ?, updated_at = ? WHERE id = ? AND status = 'running' AND worker_id = ?",
-                params![
-                    i64_from(scanned)?, i64_from(unmatched)?, values.2,
-                    future_iso(Duration::from_secs(30)), now_iso(), values.0, values.1
-                ],
-            ).map_err(IndexerError::database)? == 1)
-        }).await
+            let now = now_iso();
+            Ok(connection
+                .execute(
+                    "UPDATE media_scan_runs SET scanned = ?, unmatched = ?, current_path = ?, \
+                 lease_expires_at = ?, updated_at = ? WHERE id = ? AND generation = ? \
+                 AND status = 'running' AND worker_id = ? AND lease_expires_at > ?",
+                    params![
+                        i64_from(scanned)?,
+                        i64_from(unmatched)?,
+                        values.2,
+                        future_iso(Duration::from_secs(30)),
+                        now,
+                        values.0.id,
+                        values.0.generation,
+                        values.1,
+                        now
+                    ],
+                )
+                .map_err(IndexerError::database)?
+                == 1)
+        })
+        .await
     }
 
     pub async fn fail_media_scan(
@@ -960,8 +1002,9 @@ impl Db {
             let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate).map_err(IndexerError::database)?;
             let active: bool = transaction.query_row(
                 "SELECT EXISTS(SELECT 1 FROM media_scan_runs \
-                 WHERE id = ? AND generation = ? AND status = 'running' AND worker_id = ?)",
-                params![task.id, task.generation, worker_id],
+                 WHERE id = ? AND generation = ? AND status = 'running' AND worker_id = ? \
+                 AND lease_expires_at > ?)",
+                params![task.id, task.generation, worker_id, now_iso()],
                 |row| row.get(0),
             ).map_err(IndexerError::database)?;
             if !active {

@@ -295,7 +295,7 @@ fn open_beneath(
     } else {
         relative
     };
-    let mut flags = OFlag::O_RDONLY | OFlag::O_CLOEXEC | OFlag::O_NOFOLLOW;
+    let mut flags = OFlag::O_RDONLY | OFlag::O_CLOEXEC | OFlag::O_NOFOLLOW | OFlag::O_NONBLOCK;
     if is_directory {
         flags |= OFlag::O_DIRECTORY;
     }
@@ -321,7 +321,7 @@ fn open_beneath(
     } else {
         relative
     };
-    let mut flags = OFlag::O_RDONLY | OFlag::O_CLOEXEC | OFlag::O_NOFOLLOW;
+    let mut flags = OFlag::O_RDONLY | OFlag::O_CLOEXEC | OFlag::O_NOFOLLOW | OFlag::O_NONBLOCK;
     if is_directory {
         flags |= OFlag::O_DIRECTORY;
     }
@@ -368,9 +368,15 @@ fn identity(metadata: &std::fs::Metadata) -> FileIdentity {
 
 #[cfg(target_os = "linux")]
 fn find_mountpoint(pool_path: &Path, required: bool) -> Result<MountLocation, PhotosError> {
+    let directory = OpenOptions::new()
+        .read(true)
+        .custom_flags(nix::libc::O_DIRECTORY | nix::libc::O_NOFOLLOW | nix::libc::O_CLOEXEC)
+        .open(pool_path)
+        .map_err(PhotosError::storage)?;
+    let visible_id = read_mount_id(&directory)?;
     let mountinfo =
         std::fs::read_to_string("/proc/self/mountinfo").map_err(PhotosError::storage)?;
-    match find_mountpoint_in(&mountinfo, pool_path) {
+    match find_mountpoint_in(&mountinfo, pool_path, visible_id) {
         Some(location) => Ok(location),
         None if required => Err(PhotosError::new(
             ErrorCode::PhotosStorageUnavailable,
@@ -385,7 +391,7 @@ fn find_mountpoint(pool_path: &Path, required: bool) -> Result<MountLocation, Ph
 }
 
 #[cfg(any(target_os = "linux", test))]
-fn find_mountpoint_in(mountinfo: &str, pool_path: &Path) -> Option<MountLocation> {
+fn find_mountpoint_in(mountinfo: &str, pool_path: &Path, visible_id: u64) -> Option<MountLocation> {
     let requested = std::fs::canonicalize(pool_path).ok()?;
     for line in mountinfo.lines() {
         let Some((left, right)) = line.split_once(" - ") else {
@@ -398,6 +404,7 @@ fn find_mountpoint_in(mountinfo: &str, pool_path: &Path) -> Option<MountLocation
         let mountpoint = PathBuf::from(unescape_mount_field(left_fields[4]));
         if std::fs::canonicalize(&mountpoint).ok().as_ref() == Some(&requested)
             && let Ok(mount_id) = left_fields[0].parse()
+            && mount_id == visible_id
         {
             return Some(MountLocation {
                 path: mountpoint,
@@ -437,13 +444,7 @@ fn verify_mount_id(file: &File, expected: Option<u64>) -> Result<(), PhotosError
     let Some(expected) = expected else {
         return Ok(());
     };
-    let fdinfo = std::fs::read_to_string(format!("/proc/self/fdinfo/{}", file.as_raw_fd()))
-        .map_err(PhotosError::storage)?;
-    let actual = fdinfo
-        .lines()
-        .find_map(|line| line.strip_prefix("mnt_id:").map(str::trim))
-        .and_then(|value| value.parse().ok());
-    if actual == Some(expected) {
+    if read_mount_id(file)? == expected {
         Ok(())
     } else {
         Err(PhotosError::new(
@@ -454,6 +455,23 @@ fn verify_mount_id(file: &File, expected: Option<u64>) -> Result<(), PhotosError
     }
 }
 
+#[cfg(target_os = "linux")]
+fn read_mount_id(file: &File) -> Result<u64, PhotosError> {
+    let fdinfo = std::fs::read_to_string(format!("/proc/self/fdinfo/{}", file.as_raw_fd()))
+        .map_err(PhotosError::storage)?;
+    fdinfo
+        .lines()
+        .find_map(|line| line.strip_prefix("mnt_id:").map(str::trim))
+        .and_then(|value| value.parse().ok())
+        .ok_or_else(|| {
+            PhotosError::new(
+                ErrorCode::PhotosStorageUnavailable,
+                "Storage pool descriptor has no mount identity",
+                true,
+            )
+        })
+}
+
 #[cfg(not(target_os = "linux"))]
 fn verify_mount_id(_file: &File, _expected: Option<u64>) -> Result<(), PhotosError> {
     Ok(())
@@ -462,6 +480,40 @@ fn verify_mount_id(_file: &File, _expected: Option<u64>) -> Result<(), PhotosErr
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rejects_fifo_without_waiting_for_a_writer() {
+        let directory = tempfile::tempdir().unwrap();
+        let pool = directory.path().join("pool-a");
+        std::fs::create_dir(&pool).unwrap();
+        let library = Library::resolve(directory.path(), "pool-a", Path::new("."), false).unwrap();
+        let path = pool.join("source.fifo");
+        nix::unistd::mkfifo(
+            &path,
+            nix::sys::stat::Mode::S_IRUSR | nix::sys::stat::Mode::S_IWUSR,
+        )
+        .unwrap();
+
+        let (send, receive) = std::sync::mpsc::channel();
+        let worker = std::thread::spawn(move || {
+            send.send(library.open_media(Path::new("source.fifo")).is_err())
+                .unwrap();
+        });
+        let result = receive.recv_timeout(std::time::Duration::from_secs(1));
+        // Unblock an unsafe open before failing so the regression cannot hang the suite.
+        let writer = result.is_err().then(|| {
+            OpenOptions::new()
+                .read(true)
+                .write(true)
+                .custom_flags(nix::libc::O_NONBLOCK)
+                .open(&path)
+                .unwrap()
+        });
+        worker.join().unwrap();
+        drop(writer);
+        assert!(result.is_ok(), "FIFO open waited for a writer");
+        assert!(result.unwrap(), "FIFO was accepted as a regular file");
+    }
 
     #[test]
     fn rejects_escape_absolute_and_non_utf8_paths() {
@@ -486,12 +538,32 @@ mod tests {
         );
         let mountinfo = mountinfo.replace("POOL_PATH", pool.to_str().unwrap());
         assert_eq!(
-            find_mountpoint_in(&mountinfo, &pool),
+            find_mountpoint_in(&mountinfo, &pool, 36),
             Some(MountLocation {
                 path: pool,
                 mount_id: Some(36),
             })
         );
+    }
+
+    #[test]
+    fn selects_the_visible_pool_mount_when_systemd_stacks_bind_mounts() {
+        let directory = tempfile::tempdir().unwrap();
+        let pool = directory.path().join("pool-a");
+        std::fs::create_dir(&pool).unwrap();
+        let mountinfo = format!(
+            "35 25 0:31 / {0} rw - ext4 /dev/md0 rw\n36 25 0:31 / {0} rw - ext4 /dev/md0 rw\n",
+            pool.display(),
+        );
+        assert_eq!(
+            find_mountpoint_in(&mountinfo, &pool, 36).unwrap().mount_id,
+            Some(36),
+        );
+        assert_eq!(
+            find_mountpoint_in(&mountinfo, &pool, 35).unwrap().mount_id,
+            Some(35)
+        );
+        assert!(find_mountpoint_in(&mountinfo, &pool, 37).is_none());
     }
 
     #[test]

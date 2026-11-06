@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -53,8 +53,19 @@ describe("extended file read capabilities", () => {
     ]);
   });
 
-  it("paginates grep results with request-bound cursors", async () => {
-    const first = await run("cyberos.files.grep", { storagePoolId: "local", pattern: "needle", limit: 1 });
+  it("stops catastrophic regular expressions without blocking the API event loop", async () => {
+    await writeFile(path.join(rootDir, "expensive.txt"), `${"a".repeat(32)}!`);
+    let responsive = false;
+    const heartbeat = new Promise<void>((resolve) => setTimeout(() => { responsive = true; resolve(); }, 25));
+    await expect(run("cyberos.files.grep", {
+      storagePoolId: "local", path: "expensive.txt", pattern: "(a+)+$", mode: "regex", timeoutMs: 100
+    })).rejects.toMatchObject({ code: "RATE_LIMITED" });
+    expect(responsive).toBe(true);
+    await heartbeat;
+  });
+
+  it.each(["literal", "regex"])("paginates %s grep results with request-bound cursors", async (mode) => {
+    const first = await run("cyberos.files.grep", { storagePoolId: "local", pattern: "needle", mode, limit: 1 });
     const cursor = first.page?.nextCursor;
     expect(cursor).toEqual(expect.any(String));
     if (!cursor) throw new Error("Expected a grep cursor");
@@ -63,6 +74,7 @@ describe("extended file read capabilities", () => {
     const second = await run("cyberos.files.grep", {
       storagePoolId: "local",
       pattern: "needle",
+      mode,
       limit: 1,
       cursor
     });
@@ -70,6 +82,7 @@ describe("extended file read capabilities", () => {
     await expect(run("cyberos.files.grep", {
       storagePoolId: "local",
       pattern: "different",
+      mode,
       cursor
     })).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
   });
@@ -125,6 +138,18 @@ describe("extended file read capabilities", () => {
     await execFileAsync("git", ["init", "--quiet", tempDir]);
     await expect(run("cyberos.files.git", { storagePoolId: "local" }))
       .rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+  });
+
+  it("does not execute repository-configured filesystem monitors while reading Git status", async () => {
+    await execFileAsync("git", ["init", "--quiet", rootDir]);
+    await execFileAsync("git", ["-C", rootDir, "add", "alpha.txt"]);
+    await writeFile(path.join(rootDir, ".git", "monitor.sh"),
+      "#!/bin/sh\nprintf invoked > .git/monitor-invoked\n", { mode: 0o700 });
+    await execFileAsync("git", ["-C", rootDir, "config", "core.fsmonitor", ".git/monitor.sh"]);
+
+    await run("cyberos.files.git", { storagePoolId: "local" });
+
+    await expect(access(path.join(rootDir, ".git", "monitor-invoked"))).rejects.toMatchObject({ code: "ENOENT" });
   });
 });
 

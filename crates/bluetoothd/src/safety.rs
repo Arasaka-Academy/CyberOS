@@ -129,6 +129,9 @@ pub fn safe_existing(root: &Path, relative: &str) -> Result<PathBuf, TransferErr
 }
 
 fn validate_relative(value: &str) -> Result<(), TransferError> {
+    if value == "." {
+        return Ok(());
+    }
     let path = Path::new(value);
     if value.is_empty()
         || value.contains('\0')
@@ -168,6 +171,19 @@ fn reject_symlinks(root: &Path, target: &Path) -> Result<(), TransferError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn allows_the_pool_root_as_an_inbox_but_not_as_a_send_file() {
+        let directory = tempfile::tempdir().unwrap();
+        assert_eq!(
+            safe_existing(directory.path(), ".").unwrap(),
+            directory.path().canonicalize().unwrap()
+        );
+        assert!(open_send_file(directory.path(), ".").is_err());
+        assert!(safe_existing(directory.path(), "").is_err());
+        assert!(safe_existing(directory.path(), "/").is_err());
+        assert!(safe_existing(directory.path(), "./..").is_err());
+    }
 
     #[test]
     fn rejects_traversal_symlinks_and_unsafe_receive_names() {

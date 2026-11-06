@@ -453,6 +453,7 @@ impl Db {
     }
 
     pub async fn claim(&self, worker_id: &str, lease: Duration) -> DbResult<Option<Task>> {
+        let limit = self.settings().await?.concurrency as i64;
         let worker_id = worker_id.to_owned();
         self.call(move |connection| {
             let now = now_iso();
@@ -463,11 +464,13 @@ impl Db {
                   error_retryable = 0, phase = 'probing', next_retry_at = NULL, control_requested = NULL, updated_at = ?3 \
                 WHERE id = (SELECT id FROM download_tasks WHERE status = 'queued' AND source_kind = 'http' \
                   AND (next_retry_at IS NULL OR next_retry_at <= ?3) \
+                  AND (SELECT COUNT(*) FROM download_tasks active \
+                    WHERE active.status = 'running' AND active.source_kind = 'http') < ?4 \
                   AND NOT EXISTS (SELECT 1 FROM download_publish_journal j WHERE j.task_id = download_tasks.id) \
                   ORDER BY COALESCE(next_retry_at, created_at), created_at LIMIT 1) \
                 AND status = 'queued' \
                 RETURNING {}", TASK_COLUMNS.replace("d.", ""));
-            connection.query_row(&sql, params![worker_id, lease_expires, now], map_task)
+            connection.query_row(&sql, params![worker_id, lease_expires, now, limit], map_task)
                 .optional().map_err(DownloadError::database)
         }).await
     }
@@ -1580,6 +1583,45 @@ mod tests {
             .unwrap();
         assert_eq!(seed.status, "seeding");
         assert_eq!(db.torrent_running_count().await.unwrap(), 10);
+    }
+
+    #[tokio::test]
+    async fn http_admission_serializes_competing_workers_at_each_limit() {
+        for limit in [1, 3, 10] {
+            let directory = tempfile::tempdir().unwrap();
+            let path = directory.path().join("test.sqlite");
+            let db = Db::open(&path).unwrap();
+            db.test_call(move |connection| {
+                connection
+                    .execute_batch(TEST_SCHEMA)
+                    .map_err(DownloadError::database)?;
+                connection
+                    .execute(
+                        "INSERT INTO system_settings VALUES ('download_settings', ?, 'now')",
+                        [format!(r#"{{"concurrency":{limit}}}"#)],
+                    )
+                    .map_err(DownloadError::database)?;
+                for index in 0..12 {
+                    insert_queued_task(connection, &format!("http-{index:02}"))?;
+                }
+                Ok(())
+            })
+            .await
+            .unwrap();
+            let other = Db::open(&path).unwrap();
+            let results = futures_util::future::join_all((0..12).map(|index| {
+                let database = if index % 2 == 0 { &db } else { &other };
+                async move {
+                    database
+                        .claim(&format!("worker-{index}"), Duration::from_secs(30))
+                        .await
+                        .unwrap()
+                }
+            }))
+            .await;
+            assert_eq!(results.iter().filter(|task| task.is_some()).count(), limit);
+            assert_eq!(db.running_count().await.unwrap(), limit);
+        }
     }
 
     #[tokio::test]

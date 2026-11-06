@@ -53,6 +53,7 @@ pub struct ShareOptions {
     pub managed_roots: Vec<PathBuf>,
     pub acl_script: PathBuf,
     pub acl_state: PathBuf,
+    pub nfs_identity: Option<(u32, u32)>,
 }
 
 impl Default for ShareOptions {
@@ -63,6 +64,7 @@ impl Default for ShareOptions {
             managed_roots: DEFAULT_MANAGED_ROOTS.iter().map(PathBuf::from).collect(),
             acl_script: "/usr/lib/cyberos/scripts/cyberos-share-acl.mjs".into(),
             acl_state: "/cyberos/state/shares/acl.json".into(),
+            nfs_identity: None,
         }
     }
 }

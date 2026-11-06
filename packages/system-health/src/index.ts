@@ -2,6 +2,7 @@ import { constants as fsConstants } from "node:fs";
 import { access, lstat, readFile, readdir, realpath } from "node:fs/promises";
 import path from "node:path";
 import {
+  getBackupSettings,
   getDownloadWorkerHealth,
   getIndexerServiceStatus,
   getIndexStoragePoolStatus,
@@ -283,10 +284,20 @@ export async function runScheduledHealthEvaluation(
   input: SystemHealthEvaluationInput
 ): Promise<SystemHealthSummary> {
   const now = input.now ?? new Date();
-  const backupTargetReadiness = await inspectBackupTarget(input.config, now);
+  const settings = getBackupSettings(input.db);
+  const config = settings ? {
+    ...input.config,
+    backup: {
+      ...input.config.backup,
+      enabled: settings.enabled,
+      repositoryPath: settings.repositoryPath,
+      requireMount: settings.requireMount
+    }
+  } : input.config;
+  const backupTargetReadiness = await inspectBackupTarget(config, now);
   const summary = await evaluateSystemHealth({
     db: input.db,
-    config: input.config,
+    config,
     now,
     ...(input.vodPlayer ? { vodPlayer: input.vodPlayer } : {}),
     backupTargetReadiness
@@ -343,7 +354,16 @@ async function inspectBackupTarget(
 ): Promise<StoragePoolReadiness | null> {
   if (!config.backup.enabled) return null;
   try {
-    await access(config.backup.repositoryPath ?? "", fsConstants.R_OK | fsConstants.W_OK);
+    const repositoryPath = config.backup.repositoryPath;
+    if (!repositoryPath) throw new Error("backup repository is not configured");
+    const metadata = await lstat(repositoryPath);
+    if (!metadata.isDirectory() || metadata.isSymbolicLink()) {
+      throw new Error("backup repository must be a real directory");
+    }
+    await access(repositoryPath, fsConstants.R_OK | fsConstants.W_OK);
+    if (config.backup.requireMount && !(await mountedPaths()).has(await realpath(repositoryPath))) {
+      throw new Error("backup repository is not mounted");
+    }
     return {
       storagePoolId: "backup",
       status: "ready",

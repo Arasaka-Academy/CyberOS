@@ -189,18 +189,20 @@ function classifyAddress(address: string): AddressClass {
 
 function classifyIpv6(address: string): AddressClass {
   const normalized = address.toLowerCase().split("%")[0]!;
-  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/u.exec(normalized);
-  if (mapped) return classifyAddress(mapped[1]!);
   const value = ipv6BigInt(normalized);
   if (value === null) return "blocked";
+  if (value >> 32n === 0xffffn) {
+    const ipv4 = [24n, 16n, 8n, 0n].map((shift) => Number((value >> shift) & 0xffn)).join(".");
+    return classifyAddress(ipv4);
+  }
   if (value === 1n) return "loopback";
   if (value === 0n) return "blocked";
+  if (value === 0xfd000ec2000000000000000000000254n) return "blocked";
   const prefix8 = Number(value >> 120n);
   const prefix10 = Number(value >> 118n);
   const prefix32 = Number(value >> 96n);
   if (prefix8 === 0xfc || prefix8 === 0xfd) return "private";
   if (prefix10 === 0x3fa || prefix8 === 0xff || prefix32 === 0x20010db8) return "blocked";
-  if (normalized === "fd00:ec2::254") return "blocked";
   return "public";
 }
 

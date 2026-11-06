@@ -1,3 +1,207 @@
+cyberos (2.3.39) unstable; urgency=medium
+
+  * Rebuild Web, mobile, TV and documentation with CyberUI and shared appearance controls.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 17:39:17 +0000
+
+cyberos (2.3.38) unstable; urgency=medium
+
+  * Bound HTTP tracker response bodies before parsing.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 17:22:30 +0000
+
+cyberos (2.3.37) unstable; urgency=medium
+
+  * Enforce public network restrictions in tracker DNS and HTTP connections.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 17:19:38 +0000
+
+cyberos (2.3.36) unstable; urgency=medium
+
+  * Stream checksum validation for large file write targets.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 17:14:20 +0000
+
+cyberos (2.3.35) unstable; urgency=medium
+
+  * Preserve literal replacement text in approved file edits.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 17:09:04 +0000
+
+cyberos (2.3.34) unstable; urgency=medium
+
+  * Map read-only NFS clients to the identity granted share access.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 17:02:04 +0000
+
+cyberos (2.3.33) unstable; urgency=medium
+
+  * Reject symlinked storage pool mountpoints before root mount operations.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:59:53 +0000
+
+cyberos (2.3.32) unstable; urgency=medium
+
+  * Use the visible storage mount identity for media playback.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:58:01 +0000
+
+cyberos (2.3.31) unstable; urgency=medium
+
+  * Reject special media files without blocking the playback controller.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:56:14 +0000
+
+cyberos (2.3.30) unstable; urgency=medium
+
+  * Keep media scan leases alive and reject expired catalog publication.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:53:15 +0000
+
+cyberos (2.3.29) unstable; urgency=medium
+
+  * Match the visible Photos pool mount when systemd stacks bind mounts.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:47:45 +0000
+
+cyberos (2.3.28) unstable; urgency=medium
+
+  * Bound TMDB search response memory before parsing JSON.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:45:13 +0000
+
+cyberos (2.3.27) unstable; urgency=medium
+
+  * Reject special files without blocking indexing, photo processing, or downloads.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:42:04 +0000
+
+cyberos (2.3.26) unstable; urgency=medium
+
+  * Keep terminal requests responsive while idle session cleanup waits for tmux.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:38:50 +0000
+
+cyberos (2.3.25) unstable; urgency=medium
+
+  * Terminate tmux command clients when their deadline expires.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:37:19 +0000
+
+cyberos (2.3.24) unstable; urgency=medium
+
+  * Enforce HTTP download concurrency atomically when claiming tasks.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:32:54 +0000
+
+cyberos (2.3.23) unstable; urgency=medium
+
+  * Resolve bracketed IPv6 download hosts as literal addresses.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:30:51 +0000
+
+cyberos (2.3.22) unstable; urgency=medium
+
+  * Avoid counting Linux guest CPU time twice in host utilization.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:28:55 +0000
+
+cyberos (2.3.21) unstable; urgency=medium
+
+  * Allow the storage pool root as a Bluetooth transfer inbox.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:26:13 +0000
+
+cyberos (2.3.20) unstable; urgency=medium
+
+  * Preserve active host-access daemon and proxy sockets during startup.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:24:24 +0000
+
+cyberos (2.3.19) unstable; urgency=medium
+
+  * Keep hostd responsive while periodic maintenance waits for domain locks.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:18:21 +0000
+
+cyberos (2.3.18) unstable; urgency=medium
+
+  * Stream backup checksum verification for large restored files.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:15:26 +0000
+
+cyberos (2.3.17) unstable; urgency=medium
+
+  * Evaluate file-search regular expressions in a worker with an enforced deadline
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:11:06 +0000
+
+cyberos (2.3.16) unstable; urgency=medium
+
+  * Preserve a live hostd socket when another instance starts
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:06:28 +0000
+
+cyberos (2.3.15) unstable; urgency=medium
+
+  * Disable repository text conversion and external diff programs in restricted Git queries
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:04:10 +0000
+
+cyberos (2.3.14) unstable; urgency=medium
+
+  * Reject attached and abbreviated unsafe options in restricted shell commands
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:01:58 +0000
+
+cyberos (2.3.13) unstable; urgency=medium
+
+  * Report backup targets as unavailable when their required mount is absent
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:00:18 +0000
+
+cyberos (2.3.12) unstable; urgency=medium
+
+  * Apply MCP network restrictions to IPv6 metadata and mapped IPv4 addresses
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 15:59:01 +0000
+
+cyberos (2.3.11) unstable; urgency=medium
+
+  * Reject restore manifest paths escaping staging through symlinks
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 15:57:07 +0000
+
+cyberos (2.3.10) unstable; urgency=medium
+
+  * Use saved backup settings for scheduled health evaluation
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 15:54:36 +0000
+
+cyberos (2.3.9) unstable; urgency=medium
+
+  * Restrict Git branch commands to explicit read-only queries
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 15:52:47 +0000
+
+cyberos (2.3.8) unstable; urgency=medium
+
+  * Disable repository filesystem monitors during capability Git inspection
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 15:50:54 +0000
+
+cyberos (2.3.7) unstable; urgency=medium
+
+  * Fail backups when trash files cannot be staged instead of verifying incomplete snapshots.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 15:46:42 +0000
+
+cyberos (2.3.6) unstable; urgency=medium
+
+  * Allow safe storage paths whose names begin with two dots.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 15:35:27 +0000
+
 cyberos (2.3.5) unstable; urgency=medium
 
   * Show correct Photos empty search guidance and record 2B rollout acceptance.

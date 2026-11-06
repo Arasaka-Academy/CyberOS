@@ -67,3 +67,13 @@
 2. **物理验收独立**：浏览器方向键/焦点和原生主题命令成功，不等于实体遥控、HDMI 观看距离或可听音频通过。
 3. 设备根盘仍较满；未清理用户数据或已有备份，仅增加静态资源备份。
 4. 上述设备证据对应提交前源码；合并和推送后的 Git 状态、验证与上游 CI 必须单独核实，不从设备测试推断。
+
+## main 整合验收（2026-11-07）
+
+- 重构提交：`e8946577`。整合远端 `main` 的 `6a0c24d500a8138df295bfd340b81122e3c95f8f`，保留基线之后全部 33 个后端修复；48 个传入后端/文档源码路径与该远端提交逐字节一致。
+- 唯一合并冲突是依赖锁文件中的版本条目。新增 UI 包随项目统一版本；按 CI 版本策略从 `2.3.38` 推进到 `2.3.39`，相对原远端 main 的版本检查通过。
+- 整合树完整 `make ci` exit 0：260 个 Vitest 文件，1754 passed / 5 skipped；协议、外观生成、TypeScript/Astro、Rust/Python、fmt/clippy、ESLint、所有构建及 42 页文档链接/Pagefind 检查通过。日志：`.cyberos/component-review/make-ci-main-integration-recheck.log`。
+- 整合后浏览器复核：共享样式 30、TV 62、Mobile/appearance 30、Docs 19，共 141 项通过。日志：`browser-main-integration.log`、`mobile-browser-main-integration.log`、`docs-browser-main-integration.log`。
+- 首次完整检查在既有 `terminald` 陈旧 socket 测试失败一次；单项及完整模块 30 次复跑全部通过，随后默认配置完整 `make ci` 通过。没有稳定复现或确认根因，没有为通过检查改动运行代码。首次失败与复跑日志分别保留，不能将这项记录描述为已修复。
+- 原 main 工作树另有 15 个已跟踪文件改动与 8 个未跟踪文件，均已单独备份并核对哈希；它们不属于重构提交。主分支更新与恢复结果由交付时的 Git/哈希核验记录证明。
+- 本节验证源码整合；前述设备仍对应已验收的提交前测试构建，不能据此声称设备已升级到 `2.3.39` 或上游 CI 已完成。

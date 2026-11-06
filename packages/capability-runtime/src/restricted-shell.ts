@@ -141,17 +141,29 @@ function validateArguments(command: RestrictedCommand, args: string[]): void {
 
 function validateGit(args: string[]): void {
   const forbidden = [
-    "-c", "--config-env", "--exec-path", "--git-dir", "--work-tree", "--namespace",
+    "-c", "-C", "--config-env", "--exec-path", "--git-dir", "--work-tree", "--namespace",
     "--global", "--system", "--local", "--file", "--blob", "--ext-diff", "--no-index",
-    "--output", "--paginate"
+    "--output", "--paginate", "--textconv", "--open-files-in-pager"
   ];
   denyOptions(args, forbidden);
   const subcommand = args.find((argument) => !argument.startsWith("-"));
   if (!subcommand || !new Set(["status", "diff", "log", "show", "branch", "rev-parse", "ls-files", "grep"]).has(subcommand)) {
     throw new CapabilityError("INVALID_ARGUMENT", "Git command is not in the read-only profile");
   }
-  if (subcommand === "branch" && args.some((argument) => ["-d", "-D", "-m", "-M", "-c", "-C", "--delete", "--move", "--copy", "--edit-description", "--set-upstream-to", "--unset-upstream"].includes(argument))) {
-    throw new CapabilityError("INVALID_ARGUMENT", "Git branch mutations are not allowed");
+  if (subcommand === "branch") {
+    const branchArgs = args.slice(args.indexOf(subcommand) + 1);
+    const listOptions = new Set([
+      "--list", "--show-current", "-a", "--all", "-r", "--remotes",
+      "-v", "-vv", "--verbose", "--no-color", "--color", "--column", "--no-column",
+      "--ignore-case", "--omit-empty"
+    ]);
+    if (branchArgs.some((argument) => !(
+      listOptions.has(argument) ||
+      /^(?:--format|--sort|--color|--column|--contains|--no-contains|--merged|--no-merged|--points-at)=/u.test(argument) ||
+      (branchArgs.includes("--list") && !argument.startsWith("-"))
+    ))) {
+      throw new CapabilityError("INVALID_ARGUMENT", "Git branch mutations are not allowed");
+    }
   }
   if (args.some((argument) => (
     argument === "--textconv" ||
@@ -177,7 +189,14 @@ function denyFind(args: string[]): void {
 }
 
 function denyOptions(args: string[], denied: string[]): void {
-  if (args.some((argument) => denied.some((option) => argument === option || argument.startsWith(`${option}=`)))) {
+  if (args.some((argument) => denied.some((option) => {
+    if (argument === option || argument.startsWith(`${option}=`)) return true;
+    if (/^-[a-zA-Z]$/u.test(option) && argument.startsWith("-") && !argument.startsWith("--")) {
+      return argument.slice(1).includes(option[1]!);
+    }
+    const name = argument.split("=", 1)[0]!;
+    return option.startsWith("--") && name.startsWith("--") && name.length > 2 && option.startsWith(name);
+  }))) {
     throw new CapabilityError("INVALID_ARGUMENT", "Command option is not allowed by the read-only profile");
   }
 }
@@ -206,17 +225,26 @@ async function validateExistingPathArguments(root: ResolvedStoragePool, cwd: str
 
 function commandInvocation(command: RestrictedCommand, args: string[]): { command: string; args: string[] } {
   if (command === "git") {
+    const subcommandIndex = args.findIndex((argument) => !argument.startsWith("-"));
+    const safeArgs = [...args];
+    if (["diff", "show", "log", "grep"].includes(args[subcommandIndex] ?? "")) {
+      safeArgs.splice(subcommandIndex + 1, 0, "--no-textconv",
+        ...(args[subcommandIndex] === "grep" ? [] : ["--no-ext-diff"]));
+    }
     return {
       command,
       args: [
         "-c", "core.hooksPath=/dev/null",
+        "-c", "core.fsmonitor=false",
+        "-c", "core.untrackedCache=false",
+        "-c", "submodule.recurse=false",
         "-c", "core.pager=cat",
         "-c", "pager.branch=false",
         "-c", "pager.diff=false",
         "-c", "pager.log=false",
         "-c", "diff.external=",
         "--no-optional-locks",
-        ...args
+        ...safeArgs
       ]
     };
   }

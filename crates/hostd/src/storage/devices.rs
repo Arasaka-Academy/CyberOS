@@ -176,6 +176,16 @@ pub(super) async fn assert_mountpoint_available(
             "Storage pool mountpoint is outside /cyberos/data",
         ));
     }
+    match fs::symlink_metadata(mountpoint).await {
+        Ok(metadata) if metadata.is_dir() => {}
+        Ok(_) => {
+            return Err(HostdError::validation(
+                "Storage pool mountpoint must be a real directory",
+            ));
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(error) => return Err(error.into()),
+    }
     match fs::read_dir(mountpoint).await {
         Ok(mut entries) => {
             if entries.next_entry().await?.is_some() {

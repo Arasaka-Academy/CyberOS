@@ -198,10 +198,7 @@ pub fn render_nfs(
     settings: &ShareSettings,
     shares: &[ResolvedShare<'_>],
 ) -> Result<String, HostdError> {
-    let identity = if settings.enabled
-        && shares
-            .iter()
-            .any(|item| item.share.protocols.nfs.enabled && !item.share.protocols.nfs.read_only)
+    let identity = if settings.enabled && shares.iter().any(|item| item.share.protocols.nfs.enabled)
     {
         let user = nix::unistd::User::from_name("cyberos-nfs")
             .map_err(|error| HostdError::unavailable(error.to_string()))?
@@ -237,13 +234,9 @@ pub(super) fn render_nfs_with_identity(
             ));
         }
         let path = safe_inline(&resolved.absolute_path.to_string_lossy())?.replace(' ', "\\040");
-        let identity = if nfs.read_only {
-            String::new()
-        } else {
-            let (uid, gid) = identity
-                .ok_or_else(|| HostdError::validation("NFS identity cyberos-nfs does not exist"))?;
-            format!(",all_squash,anonuid={uid},anongid={gid}")
-        };
+        let (uid, gid) = identity
+            .ok_or_else(|| HostdError::validation("NFS identity cyberos-nfs does not exist"))?;
+        let identity = format!(",all_squash,anonuid={uid},anongid={gid}");
         for cidr in &nfs.allowed_cidrs {
             lines.push(format!(
                 "{path} {}({},sync,subtree_check,{}{})",

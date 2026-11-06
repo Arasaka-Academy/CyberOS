@@ -36,6 +36,28 @@ afterEach(async () => {
 });
 
 describe("shared system health evaluator", () => {
+  it("alerts when a required backup mount is absent even if its directory remains", async () => {
+    const repositoryPath = path.join(tempDir, "unmounted-backup");
+    await mkdir(repositoryPath);
+    config.backup = { ...config.backup, enabled: true, repositoryPath, requireMount: true };
+
+    const summary = await runScheduledHealthEvaluation({ db, config });
+
+    expect(summary.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "backup_target_not_ready", message: "backup repository is not mounted" })
+    ]));
+  });
+
+  it("accepts a real backup directory when mount enforcement is disabled", async () => {
+    const repositoryPath = path.join(tempDir, "backup");
+    await mkdir(repositoryPath);
+    config.backup = { ...config.backup, enabled: true, repositoryPath, requireMount: false };
+
+    const summary = await runScheduledHealthEvaluation({ db, config });
+
+    expect(summary.issues.some((issue) => issue.code === "backup_target_not_ready")).toBe(false);
+  });
+
   it("discovers storage pools from the data namespace", async () => {
     const summary = await evaluateSystemHealth({
       db,

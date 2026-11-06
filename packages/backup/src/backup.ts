@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { createReadStream } from "node:fs";
 import { access, constants as fsConstants, copyFile, lstat, mkdir, mkdtemp, readdir, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
@@ -166,7 +167,11 @@ export async function runBackup(input: BackupDependencies & { kind?: Exclude<Bac
     staging = runStaging;
     await createSqliteSnapshot(input.db, path.join(runStaging, "cyberos.sqlite"));
     const trashPath = path.join(input.config.paths.stateDir, "trash");
-    await access(trashPath).then(() => copyTreeNoSymlinks(trashPath, path.join(runStaging, "trash"))).catch(() => undefined);
+    const trashMetadata = await lstat(trashPath).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") return null;
+      throw error;
+    });
+    if (trashMetadata) await copyTreeNoSymlinks(trashPath, path.join(runStaging, "trash"));
     const manifest = await createManifest(run.id, dataRoot, runStaging);
     await writeFile(path.join(runStaging, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o600 });
     const snapshotIds: string[] = [];
@@ -520,6 +525,7 @@ async function validateManifest(manifest: BackupManifest, manifestRoot: string, 
   if (!entries.some(([relativePath]) => relativePath === manifest.database)) {
     throw new Error("restore manifest database checksum missing");
   }
+  const stagingRoot = await realpath(manifestRoot);
   for (const [relativePath, expectedHash] of entries) {
     if (!/^[a-f0-9]{64}$/u.test(expectedHash)) {
       throw new Error("restore manifest checksum is invalid");
@@ -529,7 +535,11 @@ async function validateManifest(manifest: BackupManifest, manifestRoot: string, 
     if (!entryStat?.isFile() || entryStat.isSymbolicLink()) {
       throw new Error(`restore manifest file missing: ${relativePath}`);
     }
-    const actualHash = await hashFile(absolutePath);
+    const resolvedPath = await realpath(absolutePath);
+    if (!resolvedPath.startsWith(`${stagingRoot}${path.sep}`)) {
+      throw new Error("restore manifest path escapes staging");
+    }
+    const actualHash = await hashFile(resolvedPath);
     if (actualHash !== expectedHash) {
       throw new Error(`restore manifest checksum mismatch: ${relativePath}`);
     }
@@ -552,8 +562,7 @@ function resolveManifestPath(rootPath: string, relativePath: string): string {
 
 async function hashFile(filePath: string): Promise<string> {
   const hash = createHash("sha256");
-  const contents = await readFile(filePath);
-  hash.update(contents);
+  for await (const chunk of createReadStream(filePath)) hash.update(chunk);
   return hash.digest("hex");
 }
 

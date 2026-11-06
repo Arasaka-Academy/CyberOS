@@ -1,10 +1,14 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { access, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { openCyberOsDb, type CyberOsDatabase } from "@cyberos/db";
 import { loadCyberOsRuntime, type CyberOsRuntime } from "@cyberos/shared";
 import { createRestrictedShellAdapter } from "./restricted-shell.js";
+
+const execFileAsync = promisify(execFile);
 
 let tempDir: string;
 let rootDir: string;
@@ -57,6 +61,36 @@ describe("restricted shell adapter", () => {
     }, adapterContext())).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
   });
 
+  it.each([
+    ["ls", ["-RL"]],
+    ["ls", ["--derefer"]],
+    ["du", ["-aL"]],
+    ["stat", ["-Lc", "%s"]],
+    ["file", ["-bL"]],
+    ["git", ["-C../outside", "status"]],
+    ["git", ["-cinclude.path=untrusted", "status"]]
+  ] as const)("rejects attached, combined, and abbreviated unsafe options in %s", async (command, args) => {
+    await expect(createRestrictedShellAdapter().prepare({
+      storagePoolId: "pool-1", command, args: [...args]
+    }, adapterContext())).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+  });
+
+  it("does not execute repository-configured filesystem monitors in read-only Git commands", async () => {
+    await execFileAsync("git", ["init", "--quiet", rootDir]);
+    await execFileAsync("git", ["-C", rootDir, "add", "visible.txt"]);
+    await writeFile(path.join(rootDir, ".git", "monitor.sh"),
+      "#!/bin/sh\nprintf invoked > .git/monitor-invoked\n", { mode: 0o700 });
+    await execFileAsync("git", ["-C", rootDir, "config", "core.fsmonitor", ".git/monitor.sh"]);
+    const adapter = createRestrictedShellAdapter();
+    const context = adapterContext();
+    const prepared = await adapter.prepare({ storagePoolId: "pool-1", command: "git", args: ["status", "--porcelain"] }, context);
+
+    const result = await adapter.execute(prepared, context, {});
+
+    expect(result.data).toMatchObject({ exitCode: 0 });
+    await expect(access(path.join(rootDir, ".git", "monitor-invoked"))).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
   it("stays unavailable when the shell feature flag is disabled", async () => {
     const context = adapterContext(false);
     expect(await createRestrictedShellAdapter().availability(context)).toEqual({
@@ -67,6 +101,54 @@ describe("restricted shell adapter", () => {
       storagePoolId: "pool-1",
       command: "ls"
     }, context)).rejects.toMatchObject({ code: "NOT_READY" });
+  });
+
+  it.each([
+    ["show", "--format=", "HEAD"],
+    ["log", "-p", "--max-count=1"],
+    ["diff", "HEAD"],
+    ["grep", "changed"]
+  ])("does not execute repository text conversion commands: %j", async (...args) => {
+    await execFileAsync("git", ["init", "--quiet", rootDir]);
+    await writeFile(path.join(rootDir, ".gitattributes"), "*.txt diff=unsafe\n");
+    await execFileAsync("git", ["-C", rootDir, "add", "."]);
+    await execFileAsync("git", ["-C", rootDir, "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+      "-c", "core.hooksPath=/dev/null", "commit", "--quiet", "-m", "initial"]);
+    await writeFile(path.join(rootDir, ".git", "textconv.sh"),
+      '#!/bin/sh\nprintf invoked > .git/textconv-invoked\ncat "$1"\n', { mode: 0o700 });
+    await execFileAsync("git", ["-C", rootDir, "config", "diff.unsafe.textconv", ".git/textconv.sh"]);
+    await writeFile(path.join(rootDir, "visible.txt"), "changed\n");
+    const adapter = createRestrictedShellAdapter();
+    const context = adapterContext();
+    const prepared = await adapter.prepare({ storagePoolId: "pool-1", command: "git", args }, context);
+
+    const result = await adapter.execute(prepared, context, {});
+
+    expect(result.data).toMatchObject({ exitCode: 0 });
+    await expect(access(path.join(rootDir, ".git", "textconv-invoked"))).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it.each([
+    ["branch", "new-branch"],
+    ["branch", "--track", "new-branch", "main"],
+    ["branch", "--set-upstream-to=origin/main", "main"],
+    ["branch", "-Dmain"],
+    ["branch", "--del", "main"]
+  ])("rejects branch mutations in the read-only profile: %j", async (...args) => {
+    await expect(createRestrictedShellAdapter().prepare({
+      storagePoolId: "pool-1", command: "git", args
+    }, adapterContext())).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+  });
+
+  it.each([
+    ["branch"],
+    ["branch", "-a", "-vv"],
+    ["branch", "--show-current"],
+    ["branch", "--list", "feature/*", "--sort=-committerdate"]
+  ])("allows read-only branch queries: %j", async (...args) => {
+    await expect(createRestrictedShellAdapter().prepare({
+      storagePoolId: "pool-1", command: "git", args
+    }, adapterContext())).resolves.toMatchObject({ changes: { args } });
   });
 });
 

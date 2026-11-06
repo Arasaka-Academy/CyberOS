@@ -2,7 +2,6 @@ use std::fs::{File, OpenOptions};
 #[cfg(target_os = "linux")]
 use std::os::fd::AsRawFd;
 use std::os::unix::fs::MetadataExt;
-#[cfg(target_os = "linux")]
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Component, Path, PathBuf};
 
@@ -222,7 +221,7 @@ fn open_beneath(
         ));
     }
     let how = OpenHow::new()
-        .flags(OFlag::O_RDONLY | OFlag::O_CLOEXEC)
+        .flags(OFlag::O_RDONLY | OFlag::O_CLOEXEC | OFlag::O_NONBLOCK)
         .resolve(
             ResolveFlag::RESOLVE_BENEATH
                 | ResolveFlag::RESOLVE_NO_MAGICLINKS
@@ -264,7 +263,10 @@ fn open_beneath(
             "Media path escapes the selected storage pool",
         ));
     }
-    Ok(OpenOptions::new().read(true).open(resolved)?)
+    Ok(OpenOptions::new()
+        .read(true)
+        .custom_flags(nix::libc::O_NONBLOCK | nix::libc::O_CLOEXEC)
+        .open(resolved)?)
 }
 
 #[cfg(target_os = "linux")]
@@ -291,8 +293,13 @@ fn identity(metadata: &std::fs::Metadata) -> FileIdentity {
 
 #[cfg(target_os = "linux")]
 fn find_mountpoint(pool_path: &Path, required: bool) -> Result<MountLocation, VodError> {
+    let directory = OpenOptions::new()
+        .read(true)
+        .custom_flags(nix::libc::O_DIRECTORY | nix::libc::O_NOFOLLOW | nix::libc::O_CLOEXEC)
+        .open(pool_path)?;
+    let visible_mount_id = mount_id_for_fd(&directory)?;
     let mountinfo = std::fs::read_to_string("/proc/self/mountinfo")?;
-    match find_mountpoint_in(&mountinfo, pool_path) {
+    match find_mountpoint_in(&mountinfo, pool_path, visible_mount_id) {
         Some(location) => Ok(location),
         None if required => Err(VodError::unavailable(
             ErrorCode::StorageUnavailable,
@@ -320,7 +327,11 @@ fn find_mountpoint(pool_path: &Path, required: bool) -> Result<MountLocation, Vo
 }
 
 #[cfg(any(target_os = "linux", test))]
-fn find_mountpoint_in(mountinfo: &str, pool_path: &Path) -> Option<MountLocation> {
+fn find_mountpoint_in(
+    mountinfo: &str,
+    pool_path: &Path,
+    visible_mount_id: u64,
+) -> Option<MountLocation> {
     let requested = std::fs::canonicalize(pool_path).ok()?;
     for line in mountinfo.lines() {
         let Some((left, right)) = line.split_once(" - ") else {
@@ -333,7 +344,9 @@ fn find_mountpoint_in(mountinfo: &str, pool_path: &Path) -> Option<MountLocation
                 continue;
             };
             let mountpoint = PathBuf::from(unescape_mount_field(left[4]));
-            if std::fs::canonicalize(&mountpoint).ok().as_ref() == Some(&requested) {
+            if mount_id == visible_mount_id
+                && std::fs::canonicalize(&mountpoint).ok().as_ref() == Some(&requested)
+            {
                 return Some(MountLocation {
                     path: mountpoint,
                     mount_id: Some(mount_id),
@@ -358,6 +371,34 @@ mod tests {
     use super::*;
 
     #[test]
+    fn fifo_open_does_not_block_before_media_type_check() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("movie.mp4");
+        nix::unistd::mkfifo(
+            &path,
+            nix::sys::stat::Mode::S_IRUSR | nix::sys::stat::Mode::S_IWUSR,
+        )
+        .unwrap();
+        let root = directory.path().to_owned();
+        let (send, receive) = std::sync::mpsc::channel();
+        let worker = std::thread::spawn(move || {
+            let file = open_beneath(&root, Path::new("movie.mp4"), None).unwrap();
+            send.send(!file.metadata().unwrap().is_file()).unwrap();
+        });
+        let result = receive.recv_timeout(std::time::Duration::from_secs(1));
+        let writer = result.is_err().then(|| {
+            OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(&path)
+                .unwrap()
+        });
+        worker.join().unwrap();
+        drop(writer);
+        assert!(result.expect("special file blocked the player"));
+    }
+
+    #[test]
     fn validates_media_paths_and_extensions() {
         assert!(validate_relative_path("movies/a.mkv").is_ok());
         assert!(validate_relative_path("../a.mkv").is_err());
@@ -378,12 +419,33 @@ mod tests {
         std::fs::create_dir(&pool).unwrap();
         let mountinfo = format!("36 25 0:31 / {} rw - ext4 /dev/md0 rw\n", pool.display());
         assert_eq!(
-            find_mountpoint_in(&mountinfo, &pool),
+            find_mountpoint_in(&mountinfo, &pool, 36),
             Some(MountLocation {
                 path: pool,
                 mount_id: Some(36)
             })
         );
+    }
+
+    #[test]
+    fn stacked_mounts_use_the_visible_mount_id() {
+        let directory = tempfile::tempdir().unwrap();
+        let pool = directory.path().join("pool-a");
+        std::fs::create_dir(&pool).unwrap();
+        let mountinfo = format!(
+            "35 25 0:31 / {} rw - ext4 /dev/md0 rw\n36 25 0:31 / {} rw - ext4 /dev/md0 rw\n",
+            pool.display(),
+            pool.display()
+        );
+        assert_eq!(
+            find_mountpoint_in(&mountinfo, &pool, 36).unwrap().mount_id,
+            Some(36)
+        );
+        assert_eq!(
+            find_mountpoint_in(&mountinfo, &pool, 35).unwrap().mount_id,
+            Some(35)
+        );
+        assert!(find_mountpoint_in(&mountinfo, &pool, 37).is_none());
     }
 
     #[test]

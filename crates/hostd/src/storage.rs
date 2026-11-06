@@ -464,6 +464,32 @@ mod tests {
         }
     }
 
+    #[tokio::test]
+    async fn refuses_symlinked_pool_mountpoints() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path().join("data");
+        let outside = temp.path().join("outside");
+        fs::create_dir_all(&root).await.unwrap();
+        fs::create_dir_all(&outside).await.unwrap();
+        std::os::unix::fs::symlink(&outside, root.join("pool")).unwrap();
+        assert!(
+            assert_mountpoint_available(&root.join("pool"), &root)
+                .await
+                .is_err()
+        );
+        assert!(
+            assert_mountpoint_available(&root.join("new"), &root)
+                .await
+                .is_ok()
+        );
+        fs::create_dir(root.join("empty")).await.unwrap();
+        assert!(
+            assert_mountpoint_available(&root.join("empty"), &root)
+                .await
+                .unwrap()
+        );
+    }
+
     #[test]
     fn allows_only_read_only_storage_commands() {
         assert!(

@@ -306,7 +306,7 @@ fn files_equal(left: &Path, right: &Path) -> Result<bool, PhotosError> {
 fn open_regular_nofollow(path: &Path) -> Result<File, PhotosError> {
     let file = OpenOptions::new()
         .read(true)
-        .custom_flags(nix::libc::O_NOFOLLOW | nix::libc::O_CLOEXEC)
+        .custom_flags(nix::libc::O_NOFOLLOW | nix::libc::O_CLOEXEC | nix::libc::O_NONBLOCK)
         .open(path)
         .map_err(PhotosError::storage)?;
     FileIdentity::from_file(&file)?;
@@ -395,6 +395,38 @@ fn _path(path: PathBuf) -> PathBuf {
 mod tests {
     use super::*;
     use std::time::Duration;
+
+    #[test]
+    fn rejects_fifo_without_waiting_for_a_writer() {
+        let directory = tempfile::tempdir().unwrap();
+
+        let path = directory.path().join("source.fifo");
+        nix::unistd::mkfifo(
+            &path,
+            nix::sys::stat::Mode::S_IRUSR | nix::sys::stat::Mode::S_IWUSR,
+        )
+        .unwrap();
+        let worker_path = path.clone();
+        let (send, receive) = std::sync::mpsc::channel();
+        let worker = std::thread::spawn(move || {
+            send.send(open_regular_nofollow(&worker_path).is_err())
+                .unwrap();
+        });
+        let result = receive.recv_timeout(std::time::Duration::from_secs(1));
+        // Unblock an unsafe open before failing so the regression cannot hang the suite.
+        let writer = result.is_err().then(|| {
+            OpenOptions::new()
+                .read(true)
+                .write(true)
+                .custom_flags(nix::libc::O_NONBLOCK)
+                .open(&path)
+                .unwrap()
+        });
+        worker.join().unwrap();
+        drop(writer);
+        assert!(result.is_ok(), "FIFO open waited for a writer");
+        assert!(result.unwrap(), "FIFO was accepted as a regular file");
+    }
 
     #[test]
     fn publishes_a_new_derivative_with_rename_stable_identity() {

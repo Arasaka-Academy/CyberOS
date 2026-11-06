@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { EventEmitter } from "node:events";
 import http from "node:http";
 import net from "node:net";
-import { access, chmod, mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { access, chmod, mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, truncate, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -100,6 +100,7 @@ import { streamDockerDaemonEvents } from "./routes/docker.js";
 import { streamBluetoothEvents, streamEthernetEvents, streamWifiEvents } from "./routes/system.js";
 import type { SystemCommandRunner } from "./lib/system-management.js";
 import { buildServer as buildApiServer, type ServerDependencies } from "./server.js";
+import { createCapabilityAdapters } from "./lib/capability-adapters.js";
 
 const execFileAsync = promisify(execFile);
 const TEST_STORAGE_POOL_ID = "pool-1";
@@ -176,6 +177,50 @@ afterEach(async () => {
 });
 
 describe("API server", () => {
+  it("checks a large write target without buffering the entire file", async () => {
+    const config = testConfig(tempDir);
+    const system = { commandRunner: testStorageCommandRunner() };
+    const server = await buildServer({ config, db, system });
+    const target = path.join(rootDir, "large.bin");
+    await writeFile(target, "");
+    await truncate(target, 2_147_483_648);
+    try {
+      const capabilityId = "cyberos.files.write";
+      const adapter = createCapabilityAdapters(server, { resourceBaseUrl: "http://127.0.0.1:3010", system })[capabilityId]!;
+      const context = {
+        config, db, capabilityId,
+        subject: { id: "pi", clientId: "pi", kind: "pi" as const, scopes: new Set<string>() }
+      };
+      const prepared = await adapter.prepare({ operation: "write", storagePoolId: TEST_STORAGE_POOL_ID, path: "large.bin", content: "replacement", expectedSha256: "0".repeat(64) }, context);
+      await adapter.revalidate(prepared, context);
+      await expect(adapter.execute(prepared, context, {})).rejects.toMatchObject({ code: "CONFLICT" });
+      expect((await stat(target)).size).toBe(2_147_483_648);
+    } finally {
+      await server.close();
+    }
+  }, 30_000);
+
+  it.each([false, true])("keeps replacement text literal in file edits with replaceAll=%s", async (replaceAll) => {
+    const config = testConfig(tempDir);
+    const system = { commandRunner: testStorageCommandRunner() };
+    const server = await buildServer({ config, db, system });
+    try {
+      const capabilityId = "cyberos.files.edit";
+      const adapter = createCapabilityAdapters(server, { resourceBaseUrl: "http://127.0.0.1:3010", system })[capabilityId]!;
+      const context = {
+        config, db, capabilityId,
+        subject: { id: "pi", clientId: "pi", kind: "pi" as const, scopes: new Set<string>() }
+      };
+      const replacement = "$& $$ $` $' literal";
+      const prepared = await adapter.prepare({ operation: "edit", storagePoolId: TEST_STORAGE_POOL_ID, path: "hello.txt", find: "hello", replace: replacement, replaceAll }, context);
+      await adapter.revalidate(prepared, context);
+      await adapter.execute(prepared, context, {});
+      expect(await readFile(path.join(rootDir, "hello.txt"), "utf8")).toBe(replacement);
+    } finally {
+      await server.close();
+    }
+  });
+
   it("allows 480 database requests per minute and rate-limits the next request", async () => {
     const server = await buildServer({ config: testConfig(tempDir), db });
     try {

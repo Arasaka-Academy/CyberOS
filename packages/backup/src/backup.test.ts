@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, open, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -12,6 +12,11 @@ import {
 } from "@cyberos/db";
 import { loadCyberOsRuntime, type CyberOsRuntime } from "@cyberos/shared";
 import { initBackup, restoreBackup, runBackup, shouldSkipScheduledBackup, validateBackup } from "./backup.js";
+
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs/promises")>();
+  return { ...actual, copyFile: vi.fn(actual.copyFile) };
+});
 
 let tempDir: string | undefined;
 let db: CyberOsDatabase | undefined;
@@ -81,6 +86,31 @@ describe("backup workflow", () => {
     expect(dataBackup).toContain("*/.cyberos/iscsi");
     expect(dataBackup).not.toContain("*/.cyberos");
     expect(manifestVersion).toBe(2);
+  });
+
+  it("fails before creating snapshots when a trash file cannot be staged", async () => {
+    tempDir = await mkdtemp(path.join(os.tmpdir(), "cyberos-backup-"));
+    const root = path.join(tempDir, "root");
+    await mkdir(root);
+    db = openCyberOsDb(path.join(tempDir, "cyberos.sqlite"));
+    const cfg = config(root, path.join(tempDir, "repo"), path.join(tempDir, "password"));
+    const trash = path.join(cfg.paths.stateDir, "trash");
+    await mkdir(trash, { recursive: true });
+    await writeFile(path.join(trash, "deleted.txt"), "recoverable data");
+    const restic = { run: vi.fn(async (args: string[]) => ({
+      stdout: args[0] === "snapshots" ? '[{"id":"abc123"}]' : '{"id":"abc123"}\n',
+      stderr: "",
+      code: 0
+    })) };
+    const copy = vi.mocked(copyFile).mockRejectedValueOnce(new Error("trash copy failed"));
+    try {
+      const result = await runBackup({ db, config: cfg, restic });
+
+      expect(result).toMatchObject({ status: "failed", verified: false, error: "trash copy failed" });
+      expect(restic.run).not.toHaveBeenCalled();
+    } finally {
+      copy.mockRestore();
+    }
   });
 
   it("requires exact repository and storage-pool mounts when mount enforcement is enabled", async () => {
@@ -154,6 +184,73 @@ describe("backup workflow", () => {
       snapshot: "snapshot-v2"
     }))
       .resolves.toMatchObject({ verified: true });
+  });
+
+  it("verifies restored files larger than the whole-file read limit", async () => {
+    tempDir = await mkdtemp(path.join(os.tmpdir(), "cyberos-restore-large-"));
+    const root = path.join(tempDir, "root");
+    const repo = path.join(tempDir, "repo");
+    const password = path.join(tempDir, "password");
+    await Promise.all([mkdir(root), mkdir(repo), writeFile(password, "test")]);
+    const size = 2 ** 31 + 1;
+    const zeros = Buffer.alloc(8 * 1024 * 1024);
+    const checksum = createHash("sha256");
+    for (let offset = 0; offset < size; offset += zeros.length) {
+      checksum.update(zeros.subarray(0, Math.min(zeros.length, size - offset)));
+    }
+    const checksums = {
+      "cyberos.sqlite": createHash("sha256").update("database").digest("hex"),
+      "large.bin": checksum.digest("hex")
+    };
+    const restic = { run: async (args: string[]) => {
+      if (args[0] === "restore" && !args.includes("--dry-run")) {
+        const target = args[args.indexOf("--target") + 1]!;
+        const handle = await open(path.join(target, "large.bin"), "w");
+        try { await handle.truncate(size); } finally { await handle.close(); }
+        await writeFile(path.join(target, "cyberos.sqlite"), "database");
+        await writeFile(path.join(target, "manifest.json"), JSON.stringify({
+          version: 2, runId: "large-file", database: "cyberos.sqlite", dataRoot: root, checksums
+        }));
+      }
+      return { code: 0, stdout: "", stderr: "" };
+    } };
+
+    await expect(restoreBackup({
+      config: config(root, repo, password), repositoryPath: repo, passwordFile: password,
+      snapshot: "large-file", restic
+    })).resolves.toMatchObject({ verified: true });
+  }, 30_000);
+
+  it("rejects restored checksum paths that escape staging through a parent symlink", async () => {
+    tempDir = await mkdtemp(path.join(os.tmpdir(), "cyberos-restore-symlink-"));
+    const root = path.join(tempDir, "root");
+    const repo = path.join(tempDir, "repo");
+    const outside = path.join(tempDir, "outside");
+    await Promise.all([mkdir(root), mkdir(repo), mkdir(outside)]);
+    const password = path.join(tempDir, "password");
+    await writeFile(password, "secret\n");
+    await writeFile(path.join(outside, "external.txt"), "external contents");
+    const restic = { run: async (args: string[]) => {
+      if (args[0] === "restore" && !args.includes("--dry-run")) {
+        const target = args[args.indexOf("--target") + 1]!;
+        await writeFile(path.join(target, "cyberos.sqlite"), "database");
+        await symlink(outside, path.join(target, "linked"));
+        await writeFile(path.join(target, "manifest.json"), JSON.stringify({
+          version: 2, runId: "linked-restore", dataRoot: root, database: "cyberos.sqlite",
+          checksums: {
+            "cyberos.sqlite": createHash("sha256").update("database").digest("hex"),
+            "linked/external.txt": createHash("sha256").update("external contents").digest("hex")
+          }
+        }));
+      }
+      return { stdout: "", stderr: "", code: 0 };
+    } };
+
+    await expect(restoreBackup({
+      config: config(root, repo, password), repositoryPath: repo, passwordFile: password,
+      restic, snapshot: "linked-snapshot"
+    })).rejects.toThrow("restore manifest path escapes staging");
+    expect(await readFile(path.join(outside, "external.txt"), "utf8")).toBe("external contents");
   });
 
   it("rejects v1 backup manifests", async () => {

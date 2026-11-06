@@ -6,8 +6,10 @@ import {
   acquireExecutionLock,
   createTrashEntry,
   getSystemOperations,
+  listHealthAlerts,
   openCyberOsDb,
   releaseExecutionLock,
+  saveBackupSettings,
   type CyberOsDatabase
 } from "@cyberos/db";
 import { loadCyberOsRuntime, type CyberOsRuntime } from "@cyberos/shared";
@@ -36,6 +38,43 @@ afterEach(async () => {
 });
 
 describe("operations runner", () => {
+  it("uses persisted backup settings for scheduled health alerts", async () => {
+    saveBackupSettings(db, {
+      enabled: true,
+      repositoryPath: path.join(tempDir, "missing-backup"),
+      requireMount: false,
+      keepDaily: 7,
+      keepWeekly: 4,
+      validatedAt: "2026-01-01T00:00:00.000Z"
+    });
+
+    const summary = await runHealthTask({ db, config });
+
+    expect(summary.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "backup_target_not_ready" }),
+      expect.objectContaining({ code: "backup_stale" })
+    ]));
+    expect(listHealthAlerts(db, { status: "active" })).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "backup_stale" })
+    ]));
+  });
+
+  it("clears backup alerts after backup is disabled in saved settings", async () => {
+    config.backup.enabled = true;
+    saveBackupSettings(db, {
+      enabled: false,
+      repositoryPath: path.join(tempDir, "missing-backup"),
+      requireMount: false,
+      keepDaily: 7,
+      keepWeekly: 4,
+      validatedAt: null
+    });
+
+    const summary = await runHealthTask({ db, config });
+
+    expect(summary.issues.some((issue) => issue.code.startsWith("backup_"))).toBe(false);
+  });
+
   it("records unhealthy system conclusions as completed health runs", async () => {
     const summary = await runHealthTask({
       db,

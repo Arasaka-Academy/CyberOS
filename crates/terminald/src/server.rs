@@ -56,6 +56,13 @@ impl TerminalServer {
     }
 
     pub async fn run(self) -> Result<(), TerminalError> {
+        self.run_with_reaper_interval(REAPER_INTERVAL).await
+    }
+
+    async fn run_with_reaper_interval(
+        self,
+        reaper_interval: Duration,
+    ) -> Result<(), TerminalError> {
         self.state.tmux.ensure_available().await?;
         if let Some(parent) = self.config.tmux_socket_path.parent() {
             fs::create_dir_all(parent).await?;
@@ -71,7 +78,8 @@ impl TerminalServer {
 
         let (shutdown_tx, shutdown_rx) = watch::channel(false);
         let mut connections = JoinSet::new();
-        let mut reaper = interval(REAPER_INTERVAL);
+        let mut reaping = JoinSet::new();
+        let mut reaper = interval(reaper_interval);
         reaper.tick().await;
 
         loop {
@@ -100,16 +108,25 @@ impl TerminalServer {
                         tracing::warn!(message = %error, "terminal connection task failed");
                     }
                 }
-                _ = reaper.tick() => {
-                    match self.state.tmux.reap_expired(self.config.idle_timeout_ms).await {
-                        Ok(reaped) => {
-                            for session in reaped {
-                                tracing::info!(session, "reaped idle terminal session");
+                _ = reaper.tick(), if reaping.is_empty() => {
+                    let tmux = self.state.tmux.clone();
+                    let idle_timeout_ms = self.config.idle_timeout_ms;
+                    reaping.spawn(async move {
+                        match tmux.reap_expired(idle_timeout_ms).await {
+                            Ok(reaped) => {
+                                for session in reaped {
+                                    tracing::info!(session, "reaped idle terminal session");
+                                }
+                            }
+                            Err(error) => {
+                                tracing::warn!(code = ?error.code, message = %error.message, "unable to reap terminal sessions");
                             }
                         }
-                        Err(error) => {
-                            tracing::warn!(code = ?error.code, message = %error.message, "unable to reap terminal sessions");
-                        }
+                    });
+                }
+                result = reaping.join_next(), if !reaping.is_empty() => {
+                    if let Some(Err(error)) = result {
+                        tracing::warn!(message = %error, "terminal reaper task failed");
                     }
                 }
                 result = shutdown_signal() => {
@@ -120,6 +137,7 @@ impl TerminalServer {
         }
 
         let _ = shutdown_tx.send(true);
+        reaping.shutdown().await;
         drop(listener);
         while let Some(result) = connections.join_next().await {
             if let Err(error) = result {
@@ -623,7 +641,56 @@ async fn shutdown_signal() -> Result<(), TerminalError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::Account;
     use tempfile::tempdir;
+
+    #[tokio::test]
+    async fn stalled_reaper_does_not_block_new_requests() {
+        let directory = tempdir().unwrap();
+        let config = TerminalConfig {
+            socket_path: directory.path().join("terminal.sock"),
+            tmux_socket_path: directory.path().join("tmux.sock"),
+            account: Account {
+                name: "test".to_owned(),
+                uid: Uid::effective().as_raw(),
+                gid: Gid::effective().as_raw(),
+                home: directory.path().to_path_buf(),
+                shell: "/bin/sh".into(),
+            },
+            idle_timeout_ms: 1000,
+            connect_timeout_ms: 1000,
+            max_sessions: 2,
+        };
+        // Accept the real tmux client without replying, like an unresponsive server.
+        let tmux_listener = UnixListener::bind(&config.tmux_socket_path).unwrap();
+        let socket = config.socket_path.clone();
+        let terminal = TerminalServer::new(config);
+        if terminal.state.tmux.ensure_available().await.is_err() {
+            eprintln!("tmux is unavailable; skipping reaper integration test");
+            return;
+        }
+        let server = tokio::spawn(terminal.run_with_reaper_interval(Duration::from_millis(20)));
+        let result = async {
+            let (_stalled_client, _) = timeout(Duration::from_secs(2), tmux_listener.accept())
+                .await
+                .expect("reaper should connect to tmux")
+                .unwrap();
+            let mut stream = UnixStream::connect(&socket).await.unwrap();
+            stream.write_all(b"{}\n").await.unwrap();
+            timeout(
+                Duration::from_millis(500),
+                FrameReader::default().read_next(&mut stream),
+            )
+            .await
+        }
+        .await;
+        server.abort();
+        let _ = server.await;
+        assert!(result.is_ok(), "new request was blocked by the reaper");
+        let response: serde_json::Value =
+            serde_json::from_slice(&result.unwrap().unwrap().unwrap()).unwrap();
+        assert_eq!(response["ok"], false);
+    }
 
     #[tokio::test]
     async fn refuses_to_replace_an_active_socket() {

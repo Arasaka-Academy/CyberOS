@@ -502,7 +502,8 @@ fn parse_cpu(value: &str) -> Result<Cpu, MonitorError> {
     }
     Ok(Cpu {
         idle: fields[3] + fields[4],
-        total: fields.iter().sum(),
+        // guest and guest_nice are already included in user and nice.
+        total: fields.iter().take(8).sum(),
     })
 }
 
@@ -721,6 +722,18 @@ mod tests {
     async fn cpu_waits_for_a_baseline() {
         let first = parse_cpu("cpu 100 0 100 800 0 0 0 0\n").unwrap();
         let second = parse_cpu("cpu 150 0 150 900 0 0 0 0\n").unwrap();
+        assert_eq!(first.total, 1000.0);
+        assert_eq!(
+            1.0 - (second.idle - first.idle) / (second.total - first.total),
+            0.5
+        );
+    }
+
+    #[test]
+    fn cpu_does_not_count_guest_time_twice() {
+        // Linux includes guest in user and guest_nice in nice already.
+        let first = parse_cpu("cpu 100 0 100 800 0 0 0 0 80 0\n").unwrap();
+        let second = parse_cpu("cpu 150 0 150 900 0 0 0 0 100 0\n").unwrap();
         assert_eq!(first.total, 1000.0);
         assert_eq!(
             1.0 - (second.idle - first.idle) / (second.total - first.total),

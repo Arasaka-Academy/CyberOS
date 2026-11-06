@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { createReadStream } from "node:fs";
 import { copyFile, link, lstat, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
@@ -464,7 +465,7 @@ async function executeFileEdit(server: FastifyInstance, request: Record<string, 
   const occurrences = current.content.split(find).length - 1;
   if (occurrences === 0) throw new CapabilityError("CONFLICT", "Edit text no longer exists in the file");
   if (request.replaceAll !== true && occurrences !== 1) throw new CapabilityError("CONFLICT", "Edit text is not unique; set replaceAll to replace every match");
-  const content = request.replaceAll === true ? current.content.split(find).join(replacement) : current.content.replace(find, replacement);
+  const content = request.replaceAll === true ? current.content.split(find).join(replacement) : current.content.replace(find, () => replacement);
   return injectJson(server, { method: "PUT", url: "/api/files/edit-text", payload: { storagePoolId, path: filePath, content, expectedModifiedAt: current.modifiedAt ?? null } });
 }
 
@@ -493,8 +494,9 @@ async function executeFileWrite(
     existed = true;
     if (request.createOnly === true) throw new CapabilityError("CONFLICT", "Write target already exists");
     if (typeof request.expectedSha256 === "string") {
-      const digest = createHash("sha256").update(await readFile(existing.realPath)).digest("hex");
-      if (digest !== request.expectedSha256.toLocaleLowerCase()) throw new CapabilityError("CONFLICT", "Write target changed after it was read");
+      const hash = createHash("sha256");
+      for await (const chunk of createReadStream(existing.realPath)) hash.update(chunk);
+      if (hash.digest("hex") !== request.expectedSha256.toLowerCase()) throw new CapabilityError("CONFLICT", "Write target changed after it was read");
     }
   } catch (error) {
     if (error instanceof CapabilityError) throw error;

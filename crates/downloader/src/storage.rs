@@ -765,15 +765,19 @@ fn open_file_beneath(
     flags: OFlag,
     mode: Mode,
 ) -> Result<File, DownloadError> {
-    let how = OpenHow::new().flags(flags).mode(mode).resolve(
-        ResolveFlag::RESOLVE_BENEATH
-            | ResolveFlag::RESOLVE_NO_SYMLINKS
-            | ResolveFlag::RESOLVE_NO_MAGICLINKS
-            | ResolveFlag::RESOLVE_NO_XDEV,
-    );
-    openat2(directory, Path::new(name), how)
+    let how = OpenHow::new()
+        .flags(flags | OFlag::O_NONBLOCK)
+        .mode(mode)
+        .resolve(
+            ResolveFlag::RESOLVE_BENEATH
+                | ResolveFlag::RESOLVE_NO_SYMLINKS
+                | ResolveFlag::RESOLVE_NO_MAGICLINKS
+                | ResolveFlag::RESOLVE_NO_XDEV,
+        );
+    let file = openat2(directory, Path::new(name), how)
         .map(File::from)
-        .map_err(DownloadError::storage)
+        .map_err(DownloadError::storage)?;
+    require_regular_file(file)
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -783,9 +787,21 @@ fn open_file_beneath(
     flags: OFlag,
     mode: Mode,
 ) -> Result<File, DownloadError> {
-    openat(directory, Path::new(name), flags, mode)
+    let file = openat(directory, Path::new(name), flags | OFlag::O_NONBLOCK, mode)
         .map(File::from)
-        .map_err(DownloadError::storage)
+        .map_err(DownloadError::storage)?;
+    require_regular_file(file)
+}
+
+fn require_regular_file(file: File) -> Result<File, DownloadError> {
+    if !file.metadata().map_err(DownloadError::storage)?.is_file() {
+        return Err(DownloadError::new(
+            ErrorCode::Storage,
+            "download path is not a regular file",
+            false,
+        ));
+    }
+    Ok(file)
 }
 
 #[cfg(target_os = "linux")]
@@ -861,6 +877,47 @@ fn identity(metadata: &std::fs::Metadata) -> FileIdentity {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rejects_fifo_without_waiting_for_a_writer() {
+        let directory = tempfile::tempdir().unwrap();
+        let target = StorageTarget {
+            directory: File::open(directory.path()).unwrap(),
+            directory_path: directory.path().to_path_buf(),
+            target_name: "source.fifo".into(),
+            partial_name: "source.fifo".into(),
+        };
+        let path = directory.path().join("source.fifo");
+        nix::unistd::mkfifo(
+            &path,
+            nix::sys::stat::Mode::S_IRUSR | nix::sys::stat::Mode::S_IWUSR,
+        )
+        .unwrap();
+
+        let (send, receive) = std::sync::mpsc::channel();
+        let worker = std::thread::spawn(move || {
+            send.send(
+                target.partial_identity().is_err()
+                    && target.open_partial_readonly().is_err()
+                    && target.open_partial(false).is_err(),
+            )
+            .unwrap();
+        });
+        let result = receive.recv_timeout(std::time::Duration::from_secs(1));
+        // Unblock an unsafe open before failing so the regression cannot hang the suite.
+        let writer = result.is_err().then(|| {
+            OpenOptions::new()
+                .read(true)
+                .write(true)
+                .custom_flags(nix::libc::O_NONBLOCK)
+                .open(&path)
+                .unwrap()
+        });
+        worker.join().unwrap();
+        drop(writer);
+        assert!(result.is_ok(), "FIFO open waited for a writer");
+        assert!(result.unwrap(), "FIFO was accepted as a regular file");
+    }
 
     #[test]
     fn rejects_parent_and_absolute_paths() {
