@@ -578,7 +578,7 @@ function buildQuery(
   const cte = `
     WITH candidates AS (
       SELECT ${QUERY_COLUMNS}, ${distanceExpression} AS distance_m, ${sortExpression} AS base_sort_value
-      FROM photos_assets a
+      FROM photos_assets a ${matchingIds !== undefined && matchingIds.length <= 100 ? "INDEXED BY sqlite_autoindex_photos_assets_1" : ""}
       LEFT JOIN photos_asset_metadata m ON m.asset_id = a.id
       WHERE ${where.join(" AND ")}
     ), matches AS (
@@ -706,7 +706,7 @@ function loadFacets(
   const keywordQuery = facetQuery("keywords");
   const keywordRows = db.prepare(`
     ${keywordQuery.cte}
-    SELECT k.keyword AS value, COUNT(DISTINCT k.asset_id) AS count
+    SELECT MIN(k.keyword) AS value, COUNT(DISTINCT k.asset_id) AS count
     FROM matches q JOIN photos_keywords k ON k.asset_id = q.id
     WHERE ${keywordQuery.postWhere} AND q.schema_version = ?
     GROUP BY k.normalized_keyword ORDER BY count DESC, value ASC LIMIT 100

@@ -3,12 +3,14 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import * as sqliteVec from "sqlite-vec";
+import type { PhotosQueryRequest } from "@cyberos/shared";
 import { openCyberOsDb, openCyberOsDbReadOnly, getPhotosLibrarySettings, savePhotosLibrarySettings, savePhotosSemanticSettings, activatePhotosEmbeddingModel, getActivePhotosEmbeddingProfile } from "@cyberos/db";
 import { PhotosSearchEngine } from "./lib/photos-search-engine.js";
 
 const args = parseArgs({ allowPositionals: true, options: {
   reuse: { type: "boolean" }, dimensions: { type: "string" }, filtered: { type: "boolean" },
-  partial: { type: "boolean" }, history: { type: "string" }
+  partial: { type: "boolean" }, history: { type: "string" },
+  runs: { type: "string" }, varied: { type: "boolean" }, literal: { type: "boolean" }, sort: { type: "string" }
 } });
 const directory = args.positionals[0];
 if (!directory) throw new Error("Usage: node photos-search-benchmark.js <new isolated directory> [count=100000]");
@@ -64,19 +66,33 @@ console.log(JSON.stringify({ populated: count, milliseconds: performance.now() -
 }
 const engine = new PhotosSearchEngine(db);
 const embedding = Array.from({ length: dimensions }, () => 1 / Math.sqrt(dimensions));
-const expected = args.values.filtered ? Math.ceil(count / 100) : args.values.partial ? Math.ceil(count / 2) : count;
+const expected = args.values.filtered ? Math.ceil(count / 100) : args.values.partial && !args.values.literal ? Math.ceil(count / 2) : count;
+const runs = Number(args.values.runs ?? 20);
+if (!Number.isInteger(runs) || runs < 20 || runs > 1000) throw new Error("Runs must be 20..1000");
+const sort = args.values.sort;
+if (sort && sort !== "name" && sort !== "captured_at") throw new Error("Sort must be name or captured_at");
+const querySort: PhotosQueryRequest["sort"] = sort === "name" || sort === "captured_at" ? { field: sort, direction: "desc" } : undefined;
+const keywords = args.values.literal ? [".jpg"] : args.values.varied ? ["海边日落", "森林徒步", "city skyline", "建筑夜景", "宠物奔跑"] : ["海边日落"];
+const embeddings = keywords.map((_, index) => {
+  const vector = args.values.varied ? embedding.map((value, d) => value * (1 + ((index + d) % 5) / 10)) : embedding;
+  const norm = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0));
+  return vector.map((value) => value / norm);
+});
 const samples: number[] = [];
+let coldFirstPageMs = 0;
 let total = 0;
-for (let index = 0; index < 22; index++) {
+for (let index = 0; index < runs + 2; index++) {
   const before = performance.now();
-  const result = engine.query({ libraryUpdatedAt: library.updatedAt, request: { filters: { text: "海边日落", ...(args.values.filtered ? { cameraModels: ["subset"] } : {}) }, limit: 60, includeFacets: true }, embedding,
+  const result = engine.query({ libraryUpdatedAt: library.updatedAt, request: { filters: { text: keywords[index % keywords.length]!, ...(args.values.filtered ? { cameraModels: ["subset"] } : {}) }, limit: 60, includeFacets: true, ...(querySort ? { sort: querySort } : {}) },
+    embedding: embeddings[index % embeddings.length]!,
     search: { mode: "hybrid", semanticState: "ready", indexed: count, total: count, embeddingSpaceId: space } });
   total = result.total;
   if (total !== expected) throw new Error(`Invalid benchmark: expected ${expected} matched vectors, got ${total}`);
+  if (index === 0) coldFirstPageMs = performance.now() - before;
   if (index > 1) samples.push(performance.now() - before);
 }
 samples.sort((a, b) => a - b);
-console.log(JSON.stringify({ count, dimensions, history, filtered: args.values.filtered ?? false, partial: args.values.partial ?? false, total, warmRuns: samples.length, p50Ms: samples[Math.floor(samples.length * 0.5)],
+console.log(JSON.stringify({ count, dimensions, history, filtered: args.values.filtered ?? false, partial: args.values.partial ?? false, total, coldFirstPageMs, varied: args.values.varied ?? false, literal: args.values.literal ?? false, sort: sort ?? "relevance", warmRuns: samples.length, p50Ms: samples[Math.floor(samples.length * 0.5)],
   p95Ms: samples[Math.ceil(samples.length * 0.95) - 1], rssMiB: process.memoryUsage().rss / 1024 ** 2,
   peakRssMiB: process.resourceUsage().maxRSS / 1024, samplesMs: samples }, null, 2));
 db.close();

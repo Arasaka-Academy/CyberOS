@@ -118,6 +118,9 @@ describe("native packaging artifacts", () => {
     await expect(readPackagingFile("systemd", "cyberos-api.service")).resolves.toContain(
       "After=network-online.target local-fs.target"
     );
+    const apiUnit = await readPackagingFile("systemd", "cyberos-api.service");
+    expect(apiUnit).toContain("MemoryHigh=1536M");
+    expect(apiUnit).toContain("MemoryMax=2G");
     const monitorUnit = await readPackagingFile("systemd", "cyberos-monitor.service");
     expect(monitorUnit).toContain("After=local-fs.target cyberos-api.service");
     expect(monitorUnit).toContain("Type=notify");

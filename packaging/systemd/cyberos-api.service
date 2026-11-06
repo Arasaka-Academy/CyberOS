@@ -25,7 +25,9 @@ BindReadOnlyPaths=-/run/libvirt/libvirt-sock
 NoNewPrivileges=yes
 PrivateTmp=yes
 CapabilityBoundingSet=
-MemoryMax=512M
+# Includes reclaimable SQLite mappings for exact Photos vector search.
+MemoryHigh=1536M
+MemoryMax=2G
 CPUQuota=150%
 TasksMax=256
 

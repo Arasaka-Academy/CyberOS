@@ -116,3 +116,12 @@ it("uses cached text vectors offline and falls back to lexical matches for uncac
   expect(target.messages[2]).toMatchObject({ input: { search: { mode: "hybrid", semanticState: "ready" }, embedding: [1, 0] } }); complete(target); await cached;
   expect(fetcher).toHaveBeenCalledTimes(2);
 });
+
+it("leaves library-wide coverage and failed-task scans to the reader", async () => {
+  enable(); vi.stubGlobal("fetch", vi.fn().mockResolvedValue(vectorResponse()));
+  const prepare = vi.spyOn(db, "prepare");
+  const result = service.query(input("海边"));
+  const target = await reader();
+  expect(prepare.mock.calls.some(([sql]) => sql.includes("FROM photos_assets"))).toBe(false);
+  complete(target); await result; prepare.mockRestore();
+});

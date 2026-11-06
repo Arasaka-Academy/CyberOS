@@ -4,7 +4,7 @@ description: 在 Mac mini 运行图文向量模型，在 CyberOS 保存派生索
 type: how-to
 status: current
 audience: [developer, operator]
-sourceOfTruth: [tools/photos-embedding-service/service.py, packages/db/src/repositories/photos-semantic.ts, packages/db/src/repositories/photos-search.ts, packages/api/src/lib/photos-search-engine.ts, packaging/systemd/cyberos-photos-embeddings.service]
+sourceOfTruth: [tools/photos-embedding-service/service.py, packages/db/src/repositories/photos-semantic.ts, packages/db/src/repositories/photos-search.ts, packages/db/src/repositories/photos-search-corpus.ts, packages/api/src/lib/photos-search-engine.ts, packaging/systemd/cyberos-photos-embeddings.service]
 sidebar:
   order: 13
 ---
@@ -137,22 +137,26 @@ python evaluate_api.py dataset.json --base-url http://127.0.0.1:3010 \
 
 ```bash
 npm run build -w @cyberos/api
-node --max-old-space-size=128 --max-semi-space-size=8 \
+node --max-old-space-size=256 --max-semi-space-size=16 \
   packages/api/dist/photos-search-benchmark.js /新建的隔离目录 100000
 # 只重用该工具创建的 synthetic benchmark 数据库，不接受生产数据库
-node --max-old-space-size=128 --max-semi-space-size=8 \
+node --max-old-space-size=256 --max-semi-space-size=16 \
   packages/api/dist/photos-search-benchmark.js /同一个隔离目录 100000 --reuse
 # 新建降维数据库；加入历史模型向量并测试 1% 相机筛选
-node --max-old-space-size=128 --max-semi-space-size=16 \
+node --max-old-space-size=256 --max-semi-space-size=16 \
   packages/api/dist/photos-search-benchmark.js /另一个新目录 100000 \
   --dimensions 512 --history 100000 --filtered
 # 部分覆盖用独立新目录和 --partial；重用时携带相同的场景参数
 npm run test:photos-browser
 ```
 
-工具断言每次返回完整预期结果（全覆盖十万项，筛选或部分覆盖按对应数量），包含排序、分页首屏和统计计算，预热两次后测量 20 次。服务 reader thread 限制 V8 old heap 128 MiB、young heap 16 MiB，避免向量查询挤占 API 的 512 MiB 单元预算。
+工具断言每次返回完整预期结果（全覆盖十万项，筛选或部分覆盖按对应数量），包含排序、分页首屏和统计计算。默认预热两次、测量20次；`--runs 60 --varied` 会轮换五组关键词和归一化查询向量，`--sort name` 或 `--sort captured_at` 检查其他排序，并单独报告首次查询耗时。
 
-2026-11-05 的阶段性实测（样本仅 30 张，校准与验证各 8 条正例、10 条负例）：
+2.3.3 的 reader 开启最多2 GiB的 SQLite 文件映射，仍按当前向量空间顺序读取普通 Float32 BLOB。只缓存元数据、标签和有效向量 rowid，估算预算64 MiB，超出预算后回到完整 SQL 路径。Migration013 在照片、元数据、标签、向量关联和缓存变更时递增 revision；新查询严格刷新缓存，已有分页快照继续保持原结果。相似度排序交给 SQLite，评分相同和重复文件仍按照片 ID 排列；首屏只按主键读取对应照片。地图和列表使用同一缓存与匹配规则。API 主线程不再执行全库覆盖率和失败任务扫描。
+
+reader 的 V8 old heap 为256 MiB、young heap为16 MiB，结果快照仍限32 MiB。API systemd 单元采用 `MemoryHigh=1536M`、`MemoryMax=2G`，预算包含可回收的映射页，运行时不会提前分配2 GiB。原128 MiB heap在十万条元数据缓存下实测耗尽，原512 MiB服务预算也不适用于约1.3 GiB的映射工作集。文件映射可以被系统回收，但内存紧张后的重新读盘会增加延迟；必须同时观察剩余内存、其他服务和实际 cgroup controller。
+
+以下是2026-11-05的历史阶段性实测（2.3.2，不能代替2.3.3验收）（样本仅 30 张，校准与验证各 8 条正例、10 条负例）：
 
 | 验证 | 实际结果与边界 |
 | --- | --- |
@@ -168,14 +172,52 @@ npm run test:photos-browser
 
 降维探索对每个维度分别校准阈值并归一化：256D、512D 的验证相关率均为 62.5%，1024D 为 56.25%，2048D 为 52.08%，召回率均为 77.08%；256D 的负例误命中为 10%，其余为 0。各维度均未达到质量门槛，默认继续使用 2048D。这份验证集已用于比较，后续选维度需要新的独立验证数据。
 
-以上结果仍未满足十万张热查询 P95 ≤1 秒及相关率 ≥80% 的上线门槛。生产图库保持智能搜索关闭，不启动全库补建。旧流水线的 68.75% 相关率、旧阈值和吞吐记录仅为历史测量，不能作为流水线 2 的验收结果。
+上述2.3.2历史结果未满足十万张热查询 P95 ≤1 秒及相关率 ≥80% 的上线门槛。生产图库保持智能搜索关闭，不启动全库补建。旧流水线的 68.75% 相关率、旧阈值和吞吐记录仅为历史测量，不能作为流水线 2 的验收结果。
 
 CyberMachine 测试使用隔离的合成数据库和本机 Linux ARM64 扩展，生产服务保持运行。设备未启用 memory cgroup controller，测试请求的 systemd MemoryMax 不构成有效内存上限；128 MiB V8 old heap 仍然生效，峰值取进程实际资源使用。两次预热不能保证其他生产负载下的全部向量始终驻留内存，因此该值应视为设备实测，不能归因于单独的模型或 SQLite 算力。
 
-这些结果不能证明全库检索质量或十万规模的端到端 P95。当前精确检索在这台设备上没有达到方案速度目标，不应按目标速度宣称全量上线验收通过。十万张仅按样本推理速度外推约 36 小时，实际上线时使用设备的持续吞吐更新估算。
+这些结果不能证明全库检索质量或十万规模的端到端 P95。上述2.3.2精确检索测试没有达到方案速度目标，不应按目标速度宣称全量上线验收通过。十万张仅按样本推理速度外推约 36 小时，实际上线时使用设备的持续吞吐更新估算。
+
+## 2026-11-06十万规模复测
+
+2.3.3在同一台4GB Cortex-A76/NVMe设备测试，完整库仍为十万照片、十万条2048D当前向量、十万条历史向量及真实形状的元数据行。除特别说明外，按相关度排序；关键词和归一化查询向量轮换，统计和首屏仍来自完整匹配集合。
+
+| 隔离场景 | 热P95 | 完整匹配数量 |
+| --- | --- | --- |
+| 相关度检索，60次 | **0.921秒** | 100000 |
+| 实际reader线程与服务调度，60次 | **0.920秒** | 100000，模型响应为桩数据 |
+| 额外占用512 MiB匿名内存，20次 | **0.978秒** | 100000 |
+| 1%相机筛选，20次 | 0.029秒 | 1000 |
+| 50%索引覆盖，20次 | 0.638秒 | 50000 |
+| 文件名排序，20次 | **2.684秒** | 100000，仍未达到1秒目标 |
+| 文件名子串广命中，20次 | **1.454秒** | 100000，`.jpg`命中全部照片，无OOM |
+
+完整相关度检索的进程峰值RSS约1.26 GiB；文件名排序约1.31 GiB。六项常驻服务在测试前后均为active且没有新增重启。设备使用zram交换空间，额外内存实验后空闲swap减少约135 MiB；服务持续运行不能证明内存竞争完全没有代价。
+
+这些是热缓存结果。新reader首次查询在该组测试中为7.92秒；部分覆盖库首次查询为19.72秒，额外内存场景首次查询为11.14秒。首次查询受文件页是否仍驻留、数据库布局和其他负载影响，尚不能承诺冷启动和任意内存压力下都在1秒内。当前缓存revision变化后的新查询也可能需要重建元数据；后台补建期间不保证一直获得热缓存延迟。
+
+另在本地Linux ARM64容器用实际2 GiB cgroup上限、禁用swap，生成同规模含历史向量的数据库并运行引擎和真实reader；均完成，没有OOM或OOM kill，期间触及上限并发生回收。该项验证内存预算，不代表Cortex-A76性能或设备实际cgroup生效；当前CyberMachine仍未启用memory controller。
+
+默认相关度的热检索目标已在上述场景满足，冷查询、文件名等其他排序和真实十万照片的端到端查询仍有边界。更换设备前，应先测量目标机器的持续负载和页回收情况。当前质量门槛仍未通过，生产保持智能搜索关闭，不开始全库补建。
+
+## 2026-11-06质量复测与路线选择
+
+重新冻结60张照片，排除旧30图及重复内容，使用12条校准正例、16条验证正例，两组各10条负例。标注来自视觉审阅，尚无人类复核；样本规模不足以代表全库。每种候选的阈值只用校准集选择，约束负例误命中不超过10%。
+
+| 隔离候选 | 验证相关率 | 验证负例误命中 | Mac推理耗时与限制 |
+| --- | --- | --- | --- |
+| 当前2048D全局向量 | 68.75% | 20% | 新60图基线，与旧30图不能直接计算改进比例 |
+| 英文图像检索专用文本指令 | 75% | 10% | 仅更换文本指令的探索，尚未定义生产向量空间 |
+| 中文图像检索专用文本指令 | 69.79% | 20% | 未达质量目标 |
+| 官方2B Reranker，384像素输入 | 64.38% | 0% | 8候选热推理P95约2.42秒，仅候选实验 |
+| 同一Reranker，768像素输入 | 68.23% | 0% | 8候选P95约8.20秒；Metal峰值约4.68 GiB，不含其他进程 |
+
+Reranker固定revision为`4bd860ac4f15ad1897a214615cccc700f8f71818`，权重校验后通过固定MLX环境隔离运行；当前结果没有完成官方PyTorch数值对照，也不是最终混合API验收。先取8候选只用于比较可行性；不能直接作为生产结果集合，否则会隐藏更多匹配项，破坏总数和分页语义。
+
+上述候选均未达到质量门槛，因此保持当前模型、默认提示词和生产关闭状态。更高分辨率重排同时暴露了M4/16GB上此路线的延迟限制；现有样本不能证明更快硬件会改善模型相关性。下一阶段应先核验更强模型（例如8B的4bit候选）的权重来源、内存和图文接口，再用新的独立数据验证；不能把当前已用于候选比较的验证集当作新的验收集。不得只降低阈值或根据验证标签反复调参来宣布达标。
 
 ## CyberMachine 升级
 
-本功能增加 npm 原生扩展、migration 011/012 和 systemd unit，必须使用 [CyberMachine 包升级流程](/docs/operations/cybermachine/#升级保留与回滚)，不能使用快速组件替换。先构建和验证 Linux amd64/arm64 包，再停止全部状态写入者和 timers，备份旧包、SQLite/WAL、配置、状态及服务启用状态。不要备份正在写入的 SQLite 目录。
+本功能增加 npm 原生扩展、migration 011/012/013 和 systemd unit，必须使用 [CyberMachine 包升级流程](/docs/operations/cybermachine/#升级保留与回滚)，不能使用快速组件替换。先构建和验证 Linux amd64/arm64 包，再停止全部状态写入者和 timers，备份旧包、SQLite/WAL、配置、状态及服务启用状态。不要备份正在写入的 SQLite 目录。
 
 升级后先启动 API 完成 migration，再启动 `cyberos-photos-embeddings.service` 和此前启用的常驻服务，最后恢复 timers。验证普通扫描、浏览、文字检索、真实图文查询、覆盖率和 journal；`/health` 成功不能代替这些检查。回滚 migration 需要匹配的旧包和状态备份。

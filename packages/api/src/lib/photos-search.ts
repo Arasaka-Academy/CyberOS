@@ -1,6 +1,6 @@
 import { Worker } from "node:worker_threads";
 import {
-  getActivePhotosEmbeddingProfile, getPhotosSemanticSettings, getPhotosSemanticStatus, type CyberOsDatabase
+  getActivePhotosEmbeddingProfile, getPhotosSemanticSettings, type CyberOsDatabase
 } from "@cyberos/db";
 import { PhotosEmbeddingClient, type PhotoQueryPage, type PhotoMapQueryResult, type PhotosSearchInfo } from "@cyberos/shared";
 import type { PhotosSearchInput, PhotosMapSearchInput } from "./photos-search-engine.js";
@@ -63,10 +63,9 @@ export class PhotosSearchService {
 
   private async context(text: string, signal: AbortSignal): Promise<{ search: PhotosSearchInfo; embedding?: number[] }> {
     const settings = getPhotosSemanticSettings(this.db);
-    const status = getPhotosSemanticStatus(this.db);
     const profile = getActivePhotosEmbeddingProfile(this.db);
     const search: PhotosSearchInfo = { mode: "lexical", semanticState: settings.enabled ? "unavailable" : "disabled",
-      indexed: status.indexed, total: status.total, embeddingSpaceId: profile?.embeddingSpaceId ?? null };
+      indexed: 0, total: 0, embeddingSpaceId: profile?.embeddingSpaceId ?? null };
     if (!settings.enabled || !profile) return { search };
     const normalized = text.normalize("NFKC").trim();
     const key = JSON.stringify([profile.embeddingSpaceId, normalized]);
@@ -171,9 +170,10 @@ function waitForSearch<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> 
 }
 
 function createReader(databasePath: string): Worker {
-  // Bound the reader's V8 heap as well as retained snapshots. The API and this
-  // thread share the service's 512 MiB systemd memory budget.
-  const resourceLimits = { maxOldGenerationSizeMb: 128, maxYoungGenerationSizeMb: 16 };
+  // Bound metadata/ranking allocations separately from SQLite's reclaimable
+  // file mappings. The API unit allows 2 GiB including mapped vector pages;
+  // vectors never enter the reader's 256 MiB JavaScript heap.
+  const resourceLimits = { maxOldGenerationSizeMb: 256, maxYoungGenerationSizeMb: 16 };
   if (import.meta.url.endsWith(".ts")) {
     const bootstrap = `import { register } from ${JSON.stringify(import.meta.resolve("tsx/esm/api"))};
       register(); await import(${JSON.stringify(new URL("./photos-search-worker.ts", import.meta.url).href)});`;

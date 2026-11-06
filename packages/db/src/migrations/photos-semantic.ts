@@ -87,4 +87,19 @@ WHEN old.content_hash IS NOT new.content_hash OR old.preview_key IS NOT new.prev
   UPDATE photos_embedding_runtime SET asset_revision=asset_revision+1 WHERE id=1;
 END;
 `
+
+}, {
+  id: "013_photos_search_corpus_revision",
+  sql: `
+CREATE TABLE photos_search_state (
+  id INTEGER PRIMARY KEY CHECK(id=1),
+  revision INTEGER NOT NULL DEFAULT 0
+);
+INSERT INTO photos_search_state(id) VALUES(1);
+${["photos_assets", "photos_asset_metadata", "photos_keywords", "photos_asset_embeddings", "photos_embedding_cache"].flatMap((table) =>
+    ["INSERT", "UPDATE", "DELETE"].map((event) => `CREATE TRIGGER photos_search_${table}_${event.toLowerCase()}
+AFTER ${event} ON ${table} BEGIN
+  UPDATE photos_search_state SET revision=revision+1 WHERE id=1;
+END;`)).join("\n")}
+`
 }];

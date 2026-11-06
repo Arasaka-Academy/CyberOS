@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import * as sqliteVec from "sqlite-vec";
-import { afterEach, beforeEach, expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { openCyberOsDb, savePhotosLibrarySettings, savePhotosSemanticSettings, activatePhotosEmbeddingModel, type CyberOsDatabase } from "@cyberos/db";
 import { PhotosSearchEngine } from "./photos-search-engine.js";
 
@@ -87,4 +87,24 @@ it("invalidates an existing snapshot when the preview processing version changes
   expect(first.nextCursor).toBeTruthy();
   db.prepare("UPDATE photos_assets SET derivative_schema_version=derivative_schema_version+1 WHERE id='a'").run();
   expect(() => engine.query({ ...input, request: { ...input.request, cursor: first.nextCursor } })).toThrow(/changed|expired/iu);
+});
+
+it("reuses the bounded search corpus across keywords and refreshes changed metadata", () => {
+  add("a"); add("b");
+  db.prepare(`INSERT INTO photos_asset_metadata(asset_id,schema_version,status,media_kind,capture_source,camera_model,
+    raw_metadata_json,warnings_json,updated_at) VALUES('a',2,'ready','image','file_mtime','Old Camera','{}','[]','2026-01-01')`).run();
+  const engine = new PhotosSearchEngine(db);
+  const input = { libraryUpdatedAt: library, request: { filters: { text: "海边" }, includeFacets: true }, search };
+  expect(engine.query(input).facets?.cameraModels).toEqual([{ value: "Old Camera", count: 1 }]);
+  const prepare = vi.spyOn(db, "prepare");
+  expect(engine.query({ ...input, request: { ...input.request, filters: { text: "边" } } }).total).toBe(2);
+  // Hot keyword searches must not rebuild full metadata aggregates in SQLite.
+  expect(prepare.mock.calls.some(([sql]) => sql.includes("AS iso_min"))).toBe(false);
+  prepare.mockRestore();
+  db.prepare("UPDATE photos_asset_metadata SET camera_model='New Camera' WHERE asset_id='a'").run();
+  expect(engine.query(input).facets?.cameraModels).toEqual([{ value: "New Camera", count: 1 }]);
+  db.prepare("UPDATE photos_assets SET name='山林.jpg' WHERE id='b'").run();
+  expect(engine.query(input).total).toBe(1);
+  db.prepare("INSERT INTO photos_keywords(asset_id,keyword,normalized_keyword) VALUES('b','海边','海边')").run();
+  expect(engine.query(input).total).toBe(2);
 });

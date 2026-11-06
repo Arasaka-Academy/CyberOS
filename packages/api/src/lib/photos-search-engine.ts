@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import {
-  getActivePhotosEmbeddingProfile, getPhotosEmbeddingRuntime, getPhotosSemanticSettings, getPhotosMetadataIndexStatus,
-  loadPhotosSearchFacets, photosQueryFingerprint, queryPhotosAssets, queryPhotosMap, rankPhotosSearchMatches,
+  getActivePhotosEmbeddingProfile, getPhotosEmbeddingRuntime, getPhotosSemanticSettings, getPhotosSemanticStatus, getPhotosMetadataIndexStatus,
+  PhotosSearchCorpusCache, photosCorpusFacets, loadPhotosSearchFacets, photosQueryFingerprint, queryPhotosAssets, queryPhotosMap, rankPhotosSearchMatches,
   type CyberOsDatabase
 } from "@cyberos/db";
 import type { PhotoMapQueryRequest, PhotoMapQueryResult, PhotoQueryPage, PhotoQueryRequest, PhotosSearchInfo } from "@cyberos/shared";
@@ -34,9 +34,13 @@ export class PhotosSearchCursorError extends Error {
 export class PhotosSearchEngine {
   private readonly snapshots = new Map<string, Snapshot>();
   private bytes = 0;
+  private readonly corpusCache = new PhotosSearchCorpusCache();
   private readonly now: () => number;
   constructor(private readonly db: CyberOsDatabase, options: { now?: () => number } = {}) {
     this.now = options.now ?? Date.now;
+    // File-backed mapping is reclaimable by Linux and avoids copying vector
+    // pages into the small SQLite page cache on every exact scan. Reader only.
+    this.db.pragma("mmap_size = 2147483648");
   }
 
   query(input: PhotosSearchInput): PhotoQueryPage {
@@ -48,15 +52,24 @@ export class PhotosSearchEngine {
     return this.db.transaction(() => {
       this.checkEmbeddingSpace(input);
       const { text: _text, ...filters } = input.request.filters ?? {};
-      const matches = rankPhotosSearchMatches(this.db, { ...input, request: {
+      const profile = getActivePhotosEmbeddingProfile(this.db);
+      const corpus = this.corpusCache.get(this.db, input.libraryUpdatedAt, profile?.embeddingSpaceId, profile?.dimensions);
+      const matches = rankPhotosSearchMatches(this.db, { ...input, corpus, request: {
         filters: { ...input.request.filters, location: input.request.bounds }
       } });
       return {
         clusters: queryPhotosMap(this.db, { libraryUpdatedAt: input.libraryUpdatedAt,
           request: { ...input.request, filters }, matchingIds: matches.map(({ id }) => id) }),
-        metadataIndex: getPhotosMetadataIndexStatus(this.db, input.libraryUpdatedAt), search: input.search
+        metadataIndex: corpus?.metadataIndex ?? getPhotosMetadataIndexStatus(this.db, input.libraryUpdatedAt), search: this.searchInfo(input, corpus?.searchCounts)
       };
     })();
+  }
+
+  private searchInfo(input: PhotosSearchInput | PhotosMapSearchInput, counts?: { indexed: number; total: number }): PhotosSearchInfo {
+    // Full-library counts belong on the reader too. The API must never scan
+    // every photo and failed task synchronously before posting a search.
+    const current = counts ?? getPhotosSemanticStatus(this.db);
+    return { ...input.search, indexed: current.indexed, total: current.total };
   }
 
   private checkEmbeddingSpace(input: PhotosSearchInput | PhotosMapSearchInput): void {
@@ -94,10 +107,12 @@ export class PhotosSearchEngine {
       // Move to the newest LRU position, without extending its lifetime.
       this.snapshots.delete(snapshot.id); this.snapshots.set(snapshot.id, snapshot);
     } else {
-      const matches = rankPhotosSearchMatches(this.db, input).map(({ id, score }) => ({ id, score }));
-      const facets = request.includeFacets ? loadPhotosSearchFacets(this.db, matches.map(({ id }) => id)) : null;
+      const corpus = this.corpusCache.get(this.db, input.libraryUpdatedAt, profile?.embeddingSpaceId, profile?.dimensions);
+      const matches = rankPhotosSearchMatches(this.db, { ...input, corpus });
+      const facets = request.includeFacets ? (corpus ? photosCorpusFacets(corpus, matches.map(({ id }) => id))
+        : loadPhotosSearchFacets(this.db, matches.map(({ id }) => id))) : null;
       snapshot = { id: randomUUID(), fingerprint, source, expires: this.now() + 300_000, matches, facets,
-        metadataIndex: getPhotosMetadataIndexStatus(this.db, input.libraryUpdatedAt), search: input.search,
+        metadataIndex: corpus?.metadataIndex ?? getPhotosMetadataIndexStatus(this.db, input.libraryUpdatedAt), search: this.searchInfo(input, corpus?.searchCounts),
         bytes: matches.reduce((bytes, match) => bytes + 160 + match.id.length * 2, 0) + Buffer.byteLength(JSON.stringify(facets)) * 2 + 2048 };
       if (snapshot.bytes > 32 * 1024 * 1024) throw new PhotosSearchCursorError("Photo search result exceeds snapshot memory limit", 503);
       this.snapshots.set(snapshot.id, snapshot); this.bytes += snapshot.bytes;
