@@ -166,7 +166,11 @@ export async function runBackup(input: BackupDependencies & { kind?: Exclude<Bac
     staging = runStaging;
     await createSqliteSnapshot(input.db, path.join(runStaging, "cyberos.sqlite"));
     const trashPath = path.join(input.config.paths.stateDir, "trash");
-    await access(trashPath).then(() => copyTreeNoSymlinks(trashPath, path.join(runStaging, "trash"))).catch(() => undefined);
+    const trashMetadata = await lstat(trashPath).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") return null;
+      throw error;
+    });
+    if (trashMetadata) await copyTreeNoSymlinks(trashPath, path.join(runStaging, "trash"));
     const manifest = await createManifest(run.id, dataRoot, runStaging);
     await writeFile(path.join(runStaging, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o600 });
     const snapshotIds: string[] = [];

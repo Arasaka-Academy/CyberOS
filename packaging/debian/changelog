@@ -1,3 +1,9 @@
+cyberos (2.3.7) unstable; urgency=medium
+
+  * Fail backups when trash files cannot be staged instead of verifying incomplete snapshots.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 15:46:42 +0000
+
 cyberos (2.3.6) unstable; urgency=medium
 
   * Allow safe storage paths whose names begin with two dots.
