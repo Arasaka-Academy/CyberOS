@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -184,6 +184,38 @@ describe("backup workflow", () => {
       snapshot: "snapshot-v2"
     }))
       .resolves.toMatchObject({ verified: true });
+  });
+
+  it("rejects restored checksum paths that escape staging through a parent symlink", async () => {
+    tempDir = await mkdtemp(path.join(os.tmpdir(), "cyberos-restore-symlink-"));
+    const root = path.join(tempDir, "root");
+    const repo = path.join(tempDir, "repo");
+    const outside = path.join(tempDir, "outside");
+    await Promise.all([mkdir(root), mkdir(repo), mkdir(outside)]);
+    const password = path.join(tempDir, "password");
+    await writeFile(password, "secret\n");
+    await writeFile(path.join(outside, "external.txt"), "external contents");
+    const restic = { run: async (args: string[]) => {
+      if (args[0] === "restore" && !args.includes("--dry-run")) {
+        const target = args[args.indexOf("--target") + 1]!;
+        await writeFile(path.join(target, "cyberos.sqlite"), "database");
+        await symlink(outside, path.join(target, "linked"));
+        await writeFile(path.join(target, "manifest.json"), JSON.stringify({
+          version: 2, runId: "linked-restore", dataRoot: root, database: "cyberos.sqlite",
+          checksums: {
+            "cyberos.sqlite": createHash("sha256").update("database").digest("hex"),
+            "linked/external.txt": createHash("sha256").update("external contents").digest("hex")
+          }
+        }));
+      }
+      return { stdout: "", stderr: "", code: 0 };
+    } };
+
+    await expect(restoreBackup({
+      config: config(root, repo, password), repositoryPath: repo, passwordFile: password,
+      restic, snapshot: "linked-snapshot"
+    })).rejects.toThrow("restore manifest path escapes staging");
+    expect(await readFile(path.join(outside, "external.txt"), "utf8")).toBe("external contents");
   });
 
   it("rejects v1 backup manifests", async () => {

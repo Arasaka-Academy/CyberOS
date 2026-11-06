@@ -1,3 +1,9 @@
+cyberos (2.3.11) unstable; urgency=medium
+
+  * Reject restore manifest paths escaping staging through symlinks
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 15:57:07 +0000
+
 cyberos (2.3.10) unstable; urgency=medium
 
   * Use saved backup settings for scheduled health evaluation

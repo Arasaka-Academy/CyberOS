@@ -524,6 +524,7 @@ async function validateManifest(manifest: BackupManifest, manifestRoot: string, 
   if (!entries.some(([relativePath]) => relativePath === manifest.database)) {
     throw new Error("restore manifest database checksum missing");
   }
+  const stagingRoot = await realpath(manifestRoot);
   for (const [relativePath, expectedHash] of entries) {
     if (!/^[a-f0-9]{64}$/u.test(expectedHash)) {
       throw new Error("restore manifest checksum is invalid");
@@ -533,7 +534,11 @@ async function validateManifest(manifest: BackupManifest, manifestRoot: string, 
     if (!entryStat?.isFile() || entryStat.isSymbolicLink()) {
       throw new Error(`restore manifest file missing: ${relativePath}`);
     }
-    const actualHash = await hashFile(absolutePath);
+    const resolvedPath = await realpath(absolutePath);
+    if (!resolvedPath.startsWith(`${stagingRoot}${path.sep}`)) {
+      throw new Error("restore manifest path escapes staging");
+    }
+    const actualHash = await hashFile(resolvedPath);
     if (actualHash !== expectedHash) {
       throw new Error(`restore manifest checksum mismatch: ${relativePath}`);
     }
