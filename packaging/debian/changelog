@@ -1,3 +1,9 @@
+cyberos (2.3.5) unstable; urgency=medium
+
+  * Show correct Photos empty search guidance and record 2B rollout acceptance.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 09:55:46 +0000
+
 cyberos (2.3.4) unstable; urgency=medium
 
   * Keep photo browsing local when semantic search is enabled; verify indexing fault recovery and document the 2B production rollout.
