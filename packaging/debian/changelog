@@ -1,3 +1,9 @@
+cyberos (2.3.13) unstable; urgency=medium
+
+  * Report backup targets as unavailable when their required mount is absent
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:00:18 +0000
+
 cyberos (2.3.12) unstable; urgency=medium
 
   * Apply MCP network restrictions to IPv6 metadata and mapped IPv4 addresses

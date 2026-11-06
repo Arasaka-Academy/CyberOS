@@ -354,7 +354,16 @@ async function inspectBackupTarget(
 ): Promise<StoragePoolReadiness | null> {
   if (!config.backup.enabled) return null;
   try {
-    await access(config.backup.repositoryPath ?? "", fsConstants.R_OK | fsConstants.W_OK);
+    const repositoryPath = config.backup.repositoryPath;
+    if (!repositoryPath) throw new Error("backup repository is not configured");
+    const metadata = await lstat(repositoryPath);
+    if (!metadata.isDirectory() || metadata.isSymbolicLink()) {
+      throw new Error("backup repository must be a real directory");
+    }
+    await access(repositoryPath, fsConstants.R_OK | fsConstants.W_OK);
+    if (config.backup.requireMount && !(await mountedPaths()).has(await realpath(repositoryPath))) {
+      throw new Error("backup repository is not mounted");
+    }
     return {
       storagePoolId: "backup",
       status: "ready",
