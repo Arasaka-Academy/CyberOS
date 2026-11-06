@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import * as sqliteVec from "sqlite-vec";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { PHOTOS_METADATA_SCHEMA_VERSION } from "@cyberos/shared";
 import { openCyberOsDb, savePhotosLibrarySettings, savePhotosSemanticSettings, activatePhotosEmbeddingModel, type CyberOsDatabase } from "@cyberos/db";
 import { PhotosSearchEngine } from "./photos-search-engine.js";
 
@@ -52,7 +53,7 @@ it("counts facets and map matches from the same filtered keyword result", () => 
   add("a"); add("b"); add("c");
   const insert = db.prepare(`INSERT INTO photos_asset_metadata(asset_id,schema_version,status,media_kind,capture_source,
     camera_model,rating,iso,gps_latitude,gps_longitude,raw_metadata_json,warnings_json,updated_at)
-    VALUES(?,2,'ready','image','file_mtime',?,?,?,30,120,'{}','[]','2026-01-01')`);
+    VALUES(?,${PHOTOS_METADATA_SCHEMA_VERSION},'ready','image','file_mtime',?,?,?,30,120,'{}','[]','2026-01-01')`);
   insert.run("a", "Camera A", 5, 100); insert.run("b", "Camera B", 3, 400); insert.run("c", "Camera A", 5, 800);
   db.prepare(`INSERT INTO photos_geo_index(metadata_rowid,min_latitude,max_latitude,min_longitude,max_longitude)
     SELECT rowid,30,30,120,120 FROM photos_asset_metadata`).run();
@@ -92,7 +93,7 @@ it("invalidates an existing snapshot when the preview processing version changes
 it("reuses the bounded search corpus across keywords and refreshes changed metadata", () => {
   add("a"); add("b");
   db.prepare(`INSERT INTO photos_asset_metadata(asset_id,schema_version,status,media_kind,capture_source,camera_model,
-    raw_metadata_json,warnings_json,updated_at) VALUES('a',2,'ready','image','file_mtime','Old Camera','{}','[]','2026-01-01')`).run();
+    raw_metadata_json,warnings_json,updated_at) VALUES('a',${PHOTOS_METADATA_SCHEMA_VERSION},'ready','image','file_mtime','Old Camera','{}','[]','2026-01-01')`).run();
   const engine = new PhotosSearchEngine(db);
   const input = { libraryUpdatedAt: library, request: { filters: { text: "海边" }, includeFacets: true }, search };
   expect(engine.query(input).facets?.cameraModels).toEqual([{ value: "Old Camera", count: 1 }]);

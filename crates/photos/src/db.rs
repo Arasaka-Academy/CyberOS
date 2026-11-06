@@ -11,7 +11,7 @@ use tokio::sync::oneshot;
 use uuid::Uuid;
 
 use crate::error::{ErrorCode, PhotosError};
-use crate::media::{MediaKind, ProcessedMedia};
+use crate::media::{METADATA_SCHEMA_VERSION, MediaKind, ProcessedMedia};
 use crate::storage::FileIdentity;
 
 type DbResult<T> = Result<T, PhotosError>;
@@ -575,8 +575,8 @@ impl Db {
             let transaction = connection.transaction_with_behavior(TransactionBehavior::Immediate).map_err(PhotosError::database)?;
             ensure_job_owned(&transaction, &job.id, &worker_id)?;
             let matched: bool = transaction.query_row(
-                "SELECT EXISTS(SELECT 1 FROM photos_assets a JOIN photos_asset_metadata m ON m.asset_id = a.id WHERE a.storage_pool_id = ? AND a.path = ? AND a.status = 'ready' AND a.source_device = ? AND a.source_inode = ? AND a.source_size_bytes = ? AND a.source_mtime_ns = ? AND a.source_ctime_ns = ? AND a.derivative_schema_version = 1 AND m.schema_version = 2 AND a.sidecar_path IS ? AND a.sidecar_device IS ? AND a.sidecar_inode IS ? AND a.sidecar_size_bytes IS ? AND a.sidecar_mtime_ns IS ? AND a.sidecar_ctime_ns IS ?)",
-                params![job.storage_pool_id, path, source.device as i64, source.inode as i64, source.size as i64, source.mtime_ns, source.ctime_ns, sidecar_path, sidecar_identity.map(|v| v.device as i64), sidecar_identity.map(|v| v.inode as i64), sidecar_identity.map(|v| v.size as i64), sidecar_identity.map(|v| v.mtime_ns), sidecar_identity.map(|v| v.ctime_ns)],
+                "SELECT EXISTS(SELECT 1 FROM photos_assets a JOIN photos_asset_metadata m ON m.asset_id = a.id WHERE a.storage_pool_id = ? AND a.path = ? AND a.status = 'ready' AND a.source_device = ? AND a.source_inode = ? AND a.source_size_bytes = ? AND a.source_mtime_ns = ? AND a.source_ctime_ns = ? AND a.derivative_schema_version = 1 AND m.schema_version = ? AND a.sidecar_path IS ? AND a.sidecar_device IS ? AND a.sidecar_inode IS ? AND a.sidecar_size_bytes IS ? AND a.sidecar_mtime_ns IS ? AND a.sidecar_ctime_ns IS ?)",
+                params![job.storage_pool_id, path, source.device as i64, source.inode as i64, source.size as i64, source.mtime_ns, source.ctime_ns, METADATA_SCHEMA_VERSION, sidecar_path, sidecar_identity.map(|v| v.device as i64), sidecar_identity.map(|v| v.inode as i64), sidecar_identity.map(|v| v.size as i64), sidecar_identity.map(|v| v.mtime_ns), sidecar_identity.map(|v| v.ctime_ns)],
                 |row| row.get(0),
             ).map_err(PhotosError::database)?;
             if matched {

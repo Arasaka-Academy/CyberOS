@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import * as sqliteVec from "sqlite-vec";
 import { afterEach, beforeEach, expect, it } from "vitest";
-import type { PhotosQueryRequest } from "@cyberos/shared";
+import { PHOTOS_METADATA_SCHEMA_VERSION, type PhotosQueryRequest } from "@cyberos/shared";
 import { activatePhotosEmbeddingModel, openCyberOsDb, savePhotosLibrarySettings, savePhotosSemanticSettings,
   type CyberOsDatabase } from "./index.js";
 import { loadPhotosSearchFacets, photosCorpusFacets, PhotosSearchCorpusCache, rankPhotosSearchMatches } from "./repositories/photos-search.js";
@@ -28,7 +28,7 @@ beforeEach(async () => {
     const id = `photo-${i}`;
     const content = i === 1 ? "photo-0" : id;
     asset.run(id, `${id}.jpg`, i === 3 ? "ÎSAAB.jpg" : i < 6 ? `海边-${i}.jpg` : `mountain-${i}.jpg`, content, content, library);
-    if (i !== 8) metadata.run(id, i === 9 ? 1 : 2, i % 2 ? "Camera B" : "Camera A", i % 6, 100 + i);
+    if (i !== 8) metadata.run(id, i === 9 ? PHOTOS_METADATA_SCHEMA_VERSION - 1 : PHOTOS_METADATA_SCHEMA_VERSION, i % 2 ? "Camera B" : "Camera A", i % 6, 100 + i);
     if (i !== 1 && i !== 10) cache.run(`${content}:1:${content}`, Buffer.from(new Float32Array(i < 7 ? [1, 0] : [0, 1]).buffer));
     if (i !== 10) db.prepare("INSERT INTO photos_asset_embeddings VALUES(?, 'space', ?)").run(id, `${content}:1:${content}`);
   }

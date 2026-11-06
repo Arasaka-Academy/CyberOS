@@ -17,7 +17,7 @@ use crate::error::{ErrorCode, PhotosError};
 use crate::storage::FileIdentity;
 
 const PIPELINE_VERSION: u32 = 1;
-pub const METADATA_SCHEMA_VERSION: u32 = 2;
+pub const METADATA_SCHEMA_VERSION: u32 = 3;
 const MAX_METADATA_LEAVES: usize = 4096;
 const MAX_METADATA_SCALAR_BYTES: usize = 64 * 1024;
 const MAX_METADATA_JSON_BYTES: usize = 512 * 1024;
@@ -905,14 +905,12 @@ fn normalize_metadata(
     }
     let (captured_at, captured_at_local, capture_offset_minutes, capture_source) =
         capture_time(&groups, mtime_ns);
-    let keywords = metadata_strings(
-        &groups,
-        &["XMP:Subject", "IPTC:Keywords", "sidecar_xmp:XMP:Subject"],
-    )
-    .into_iter()
-    .collect::<BTreeSet<_>>()
-    .into_iter()
-    .collect();
+    let keywords = ["XMP:Subject", "IPTC:Keywords", "sidecar_xmp:XMP:Subject"]
+        .into_iter()
+        .flat_map(|key| metadata_strings(&groups, &[key]))
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect();
     let video_stream = probe
         .and_then(|value| value.get("streams"))
         .and_then(Value::as_array)
@@ -1329,18 +1327,45 @@ fn dimensions(
     }
 }
 
+fn metadata_values<'a>(
+    groups: &'a BTreeMap<String, BTreeMap<String, Vec<Value>>>,
+    key: &str,
+) -> Option<&'a Vec<Value>> {
+    let (source, field) = key.split_once(':')?;
+    let source = source.to_ascii_lowercase();
+    if let Some(group) = groups.get(&source) {
+        if let Some(values) = group.get(field) {
+            return Some(values);
+        }
+        if source == "sidecar_xmp" {
+            let (family, tag) = field.split_once(':')?;
+            if family == "XMP" {
+                return group.iter().find_map(|(key, values)| {
+                    let (group, field) = key.split_once(':')?;
+                    (group.starts_with("XMP-") && field == tag).then_some(values)
+                });
+            }
+        }
+    }
+    // ExifTool -G1 preserves XMP namespaces such as XMP-dc and XMP-xmp.
+    // Resolve those names for normalized fields without changing raw metadata.
+    if source == "xmp" {
+        return groups.iter().find_map(|(group, fields)| {
+            group
+                .starts_with("xmp-")
+                .then(|| fields.get(field))
+                .flatten()
+        });
+    }
+    None
+}
+
 fn metadata_strings(
     groups: &BTreeMap<String, BTreeMap<String, Vec<Value>>>,
     keys: &[&str],
 ) -> Vec<String> {
     for key in keys {
-        let Some((source, field)) = key.split_once(':') else {
-            continue;
-        };
-        if let Some(found) = groups
-            .get(&source.to_ascii_lowercase())
-            .and_then(|group| group.get(field))
-        {
+        if let Some(found) = metadata_values(groups, key) {
             let values: Vec<_> = found
                 .iter()
                 .filter_map(|value| {
@@ -1368,10 +1393,7 @@ fn metadata_string(
         .next()
         .or_else(|| {
             keys.iter().find_map(|key| {
-                let (source, field) = key.split_once(':')?;
-                groups
-                    .get(&source.to_ascii_lowercase())?
-                    .get(field)?
+                metadata_values(groups, key)?
                     .iter()
                     .find_map(|value| value.as_f64().map(|value| value.to_string()))
             })
@@ -1382,14 +1404,8 @@ fn metadata_number(
     groups: &BTreeMap<String, BTreeMap<String, Vec<Value>>>,
     keys: &[&str],
 ) -> Option<f64> {
-    keys.iter().find_map(|key| {
-        let (source, field) = key.split_once(':')?;
-        groups
-            .get(&source.to_ascii_lowercase())?
-            .get(field)?
-            .iter()
-            .find_map(number_value)
-    })
+    keys.iter()
+        .find_map(|key| metadata_values(groups, key)?.iter().find_map(number_value))
 }
 
 fn number_value(value: &Value) -> Option<f64> {
@@ -1759,6 +1775,53 @@ mod tests {
         let result =
             sidecar_associations(&["a.jpg".into(), "A.JPG.XMP".into(), "a.jpg.xmp".into()]);
         assert!(result["a.jpg"].is_err());
+    }
+
+    #[test]
+    fn normalizes_family_one_xmp_tags_and_keeps_sidecar_precedence() {
+        let embedded = serde_json::json!({
+            "XMP-dc:Subject": ["内嵌标签"],
+            "XMP-dc:Title": "内嵌标题",
+            "XMP-xmp:Rating": 2,
+            "XMP-xmp:CreateDate": "2025-01-02T03:04:05+08:00"
+        });
+        let metadata = normalize_metadata(
+            MediaKind::Image,
+            embedded.clone(),
+            None,
+            None,
+            0,
+            None,
+            Vec::new(),
+        );
+        assert_eq!(metadata.keywords, vec!["内嵌标签"]);
+        assert_eq!(metadata.rating, Some(2.0));
+        assert_eq!(metadata.capture_source, "embedded_xmp");
+
+        let metadata = normalize_metadata(
+            MediaKind::Image,
+            embedded,
+            Some(serde_json::json!({
+                "XMP-dc:Subject": ["验收标签"],
+                "XMP-dc:Title": "边车标题",
+                "XMP-xmp:Rating": 5,
+                "XMP-xmp:CreateDate": "2026-02-03T04:05:06+08:00"
+            })),
+            None,
+            0,
+            None,
+            Vec::new(),
+        );
+        assert!(metadata.keywords.contains(&"验收标签".to_owned()));
+        assert_eq!(metadata.title.as_deref(), Some("边车标题"));
+        assert_eq!(metadata.rating, Some(5.0));
+        assert_eq!(metadata.capture_source, "sidecar_xmp");
+        assert_eq!(
+            metadata.captured_at.as_deref(),
+            Some("2026-02-03T04:05:06+08:00")
+        );
+        assert_eq!(metadata.capture_offset_minutes, Some(480));
+        assert_eq!(metadata.raw_metadata["sidecar_xmp"]["XMP-xmp:Rating"][0], 5);
     }
 
     #[test]

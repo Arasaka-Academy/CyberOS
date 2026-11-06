@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import * as sqliteVec from "sqlite-vec";
+import { PHOTOS_METADATA_SCHEMA_VERSION } from "@cyberos/shared";
 import {
   openCyberOsDb, savePhotosLibrarySettings,
   getPhotosSemanticSettings, savePhotosSemanticSettings, publicPhotosSemanticSettings,
@@ -48,7 +49,7 @@ describe("Photos semantic index", () => {
   it("unions lexical and visual matches, applying metadata filters before scoring", () => {
     asset("海边日落"); asset("semantic"); asset("unrelated"); enable();
     db.prepare(`INSERT INTO photos_asset_metadata(asset_id,schema_version,status,media_kind,capture_source,raw_metadata_json,warnings_json,updated_at)
-      SELECT id,2,'ready','image','file_mtime','{}','[]','2026-01-01' FROM photos_assets`).run();
+      SELECT id,${PHOTOS_METADATA_SCHEMA_VERSION},'ready','image','file_mtime','{}','[]','2026-01-01' FROM photos_assets`).run();
     db.prepare("UPDATE photos_assets SET taken_at='2024-01-01' WHERE id='海边日落'").run();
     reconcilePhotosEmbeddingJobs(db);
     for (let n = 0; n < 3; n++) {
