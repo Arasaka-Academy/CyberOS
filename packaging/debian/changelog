@@ -1,3 +1,9 @@
+cyberos (2.3.16) unstable; urgency=medium
+
+  * Preserve a live hostd socket when another instance starts
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:06:28 +0000
+
 cyberos (2.3.15) unstable; urgency=medium
 
   * Disable repository text conversion and external diff programs in restricted Git queries

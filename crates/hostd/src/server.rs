@@ -1,4 +1,4 @@
-use std::os::unix::fs::{FileTypeExt, PermissionsExt};
+use std::os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt};
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
@@ -169,7 +169,24 @@ async fn bind_socket(path: &Path, group: &str) -> Result<UnixListener, HostdErro
         fs::create_dir_all(parent).await?;
     }
     match fs::symlink_metadata(path).await {
-        Ok(metadata) if metadata.file_type().is_socket() => fs::remove_file(path).await?,
+        Ok(metadata) if metadata.file_type().is_socket() => {
+            match timeout(FRAME_TIMEOUT, UnixStream::connect(path)).await {
+                Ok(Ok(_)) => return Err(HostdError::conflict("Another hostd instance is running")),
+                Ok(Err(error)) if error.kind() == std::io::ErrorKind::ConnectionRefused => {
+                    let current = fs::symlink_metadata(path).await?;
+                    if current.dev() != metadata.dev() || current.ino() != metadata.ino() {
+                        return Err(HostdError::conflict("hostd socket changed during startup"));
+                    }
+                    fs::remove_file(path).await?;
+                }
+                Ok(Err(error)) => return Err(error.into()),
+                Err(_) => {
+                    return Err(HostdError::unavailable(
+                        "Could not verify existing hostd socket",
+                    ));
+                }
+            }
+        }
         Ok(_) => {
             return Err(HostdError::validation(
                 "hostd socket path is occupied by a non-socket",
@@ -441,6 +458,24 @@ mod tests {
     use std::path::Path;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use tempfile::TempDir;
+
+    #[tokio::test]
+    async fn preserves_a_live_socket_and_recovers_an_abandoned_socket() {
+        let directory = TempDir::new().unwrap();
+        let path = directory.path().join("hostd.sock");
+        let first = UnixListener::bind(&path).unwrap();
+        let result = bind_socket(&path, "cyberos-nonexistent-test-group").await;
+        assert!(
+            result.is_err(),
+            "a second instance must not replace the live socket"
+        );
+        let error = result.unwrap_err();
+        assert_eq!(error.code, ErrorCode::Conflict);
+        assert!(UnixStream::connect(&path).await.is_ok());
+        drop(first);
+        let recovered = bind_socket(&path, "cyberos-nonexistent-test-group").await;
+        assert!(recovered.is_ok(), "an abandoned socket should be recovered");
+    }
 
     #[derive(Default)]
     struct FakeRunner {
