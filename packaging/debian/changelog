@@ -1,3 +1,9 @@
+cyberos (2.3.23) unstable; urgency=medium
+
+  * Resolve bracketed IPv6 download hosts as literal addresses.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:30:51 +0000
+
 cyberos (2.3.22) unstable; urgency=medium
 
   * Avoid counting Linux guest CPU time twice in host utilization.

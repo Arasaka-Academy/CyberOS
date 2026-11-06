@@ -1,6 +1,6 @@
 [package]
 name = "cyberos-bluetoothd"
-version = "2.3.22"
+version = "2.3.23"
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
