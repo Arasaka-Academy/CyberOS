@@ -33,9 +33,12 @@ impl TmuxManager {
     pub async fn ensure_available(&self) -> Result<(), TerminalError> {
         let mut command = Command::new("tmux");
         command.arg("-V");
-        let output = timeout(COMMAND_TIMEOUT, command.output())
-            .await
-            .map_err(|_| TerminalError::timeout("Timed out checking tmux availability"))??;
+        let output = command_output(
+            &mut command,
+            COMMAND_TIMEOUT,
+            "Timed out checking tmux availability",
+        )
+        .await?;
         if !output.status.success() {
             return Err(TerminalError::unavailable(
                 "tmux is required for persistent terminal sessions",
@@ -270,10 +273,7 @@ impl TmuxManager {
         let mut command = Command::new("tmux");
         command.arg("-S").arg(&self.socket_path).args(arguments);
         self.configure_environment(&mut command);
-        timeout(COMMAND_TIMEOUT, command.output())
-            .await
-            .map_err(|_| TerminalError::timeout("tmux command timed out"))?
-            .map_err(Into::into)
+        command_output(&mut command, COMMAND_TIMEOUT, "tmux command timed out").await
     }
 
     fn configure_environment(&self, command: &mut Command) {
@@ -286,6 +286,18 @@ impl TmuxManager {
             .env("PWD", &self.account.home)
             .env("TERM", "xterm-256color");
     }
+}
+
+async fn command_output(
+    command: &mut Command,
+    duration: Duration,
+    timeout_message: &str,
+) -> Result<std::process::Output, TerminalError> {
+    command.kill_on_drop(true);
+    timeout(duration, command.output())
+        .await
+        .map_err(|_| TerminalError::timeout(timeout_message))?
+        .map_err(Into::into)
 }
 
 fn command_error(context: &str, stderr: &[u8]) -> TerminalError {
@@ -324,6 +336,40 @@ fn current_time_ms() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn timed_out_command_does_not_leave_a_running_client() {
+        use nix::sys::signal::{Signal, kill};
+        use nix::unistd::Pid;
+
+        struct ChildGuard(Pid);
+        impl Drop for ChildGuard {
+            fn drop(&mut self) {
+                let _ = kill(self.0, Signal::SIGKILL);
+            }
+        }
+
+        let directory = tempfile::tempdir().unwrap();
+        let pid_file = directory.path().join("client.pid");
+        let mut command = Command::new("sh");
+        command.args(["-c", "echo $$ > \"$1\"; exec sleep 60", "sh"]);
+        command.arg(&pid_file);
+        let result = command_output(&mut command, Duration::from_millis(200), "timeout").await;
+        let pid: i32 = std::fs::read_to_string(pid_file)
+            .unwrap()
+            .trim()
+            .parse()
+            .unwrap();
+        let guard = ChildGuard(Pid::from_raw(pid));
+        assert_eq!(result.unwrap_err().code, crate::error::ErrorCode::Timeout);
+        let stopped = timeout(Duration::from_secs(2), async {
+            while kill(guard.0, None).is_ok() {
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await;
+        assert!(stopped.is_ok(), "timed-out command is still running");
+    }
 
     #[test]
     fn recognizes_managed_names_and_missing_sessions() {
