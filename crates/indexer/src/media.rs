@@ -294,7 +294,7 @@ impl TmdbClient {
                 );
             }
         }
-        let response = self
+        let mut response = self
             .client
             .get(url)
             .bearer_auth(&self.token)
@@ -307,10 +307,17 @@ impl TmdbClient {
                 response.status().as_u16()
             )));
         }
-        let bytes = response
-            .bytes()
+        let mut bytes = Vec::new();
+        while let Some(chunk) = response
+            .chunk()
             .await
-            .map_err(|_| tmdb_error("TMDB response could not be read"))?;
+            .map_err(|_| tmdb_error("TMDB response could not be read"))?
+        {
+            if bytes.len() + chunk.len() > 2 * 1024 * 1024 {
+                return Err(tmdb_error("TMDB search response too large"));
+            }
+            bytes.extend_from_slice(&chunk);
+        }
         serde_json::from_slice::<TmdbSearchResponse>(&bytes)
             .map(|response| response.results)
             .map_err(|_| tmdb_error("TMDB response was invalid"))
@@ -1250,6 +1257,46 @@ fn tmdb_error(message: impl Into<String>) -> IndexerError {
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn bounds_tmdb_search_response_before_parsing() {
+        use super::*;
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        if rustls::crypto::CryptoProvider::get_default().is_none() {
+            let _ = rustls::crypto::ring::default_provider().install_default();
+        }
+        for padding in [0, 2 * 1024 * 1024] {
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let address = listener.local_addr().unwrap();
+            let server = tokio::spawn(async move {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                let mut request = [0; 4096];
+                let _ = stream.read(&mut request).await.unwrap();
+                let body = format!(r#"{{"results":[],"padding":"{}"}}"#, "x".repeat(padding));
+                let header = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                    body.len()
+                );
+                let _ = stream.write_all(header.as_bytes()).await;
+                let _ = stream.write_all(body.as_bytes()).await;
+            });
+            let client = TmdbClient {
+                client: reqwest::Client::builder()
+                    .no_proxy()
+                    .timeout(Duration::from_secs(3))
+                    .build()
+                    .unwrap(),
+                base_url: Url::parse(&format!("http://{address}/")).unwrap(),
+                token: "test".to_owned(),
+                language: "zh-CN".to_owned(),
+                region: None,
+            };
+            let result = client.search("movie", "title", None).await;
+            server.await.unwrap();
+            assert_eq!(result.is_err(), padding > 0, "{result:?}");
+        }
+    }
+
     use super::*;
 
     #[test]

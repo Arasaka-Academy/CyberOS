@@ -1,6 +1,6 @@
 [package]
 name = "cyberos-vod-player"
-version = "2.3.27"
+version = "2.3.28"
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true

@@ -1,3 +1,9 @@
+cyberos (2.3.28) unstable; urgency=medium
+
+  * Bound TMDB search response memory before parsing JSON.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:45:13 +0000
+
 cyberos (2.3.27) unstable; urgency=medium
 
   * Reject special files without blocking indexing, photo processing, or downloads.
