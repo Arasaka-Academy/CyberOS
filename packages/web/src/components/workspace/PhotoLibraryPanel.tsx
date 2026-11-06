@@ -81,7 +81,7 @@ import {
   type StorageFilePickerPool
 } from "./StorageFilePickerDialog.js";
 import { PhotoMapView } from "./PhotoMapView.js";
-import { PhotoSearchFilterMenu } from "./PhotoSearchFilterMenu.js";
+import { PhotoSearchFilterMenu, photoFilterMenuIsActive } from "./PhotoSearchFilterMenu.js";
 
 export const PHOTO_ACCEPT = PHOTOS_UPLOAD_EXTENSIONS.join(",");
 
@@ -197,6 +197,7 @@ export function PhotoLibraryPanel({
   const lightboxMediaKind = lightboxPhoto ? photoMediaKindForAsset(lightboxPhoto) : null;
   const statusBusy = isPhotoBusy(status?.state);
   const queryFilters = useMemo(() => readyPhotoQueryFilters(filters, metadataFields), [filters, metadataFields]);
+  const hasQueryFilters = Boolean(queryFilters.text?.trim()) || photoFilterMenuIsActive(queryFilters);
   const effectiveSortField = sortField === "relevance" && !queryFilters.text?.trim() ? "captured_at" : sortField;
   const queryKey = useMemo(() => JSON.stringify({ filters: queryFilters, sortField: effectiveSortField, sortDirection }), [queryFilters, sortDirection, effectiveSortField]);
   const runtimeAlert = photoRuntimeAlert(status, workerHealth);
@@ -991,9 +992,9 @@ export function PhotoLibraryPanel({
           />
         ) : photos.length === 0 ? (
           <div className="workspace-empty-state photo-library-empty" role="status">
-            {statusBusy ? <LoaderCircle className="is-spinning" aria-hidden="true" size={30} /> : <ImageOff aria-hidden="true" size={30} />}
-            <strong>{statusBusy ? t("workspace.photos.scanningTitle") : t("workspace.photos.emptyTitle")}</strong>
-            <p>{statusBusy ? t("workspace.photos.scanningBody", { count: status?.scanned ?? 0 }) : t("workspace.photos.emptyBody")}</p>
+            {statusBusy && !hasQueryFilters ? <LoaderCircle className="is-spinning" aria-hidden="true" size={30} /> : <ImageOff aria-hidden="true" size={30} />}
+            <strong>{hasQueryFilters ? t("workspace.photos.noResultsTitle") : statusBusy ? t("workspace.photos.scanningTitle") : t("workspace.photos.emptyTitle")}</strong>
+            <p>{hasQueryFilters ? t("workspace.photos.noResultsBody") : statusBusy ? t("workspace.photos.scanningBody", { count: status?.scanned ?? 0 }) : t("workspace.photos.emptyBody")}</p>
           </div>
         ) : (
           <div className="photo-timeline">

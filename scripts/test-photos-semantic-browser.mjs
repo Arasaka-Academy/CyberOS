@@ -53,7 +53,7 @@ before(async () => {
 });
 after(async () => { await browser?.close(); await server?.close(); });
 
-async function open(t, { width = 1440, zh = false, failInitial = false, library = false } = {}) {
+async function open(t, { width = 1440, zh = false, failInitial = false, library = false, photoState = "ready" } = {}) {
   const context = await browser.newContext({ viewport: { width, height: 900 } });
   const page = await context.newPage(); page.setDefaultTimeout(10_000);
   const errors = []; page.on("pageerror", error => errors.push(error.message));
@@ -65,7 +65,7 @@ async function open(t, { width = 1440, zh = false, failInitial = false, library 
     const request = route.request(), path = new URL(request.url()).pathname;
     if (path === "/api/photos/settings") return route.fulfill({ json: { settings: { storagePoolId: "pool", path: "Photos", updatedAt: "2026-01-01" } } });
     if (path === "/api/photos/status") { statusReads++; return route.fulfill({ json: {
-      status: { state: "ready", total: 120, failed: 0, scanned: 120, processed: 120, updatedAt: "2026-01-01" },
+      status: { state: photoState, total: 120, failed: 0, scanned: 120, processed: 120, updatedAt: "2026-01-01" },
       workerHealth: { status: "ready", freshWorkers: 1, activeJobs: 0, queuedJobs: 0, retryingJobs: 0 }, semanticIndex: status
     } }); }
     if (path === "/api/photos/metadata/fields") return route.fulfill({ json: { fields: [] } });
@@ -126,12 +126,27 @@ test("keyword searches cancel obsolete requests, prefer relevance and show empty
   await expect(page.locator(".photo-name").first()).toHaveText("fast-0.jpg");
   await input.fill("none"); await input.press("Enter");
   await expect(page.locator(".photo-tile")).toHaveCount(0);
+  await expect(page.locator(".photo-library-empty strong")).toHaveText("No matching media");
+  await expect(page.locator(".photo-library-empty p")).toHaveText("Try another keyword or adjust your filters.");
   await expect(page.locator(".photo-semantic-status")).toContainText("temporarily unavailable");
   await input.fill(""); await input.press("Enter");
   await expect(page.locator(".photo-name").first()).toHaveText("browse-0.jpg");
   assert.equal(queries.at(-1).sort.field, "captured_at");
   assert.deepEqual(await page.evaluate(() => globalThis.__photoErrors), []);
 });
+
+for (const zh of [false, true]) {
+  test(`unmatched keywords show search guidance during scanning in ${zh ? "Chinese" : "English"}`, async t => {
+    const { page } = await open(t, { library: true, width: 390, zh, photoState: "scanning" });
+    await expect(page.locator(".photo-tile")).toHaveCount(2);
+    const input = page.locator('input[type="search"]');
+    await input.fill("none"); await input.press("Enter");
+    await expect(page.locator(".photo-tile")).toHaveCount(0);
+    await expect(page.locator(".photo-library-empty strong")).toHaveText(zh ? "没有匹配的媒体" : "No matching media");
+    await expect(page.locator(".photo-library-empty p")).toHaveText(zh ? "试试其他关键词或调整筛选条件。" : "Try another keyword or adjust your filters.");
+    assert.equal(await page.evaluate(() => globalThis.document.documentElement.scrollWidth > globalThis.innerWidth), false);
+  });
+}
 
 test("a background index update preserves a paginated result and selection", async t => {
   const { page, queries, statusReads } = await open(t, { library: true, width: 820 });
