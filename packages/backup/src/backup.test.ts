@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, open, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -185,6 +185,41 @@ describe("backup workflow", () => {
     }))
       .resolves.toMatchObject({ verified: true });
   });
+
+  it("verifies restored files larger than the whole-file read limit", async () => {
+    tempDir = await mkdtemp(path.join(os.tmpdir(), "cyberos-restore-large-"));
+    const root = path.join(tempDir, "root");
+    const repo = path.join(tempDir, "repo");
+    const password = path.join(tempDir, "password");
+    await Promise.all([mkdir(root), mkdir(repo), writeFile(password, "test")]);
+    const size = 2 ** 31 + 1;
+    const zeros = Buffer.alloc(8 * 1024 * 1024);
+    const checksum = createHash("sha256");
+    for (let offset = 0; offset < size; offset += zeros.length) {
+      checksum.update(zeros.subarray(0, Math.min(zeros.length, size - offset)));
+    }
+    const checksums = {
+      "cyberos.sqlite": createHash("sha256").update("database").digest("hex"),
+      "large.bin": checksum.digest("hex")
+    };
+    const restic = { run: async (args: string[]) => {
+      if (args[0] === "restore" && !args.includes("--dry-run")) {
+        const target = args[args.indexOf("--target") + 1]!;
+        const handle = await open(path.join(target, "large.bin"), "w");
+        try { await handle.truncate(size); } finally { await handle.close(); }
+        await writeFile(path.join(target, "cyberos.sqlite"), "database");
+        await writeFile(path.join(target, "manifest.json"), JSON.stringify({
+          version: 2, runId: "large-file", database: "cyberos.sqlite", dataRoot: root, checksums
+        }));
+      }
+      return { code: 0, stdout: "", stderr: "" };
+    } };
+
+    await expect(restoreBackup({
+      config: config(root, repo, password), repositoryPath: repo, passwordFile: password,
+      snapshot: "large-file", restic
+    })).resolves.toMatchObject({ verified: true });
+  }, 30_000);
 
   it("rejects restored checksum paths that escape staging through a parent symlink", async () => {
     tempDir = await mkdtemp(path.join(os.tmpdir(), "cyberos-restore-symlink-"));

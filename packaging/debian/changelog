@@ -1,3 +1,9 @@
+cyberos (2.3.18) unstable; urgency=medium
+
+  * Stream backup checksum verification for large restored files.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:15:26 +0000
+
 cyberos (2.3.17) unstable; urgency=medium
 
   * Evaluate file-search regular expressions in a worker with an enforced deadline

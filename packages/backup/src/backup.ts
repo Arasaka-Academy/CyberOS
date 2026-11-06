@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { createReadStream } from "node:fs";
 import { access, constants as fsConstants, copyFile, lstat, mkdir, mkdtemp, readdir, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
@@ -561,8 +562,7 @@ function resolveManifestPath(rootPath: string, relativePath: string): string {
 
 async function hashFile(filePath: string): Promise<string> {
   const hash = createHash("sha256");
-  const contents = await readFile(filePath);
-  hash.update(contents);
+  for await (const chunk of createReadStream(filePath)) hash.update(chunk);
   return hash.digest("hex");
 }
 
