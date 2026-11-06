@@ -1,3 +1,9 @@
+cyberos (2.3.4) unstable; urgency=medium
+
+  * Keep photo browsing local when semantic search is enabled; verify indexing fault recovery and document the 2B production rollout.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 06:07:07 +0000
+
 cyberos (2.3.3) unstable; urgency=medium
 
   * Reduce exact Photos search latency with bounded metadata caching and mapped SQLite reads.

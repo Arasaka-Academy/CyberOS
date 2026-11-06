@@ -68,6 +68,7 @@ export class PhotosSearchService {
       indexed: 0, total: 0, embeddingSpaceId: profile?.embeddingSpaceId ?? null };
     if (!settings.enabled || !profile) return { search };
     const normalized = text.normalize("NFKC").trim();
+    if (!normalized) return { search };
     const key = JSON.stringify([profile.embeddingSpaceId, normalized]);
     const fetchingKey = JSON.stringify([settings.generation, key]);
     let vector: number[] | undefined;

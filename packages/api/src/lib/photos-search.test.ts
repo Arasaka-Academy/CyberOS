@@ -46,6 +46,24 @@ function enable() {
 }
 const vectorResponse = () => new Response(JSON.stringify({ dimensions: 2, embeddingSpaceId: "test-space", embeddings: [[1, 0]] }));
 
+it.each(["", " \t\u3000"])("keeps blank browsing local and preserves the next semantic query (%j)", async (text) => {
+  enable();
+  const fetcher = vi.fn().mockResolvedValue(vectorResponse());
+  vi.stubGlobal("fetch", fetcher);
+  const browsing = service.query(input(text));
+  const target = await reader();
+  const browseRequest = target.messages[0];
+  complete(target); await browsing;
+  expect(fetcher).not.toHaveBeenCalled();
+  expect(browseRequest).not.toHaveProperty("input.embedding");
+
+  const searching = service.query(input("海边"));
+  await vi.waitFor(() => expect(target.messages).toHaveLength(2));
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(target.messages[1]).toMatchObject({ input: { search: { mode: "hybrid", semanticState: "ready" } } });
+  complete(target); await searching;
+});
+
 it("never posts a cancelled queued query and continues after a cancelled native query finishes", async () => {
   const active = new AbortController(); const queued = new AbortController();
   const first = service.query(input(), active.signal); const firstRejected = expect(first).rejects.toMatchObject({ statusCode: 499 });
