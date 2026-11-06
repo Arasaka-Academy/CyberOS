@@ -1,3 +1,9 @@
+cyberos (2.3.12) unstable; urgency=medium
+
+  * Apply MCP network restrictions to IPv6 metadata and mapped IPv4 addresses
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 15:59:01 +0000
+
 cyberos (2.3.11) unstable; urgency=medium
 
   * Reject restore manifest paths escaping staging through symlinks

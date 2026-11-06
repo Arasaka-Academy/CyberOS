@@ -3,6 +3,23 @@ import { describe, expect, it } from "vitest";
 import { createSecureMcpFetch, validateMcpEndpoint, type McpAddressResolver } from "./mcp-network.js";
 
 describe("MCP network policy", () => {
+  it.each([
+    "http://[fd00:ec2::254]/latest",
+    "http://[fd00:ec2:0:0:0:0:0:254]/latest",
+    "https://[::ffff:169.254.169.254]/latest",
+    "https://[::ffff:a9fe:a9fe]/latest",
+    "https://[::ffff:0:0]/mcp"
+  ])("blocks metadata and blocked IPv4 destinations encoded as IPv6: %s", async (url) => {
+    await expect(validateMcpEndpoint(url, true)).rejects.toThrow(/blocked/u);
+  });
+
+  it.each([
+    ["http://[::ffff:127.0.0.1]/mcp", "loopback"],
+    ["http://[::ffff:192.168.1.20]/mcp", "private"]
+  ])("classifies mapped IPv4 addresses using the IPv4 policy: %s", async (url, addressClass) => {
+    await expect(validateMcpEndpoint(url, true)).resolves.toMatchObject({ addressClasses: [addressClass] });
+  });
+
   it("blocks metadata, link-local, and public plaintext endpoints", async () => {
     await expect(validateMcpEndpoint("https://metadata.google.internal/mcp", false)).rejects.toThrow(/blocked/u);
     await expect(validateMcpEndpoint("http://169.254.169.254/latest", true)).rejects.toThrow(/blocked/u);
