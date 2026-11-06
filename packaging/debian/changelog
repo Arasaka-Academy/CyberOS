@@ -1,3 +1,9 @@
+cyberos (2.3.27) unstable; urgency=medium
+
+  * Reject special files without blocking indexing, photo processing, or downloads.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 06 Nov 2026 16:42:04 +0000
+
 cyberos (2.3.26) unstable; urgency=medium
 
   * Keep terminal requests responsive while idle session cleanup waits for tmux.

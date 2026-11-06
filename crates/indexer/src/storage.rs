@@ -219,7 +219,7 @@ impl StoragePoolStorage {
         let file = open_beneath(
             &self.root,
             relative,
-            OFlag::O_RDONLY | OFlag::O_CLOEXEC | OFlag::O_NOFOLLOW,
+            OFlag::O_RDONLY | OFlag::O_CLOEXEC | OFlag::O_NOFOLLOW | OFlag::O_NONBLOCK,
             false,
             &self.path.join(relative),
         )?;
@@ -362,6 +362,38 @@ fn identity(metadata: &std::fs::Metadata) -> FileIdentity {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rejects_fifo_without_waiting_for_a_writer() {
+        let directory = tempfile::tempdir().unwrap();
+        let storage = StoragePoolStorage::open(directory.path()).unwrap();
+        let path = directory.path().join("source.fifo");
+        nix::unistd::mkfifo(
+            &path,
+            nix::sys::stat::Mode::S_IRUSR | nix::sys::stat::Mode::S_IWUSR,
+        )
+        .unwrap();
+
+        let (send, receive) = std::sync::mpsc::channel();
+        let worker = std::thread::spawn(move || {
+            send.send(storage.open_file(Path::new("source.fifo")).is_err())
+                .unwrap();
+        });
+        let result = receive.recv_timeout(std::time::Duration::from_secs(1));
+        // Unblock an unsafe open before failing so the regression cannot hang the suite.
+        let writer = result.is_err().then(|| {
+            OpenOptions::new()
+                .read(true)
+                .write(true)
+                .custom_flags(nix::libc::O_NONBLOCK)
+                .open(&path)
+                .unwrap()
+        });
+        worker.join().unwrap();
+        drop(writer);
+        assert!(result.is_ok(), "FIFO open waited for a writer");
+        assert!(result.unwrap(), "FIFO was accepted as a regular file");
+    }
 
     #[test]
     fn refuses_traversal_and_symlinks() {

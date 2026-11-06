@@ -295,7 +295,7 @@ fn open_beneath(
     } else {
         relative
     };
-    let mut flags = OFlag::O_RDONLY | OFlag::O_CLOEXEC | OFlag::O_NOFOLLOW;
+    let mut flags = OFlag::O_RDONLY | OFlag::O_CLOEXEC | OFlag::O_NOFOLLOW | OFlag::O_NONBLOCK;
     if is_directory {
         flags |= OFlag::O_DIRECTORY;
     }
@@ -321,7 +321,7 @@ fn open_beneath(
     } else {
         relative
     };
-    let mut flags = OFlag::O_RDONLY | OFlag::O_CLOEXEC | OFlag::O_NOFOLLOW;
+    let mut flags = OFlag::O_RDONLY | OFlag::O_CLOEXEC | OFlag::O_NOFOLLOW | OFlag::O_NONBLOCK;
     if is_directory {
         flags |= OFlag::O_DIRECTORY;
     }
@@ -462,6 +462,40 @@ fn verify_mount_id(_file: &File, _expected: Option<u64>) -> Result<(), PhotosErr
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rejects_fifo_without_waiting_for_a_writer() {
+        let directory = tempfile::tempdir().unwrap();
+        let pool = directory.path().join("pool-a");
+        std::fs::create_dir(&pool).unwrap();
+        let library = Library::resolve(directory.path(), "pool-a", Path::new("."), false).unwrap();
+        let path = pool.join("source.fifo");
+        nix::unistd::mkfifo(
+            &path,
+            nix::sys::stat::Mode::S_IRUSR | nix::sys::stat::Mode::S_IWUSR,
+        )
+        .unwrap();
+
+        let (send, receive) = std::sync::mpsc::channel();
+        let worker = std::thread::spawn(move || {
+            send.send(library.open_media(Path::new("source.fifo")).is_err())
+                .unwrap();
+        });
+        let result = receive.recv_timeout(std::time::Duration::from_secs(1));
+        // Unblock an unsafe open before failing so the regression cannot hang the suite.
+        let writer = result.is_err().then(|| {
+            OpenOptions::new()
+                .read(true)
+                .write(true)
+                .custom_flags(nix::libc::O_NONBLOCK)
+                .open(&path)
+                .unwrap()
+        });
+        worker.join().unwrap();
+        drop(writer);
+        assert!(result.is_ok(), "FIFO open waited for a writer");
+        assert!(result.unwrap(), "FIFO was accepted as a regular file");
+    }
 
     #[test]
     fn rejects_escape_absolute_and_non_utf8_paths() {
