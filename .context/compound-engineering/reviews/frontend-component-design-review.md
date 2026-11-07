@@ -77,3 +77,45 @@
 - 首次完整检查在既有 `terminald` 陈旧 socket 测试失败一次；单项及完整模块 30 次复跑全部通过，随后默认配置完整 `make ci` 通过。没有稳定复现或确认根因，没有为通过检查改动运行代码。首次失败与复跑日志分别保留，不能将这项记录描述为已修复。
 - 原 main 工作树另有 15 个已跟踪文件改动与 8 个未跟踪文件，均已单独备份并核对哈希；它们不属于重构提交。主分支更新与恢复结果由交付时的 Git/哈希核验记录证明。
 - 本节验证源码整合；前述设备仍对应已验收的提交前测试构建，不能据此声称设备已升级到 `2.3.39` 或上游 CI 已完成。
+
+## 主题可读性与交付复核（2026-11-07）
+
+源码提交 `ced0d309e0bf3f6b88210f6ce1a37dc68929e387`，基线为最新 main `6363291df470b1233a5506706c81e222c10b1ac6`，统一版本 `2.3.43`。包含此前重构与 main 的后端修复。本节记录本次增量；全页面布局矩阵与较早设备构建的证据归属仍按前节区分。
+
+- 选中命令同步更新实际切角装饰层的 `--face`、`--edge` 和反色文字；禁用图标命令使用对应的 inactive 底面。浏览器对比度检查读取装饰层真实背景并合成透明祖先表面。
+- 宿主适配层提供独立的 command/focus/connected/success/warning/danger 文字令牌，覆盖背景、抬升、hover 和状态浅底；对比不足时回退正文色。填充与结构线使用上游原色。Web、TV、Docs 及 Provider 中的状态/辅助文字统一消费这些令牌，固定版本的 CyberUI 色板、算法与 vendor 源码保持一致。
+- 修复 TV 英文虚拟键盘的陈旧 RAF 焦点恢复竞争，保留控制输入重绘后的光标位置；中文选词产生的输入法聚焦仍能恢复到虚拟按键。新测试主动积压 RAF 后移动焦点，验证后续按键与输入顺序；中文选词也断言返回按键。
+- Docs 正文链接、当前导航、hover 和搜索文字复用同一组语义令牌。新增浏览器检查覆盖十四套主题中的真实正文链接与选中导航。
+
+### 验证结果
+
+证据位于 `.cyberos/component-review/`，生成记录、截图和构建产物不提交。
+
+| 检查 | 结果 | 证据 |
+| --- | --- | --- |
+| 完整 make ci | exit 0；260 个 Vitest 文件，1758 passed / 5 skipped；Rust/Python、协议、类型、lint、全部构建、42 页文档及搜索索引通过 | `make-ci-theme-delivery-recheck.log` |
+| 最终 UI 增量 | typecheck、外观产物检查、Astro、受影响 TS/测试 lint、Web 构建通过；最终 TV 焦点分支另跑完整浏览器套件 | `final-ui-delta-checks.log`、`web-build-theme-delivery.log` |
+| 版本策略 | 相对 `6363291d` 检查通过，2.3.43 | `npm run version:check -- --base 6363291df470b1233a5506706c81e222c10b1ac6` |
+| 共享样式 | 34/34；十四主题中的选中/禁用底面、文字、代码链接、helper/error 与徽标 | `styles-browser-theme-delivery.log` |
+| TV | 63/63；包括连续输入、光标替换、积压 RAF 与中文选词焦点 | `tv-browser-theme-delivery.log` |
+| Mobile / appearance | 34/34；文件选择覆盖中英文、390/320px、十四主题，共 56 组组合；保留批量栏与完成后清除行为 | `mobile-browser-theme-delivery.log` |
+| Chat / voice / downloads / photos | 62/62 | `features-browser-theme-delivery.log` |
+| Docs | 20/20；包括十四主题的正文/导航链接普通与 hover 对比度 | `docs-browser-theme-delivery.log` |
+
+五组浏览器合计 **213 项通过**。新增颜色问题均保留修复前失败证据；TV 新焦点断言也先观察失败，再验证修复。最终源码增量的类型、lint、Web 构建和 TV 浏览器复核补充在完整门禁之后执行。
+
+本轮亦保留两个非 UI 测试的不稳定记录：索引 `slow_media_requests_keep_the_scan_lease_alive` 在完整检查和独立模块复跑中曾失败，独立模块出现一次 8/8、一次 7/8；终端 `replaces_a_stale_socket` 在一次完整检查中失败，单项复查通过。随后默认配置完整 `make ci` 两项均通过。根因未确认，本轮没有为通过检查更改这些 Rust 运行代码或测试，也没有将其标记为已修复。日志：`make-ci-theme-followup-final.log`、`indexer-media-recheck.log`、`make-ci-theme-delivery.log`、`terminal-stale-recheck.log`。
+
+### 本轮设备验收
+
+- 部署 ID：`dev-20261107004038893-80662`；Web、TV、Docs 静态组件；收据与备份 `/cyberos/dev-deploy/dev-20261107004038893-80662`，状态 applied。源码为 `ced0d309`；构建前 Git 工作树为空。收据的 dirty 字段为 `null`，不据此推断工作树状态。
+- 本地、设备与收据的目录哈希全部相同：Web `4d5a340c4b69517af3ce2de75066672ba4aa5e3f234eea86c1c5c19fc43ce2ef`；Docs `a35fc8bb118bc5744792b67198097971b4bdde4f55d0fb565124a297318bfdc2`。见 `artifact-verification-theme-delivery.json`。
+- 通过正式入口 `https://cybermachine.civet-beta.ts.net` 检查真实 API、十四主题、Web/Docs 同源同步、TV 独立偏好与刷新、Mermaid、移动主屏及 TV 连续英文输入/删除。十四主题切换期间终端连接 1、关闭 0，切换后 printf 输入输出成功；播放器 session/state/path/volume 保持。记录中原生主题命令 34 次成功。
+- 真实文件页在 390/320px 下检查 neon 深浅模式的选中/完成状态，装饰层对比度分别为 5.63:1、5.45:1，无页面横向溢出。按现有样式测试，在 250ms 过渡稳定后采样；首次过早采样的失败记录保留。
+- API、worker、terminald、hostd、vod-player 均 active/running、NRestarts=0；部署后检查窗口内 API/worker 无 error journal。health、storage、system health 与 Web/Docs 入口通过。
+- 临时终端 tab 已删除，原 active tab 已恢复。未将浏览器键盘测试与原生主题命令成功当作物理遥控、HDMI 或可听音频验收。设备根盘部署前约 967MB 空闲，保留用户数据与已有备份。
+- 最终证据：`deploy-theme-delivery.log`、`receipt-theme-delivery.json`、`device-services-theme-delivery.log`、`device-browser-theme-delivery-report.json`、`device-browser-theme-delivery-final.log`、`screenshots/device-theme-delivery/`。
+
+临时本地 HTTP/2 代理的终端 WebSocket 未取得 ready；正式域名复查通过。原始失败记录另存，生产 Origin 校验及 Nginx 配置未修改。此前 HTTP/1.1 SSE 同源连接限制仍按待办 003 跟踪。
+
+原 main 工作区 15 个已跟踪改动与 3 个未跟踪文件已单独备份并核对哈希，不属于本轮提交。主分支同步、恢复与远端 SHA 的结果以交付时的 Git 核验记录为准。
