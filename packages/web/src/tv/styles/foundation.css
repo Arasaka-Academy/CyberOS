@@ -26,6 +26,8 @@
   --tv-line-emphasis: var(--cyberos-color-border-emphasis);
   --tv-command: var(--cyberos-color-command);
   --tv-focus: var(--cyberos-color-focus);
+  --tv-command-text: var(--cyberos-color-command-text);
+  --tv-focus-text: var(--cyberos-color-focus-text);
   --tv-danger: var(--cyberos-color-danger);
   --tv-accent: var(--tv-command);
   --tv-accent-contrast: var(--cyberos-hud-void);

@@ -30,15 +30,15 @@
 }
 
 .download-header-stat[data-state="ready"] strong {
-  color: var(--green);
+  color: var(--success-text);
 }
 
 .download-header-stat[data-state="stale"] strong {
-  color: var(--yellow);
+  color: var(--warning-text);
 }
 
 .download-header-stat[data-state="unavailable"] strong {
-  color: var(--red);
+  color: var(--danger-text);
 }
 
 .download-header-stat span {

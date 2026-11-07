@@ -88,22 +88,32 @@ export function SearchOverlay({ open, onClose, onOpen }: {
     return () => { clearTimeout(timer); abort.abort(); };
   }, [query, open, retry]);
 
-  function keepKeyboardFocus(target: HTMLElement | null, caret?: number) {
+  function keepKeyboardFocus(target: HTMLElement | null, caret?: number, imeCommit = false) {
+    const activeAtRequest = document.activeElement;
+    const valueAtRequest = value.current;
     requestAnimationFrame(() => {
-      if (caret !== undefined) inputRef.current?.setSelectionRange(caret, caret);
+      // Restore the caret after controlled input updates even if focus moved
+      // to another virtual key. A newer input edit owns its own caret.
+      if (caret !== undefined && value.current === valueAtRequest && document.activeElement !== inputRef.current) inputRef.current?.setSelectionRange(caret, caret);
+      // IME commits focus the input themselves; other focus changes belong to
+      // a later navigation intent and must take priority over this restoration.
+      const active = document.activeElement;
+      if (active !== activeAtRequest && dialogRef.current?.contains(active) && !(imeCommit && active === inputRef.current)) return;
       const next = target?.isConnected ? target : lastKey.current?.isConnected ? lastKey.current : inputRef.current;
       next?.focus({ preventScroll: true });
     });
   }
   function choose(item: CandidateItem, target: HTMLElement | null) {
     controller.selectCandidate(item);
-    keepKeyboardFocus(target);
+    keepKeyboardFocus(target, undefined, true);
   }
   function sendKey(key: string, target: HTMLButtonElement) {
     lastKey.current = target;
     let caret: number | undefined;
+    let imeCommit = false;
     if (snapshot.hasActiveComposition || (snapshot.chineseMode && /^[a-z']$/i.test(key))) {
       controller.handleKeyDown(new KeyboardEvent("keydown", { key, cancelable: true }));
+      imeCommit = snapshot.hasActiveComposition && !controller.getSnapshot().hasActiveComposition;
     } else {
       const input = inputRef.current;
       if (!input) return;
@@ -114,7 +124,7 @@ export function SearchOverlay({ open, onClose, onOpen }: {
       change(value.current.slice(0, from) + text + value.current.slice(end));
       caret = from + text.length;
     }
-    keepKeyboardFocus(target, caret);
+    keepKeyboardFocus(target, caret, imeCommit);
   }
   function toggleLanguage(target: HTMLButtonElement) {
     cancelComposition();

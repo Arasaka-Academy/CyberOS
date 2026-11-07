@@ -50,7 +50,7 @@
 }
 
 .file-row:not(.file-row-head):hover {
-  color: var(--hud-yellow);
+  color: var(--accent-text);
   background: var(--hud-ink);
 }
 
@@ -92,7 +92,7 @@
 
 .file-action-button-send {
   border-color: var(--hud-red);
-  color: var(--hud-red);
+  color: var(--danger-text);
   background: transparent;
 }
 

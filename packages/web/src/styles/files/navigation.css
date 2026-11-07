@@ -256,7 +256,7 @@
 }
 
 .storage-pool-menu-option > svg {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .storage-pool-status {

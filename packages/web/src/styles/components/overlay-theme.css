@@ -13,7 +13,7 @@
 
 .activity-popover li:hover,
 .file-row-action-menu button:hover {
-  color: var(--hud-yellow);
+  color: var(--accent-text);
   background: var(--hud-ink);
 }
 
@@ -25,12 +25,12 @@
 .notification-tabs,
 .notification-drawer-summary {
   border-bottom-color: color-mix(in srgb, var(--cyberos-color-command) 34%, transparent);
-  color: var(--hud-yellow);
+  color: var(--accent-text);
   background: var(--hud-ink);
 }
 
 .notification-drawer-header h2::before {
-  color: var(--hud-cyan);
+  color: var(--focus-text);
 }
 
 .notification-drawer-actions button {
@@ -46,7 +46,7 @@
 }
 
 .notification-item[data-unread="true"] {
-  color: var(--hud-yellow);
+  color: var(--accent-text);
 }
 
 .notification-item[data-unread="true"]:hover {
@@ -57,7 +57,7 @@
 .notification-status-icon {
   border: 1px solid currentColor;
   border-radius: 0;
-  color: var(--hud-cyan);
+  color: var(--focus-text);
   background: transparent;
 }
 

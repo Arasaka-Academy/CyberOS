@@ -7,7 +7,7 @@
 .editor-code-surface,
 .message-code-block,
 .markdown-code-block {
-  color: var(--hud-yellow);
+  color: var(--accent-text);
   background: var(--hud-ink);
 }
 
@@ -19,7 +19,7 @@
 .workspace-terminal-tabbar,
 .workspace-terminal-tabs {
   border-bottom: 1px solid color-mix(in srgb, var(--cyberos-color-command) 34%, transparent);
-  color: var(--hud-yellow);
+  color: var(--accent-text);
   background: var(--hud-ink);
 }
 

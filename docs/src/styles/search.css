@@ -8,7 +8,7 @@ site-search button[data-open-modal] {
 
 site-search button[data-open-modal]:hover {
   border-color: var(--cyberos-hud-cyan);
-  color: var(--cyberos-hud-cyan);
+  color: var(--cyberos-color-focus-text);
 }
 
 site-search dialog {
@@ -56,7 +56,7 @@ site-search dialog::backdrop {
 }
 
 #starlight__search .pagefind-ui__result-link:hover {
-  color: var(--cyberos-hud-cyan);
+  color: var(--cyberos-color-focus-text);
 }
 
 #starlight__search .pagefind-ui__result-excerpt {
@@ -65,7 +65,7 @@ site-search dialog::backdrop {
 }
 
 #starlight__search mark {
-  color: var(--cyberos-hud-yellow);
+  color: var(--cyberos-color-command-text);
   background: var(--cyberos-hud-yellow-wash);
 }
 
@@ -78,7 +78,7 @@ site-search dialog::backdrop {
 
 #starlight__search .pagefind-ui__button:hover {
   border-color: var(--cyberos-hud-cyan);
-  color: var(--cyberos-hud-cyan);
+  color: var(--cyberos-color-focus-text);
 }
 
 @media (max-width: 49.999rem) {

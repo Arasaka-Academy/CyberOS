@@ -238,6 +238,30 @@ test("English virtual editing preserves the caret between keyboard activations",
   assert.equal(await input.evaluate(element => element.selectionStart), 2);
 });
 
+test("a deferred virtual-key focus does not override newer keyboard navigation", async t => {
+  const { page } = await library(t);
+  await page.locator(".tv-search-button").click();
+  await page.locator(".tv-keyboard-tools button").first().click();
+  await page.evaluate(() => new Promise(resolve => globalThis.requestAnimationFrame(() => globalThis.requestAnimationFrame(resolve))));
+  await page.evaluate(() => {
+    globalThis.window.__originalFrame = globalThis.requestAnimationFrame;
+    globalThis.window.__heldFrames = [];
+    globalThis.requestAnimationFrame = callback => { globalThis.window.__heldFrames.push(callback); return 1; };
+  });
+  await page.getByRole("button", { name: "Q", exact: true }).click();
+  const input = page.locator(".tv-search-input");
+  await page.waitForFunction(() => globalThis.document.querySelector(".tv-search-input").value === "q");
+  const next = page.getByRole("button", { name: "W", exact: true });
+  await next.focus();
+  await page.evaluate(() => {
+    globalThis.requestAnimationFrame = globalThis.window.__originalFrame;
+    for (const callback of globalThis.window.__heldFrames) callback(globalThis.performance.now());
+  });
+  assert.equal(await next.evaluate(element => globalThis.document.activeElement === element), true);
+  await page.keyboard.press("Enter");
+  assert.equal(await input.inputValue(), "qw");
+});
+
 test("Chinese letters keep key focus and candidates can be selected with the remote", async t => {
   const { page } = await library(t);
   await page.locator(".tv-search-button").click();
@@ -251,6 +275,7 @@ test("Chinese letters keep key focus and candidates can be selected with the rem
   await candidate.focus();
   await page.keyboard.press("Enter");
   await page.waitForFunction(word => globalThis.document.querySelector('.tv-search-input')?.value === word, word.trim());
+  await page.waitForFunction(() => globalThis.document.activeElement?.textContent === 'Q', null, { timeout: 2000 });
 });
 
 test("search failures support retry and detail Back restores search context", async t => {

@@ -127,13 +127,13 @@
 
 .custom-select-option.is-active,
 .custom-select-option:hover {
-  color: var(--cyberos-color-focus);
+  color: var(--cyberos-color-focus-text);
   background: var(--cyberos-color-surface-hover);
 }
 
 .custom-select-option.is-selected {
   border-left-color: var(--cyberos-color-danger);
-  color: var(--cyberos-color-command);
+  color: var(--cyberos-color-command-text);
   background: var(--cyberos-hud-yellow-wash);
   font-family: var(--cyberos-font-ui);
   font-weight: 700;
@@ -146,5 +146,5 @@
 
 .custom-select-option svg {
   justify-self: end;
-  color: var(--accent);
+  color: var(--accent-text);
 }

@@ -54,7 +54,7 @@
 .preview-empty > svg {
   border: 1px solid var(--hud-ink);
   border-radius: 0;
-  color: var(--hud-yellow);
+  color: var(--accent-text);
   background: var(--hud-ink);
   box-shadow: 3px 3px 0 var(--hud-red);
 }

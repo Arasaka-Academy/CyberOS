@@ -94,7 +94,7 @@
 
 .host-access-capability[data-availability="degraded"] small,
 .host-access-capability[data-availability="degraded"] > p {
-  color: var(--yellow);
+  color: var(--warning-text);
 }
 
 .host-access-capability:has(input:disabled) {
@@ -128,12 +128,12 @@
 }
 
 .host-access-picker-error {
-  color: var(--red);
+  color: var(--danger-text);
 }
 
 .host-access-degraded-confirmation {
   align-items: flex-start;
-  color: var(--yellow);
+  color: var(--warning-text);
 }
 
 .host-access-coverage {
@@ -164,12 +164,12 @@
 
 .host-access-coverage span[data-state="degraded"] {
   border-color: var(--yellow);
-  color: var(--yellow);
+  color: var(--warning-text);
 }
 
 .host-access-coverage span[data-state="unavailable"] {
   border-color: var(--red);
-  color: var(--red);
+  color: var(--danger-text);
 }
 
 .host-access-coverage span[data-state="unsupported"] {

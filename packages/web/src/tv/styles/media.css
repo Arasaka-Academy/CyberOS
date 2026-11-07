@@ -62,7 +62,7 @@
 .tv-poster:focus-visible {
   border-color: var(--tv-focus);
   outline: none;
-  color: var(--tv-focus);
+  color: var(--tv-focus-text);
   background: var(--cyberos-hud-cyan-wash);
   box-shadow: inset 5px 0 0 var(--tv-focus), 5px 5px 0 color-mix(in srgb, var(--cyberos-color-danger) 42%, transparent);
 }

@@ -47,7 +47,7 @@ button.help-tip-trigger {
 button.help-tip-trigger:hover,
 button.help-tip-trigger[aria-expanded="true"] {
   border-color: var(--line);
-  color: var(--hud-yellow);
+  color: var(--accent-text);
   background: var(--surface-hover);
 }
 

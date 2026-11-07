@@ -16,7 +16,7 @@
 .photo-view-switch button[aria-selected="true"],
 .photo-condition-mode button[aria-pressed="true"],
 .photo-filter-trigger.is-active {
-  color: var(--hud-yellow);
+  color: var(--accent-text);
   background: var(--hud-ink);
   box-shadow: inset 0 -3px 0 var(--hud-red);
 }
@@ -52,17 +52,17 @@
 }
 
 .photo-runtime-alert-heading strong {
-  color: var(--hud-yellow);
+  color: var(--accent-text);
 }
 
 .photo-runtime-alert-details[data-tone="danger"] .photo-runtime-alert-heading strong {
-  color: var(--hud-red);
+  color: var(--danger-text);
 }
 
 .photo-runtime-alert-heading button:hover,
 .photo-runtime-alert-heading button:focus-visible {
   border-color: var(--hud-cyan);
-  color: var(--hud-cyan);
+  color: var(--focus-text);
 }
 
 .photo-library-content,
@@ -72,11 +72,11 @@
 
 .photo-day > header {
   border-bottom: 1px solid color-mix(in srgb, var(--cyberos-color-command) 35%, transparent);
-  color: var(--hud-yellow);
+  color: var(--accent-text);
 }
 
 .photo-day > header span {
-  color: color-mix(in srgb, var(--cyberos-color-command) 58%, transparent);
+  color: var(--muted);
 }
 
 .photo-tile {
@@ -99,7 +99,7 @@
 .photo-media-badge,
 .photo-select {
   border-radius: 0;
-  color: var(--hud-yellow);
+  color: var(--accent-text);
   background: color-mix(in srgb, var(--cyberos-color-surface-raised) 88%, transparent);
 }
 
@@ -119,7 +119,7 @@
 .photo-lightbox-nav {
   border: 1px solid color-mix(in srgb, var(--cyberos-color-command) 48%, transparent);
   border-radius: 0;
-  color: var(--hud-yellow);
+  color: var(--accent-text);
   background: var(--hud-ink);
 }
 

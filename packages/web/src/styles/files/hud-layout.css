@@ -49,7 +49,7 @@
 .workspace-panel-tab:hover,
 .workspace-panel-tab:focus-visible {
   border-color: var(--hud-cyan);
-  color: var(--hud-cyan);
+  color: var(--focus-text);
   background: var(--hud-cyan-soft);
 }
 
@@ -94,7 +94,7 @@
 }
 
 .files-navigation-bar .storage-pool-control label {
-  color: var(--hud-cyan);
+  color: var(--focus-text);
   font-family: var(--font-mono);
   font-size: 9px;
   text-transform: uppercase;
@@ -111,7 +111,7 @@
 }
 
 .files-navigation-bar .search svg {
-  color: var(--hud-cyan);
+  color: var(--focus-text);
 }
 
 .files-navigation-bar .search input::placeholder {
@@ -127,12 +127,12 @@
 }
 
 .storage-pool-switcher-icon {
-  color: var(--hud-yellow);
+  color: var(--accent-text);
   background: var(--hud-yellow-soft);
 }
 
 .storage-pool-switcher-icon[data-state="ready"] {
-  color: var(--hud-cyan);
+  color: var(--focus-text);
   background: var(--hud-cyan-soft);
 }
 

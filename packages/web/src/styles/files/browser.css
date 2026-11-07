@@ -278,7 +278,7 @@
   max-width: calc(100% - 24px);
   padding: 6px 8px;
   border: 1px solid var(--line-soft);
-  color: var(--accent);
+  color: var(--accent-text);
   background: var(--channel-bg);
   font-size: 12px;
   pointer-events: none;
@@ -307,7 +307,7 @@
 }
 
 .workspace-empty-state svg {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .workspace-empty-state strong {

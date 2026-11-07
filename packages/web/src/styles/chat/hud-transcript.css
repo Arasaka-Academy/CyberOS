@@ -19,7 +19,7 @@
   width: 30px;
   height: 30px;
   border-color: var(--hud-cyan);
-  color: var(--hud-cyan);
+  color: var(--focus-text);
   background: var(--hud-void);
   box-shadow: 3px 3px 0 color-mix(in srgb, var(--cyberos-color-focus) 36%, transparent);
 }
@@ -57,11 +57,11 @@
 
 .message.is-streaming .message-meta,
 .message-assistant header strong {
-  color: var(--hud-cyan);
+  color: var(--focus-text);
 }
 
 .message-user header strong {
-  color: var(--hud-red);
+  color: var(--danger-text);
 }
 
 .chat-pane .message :where(.message-text, .message-markdown, p, li) {
@@ -74,7 +74,7 @@
 }
 
 .chat-pane .message-markdown a {
-  color: var(--hud-cyan);
+  color: var(--focus-text);
 }
 
 .chat-pane .message-markdown blockquote {
@@ -84,7 +84,7 @@
 
 .chat-pane :where(.message-markdown code, .message-path-button, .message-code-block) {
   border-color: var(--hud-line);
-  color: var(--hud-yellow);
+  color: var(--accent-text);
   background: var(--hud-void);
 }
 
@@ -93,7 +93,7 @@
 }
 
 .chat-pane .message-markdown th {
-  color: var(--hud-cyan);
+  color: var(--focus-text);
   background: var(--hud-panel-raised);
 }
 
@@ -112,7 +112,7 @@
 
 .chat-pane .empty-state > svg {
   border-color: var(--hud-cyan);
-  color: var(--hud-cyan);
+  color: var(--focus-text);
   background: var(--hud-void);
   box-shadow: 3px 3px 0 var(--hud-red);
 }

@@ -41,7 +41,7 @@
 }
 
 .agent-list-head::before {
-  color: var(--hud-red);
+  color: var(--danger-text);
 }
 
 .agent-list-head button,
@@ -57,7 +57,7 @@
 
 .agent-list-head button {
   border-color: color-mix(in srgb, var(--cyberos-color-command) 46%, transparent);
-  color: var(--hud-yellow);
+  color: var(--accent-text);
   background: var(--hud-yellow-soft);
 }
 
@@ -96,7 +96,7 @@
 .session-item:hover {
   border-color: var(--hud-cyan);
   border-left-color: var(--hud-cyan);
-  color: var(--hud-cyan);
+  color: var(--focus-text);
   background: var(--hud-cyan-soft);
 }
 
@@ -115,7 +115,7 @@
 }
 
 .agent-status-indicator {
-  color: var(--hud-cyan);
+  color: var(--focus-text);
 }
 
 .chat-main {
@@ -200,7 +200,7 @@
   width: 34px;
   height: 34px;
   border-color: var(--hud-line);
-  color: var(--hud-red);
+  color: var(--danger-text);
   background: transparent;
 }
 

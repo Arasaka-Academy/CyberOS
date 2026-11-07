@@ -60,13 +60,13 @@
 
 .sidebar-content a:hover {
   border-inline-start-color: var(--cyberos-hud-cyan);
-  color: var(--cyberos-hud-cyan);
+  color: var(--cyberos-color-focus-text);
   background: var(--cyberos-hud-panel);
 }
 
 .sidebar-content a[aria-current="page"] {
   border-inline-start-color: var(--cyberos-hud-red);
-  color: var(--cyberos-hud-yellow);
+  color: var(--cyberos-color-command-text);
   background: var(--cyberos-hud-panel-raised);
   box-shadow: none;
 }
@@ -158,13 +158,13 @@
 }
 
 .right-sidebar a:hover {
-  color: var(--cyberos-hud-cyan);
+  color: var(--cyberos-color-focus-text);
   background: var(--cyberos-hud-panel);
 }
 
 .right-sidebar a[aria-current="true"] {
   border-inline-start-color: var(--cyberos-hud-red);
-  color: var(--cyberos-hud-yellow);
+  color: var(--cyberos-color-command-text);
   background: var(--cyberos-hud-panel);
 }
 
@@ -193,7 +193,7 @@
 
 .pagination-links a:hover {
   border-color: var(--cyberos-hud-cyan);
-  color: var(--cyberos-hud-cyan);
+  color: var(--cyberos-color-focus-text);
   background: var(--cyberos-hud-panel);
 }
 
@@ -235,13 +235,13 @@
 
   .sl-menu-button {
     border: 1px solid var(--cyberos-hud-line-neutral);
-    color: var(--cyberos-hud-yellow);
+    color: var(--cyberos-color-command-text);
     background: var(--cyberos-hud-panel);
     box-shadow: none;
   }
 
   .sl-menu-button:has(~ :popover-open) {
-    color: var(--cyberos-hud-cyan);
+    color: var(--cyberos-color-focus-text);
     background: var(--cyberos-hud-panel-raised);
   }
 

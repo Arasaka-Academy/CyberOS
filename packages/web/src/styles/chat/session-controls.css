@@ -115,7 +115,7 @@
 
 .chat-delete-session-button {
   flex: 0 0 auto;
-  color: var(--cyberos-color-danger);
+  color: var(--cyberos-color-danger-text);
   background: color-mix(in srgb, var(--cyberos-color-danger) 10%, transparent);
 }
 

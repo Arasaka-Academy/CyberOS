@@ -22,12 +22,12 @@
 }
 
 .approval-card-icon[data-kind="tool"] {
-  color: var(--cyberos-color-focus);
+  color: var(--cyberos-color-focus-text);
   background: color-mix(in srgb, var(--cyberos-color-focus) 16%, transparent);
 }
 
 .approval-card-icon[data-kind="share"] {
-  color: var(--cyberos-color-warning);
+  color: var(--cyberos-color-warning-text);
   background: color-mix(in srgb, var(--cyberos-color-warning) 16%, transparent);
 }
 
@@ -155,18 +155,18 @@
 }
 
 .risk-pill[data-risk="low"] {
-  color: var(--cyberos-color-success);
+  color: var(--cyberos-color-success-text);
   background: color-mix(in srgb, var(--cyberos-color-success) 14%, transparent);
 }
 
 .risk-pill[data-risk="medium"] {
-  color: var(--cyberos-color-warning);
+  color: var(--cyberos-color-warning-text);
   background: color-mix(in srgb, var(--cyberos-color-command) 15%, transparent);
 }
 
 .risk-pill[data-risk="high"],
 .risk-pill[data-risk="critical"] {
-  color: var(--cyberos-color-danger);
+  color: var(--cyberos-color-danger-text);
   background: color-mix(in srgb, var(--cyberos-color-danger) 15%, transparent);
 }
 

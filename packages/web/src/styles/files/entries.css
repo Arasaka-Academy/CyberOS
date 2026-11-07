@@ -149,7 +149,7 @@
 
 .file-name svg {
   flex: 0 0 auto;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .file-type-icon {
@@ -166,21 +166,21 @@
 .file-name .file-type-symlink,
 .file-type-label.file-type-directory,
 .file-type-label.file-type-symlink {
-  color: var(--cyberos-color-focus);
+  color: var(--cyberos-color-focus-text);
 }
 
 .file-name .file-type-code,
 .file-name .file-type-shell,
 .file-type-label.file-type-code,
 .file-type-label.file-type-shell {
-  color: var(--cyberos-color-focus);
+  color: var(--cyberos-color-focus-text);
 }
 
 .file-name .file-type-config,
 .file-name .file-type-package,
 .file-type-label.file-type-config,
 .file-type-label.file-type-package {
-  color: var(--cyberos-color-warning);
+  color: var(--cyberos-color-warning-text);
 }
 
 .file-name .file-type-json,
@@ -198,21 +198,21 @@
 
 .file-name .file-type-image,
 .file-type-label.file-type-image {
-  color: var(--cyberos-color-success);
+  color: var(--cyberos-color-success-text);
 }
 
 .file-name .file-type-audio,
 .file-name .file-type-video,
 .file-type-label.file-type-audio,
 .file-type-label.file-type-video {
-  color: var(--cyberos-color-focus);
+  color: var(--cyberos-color-focus-text);
 }
 
 .file-name .file-type-spreadsheet,
 .file-name .file-type-database,
 .file-type-label.file-type-spreadsheet,
 .file-type-label.file-type-database {
-  color: var(--cyberos-color-focus);
+  color: var(--cyberos-color-focus-text);
 }
 
 .file-name .file-type-archive,
@@ -226,7 +226,7 @@
 .file-name .file-type-blocked,
 .file-type-label.file-type-secure,
 .file-type-label.file-type-blocked {
-  color: var(--cyberos-color-danger);
+  color: var(--cyberos-color-danger-text);
 }
 
 .file-name .file-type-other,
@@ -327,25 +327,25 @@
 }
 
 .git-file-status-staged {
-  color: var(--cyberos-color-warning);
+  color: var(--cyberos-color-warning-text);
   border-color: color-mix(in srgb, var(--cyberos-color-warning) 30%, transparent);
   background: color-mix(in srgb, var(--cyberos-color-warning) 8%, transparent);
 }
 
 .git-file-status-modified {
-  color: var(--cyberos-color-warning);
+  color: var(--cyberos-color-warning-text);
   border-color: color-mix(in srgb, var(--cyberos-color-warning) 32%, transparent);
   background: color-mix(in srgb, var(--cyberos-color-warning) 9%, transparent);
 }
 
 .git-file-status-untracked {
-  color: var(--cyberos-color-success);
+  color: var(--cyberos-color-success-text);
   border-color: color-mix(in srgb, var(--cyberos-color-success) 30%, transparent);
   background: color-mix(in srgb, var(--cyberos-color-success) 8%, transparent);
 }
 
 .git-file-status-conflicted {
-  color: var(--cyberos-color-danger);
+  color: var(--cyberos-color-danger-text);
   border-color: color-mix(in srgb, var(--cyberos-color-danger) 34%, transparent);
   background: color-mix(in srgb, var(--cyberos-color-danger) 9%, transparent);
 }

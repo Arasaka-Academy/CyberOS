@@ -35,7 +35,7 @@
   --sl-color-hairline: var(--cyberos-hud-line-soft);
   --sl-color-hairline-light: var(--cyberos-hud-line-neutral);
   --sl-color-text: var(--cyberos-hud-text);
-  --sl-color-text-accent: var(--cyberos-hud-cyan);
+  --sl-color-text-accent: var(--cyberos-color-focus-text);
   --sl-color-text-invert: var(--cyber-on-accent);
   --sl-sidebar-width: 16rem;
   --sl-content-width: 45rem;

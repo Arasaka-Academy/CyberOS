@@ -34,7 +34,7 @@
 .editor-footer,
 .photo-lightbox-header {
   border-color: color-mix(in srgb, var(--cyberos-color-command) 38%, transparent);
-  color: var(--hud-yellow);
+  color: var(--accent-text);
   background: var(--hud-ink);
 }
 
@@ -44,7 +44,7 @@
 }
 
 .preview-mode-switch button {
-  color: color-mix(in srgb, var(--cyberos-color-command) 60%, transparent);
+  color: var(--muted);
 }
 
 .preview-mode-switch button.is-active {
@@ -54,7 +54,7 @@
 }
 
 .markdown-preview code {
-  color: var(--hud-yellow);
+  color: var(--accent-text);
   background: var(--cyberos-color-surface-raised);
 }
 

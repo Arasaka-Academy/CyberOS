@@ -23,7 +23,7 @@
 .settings-content-header h2::before,
 .notification-drawer-header h2::before {
   margin-right: 7px;
-  color: var(--hud-red);
+  color: var(--danger-text);
   content: "//";
 }
 
@@ -38,7 +38,7 @@
 .panel-header-action:hover:not(:disabled),
 .workspace-header .icon-button:hover:not(:disabled),
 .chat-header .icon-button:hover:not(:disabled) {
-  color: var(--hud-yellow);
+  color: var(--accent-text);
   background: var(--hud-ink);
 }
 
@@ -56,7 +56,7 @@
   height: 30px;
   border: 1px solid var(--hud-ink);
   border-radius: 0;
-  color: var(--hud-yellow);
+  color: var(--accent-text);
   background: var(--hud-ink);
   box-shadow: 3px 3px 0 var(--hud-red);
 }
@@ -89,7 +89,7 @@
 
 .message-markdown a,
 .markdown-preview a {
-  color: var(--cyberos-color-focus);
+  color: var(--cyberos-color-focus-text);
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
 }
@@ -104,7 +104,7 @@
 .message-code-block,
 .markdown-code-block {
   border-color: var(--hud-ink);
-  color: var(--hud-yellow);
+  color: var(--accent-text);
   background: var(--hud-ink);
 }
 
@@ -113,7 +113,7 @@
 }
 
 .message-markdown th {
-  color: var(--hud-yellow);
+  color: var(--accent-text);
   background: var(--hud-ink);
 }
 
@@ -150,7 +150,7 @@
 }
 
 .risk-pill[data-risk="low"] {
-  color: var(--hud-cyan);
+  color: var(--focus-text);
   background: color-mix(in srgb, var(--cyberos-color-focus) 9%, transparent);
 }
 

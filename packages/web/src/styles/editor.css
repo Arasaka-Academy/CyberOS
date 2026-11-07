@@ -67,17 +67,17 @@
 }
 
 .editor-status[data-state="saved"] {
-  color: var(--green);
+  color: var(--success-text);
 }
 
 .editor-status[data-state="dirty"],
 .editor-status[data-state="pending"],
 .editor-status[data-state="saving"] {
-  color: var(--cyberos-color-warning);
+  color: var(--cyberos-color-warning-text);
 }
 
 .editor-status[data-state="error"] {
-  color: var(--cyberos-color-danger);
+  color: var(--cyberos-color-danger-text);
 }
 
 .editor-code-surface {

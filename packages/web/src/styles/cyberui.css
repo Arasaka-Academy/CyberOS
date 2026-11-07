@@ -13,7 +13,7 @@
   .agent-brand-logo, .settings-brand-logo, .brand-banner-mark, .mobile-home-brand img, .tv-brand img { filter: var(--cyberos-logo-filter); }
   .management-title-icon, .mobile-title-icon { color: var(--cyber-on-accent); background: var(--cyber-accent); }
   .management-title-copy h2, .workspace-title, .settings-content-header h2 { color: var(--cyber-ink); font-weight: 600; }
-  .management-title-copy h2::before, .workspace-title::before { color: var(--cyber-accent); }
+  .management-title-copy h2::before, .workspace-title::before { color: var(--cyber-accent-text); }
   .workspace-panel-tab.is-active, .agent-row.is-active, .agent-item.is-active, .settings-nav button.is-active {
     color: var(--cyber-ink); background: var(--cyber-soft); border-color: var(--cyber-accent);
   }

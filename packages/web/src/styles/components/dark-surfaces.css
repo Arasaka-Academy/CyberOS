@@ -19,7 +19,7 @@
 }
 
 .settings-nav button:hover {
-  color: var(--hud-cyan);
+  color: var(--focus-text);
   background: var(--cyberos-hud-cyan-wash);
 }
 
@@ -87,7 +87,7 @@
 .management-emblem {
   border-radius: 0;
   border-color: var(--hud-red);
-  color: var(--hud-yellow);
+  color: var(--accent-text);
   background: var(--hud-ink);
   box-shadow: 3px 3px 0 var(--hud-red);
 }

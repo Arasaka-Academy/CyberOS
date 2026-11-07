@@ -20,16 +20,16 @@
 
 .settings-search input {
   border-color: color-mix(in srgb, var(--cyberos-color-command) 52%, transparent) !important;
-  color: var(--hud-yellow) !important;
+  color: var(--accent-text) !important;
   background: transparent !important;
 }
 
 .settings-search input::placeholder {
-  color: color-mix(in srgb, var(--cyberos-color-command) 45%, transparent);
+  color: var(--muted);
 }
 
 .settings-search svg {
-  color: var(--hud-cyan);
+  color: var(--focus-text);
 }
 
 .settings-nav button {
@@ -48,7 +48,7 @@
 
 .settings-rail-footer {
   border-top-color: color-mix(in srgb, var(--cyberos-color-command) 34%, transparent);
-  color: color-mix(in srgb, var(--cyberos-color-command) 56%, transparent);
+  color: var(--muted);
 }
 
 .settings-content-header {

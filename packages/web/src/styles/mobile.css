@@ -46,19 +46,19 @@
   .mobile-home-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-bottom: 22px; margin-bottom: 20px; border-bottom: 1px solid var(--line); }
   .mobile-home-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
   .mobile-home-brand img { width: 36px; height: 36px; filter: invert(1); }
-  .mobile-home-brand h1 { margin: 0; color: var(--accent); font: 700 30px/1 var(--font-display); letter-spacing: 1px; }
+  .mobile-home-brand h1 { margin: 0; color: var(--accent-text); font: 700 30px/1 var(--font-display); letter-spacing: 1px; }
   .mobile-connection { display: flex; align-items: center; gap: 6px; margin-top: 7px; color: var(--muted); font-size: 11px; }
   .mobile-connection i { width: 5px; height: 5px; background: currentColor; }
-  .mobile-connection[data-state="online"] { color: var(--hud-cyan); }
-  .mobile-connection[data-state="offline"] { color: var(--red); }
+  .mobile-connection[data-state="online"] { color: var(--focus-text); }
+  .mobile-connection[data-state="offline"] { color: var(--danger-text); }
   .mobile-notifications { position: relative; display: grid; place-items: center; width: 44px; height: 44px; color: var(--text); background: var(--surface); border: 1px solid var(--line); }
   .mobile-app-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 24px 12px; align-content: start; }
   .mobile-app-icon { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 11px; width: 100%; min-width: 0; padding: 4px 0; border: 0; color: var(--text); background: transparent; cursor: pointer; }
-  .mobile-app-art { position: relative; display: grid; place-items: center; width: 56px; height: 56px; color: var(--accent); background: transparent; isolation: isolate; }
+  .mobile-app-art { position: relative; display: grid; place-items: center; width: 56px; height: 56px; color: var(--accent-text); background: transparent; isolation: isolate; }
   .mobile-app-art::before, .mobile-app-art::after { position: absolute; inset: 0; content: ""; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px)); z-index: -1; }
   .mobile-app-art::before { background: var(--red); transform: translate(4px, 4px); }
   .mobile-app-art::after { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
-  .mobile-app-icon:nth-child(3n + 2) .mobile-app-art { color: var(--hud-cyan); }
+  .mobile-app-icon:nth-child(3n + 2) .mobile-app-art { color: var(--focus-text); }
   .mobile-app-icon:hover .mobile-app-art::after { background: var(--surface-hover); }
   .mobile-app-icon:active .mobile-app-art { translate: 1px 1px; }
   .mobile-app-name { width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; line-height: 20px; text-align: center; }
@@ -96,7 +96,7 @@
   .mobile-app-titlebar .management-title-icon svg { width: 20px; height: 20px; }
   .app-shell .mobile-app-titlebar .management-title-copy { grid-area: copy; grid-template-rows: 24px 16px; gap: 2px; min-width: 0; height: auto; }
   .app-shell .mobile-app-titlebar .management-title-copy h2 { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 20px; font-weight: 700; line-height: 24px; margin: 0; }
-  .app-shell .mobile-app-titlebar .management-title-copy h2::before { display: inline; margin-right: 7px; color: var(--hud-red); content: "//"; }
+  .app-shell .mobile-app-titlebar .management-title-copy h2::before { display: inline; margin-right: 7px; color: var(--danger-text); content: "//"; }
   .app-shell .mobile-app-titlebar .management-title-copy p { display: block; max-width: none; color: var(--muted); font-size: 12px; line-height: 16px; }
   .mobile-app-titlebar h2:focus-visible { outline: 2px solid var(--hud-cyan); outline-offset: 2px; }
   .mobile-titlebar-toolbar {

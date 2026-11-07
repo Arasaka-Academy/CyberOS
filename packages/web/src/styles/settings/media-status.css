@@ -82,15 +82,15 @@
 }
 
 .settings-tv-overall.is-ready {
-  color: var(--green);
+  color: var(--success-text);
 }
 
 .settings-tv-overall.is-starting {
-  color: var(--yellow);
+  color: var(--warning-text);
 }
 
 .settings-tv-overall.is-degraded {
-  color: var(--red);
+  color: var(--danger-text);
 }
 
 .settings-media-list,

@@ -32,7 +32,7 @@
   background: var(--tv-surface);
 }
 .tv-ime { max-width: 1120px; margin: 20px auto 0; }
-.tv-ime-composition { min-height: 36px; font-size: 24px; color: var(--tv-command); overflow-wrap: anywhere; }
+.tv-ime-composition { min-height: 36px; font-size: 24px; color: var(--tv-command-text); overflow-wrap: anywhere; }
 .tv-ime-candidates { display: flex; gap: 10px; flex-wrap: wrap; }
 .tv-ime-candidates button { min-width: 64px; min-height: 56px; padding: 8px 16px; font-size: 26px; border: 1px solid var(--tv-line); color: var(--tv-text); background: var(--tv-surface); }
 .tv-search-error { display: flex; align-items: center; gap: 20px; color: var(--tv-danger); font-size: 22px; }
@@ -154,7 +154,7 @@
 .video-panel-tv .video-version .custom-select-trigger { font-size: 20px; }
 .tv-library-shell .playback-time { font-size: 18px; }
 .tv-file-details { margin-top: 8px; min-width: 0; }
-.tv-file-details summary { display: flex; align-items: center; min-height: 48px; color: var(--tv-focus); font-size: 20px; cursor: pointer; }
+.tv-file-details summary { display: flex; align-items: center; min-height: 48px; color: var(--tv-focus-text); font-size: 20px; cursor: pointer; }
 .tv-file-details p { overflow-wrap: anywhere; }
 .video-panel-tv .video-filter-status { grid-column: 1 / -1; font-size: 18px; }
 .video-panel-tv .workspace-search-filter-menu { font-size: 20px; }

@@ -44,7 +44,7 @@ async function fixture(t, render, options = {}) {
       const createRoot = D.createRoot ?? D.default.createRoot;
       const { CustomSelect } = await import("/src/components/common/CustomSelect.tsx");
       const { ModalPortal } = await import("/src/components/common/ModalPortal.tsx");
-      const { Button, IconButton, Field, Input, InputGroup, Textarea, Checkbox, Section, DialogHeader, DialogActions } = await import("/@fs/${fileURLToPath(new URL("../packages/ui/src/index.ts", import.meta.url))}");
+      const { Button, IconButton, Field, Input, InputGroup, Textarea, Checkbox, Section, DialogHeader, DialogActions, Notice, EmptyState, StatusBadge } = await import("/@fs/${fileURLToPath(new URL("../packages/ui/src/index.ts", import.meta.url))}");
       await import("/@fs/${fileURLToPath(new URL("../packages/ui/src/styles.css", import.meta.url))}");
       const { useModalDialog } = await import("/src/components/workspace/useModalDialog.ts");
       ${render}
@@ -63,6 +63,107 @@ async function themeColor(page, token) {
     globalThis.document.body.append(probe); const value = globalThis.getComputedStyle(probe).color; probe.remove(); return value;
   }, token);
 }
+
+async function textContrast(locator) {
+  return locator.evaluateAll(elements => elements.map(element => {
+    const canvas = globalThis.document.createElement("canvas"); canvas.width = canvas.height = 1;
+    const context = canvas.getContext("2d");
+    const rgba = color => {
+      context.clearRect(0, 0, 1, 1); context.fillStyle = color; context.fillRect(0, 0, 1, 1);
+      return [...context.getImageData(0, 0, 1, 1).data];
+    };
+    const over = (front, back) => front.slice(0, 3).map((channel, i) => channel * front[3] / 255 + back[i] * (1 - front[3] / 255)).concat(255);
+    const ancestors = []; for (let node = element; node; node = node.parentElement) ancestors.unshift(node);
+    let background = ancestors.reduce((color, node) => over(rgba(globalThis.getComputedStyle(node).backgroundColor), color), [255, 255, 255, 255]);
+    const decoration = element.querySelector("[data-slot='decoration']");
+    if (decoration) background = over(rgba(globalThis.getComputedStyle(decoration, "::after").backgroundColor), background);
+    const foreground = over(rgba(globalThis.getComputedStyle(element).color), background);
+    const luminance = color => color.slice(0, 3).map(v => v / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4)
+      .reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+    const a = luminance(foreground), b = luminance(background);
+    return { text: element.textContent, color: globalThis.getComputedStyle(element).color, background, ratio: (Math.max(a, b) + .05) / (Math.min(a, b) + .05) };
+  }));
+}
+
+test("selected secondary commands keep text readable on their visible cut-corner face in all themes", async t => {
+  const page = await fixture(t, `
+    createRoot(document.getElementById("root")).render(React.createElement("div", { style: { padding: 24, display: "flex", gap: 12 } },
+      ...["aria-pressed", "aria-selected", "aria-current"].map(attribute => React.createElement(Button, {
+        key: attribute, variant: "secondary", [attribute]: attribute === "aria-current" ? "page" : true
+      }, attribute))));
+  `);
+  const failures = [];
+  for (const scheme of ["neon", "mono", "graphite", "synthwave", "bloodline", "terminal", "amber"]) for (const mode of ["dark", "light"]) {
+    await page.evaluate(({ scheme, mode }) => Object.assign(globalThis.document.documentElement.dataset, { cyberScheme: scheme, cyberMode: mode }), { scheme, mode });
+    await page.waitForTimeout(250);
+    for (const paint of await textContrast(page.getByRole("button"))) if (paint.ratio < 4.5) failures.push({ scheme, mode, ...paint });
+  }
+  if (failures.length) {
+    await mkdir(".cyberos/component-review/screenshots/followup", { recursive: true });
+    await page.screenshot({ path: ".cyberos/component-review/screenshots/followup/selected-before.png" });
+  }
+  assert.equal(failures.length, 0, JSON.stringify(failures.slice(0, 8)));
+});
+
+test("emphasis text, code links and expanded help remain readable on actual theme surfaces", async t => {
+  const page = await fixture(t, `
+    createRoot(document.getElementById("root")).render(React.createElement("div", { style: { padding: 24 } },
+      ...["--cyber-bg", "--surface", "--surface-hover"].map(surface => React.createElement("section", { key: surface,
+        style: { padding: 20, background: "var(" + surface + ")" } },
+        React.createElement("div", { className: "markdown-preview" }, React.createElement("a", { href: "#", "data-readable": true }, "文件链接 / File link")),
+        React.createElement("span", { className: "hljs-type", "data-readable": true }, "Type / 类型"),
+        React.createElement("button", { className: "help-tip-trigger", "aria-expanded": true, "data-readable": true }, "?")))));
+  `);
+  const failures = [];
+  for (const scheme of ["neon", "mono", "graphite", "synthwave", "bloodline", "terminal", "amber"]) for (const mode of ["dark", "light"]) {
+    await page.evaluate(({ scheme, mode }) => Object.assign(globalThis.document.documentElement.dataset, { cyberScheme: scheme, cyberMode: mode }), { scheme, mode });
+    await page.waitForTimeout(250);
+    for (const paint of await textContrast(page.locator("[data-readable]"))) if (paint.ratio < 4.5) failures.push({ scheme, mode, ...paint });
+  }
+  if (failures.length) {
+    await mkdir(".cyberos/component-review/screenshots/followup", { recursive: true });
+    await page.screenshot({ path: ".cyberos/component-review/screenshots/followup/emphasis-before.png" });
+  }
+  assert.equal(failures.length, 0, JSON.stringify(failures.slice(0, 8)));
+});
+
+test("status badges and helper copy stay readable on tinted and raised surfaces", async t => {
+  const page = await fixture(t, `
+    const { AppearanceProvider, setAppearance } = await import("/@fs/${fileURLToPath(new URL("../packages/ui/src/index.ts", import.meta.url))}");
+    globalThis.window.__setAppearance = setAppearance;
+    createRoot(document.getElementById("root")).render(React.createElement(AppearanceProvider, null, React.createElement("div", { style: { padding: 24 } },
+      ...["--cyber-bg", "--surface", "--surface-hover"].map(surface => React.createElement("section", { key: surface,
+        style: { padding: 20, background: "var(" + surface + ")" } },
+        ...["ready", "warning", "error", "pending"].map(state => React.createElement(StatusBadge, { key: state, state }, state)),
+        React.createElement(EmptyState, { title: "Empty / 暂无内容", description: "Retry / 重试" }),
+        React.createElement(Field, { label: "Name / 名称", hint: "Helper / 说明", error: "Error / 错误" }, React.createElement(Input)))))));
+  `);
+  const failures = [];
+  for (const scheme of ["neon", "mono", "graphite", "synthwave", "bloodline", "terminal", "amber"]) for (const mode of ["dark", "light"]) {
+    await page.evaluate(preference => globalThis.window.__setAppearance(preference), { scheme, mode });
+    await page.waitForTimeout(250);
+    for (const paint of await textContrast(page.locator(".ui-status, .ui-empty-description, .ui-field-label > label, .ui-field-hint, .ui-field-error"))) {
+      if (paint.ratio < 4.5) failures.push({ scheme, mode, ...paint });
+    }
+  }
+  assert.equal(failures.length, 0, JSON.stringify(failures.slice(0, 8)));
+});
+
+test("disabled icon commands use readable inactive faces in every theme", async t => {
+  const page = await fixture(t, `
+    createRoot(document.getElementById("root")).render(React.createElement("div", { style: { padding: 24, display: "flex", gap: 12 } },
+      ...["primary", "secondary", "plain"].flatMap(variant => ["disabled", "aria-disabled"].map(attribute =>
+        React.createElement(IconButton, { key: variant + attribute, variant, label: variant + attribute,
+          [attribute]: true, "aria-pressed": true }, "X")))));
+  `);
+  const failures = [];
+  for (const scheme of ["neon", "mono", "graphite", "synthwave", "bloodline", "terminal", "amber"]) for (const mode of ["dark", "light"]) {
+    await page.evaluate(({ scheme, mode }) => Object.assign(globalThis.document.documentElement.dataset, { cyberScheme: scheme, cyberMode: mode }), { scheme, mode });
+    await page.waitForTimeout(250);
+    for (const paint of await textContrast(page.getByRole("button"))) if (paint.ratio < 4.5) failures.push({ scheme, mode, ...paint });
+  }
+  assert.equal(failures.length, 0, JSON.stringify(failures.slice(0, 8)));
+});
 
 test("explicit command variants own geometry without feature classes and preserve native form semantics", async t => {
   const page = await fixture(t, `
@@ -90,7 +191,7 @@ test("explicit command variants own geometry without feature classes and preserv
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   assert.equal(await page.evaluate(() => globalThis.window.__submissions), 1);
   const remove = page.getByRole("button", { name: "Remove", exact: true });
-  assert.equal(await remove.evaluate(node => globalThis.getComputedStyle(node).color), await themeColor(page, "--cyber-danger"));
+  assert.equal(await remove.evaluate(node => globalThis.getComputedStyle(node).color), await themeColor(page, "--cyber-danger-text"));
 });
 
 test("fields associate native and custom controls with labels, help and errors without losing existing descriptions", async t => {

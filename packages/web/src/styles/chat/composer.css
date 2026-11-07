@@ -134,11 +134,11 @@
 }
 
 .composer-status {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .composer-status[data-state="reconnecting"] {
-  color: var(--red);
+  color: var(--danger-text);
 }
 
 .composer-actions {

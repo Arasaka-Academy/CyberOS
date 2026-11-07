@@ -11,7 +11,7 @@
 
 .settings-music-library h3 > svg {
   flex: 0 0 auto;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .settings-music-add {

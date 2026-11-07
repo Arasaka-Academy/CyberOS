@@ -32,14 +32,14 @@
 }
 
 .sl-markdown-content a:not(:where(.not-content *)) {
-  color: var(--cyberos-hud-cyan-soft);
+  color: var(--cyberos-color-focus-text);
   text-decoration-thickness: 1px;
   text-decoration-color: var(--cyberos-hud-line-neutral);
   text-underline-offset: 4px;
 }
 
 .sl-markdown-content a:hover:not(:where(.not-content *)) {
-  color: var(--cyberos-hud-cyan);
+  color: var(--cyberos-color-focus-text);
   text-decoration-color: currentColor;
 }
 
@@ -94,7 +94,7 @@
 
 .expressive-code .copy button:hover {
   border-color: var(--cyberos-hud-cyan);
-  color: var(--cyberos-hud-cyan);
+  color: var(--cyberos-color-focus-text);
 }
 
 .sl-markdown-content table {

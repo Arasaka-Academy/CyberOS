@@ -10,7 +10,7 @@
   .tv-search-result:hover,
   .tv-keyboard button:hover {
     border-color: var(--tv-focus);
-    color: var(--tv-focus);
+    color: var(--tv-focus-text);
     background: var(--tv-surface-strong);
   }
 }

@@ -46,7 +46,7 @@
 }
 
 .message.is-streaming .message-meta {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .agent-tool-activity {
@@ -68,11 +68,11 @@
 }
 
 .agent-tool-activity > div[data-state="completed"] svg {
-  color: var(--green);
+  color: var(--success-text);
 }
 
 .agent-tool-activity > div[data-state="failed"] svg {
-  color: var(--red);
+  color: var(--danger-text);
 }
 
 .agent-tool-activity span {
@@ -145,12 +145,12 @@
 }
 
 .message-markdown a {
-  color: var(--cyberos-color-focus);
+  color: var(--cyberos-color-focus-text);
   text-decoration: none;
 }
 
 .message-markdown a:hover {
-  color: var(--cyberos-color-focus);
+  color: var(--cyberos-color-focus-text);
   text-decoration: underline;
 }
 
@@ -202,7 +202,7 @@
 .message-path-button:hover {
   border-color: color-mix(in srgb, var(--cyberos-color-focus) 52%, transparent);
   background: color-mix(in srgb, var(--cyberos-color-focus) 10%, transparent);
-  color: var(--cyberos-color-focus);
+  color: var(--cyberos-color-focus-text);
 }
 
 .message-path-button:focus-visible {

@@ -29,7 +29,7 @@
 }
 
 .settings-area-list svg {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .settings-area-list strong,

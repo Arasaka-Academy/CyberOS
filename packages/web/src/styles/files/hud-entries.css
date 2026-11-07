@@ -22,15 +22,15 @@
 }
 
 .files-content-breadcrumbs button {
-  color: var(--hud-cyan);
+  color: var(--focus-text);
 }
 
 .files-content-breadcrumbs button:hover:not(:disabled) {
-  color: var(--hud-yellow);
+  color: var(--accent-text);
 }
 
 .files-content-breadcrumbs button[aria-current="page"] {
-  color: var(--hud-yellow);
+  color: var(--accent-text);
 }
 
 .files-list-summary {
@@ -45,7 +45,7 @@
 
 .workspace-stage[data-panel="files"] .file-row-head {
   border-bottom: 1px solid var(--hud-red);
-  color: var(--hud-cyan);
+  color: var(--focus-text);
   background: var(--hud-void);
 }
 
@@ -65,11 +65,11 @@
 }
 
 .workspace-stage[data-panel="files"] .file-name > svg {
-  color: var(--hud-cyan);
+  color: var(--focus-text);
 }
 
 .workspace-stage[data-panel="files"] .file-row.is-batch-selected .file-name > svg {
-  color: var(--hud-red);
+  color: var(--danger-text);
 }
 
 .workspace-stage[data-panel="files"] .file-action-button {
@@ -85,7 +85,7 @@
 }
 
 .workspace-stage[data-panel="files"] .file-action-button.is-danger {
-  color: var(--hud-red);
+  color: var(--danger-text);
 }
 
 .workspace-stage[data-panel="files"] .file-action-button.is-danger:hover:not(:disabled) {
@@ -109,7 +109,7 @@
 
 .workspace-stage[data-panel="files"] .workspace-empty-state > svg {
   border-color: var(--hud-cyan);
-  color: var(--hud-cyan);
+  color: var(--focus-text);
   background: var(--hud-void);
   box-shadow: 3px 3px 0 var(--hud-red);
 }

@@ -1,4 +1,4 @@
-import { createContext, useContext, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, useContext, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { DEFAULT_APPEARANCE, appearanceSchemes, type AppearancePreference } from "@cyberos/shared/appearance";
 import { CyberUIProvider } from "./vendor/provider.js";
 import { getAppearance, setAppearance, subscribeAppearance } from "./theme.js";
@@ -10,7 +10,8 @@ export function useAppearance(): AppearancePreference {
 const LocaleContext = createContext<"en" | "zh-CN">("zh-CN");
 export function AppearanceProvider({ children, locale = "zh-CN" }: { children: ReactNode; locale?: "en" | "zh-CN" }) {
   const preference = useAppearance();
-  return <LocaleContext.Provider value={locale}><CyberUIProvider {...preference} locale={locale} className="cyberos-ui-root">{children}</CyberUIProvider></LocaleContext.Provider>;
+  return <LocaleContext.Provider value={locale}><CyberUIProvider {...preference} locale={locale} className="cyberos-ui-root"
+    style={{ "--cyber-muted": "var(--cyberos-color-text-muted)", "--cyber-accent-text": "var(--cyberos-color-command-text)" } as CSSProperties}>{children}</CyberUIProvider></LocaleContext.Provider>;
 }
 
 export function ThemePicker() {

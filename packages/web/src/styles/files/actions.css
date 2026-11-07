@@ -64,7 +64,7 @@
 }
 
 .file-action-button.is-danger {
-  color: var(--cyberos-color-danger);
+  color: var(--cyberos-color-danger-text);
   background: color-mix(in srgb, var(--cyberos-color-danger) 12%, transparent);
 }
 
@@ -161,7 +161,7 @@
 }
 
 .file-transfer-route svg {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .file-transfer-route strong {

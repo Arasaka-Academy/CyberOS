@@ -140,7 +140,7 @@
   height: 30px;
   border: 1px solid var(--line-soft);
   border-radius: 5px;
-  color: var(--accent);
+  color: var(--accent-text);
   background: var(--surface-strong);
 }
 

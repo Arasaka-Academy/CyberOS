@@ -25,6 +25,19 @@ describe("browser appearance preferences", () => {
     expect(readAppearance({ getItem: () => { throw new Error("blocked storage"); } })).toEqual(DEFAULT_APPEARANCE);
   });
 
+  it("provides readable text roles independently of accent fills in every theme", () => {
+    for (const scheme of appearanceSchemes) for (const mode of ["light", "dark"] as const) {
+      const variables = appearanceVariables({ scheme, mode });
+      for (const role of ["command", "focus", "connected", "success", "warning", "danger"]) {
+        const foreground = variables[`--cyberos-color-${role}-text`];
+        expect(foreground, `${scheme}/${mode} ${role}`).toMatch(/^#[0-9a-f]{6}$/i);
+        for (const background of ["--cyber-bg", "--cyber-soft"]) {
+          expect(contrast(foreground!, variables[background]!), `${scheme}/${mode} ${role} on ${background}`).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    }
+  });
+
   it("round trips the versioned browser preference and tolerates denied writes", () => {
     const values = new Map<string, string>();
     const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); } };

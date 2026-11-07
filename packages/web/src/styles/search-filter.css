@@ -107,7 +107,7 @@
   position: absolute;
   top: 12px;
   left: 11px;
-  color: var(--hud-cyan);
+  color: var(--focus-text);
   pointer-events: none;
 }
 

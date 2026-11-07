@@ -34,7 +34,7 @@
 
 .agent-list-head::before,
 .dock-title::before {
-  color: var(--hud-red);
+  color: var(--danger-text);
   content: "//";
 }
 
@@ -77,12 +77,12 @@
 }
 
 .session-item.is-active::after {
-  color: var(--hud-red);
+  color: var(--danger-text);
 }
 
 .agent-status,
 .agent-list :where(small, time) {
-  color: color-mix(in srgb, var(--cyberos-color-command) 58%, transparent);
+  color: var(--muted);
 }
 
 .mobile-tabs {

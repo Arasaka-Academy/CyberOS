@@ -1,3 +1,10 @@
+cyberos (2.3.43) unstable; urgency=medium
+
+  * Fix CyberUI selected command faces and readable semantic text across all themes.
+  * Preserve newer TV keyboard navigation when deferred key focus is restored.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Sat, 07 Nov 2026 00:10:46 +0000
+
 cyberos (2.3.42) unstable; urgency=medium
 
   * Upgrade Tokio past the multi-threaded interval race in withdrawn 1.54.0.

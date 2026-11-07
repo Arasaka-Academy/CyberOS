@@ -11,7 +11,7 @@
 .monitoring-alert-table th,
 .file-row-head {
   border-color: var(--cyberos-hud-line);
-  color: var(--hud-yellow);
+  color: var(--accent-text);
   background: var(--hud-ink);
   font-family: var(--font-mono);
   text-transform: uppercase;

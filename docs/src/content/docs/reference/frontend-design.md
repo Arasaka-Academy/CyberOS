@@ -164,10 +164,13 @@ CyberOS 是个人 Linux NAS 的本地控制系统。界面要像可操作的设�
 | 正文 / 次文字 | `--cyber-ink` / `--cyber-muted` | 深浅模式均保持可读；`ink` 表示文字。 |
 | 命令 / 反色字 | `--cyber-accent` / `--cyber-on-accent` | 主命令、当前入口。 |
 | 焦点 / 反色字 | `--cyber-accent2` / `--cyber-on-accent2` | 键盘、遥控焦点与菜单选中。 |
+| 强调文字 / 链接 | `--cyber-accent-text` / `--cyber-accent2-text` | 正文、代码、链接和控件文字；在背景、抬升面及状态浅底上保证对比度。 |
 | 结构线 | `--cyber-line` | 面板分隔与控件边框。 |
 | 状态 | `--cyber-danger` / `--cyber-success` / `--cyber-warning` | 风险、成功和警告，必须配合文字或图标。 |
 
 旧 `--cyberos-hud-*` 与 Web/TV 组件变量是兼容语义别名，不再定义固定色板。不要将旧黑底含义的 `--cyber-ink` 带回组件。主题更新只改变呈现，不重建上传、播放、终端或 Agent 连接。TV 通过现有 VOD 命令通道同步原生 mpv 控件，播放中和后续播放均应用当前主题；同步失败提供重试。
+
+强调填充、边框和焦点环保留上游原色，不能直接用作小字号文字。文字使用 `--cyberos-color-{command,focus,connected,success,warning,danger}-text` 语义别名；对比不足时适配层回退到主题正文色。次文字也必须覆盖抬升与 hover 表面。Provider 与 Portal 继承同一组文字别名，避免上游内联变量覆盖；选中命令同步更新切角装饰层的 `--face`、`--edge` 与反色文字。
 
 ### 几何
 

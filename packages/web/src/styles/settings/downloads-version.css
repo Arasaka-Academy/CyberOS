@@ -165,7 +165,7 @@
 }
 
 .settings-version-details dt svg {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .settings-version-details dd {
@@ -181,7 +181,7 @@
 }
 
 .settings-version-details dd[data-dirty="true"] {
-  color: var(--cyberos-color-warning);
+  color: var(--cyberos-color-warning-text);
 }
 
 .settings-version-copy {
@@ -204,7 +204,7 @@
 }
 
 .settings-version-copy[data-state="copied"] {
-  color: var(--cyberos-color-success);
+  color: var(--cyberos-color-success-text);
 }
 
 .settings-version-error {

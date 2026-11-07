@@ -17,11 +17,13 @@ async function readable(page: Page, selector: string) {
     const canvas = document.createElement("canvas"); canvas.width = canvas.height = 1;
     const context = canvas.getContext("2d")!;
     const rgba = (color: string) => { context.clearRect(0, 0, 1, 1); context.fillStyle = color; context.fillRect(0, 0, 1, 1); return [...context.getImageData(0, 0, 1, 1).data]; };
-    let parent: Element | null = element;
-    let background = [255, 255, 255, 255];
-    while (parent) { const next = rgba(getComputedStyle(parent).backgroundColor); if (next[3] === 255) { background = next; break; } parent = parent.parentElement; }
+    const over = (front: number[], back: number[]) => front.slice(0, 3).map((value, index) => value * front[3]! / 255 + back[index]! * (1 - front[3]! / 255)).concat(255);
+    const ancestors: Element[] = []; for (let parent: Element | null = element; parent; parent = parent.parentElement) ancestors.unshift(parent);
+    let background = ancestors.reduce((color, node) => over(rgba(getComputedStyle(node).backgroundColor), color), [255, 255, 255, 255]);
+    const decoration = element.querySelector("[data-slot='decoration']");
+    if (decoration) background = over(rgba(getComputedStyle(decoration, "::after").backgroundColor), background);
     const luminance = (color: number[]) => color.slice(0, 3).map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4).reduce((sum, value, index) => sum + value * [.2126, .7152, .0722][index]!, 0);
-    const a = luminance(rgba(getComputedStyle(element).color)), b = luminance(background);
+    const a = luminance(over(rgba(getComputedStyle(element).color), background)), b = luminance(background);
     return { text: element.textContent, ratio: (Math.max(a, b) + .05) / (Math.min(a, b) + .05) };
   }));
   expect(ratios.length).toBeGreaterThan(0);
@@ -81,6 +83,34 @@ test("all themes keep mobile files, text and composer usable", async ({ page }, 
   await expect(page.locator(".composer textarea")).toHaveValue("移动草稿");
   expect(await page.locator(".composer textarea").evaluate(node => parseFloat(getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(16);
 });
+
+for (const locale of ["en", "zh-CN"] as const) for (const width of [390, 320]) {
+  test(`file selection remains readable in all themes at ${width}px (${locale})`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 320 ? 568 : 844 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await fixtures(page, locale); await page.goto("/#/app/files");
+    await expect(page.locator(".file-row:not(.file-row-head)")).toHaveCount(100);
+    for (const close of await page.locator(".app-notification button").all()) await close.click();
+    const select = page.locator(".mobile-file-select");
+    for (const scheme of schemes) for (const mode of ["dark", "light"]) {
+      await page.evaluate(({ scheme, mode, key }) => {
+        const value = JSON.stringify({ scheme, mode }); localStorage.setItem(key, value);
+        window.dispatchEvent(new StorageEvent("storage", { key, newValue: value }));
+      }, { scheme, mode, key: storageKey });
+      await expectTheme(page, scheme, mode);
+      await select.click(); await expect(select).toHaveAttribute("aria-pressed", "true");
+      await page.mouse.move(0, 0);
+      await readable(page, ".mobile-file-select");
+      await page.locator(".mobile-file-checkbox").first().check();
+      await expect(page.locator(".file-batch-toolbar")).toBeVisible();
+      if (scheme === "neon") await page.screenshot({ path: info.outputPath(`file-selection-${mode}.png`) });
+      await select.click(); await expect(select).toHaveAttribute("aria-pressed", "false");
+      await expect(page.locator(".mobile-file-checkbox")).toHaveCount(0);
+      await expect(page.locator(".file-batch-toolbar")).toHaveCount(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    }
+  });
+}
 
 test("same-origin tabs synchronize preference without reloading", async ({ page, context }) => {
   await fixtures(page); await page.goto("/");

@@ -104,7 +104,7 @@
 
 .docs-directory-links a:hover,
 .docs-directory-links a:hover span {
-  color: var(--cyberos-hud-cyan);
+  color: var(--cyberos-color-focus-text);
 }
 
 @media (max-width: 49.999rem) {

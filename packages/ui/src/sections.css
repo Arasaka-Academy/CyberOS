@@ -10,7 +10,7 @@
     display: flex; align-items: flex-start; gap: 10px; min-width: 0;
     padding: 0 0 12px; border: 0; border-bottom: 1px solid var(--cyber-line); background: transparent;
   }
-  .ui-section-icon { display: inline-grid; place-items: center; flex: 0 0 24px; width: 24px; height: 24px; color: var(--cyber-accent2); }
+  .ui-section-icon { display: inline-grid; place-items: center; flex: 0 0 24px; width: 24px; height: 24px; color: var(--cyber-accent2-text); }
   .ui-section-icon > svg { width: 18px; height: 18px; }
   .ui-section-heading { flex: 1; min-width: 0; }
   .ui-section-heading > h3 { margin: 0; color: var(--cyber-ink); font: 600 15px/24px var(--cyberos-font-ui); overflow-wrap: anywhere; }

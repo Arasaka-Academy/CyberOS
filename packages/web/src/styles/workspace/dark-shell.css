@@ -30,7 +30,7 @@
 
 .brand-banner,
 .brand-banner-wordmark {
-  color: var(--hud-yellow);
+  color: var(--accent-text);
 }
 
 .agent-list-head,

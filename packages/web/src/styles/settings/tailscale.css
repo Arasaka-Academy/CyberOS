@@ -19,7 +19,7 @@
 .tailscale-peer-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
 .tailscale-peer-heading > strong { min-width: 0; overflow-wrap: anywhere; }
 .tailscale-peer-heading > span { color: var(--muted); font-size: 12px; }
-.tailscale-peer-heading > .is-online { color: var(--accent); }
+.tailscale-peer-heading > .is-online { color: var(--accent-text); }
 .tailscale-peers code { font-size: 12px; overflow-wrap: anywhere; }
 .tailscale-health > li { display: flex; gap: 8px; padding: 6px 0; color: var(--muted); font-size: 12px; }
 .tailscale-health svg { flex-shrink: 0; }

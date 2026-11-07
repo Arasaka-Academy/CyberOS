@@ -40,7 +40,7 @@
 .settings-git-skill-dialog h3 svg,
 .settings-mcp-dialog h3 svg {
   flex: 0 0 auto;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .settings-git-skill-form,

@@ -36,31 +36,31 @@
 }
 
 .composer .composer-model-config svg {
-  color: var(--hud-cyan);
+  color: var(--focus-text);
 }
 
 .composer-status {
-  color: var(--hud-yellow);
+  color: var(--accent-text);
 }
 
 .composer-status[data-state="running"] {
-  color: var(--hud-cyan);
+  color: var(--focus-text);
 }
 
 .composer-status[data-state="reconnecting"] {
-  color: var(--hud-red);
+  color: var(--danger-text);
 }
 
 .composer-path-block {
   border-color: var(--hud-cyan);
-  color: var(--hud-cyan);
+  color: var(--focus-text);
   background: var(--hud-cyan-soft);
 }
 
 .composer .secondary-button,
 .composer .primary-button {
   border-color: var(--hud-yellow);
-  color: var(--hud-yellow);
+  color: var(--accent-text);
   background: transparent;
   box-shadow: none;
 }

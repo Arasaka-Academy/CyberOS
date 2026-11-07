@@ -474,7 +474,7 @@
 .music-queue-row.is-current {
   border-left: 3px solid var(--red);
   background: var(--surface);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 .music-row-number {
   color: var(--muted-2);
@@ -509,7 +509,7 @@
   white-space: pre-wrap;
 }
 .music-lyrics .is-current {
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 700;
 }
 @container (max-width: 620px) {
