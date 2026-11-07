@@ -22,8 +22,10 @@ import type { TailscaleManagerRuntime } from "./lib/tailscale-manager.js";
 import type { MediaStreamRuntime } from "@cyberos/shared";
 import type { AudioRuntime } from "./lib/audio-runtime.js";
 import type { AudioCoordinator } from "./lib/audio-coordinator.js";
+import type { NvrRuntime } from "@cyberos/shared";
 
 export interface ApiRouteContext {
+  nvr?: NvrRuntime;
   audio?: AudioCoordinator;
   audioRuntime?: AudioRuntime;
   mediaStreamer?: MediaStreamRuntime;

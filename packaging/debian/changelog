@@ -1,3 +1,9 @@
+cyberos (2.3.44) unstable; urgency=medium
+
+  * Add independent NVR recording, playback, AI events and CyberVisual PTZ integration.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Sat, 07 Nov 2026 05:27:19 +0000
+
 cyberos (2.3.43) unstable; urgency=medium
 
   * Fix CyberUI selected command faces and readable semantic text across all themes.

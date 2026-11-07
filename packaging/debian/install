@@ -12,6 +12,7 @@ target/release/cyberos-indexer usr/lib/cyberos/bin/
 packages/backup/dist/* usr/lib/cyberos/apps/backup/dist/
 packages/ops/dist/* usr/lib/cyberos/apps/ops/dist/
 target/release/cyberos-downloader usr/lib/cyberos/bin/
+target/release/cyberos-nvr usr/lib/cyberos/bin/
 target/release/cyberos-vod-player usr/lib/cyberos/bin/
 target/release/cyberos-bluetoothd usr/lib/cyberos/bin/
 target/release/cyberos-audiod usr/lib/cyberos/bin/

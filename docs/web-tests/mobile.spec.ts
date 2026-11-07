@@ -32,7 +32,7 @@ for (const locale of ["en", "zh-CN"]) for (const width of [320, 390, 560, 820, 1
       await expect(page.locator(".playback-menu")).toHaveCount(0);
       await expect(page.locator(".agent-playback-button")).toHaveCount(0);
     }
-    await expect(page.locator(".mobile-app-icon")).toHaveCount(14);
+    await expect(page.locator(".mobile-app-icon")).toHaveCount(15);
     expect(await page.locator(".mobile-app-icon").evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-app-id")))).toEqual(appIds);
     const columns = await page.locator(".mobile-app-grid").evaluate((node) => getComputedStyle(node).gridTemplateColumns.split(" ").length);
     expect(columns).toBe(width <= 560 ? 4 : 6);

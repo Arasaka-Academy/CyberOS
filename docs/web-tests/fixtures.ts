@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-export const appIds = ["video", "downloads", "monitoring", "docker", "virtualMachines", "network", "storage", "shares", "terminal", "settings", "files", "photos", "music", "agent"];
+export const appIds = ["video", "downloads", "monitoring", "nvr", "docker", "virtualMachines", "network", "storage", "shares", "terminal", "settings", "files", "photos", "music", "agent"];
 export const stamp = "2026-11-02T00:00:00.000Z";
 const session = { id: "session-1", currentPath: ".", firstMessage: "移动端会话 / Mobile session", lastMessage: null, pendingApprovalCount: 0, createdAt: stamp, updatedAt: stamp };
 const tracks = Array.from({ length: 80 }, (_, i) => ({ id: `track-${i}`, title: `音乐 ${i} / Long song title`, artists: ["CyberOS"], artist: "CyberOS", album: "Test album", durationSeconds: 180, favorite: false, coverKey: null }));

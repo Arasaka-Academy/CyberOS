@@ -1,0 +1,33 @@
+[Unit]
+Description=CyberOS network video recorder
+After=network-online.target local-fs.target cyberos-state-init.service
+Wants=network-online.target
+Requires=cyberos-state-init.service
+RequiresMountsFor=/cyberos/data
+
+[Service]
+Type=simple
+User=cyberos
+Group=cyberos
+UMask=0077
+Environment=CYBEROS_ROOT=/cyberos
+Environment=CYBEROS_ENVIRONMENT=production
+WorkingDirectory=/cyberos/state
+ExecStart=/usr/lib/cyberos/bin/cyberos-nvr
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=45
+KillMode=control-group
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/cyberos/state /cyberos/logs /cyberos/data /run/cyberos
+NoNewPrivileges=yes
+PrivateTmp=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+MemoryMax=1G
+CPUQuota=250%
+TasksMax=256
+
+[Install]
+WantedBy=multi-user.target

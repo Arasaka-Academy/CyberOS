@@ -33,6 +33,7 @@ import { registerPlaybackRoutes } from "./playback.js";
 import { registerTvRoutes } from "./tv.js";
 import { registerAgentResourceRoutes } from "./agent-resources.js";
 import { registerAudioRoutes } from "./audio.js";
+import { registerNvrRoutes } from "./nvr.js";
 
 export function registerApiRoutes(server: FastifyInstance, context: ApiRouteContext): void {
   registerHealthRoutes(server, context);
@@ -41,6 +42,7 @@ export function registerApiRoutes(server: FastifyInstance, context: ApiRouteCont
   registerHealthStatusRoutes(server, context);
   registerSettingsRoutes(server, context);
   registerAudioRoutes(server, context);
+  registerNvrRoutes(server, context);
   registerAgentResourceRoutes(server, context);
   registerSystemRoutes(server, context);
   registerTailscaleRoutes(server, context);

@@ -12,6 +12,7 @@ const PRODUCT_CARGO_PACKAGES = [
   { manifestPath: "crates/hostd/Cargo.toml", packageName: "cyberos-hostd" },
   { manifestPath: "crates/indexer/Cargo.toml", packageName: "cyberos-indexer" },
   { manifestPath: "crates/monitor/Cargo.toml", packageName: "cyberos-monitor" },
+  { manifestPath: "crates/nvr/Cargo.toml", packageName: "cyberos-nvr" },
   { manifestPath: "crates/photos/Cargo.toml", packageName: "cyberos-photos" },
   { manifestPath: "crates/terminald/Cargo.toml", packageName: "cyberos-terminald" },
   { manifestPath: "crates/tv-gamepad/Cargo.toml", packageName: "cyberos-tv-gamepad" },

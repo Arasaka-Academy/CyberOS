@@ -1,4 +1,4 @@
-import { Activity, Bot, Container, Download, Files, HardDrive, Images, MonitorCog, MonitorPlay, Music2, Network, Settings, Share2, TerminalSquare, type LucideIcon } from "lucide-react";
+import { Activity, Bot, Container, Download, Files, HardDrive, Images, MonitorCog, MonitorPlay, Music2, Network, Settings, Share2, TerminalSquare, Video, type LucideIcon } from "lucide-react";
 import { WORKSPACE_PANEL_IDS, type WorkspacePanelId } from "../lib/workspace-panel-settings.js";
 
 export type MobileAppId = WorkspacePanelId | "agent" | "settings";
@@ -16,6 +16,7 @@ function panel(id: WorkspacePanelId, Icon: LucideIcon): AppDefinition {
 export const APP_REGISTRY: readonly AppDefinition[] = [
   panel("files", Files), panel("photos", Images), panel("video", MonitorPlay), panel("music", Music2),
   panel("terminal", TerminalSquare), panel("downloads", Download), panel("monitoring", Activity),
+  panel("nvr", Video),
   panel("docker", Container), panel("virtualMachines", MonitorCog), panel("network", Network),
   panel("storage", HardDrive), panel("shares", Share2),
   { id: "agent", Icon: Bot, labelKey: "mobile.agent", shortLabelKey: "mobile.agent" },
@@ -35,5 +36,5 @@ function apps(ids: readonly MobileAppId[]): readonly AppDefinition[] {
 }
 
 export const WORKSPACE_APPS = apps(WORKSPACE_PANEL_IDS) as readonly (AppDefinition & { id: WorkspacePanelId })[];
-export const MOBILE_GRID_APPS = apps(["video", "downloads", "monitoring", "docker", "virtualMachines", "network", "storage", "shares", "terminal", "settings"]);
+export const MOBILE_GRID_APPS = apps(["video", "downloads", "monitoring", "nvr", "docker", "virtualMachines", "network", "storage", "shares", "terminal", "settings"]);
 export const MOBILE_DOCK_APPS = apps(["files", "photos", "music", "agent"]);

@@ -1,4 +1,6 @@
+import { nvrEn, nvrZh } from "./nvr.js";
 export const en = {
+  nvr: nvrEn,
   voice: {
     title: "Voice", history: "Voice conversation history", fullSession: "Open full conversation", settings: "Audio settings",
     newMessages: "New messages", you: "You", loading: "Loading…", older: "Earlier conversations", retry: "Retry",
@@ -922,7 +924,9 @@ export const en = {
       downloads: "Downloads",
       downloadsShort: "DL",
       monitoring: "Monitoring",
-      monitoringShort: "Metrics"
+      monitoringShort: "Metrics",
+      nvr: "NVR",
+      nvrShort: "NVR"
     },
     monitoring: {
       title: "Monitoring",
@@ -3496,6 +3500,7 @@ type LocaleResource<T> = {
 };
 
 export const zhCN = {
+  nvr: nvrZh,
   voice: {
     title: "语音", history: "语音对话历史", fullSession: "打开完整会话", settings: "Audio 设置",
     newMessages: "有新消息", you: "你", loading: "加载中…", older: "更早的对话", retry: "重试",
@@ -4419,7 +4424,9 @@ export const zhCN = {
       downloads: "下载",
       downloadsShort: "下载",
       monitoring: "监控",
-      monitoringShort: "监控"
+      monitoringShort: "监控",
+      nvr: "NVR",
+      nvrShort: "NVR"
     },
     monitoring: {
       title: "监控",

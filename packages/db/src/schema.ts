@@ -10,6 +10,7 @@ import { photosIndexPerformanceMigrations } from "./migrations/photos-index-perf
 import type { Migration } from "./migrations/types.js";
 import { audioMigrations } from "./migrations/audio.js";
 import { photosSemanticMigrations } from "./migrations/photos-semantic.js";
+import nvrMigration from "./migrations/nvr.json" with { type: "json" };
 
 export type { Migration } from "./migrations/types.js";
 
@@ -23,7 +24,8 @@ export const migrations: Migration[] = [
   ...photosMetadataLookupMigrations,
   ...photosIndexPerformanceMigrations,
   ...audioMigrations,
-  ...photosSemanticMigrations
+  ...photosSemanticMigrations,
+  nvrMigration
 ];
 
 export function runMigrations(db: Database.Database): void {

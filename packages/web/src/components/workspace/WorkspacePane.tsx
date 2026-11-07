@@ -62,6 +62,7 @@ import { PanelHeader, PanelHeaderAction, PanelHeaderActions } from "./PanelHeade
 import { StorageFilePickerDialog } from "./StorageFilePickerDialog.js";
 import { FilePreviewDialog } from "./FilePreviewDialog.js";
 const MonitoringPanel = lazy(() => import("./MonitoringPanel.js").then((module) => ({ default: module.MonitoringPanel })));
+const NvrPanel = lazy(() => import("../nvr/NvrPanel.js").then((module) => ({ default: module.NvrPanel })));
 
 const EPOCH_DATE = new Date(0).toISOString();
 
@@ -1716,6 +1717,8 @@ export function WorkspacePane({
             <MusicLibraryPanel onOpenSettings={() => onOpenDeviceSettings("media")} />
           ) : activePanel === "monitoring" ? (
             <MonitoringPanel locale={locale} visible={workspaceVisible} />
+          ) : activePanel === "nvr" ? (
+            <NvrPanel storagePools={storagePools} />
           ) : activePanel === "terminal" || !workspaceVisible ? null : (
             <WorkspaceManagementPanel
               panel={activePanel}

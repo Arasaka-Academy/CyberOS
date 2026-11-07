@@ -46,7 +46,8 @@ describe("CyberOS 2.0 SQLite schema", () => {
         "011_photos_semantic_search",
         "012_photos_embedding_retention",
         "013_photos_search_corpus_revision",
-        "014_photos_embedding_cache_runtime"
+        "014_photos_embedding_cache_runtime",
+        "015_nvr"
       ]);
       expect(database.pragma("foreign_key_check")).toEqual([]);
     } finally {
@@ -72,7 +73,8 @@ describe("CyberOS 2.0 SQLite schema", () => {
         "011_photos_semantic_search",
         "012_photos_embedding_retention",
         "013_photos_search_corpus_revision",
-        "014_photos_embedding_cache_runtime"
+        "014_photos_embedding_cache_runtime",
+        "015_nvr"
     ]);
   });
 
@@ -417,7 +419,8 @@ describe("CyberOS 2.0 SQLite schema", () => {
         "011_photos_semantic_search",
         "012_photos_embedding_retention",
         "013_photos_search_corpus_revision",
-        "014_photos_embedding_cache_runtime"
+        "014_photos_embedding_cache_runtime",
+        "015_nvr"
       ]);
       expect(database.pragma("foreign_key_check")).toEqual([]);
     } finally {

@@ -314,6 +314,7 @@ if command -v systemctl >/dev/null 2>&1; then
     cyberos-worker@1.service \
     cyberos-photos.service cyberos-photos-embeddings.service \
     cyberos-downloader.service \
+    cyberos-nvr.service \
     cyberos-bluetoothd.service \
     cyberos-audiod.service \
     cyberos-indexer.service
@@ -322,6 +323,7 @@ if command -v systemctl >/dev/null 2>&1; then
   systemctl restart cyberos-host-accessd.service
   systemctl restart cyberos-api.service
   systemctl restart cyberos-vod-player.service cyberos-media-streamer.service
+  systemctl restart cyberos-nvr.service
   systemctl restart cyberos-audiod.service
   if ! systemctl restart cyberos-monitor.service; then
     log "warning: monitoring service failed to start; core services remain available"

@@ -27,7 +27,7 @@ export const COMPONENTS = Object.freeze({
   "media-streamer": { path: "apps/media-streamer/dist", kind: "node", units: ["cyberos-media-streamer.service"] },
   "mcp-cli": { path: "apps/mcp-cli/dist", kind: "node", units: [] },
   ...Object.fromEntries([
-    "indexer", "monitor", "alerter", "photos", "downloader", "hostd",
+    "indexer", "monitor", "alerter", "photos", "downloader", "nvr", "hostd",
     "host-accessd", "terminald", "bluetoothd", "vod-player", "tv-gamepad"
   ].map((name) => [name, { path: `bin/cyberos-${name}`, kind: "rust", units: [`cyberos-${name}.service`] }]))
 });

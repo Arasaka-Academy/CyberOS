@@ -13,7 +13,7 @@ describe("mobile home", () => {
       createElement(MobileHome, { connection: "online", unreadCount: 3, approvalCount: 0, onOpenApp: vi.fn(), onOpenNotifications: vi.fn() }),
       createElement(MobileDock, { approvalCount: 2, onOpenApp: vi.fn() })
     ));
-    expect(html.match(/data-app-id=/gu)).toHaveLength(14);
+    expect(html.match(/data-app-id=/gu)).toHaveLength(WORKSPACE_PANEL_IDS.length + 2);
     expect(html.match(/data-app-id="files"/gu)).toHaveLength(1);
     expect(html).toContain('aria-label="Open notifications, 3 unread"');
     expect(html).toContain('data-app-id="agent"');

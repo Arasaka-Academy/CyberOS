@@ -160,6 +160,7 @@ checksum = "31b698c5f9a010f6573133b09e0de5408834d0c82f8d7475a89fc1867a71cd90"
 dependencies = [
  "axum-core",
  "bytes",
+ "form_urlencoded",
  "futures-util",
  "http",
  "http-body",
@@ -173,6 +174,9 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "serde_core",
+ "serde_json",
+ "serde_path_to_error",
+ "serde_urlencoded",
  "sync_wrapper",
  "tokio",
  "tower",
@@ -491,7 +495,7 @@ dependencies = [
 
 [[package]]
 name = "cyberos-alerter"
-version = "2.3.43"
+version = "2.3.44"
 dependencies = [
  "async-trait",
  "cyberos-monitoring-contracts",
@@ -513,7 +517,7 @@ dependencies = [
 
 [[package]]
 name = "cyberos-audiod"
-version = "2.3.43"
+version = "2.3.44"
 dependencies = [
  "base64 0.22.1",
  "futures-util",
@@ -531,7 +535,7 @@ dependencies = [
 
 [[package]]
 name = "cyberos-bluetoothd"
-version = "2.3.43"
+version = "2.3.44"
 dependencies = [
  "nix 0.30.1",
  "rusqlite",
@@ -549,7 +553,7 @@ dependencies = [
 
 [[package]]
 name = "cyberos-downloader"
-version = "2.3.43"
+version = "2.3.44"
 dependencies = [
  "futures-util",
  "httpdate",
@@ -576,7 +580,7 @@ dependencies = [
 
 [[package]]
 name = "cyberos-host-accessd"
-version = "2.3.43"
+version = "2.3.44"
 dependencies = [
  "nix 0.30.1",
  "serde",
@@ -591,7 +595,7 @@ dependencies = [
 
 [[package]]
 name = "cyberos-hostd"
-version = "2.3.43"
+version = "2.3.44"
 dependencies = [
  "async-trait",
  "nix 0.30.1",
@@ -614,7 +618,7 @@ dependencies = [
 
 [[package]]
 name = "cyberos-indexer"
-version = "2.3.43"
+version = "2.3.44"
 dependencies = [
  "futures-util",
  "lofty",
@@ -643,7 +647,7 @@ dependencies = [
 
 [[package]]
 name = "cyberos-monitor"
-version = "2.3.43"
+version = "2.3.44"
 dependencies = [
  "async-trait",
  "cyberos-monitoring-contracts",
@@ -663,15 +667,42 @@ dependencies = [
 
 [[package]]
 name = "cyberos-monitoring-contracts"
-version = "2.3.43"
+version = "2.3.44"
 dependencies = [
  "serde",
  "serde_json",
 ]
 
 [[package]]
+name = "cyberos-nvr"
+version = "2.3.44"
+dependencies = [
+ "axum",
+ "base64 0.22.1",
+ "futures-util",
+ "md-5",
+ "nix 0.30.1",
+ "quick-xml 0.38.4",
+ "reqwest",
+ "rusqlite",
+ "rustls",
+ "serde",
+ "serde_json",
+ "sha1",
+ "tempfile",
+ "time",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "tracing-subscriber",
+ "ts-rs",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "cyberos-photos"
-version = "2.3.43"
+version = "2.3.44"
 dependencies = [
  "futures-util",
  "nix 0.30.1",
@@ -693,7 +724,7 @@ dependencies = [
 
 [[package]]
 name = "cyberos-terminald"
-version = "2.3.43"
+version = "2.3.44"
 dependencies = [
  "base64 0.22.1",
  "nix 0.30.1",
@@ -710,7 +741,7 @@ dependencies = [
 
 [[package]]
 name = "cyberos-tv-gamepad"
-version = "2.3.43"
+version = "2.3.44"
 dependencies = [
  "evdev",
  "tempfile",
@@ -721,7 +752,7 @@ dependencies = [
 
 [[package]]
 name = "cyberos-vod-player"
-version = "2.3.43"
+version = "2.3.44"
 dependencies = [
  "nix 0.30.1",
  "rusqlite",
@@ -2220,6 +2251,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
 
 [[package]]
+name = "md-5"
+version = "0.10.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d89e7ee0cfbedfc4da3340218492196241d89eefb6dab27de5df917a6d2e78cf"
+dependencies = [
+ "cfg-if",
+ "digest",
+]
+
+[[package]]
 name = "memchr"
 version = "2.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3277,6 +3318,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sha1"
+version = "0.10.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a978451301f4db1d02937a4ab3ccce137717b81826e79b7d49ffe3244a13c3b8"
+dependencies = [
+ "cfg-if",
+ "cpufeatures 0.2.17",
+ "digest",
+]
+
+[[package]]
 name = "sha2"
 version = "0.10.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3658,6 +3710,7 @@ dependencies = [
  "tokio",
  "tower-layer",
  "tower-service",
+ "tracing",
 ]
 
 [[package]]
@@ -3696,6 +3749,7 @@ version = "0.1.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "63e71662fa4b2a2c3a26f570f037eb95bb1f85397f3cd8076caed2f026a6d100"
 dependencies = [
+ "log",
  "pin-project-lite",
  "tracing-attributes",
  "tracing-core",

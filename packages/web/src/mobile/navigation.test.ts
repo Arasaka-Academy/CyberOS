@@ -17,10 +17,10 @@ describe("mobile app navigation", () => {
   it("makes every existing panel, Agent, and settings reachable exactly once", () => {
     const ids = [...MOBILE_GRID_APPS, ...MOBILE_DOCK_APPS].map((app) => app.id);
     expect(new Set(ids)).toEqual(new Set([...WORKSPACE_PANEL_IDS, "agent", "settings"]));
-    expect(ids).toHaveLength(14);
-    expect(APP_REGISTRY).toHaveLength(14);
+    expect(ids).toHaveLength(WORKSPACE_PANEL_IDS.length + 2);
+    expect(APP_REGISTRY).toHaveLength(WORKSPACE_PANEL_IDS.length + 2);
     expect(MOBILE_GRID_APPS.map((app) => app.id)).toEqual([
-      "video", "downloads", "monitoring", "docker", "virtualMachines", "network", "storage", "shares", "terminal", "settings"
+      "video", "downloads", "monitoring", "nvr", "docker", "virtualMachines", "network", "storage", "shares", "terminal", "settings"
     ]);
     expect(MOBILE_DOCK_APPS.map((app) => app.id)).toEqual(["files", "photos", "music", "agent"]);
   });

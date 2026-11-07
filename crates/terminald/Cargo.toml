@@ -1,6 +1,6 @@
 [package]
 name = "cyberos-terminald"
-version = "2.3.43"
+version = "2.3.44"
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true

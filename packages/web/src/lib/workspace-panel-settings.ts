@@ -8,6 +8,7 @@ export const WORKSPACE_PANEL_IDS = [
   "terminal",
   "downloads",
   "monitoring",
+  "nvr",
   "docker",
   "virtualMachines",
   "network",

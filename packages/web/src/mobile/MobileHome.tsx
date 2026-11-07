@@ -113,6 +113,7 @@ const APP_LOADING_COPY = {
   terminal: ["workspace.terminal.title", "workspace.terminal.description"],
   downloads: ["workspace.downloads.title", "workspace.downloads.description"],
   monitoring: ["workspace.monitoring.title", "workspace.monitoring.description"],
+  nvr: ["nvr.title", "nvr.subtitle"],
   docker: ["workspace.management.docker.title", "workspace.management.docker.description"],
   virtualMachines: ["workspace.management.virtualMachines.title", "workspace.management.virtualMachines.description"],
   network: ["workspace.management.network.title", "workspace.management.network.description"],
