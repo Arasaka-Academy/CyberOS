@@ -759,8 +759,10 @@ describe("native packaging artifacts", () => {
     expect(nginx).toContain("proxy_set_header Upgrade $http_upgrade;");
     expect(nginx).toContain("client_max_body_size 4g;");
     expect(nginx).toContain("gzip on;");
-    expect(nginx).toContain("gzip_types application/json;");
-    expect(nginx).not.toContain("gzip_types text/event-stream");
+    const compressedTypes = nginx.match(/gzip_types\s+([^;]+);/u)?.[1]?.split(/\s+/u);
+    expect(compressedTypes).toEqual(expect.arrayContaining(["application/json", "application/javascript", "text/javascript", "text/css", "image/svg+xml"]));
+    expect(compressedTypes).not.toContain("text/event-stream");
+    expect(compressedTypes).not.toContain("video/mp4");
     expect(nginx).toContain("location = /mcp");
     expect(nginx).toMatch(/location = \/mcp \{\s+return 404;/u);
     expect(nginxScript).toContain("nginx -t");

@@ -37,7 +37,8 @@ import {
   type ChangeEvent,
   type DragEvent,
   type FormEvent,
-  type KeyboardEvent
+  type KeyboardEvent,
+  type RefObject
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -168,6 +169,7 @@ export function PhotoLibraryPanel({
   const runtimeAlertTriggerRef = useRef<HTMLButtonElement | null>(null);
   const dragDepthRef = useRef(0);
   const libraryRequestRef = useRef(0);
+  const catalogAbortRef = useRef<AbortController | null>(null);
   const configurationUpdatedAtRef = useRef(configurationUpdatedAt);
   const timelineRequestRef = useRef(0);
   const timelineAbortRef = useRef<AbortController | null>(null);
@@ -284,6 +286,8 @@ export function PhotoLibraryPanel({
 
   const loadLibrary = useCallback(async () => {
     const requestId = ++libraryRequestRef.current;
+    catalogAbortRef.current?.abort();
+    catalogAbortRef.current = null;
     setLoading(true);
     setLoadError(null);
     try {
@@ -298,12 +302,20 @@ export function PhotoLibraryPanel({
       setSemanticIndex(snapshot.semanticIndex ?? null);
       if (nextSettings) {
         loadedQueryKeyRef.current = queryKeyRef.current;
-        const [, fields] = await Promise.all([
-          timelineLoadRef.current?.() ?? Promise.resolve(),
-          getPhotoMetadataFields()
-        ]);
+        const catalogController = new AbortController();
+        catalogAbortRef.current = catalogController;
+        // Advanced filter fields can be expensive; they must not hold up the photos.
+        void getPhotoMetadataFields("", catalogController.signal).then((fields) => {
+          if (!catalogController.signal.aborted && requestId === libraryRequestRef.current) {
+            setMetadataFields((current) => samePhotoMetadataFields(current, fields) ? current : fields);
+          }
+        }).catch((error: unknown) => {
+          if (!catalogController.signal.aborted && requestId === libraryRequestRef.current) onNotifyError(errorMessage(error));
+        }).finally(() => {
+          if (catalogAbortRef.current === catalogController) catalogAbortRef.current = null;
+        });
+        await timelineLoadRef.current?.();
         if (requestId !== libraryRequestRef.current) return;
-        setMetadataFields((current) => samePhotoMetadataFields(current, fields) ? current : fields);
       }
       else {
         loadedQueryKeyRef.current = null;
@@ -349,6 +361,7 @@ export function PhotoLibraryPanel({
 
   useEffect(() => () => {
     libraryRequestRef.current += 1;
+    catalogAbortRef.current?.abort();
     timelineRequestRef.current += 1;
     timelineAbortRef.current?.abort();
   }, []);
@@ -377,11 +390,11 @@ export function PhotoLibraryPanel({
           await loadTimeline(null, true);
           if (active && canRefreshSnapshotRef.current()) lastSnapshotVersionRef.current = version;
         }
-        if (!nextBusy && catalogDirtyRef.current && canRefreshSnapshotRef.current()) {
+        if (!nextBusy && catalogDirtyRef.current && !catalogAbortRef.current && canRefreshSnapshotRef.current()) {
           const requestKey = queryKeyRef.current;
           const [page, fields] = await Promise.all([
             queryPhotos({ filters: queryFilters, sort: { field: effectiveSortField, direction: sortDirection }, limit: 1, includeFacets: true }, controller.signal),
-            getPhotoMetadataFields()
+            getPhotoMetadataFields("", controller.signal)
           ]);
           if (active && queryKeyRef.current === requestKey) {
             setFacets(page.facets);
@@ -1010,14 +1023,7 @@ export function PhotoLibraryPanel({
                     return (
                       <article className={`photo-tile${isSelected ? " is-selected" : ""}`} key={photo.id} style={{ aspectRatio }}>
                         <UiButton variant="ghost" className="photo-open" type="button" onClick={(event) => openLightbox(photo, event.currentTarget)} aria-label={t("workspace.photos.openPhoto", { name: photo.name })}>
-                          <img
-                            src={`/api/photos/${encodeURIComponent(photo.id)}/thumbnail`}
-                            alt=""
-                            loading="lazy"
-                            decoding="async"
-                            width={photo.width && photo.width > 0 ? photo.width : 1}
-                            height={photo.height && photo.height > 0 ? photo.height : 1}
-                          />
+                          <PhotoThumbnail photo={photo} scrollRoot={libraryContentRef} />
                           {mediaKind === "video" ? <span className="photo-media-badge is-video" aria-hidden="true"><Play size={13} fill="currentColor" /></span> : null}
                           {mediaKind === "raw" ? <span className="photo-media-badge is-raw" aria-hidden="true">RAW</span> : null}
                           <span className="photo-name">{photo.name}</span>
@@ -1154,6 +1160,35 @@ export function PhotoLibraryPanel({
       ) : null}
     </section>
   );
+}
+
+function PhotoThumbnail({ photo, scrollRoot }: {
+  photo: PhotoQueryAsset;
+  scrollRoot: RefObject<HTMLDivElement | null>;
+}) {
+  const imageRef = useRef<HTMLImageElement | null>(null);
+  const source = `/api/photos/${encodeURIComponent(photo.id)}/thumbnail`;
+  useEffect(() => {
+    const image = imageRef.current;
+    if (!image) return;
+    let active = true;
+    const observer = new IntersectionObserver((entries) => {
+      if (active && entries.some((entry) => entry.isIntersecting)) {
+        image.src = source;
+        observer.disconnect();
+      }
+    }, { root: scrollRoot.current, rootMargin: "160px 0px" });
+    observer.observe(image);
+    return () => {
+      active = false;
+      observer.disconnect();
+      // Detached images otherwise keep downloading and delay the next panel.
+      image.removeAttribute("src");
+    };
+  }, [scrollRoot, source]);
+  return <img ref={imageRef} alt="" loading="lazy" decoding="async" fetchPriority="low"
+    width={photo.width && photo.width > 0 ? photo.width : 1}
+    height={photo.height && photo.height > 0 ? photo.height : 1} />;
 }
 
 export function PhotoLibraryEmptyState({ onConfigure }: { onConfigure: () => void }) {

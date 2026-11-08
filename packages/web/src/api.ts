@@ -2035,10 +2035,10 @@ export async function getPhotoRecord(assetId: string): Promise<PhotoQueryAsset> 
   return ((await response.json()) as { photo: PhotoQueryAsset }).photo;
 }
 
-export async function getPhotoMetadataFields(query = ""): Promise<PhotoMetadataField[]> {
+export async function getPhotoMetadataFields(query = "", signal?: AbortSignal): Promise<PhotoMetadataField[]> {
   const params = new URLSearchParams();
   if (query) params.set("q", query);
-  const response = await fetch(`/api/photos/metadata/fields?${params.toString()}`);
+  const response = await fetch(`/api/photos/metadata/fields?${params.toString()}`, { signal: signal ?? null });
   await ensureOk(response);
   return ((await response.json()) as { fields: PhotoMetadataField[] }).fields;
 }
