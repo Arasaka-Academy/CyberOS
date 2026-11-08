@@ -1,40 +1,99 @@
-.nvr-panel { display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0; overflow: hidden; }
-.nvr-tabs { flex-shrink: 0; display: flex; border-bottom: 1px solid var(--line); }
-.nvr-tabs > button { flex: 1; min-width: 0; }
-.nvr-scroll { overflow: auto; min-height: 0; min-width: 0; padding: 14px; container-type: inline-size; }
-.nvr-camera-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.nvr-camera { min-width: 0; border: 1px solid var(--line); background: var(--surface); }
-.nvr-camera[data-selected="true"] { border-color: var(--accent); }
-.nvr-camera > header { display: flex; justify-content: space-between; gap: 6px; padding: 6px; }
-.nvr-camera > header > button { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.nvr-preview, .nvr-video { width: 100%; min-width: 0; aspect-ratio: 16/9; background: var(--surface); position: relative; }
-.nvr-preview img, .nvr-video video { width: 100%; height: 100%; object-fit: contain; display: block; }
-.nvr-preview > span, .nvr-video > p { position: absolute; left: 10px; right: 10px; bottom: 8px; background: var(--surface); color: var(--danger-text); padding: 8px; overflow-wrap: anywhere; }
-.nvr-device-state { margin: 0; padding: 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.nvr-device-state > div { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; align-items: center; }
-.nvr-device-state dt { font-size: 11px; color: var(--muted); }
-.nvr-device-state dd { margin: 0; font-size: 12px; min-width: 0; }
-.nvr-device-error { padding: 0 10px; color: var(--warning-text); overflow-wrap: anywhere; font-size: 12px; }
-.nvr-form, .nvr-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: end; margin-block: 14px; }
-.nvr-form > *, .nvr-filters > * { min-width: 0; }
-.nvr-form > .nvr-actions { grid-column: 1 / -1; }
-.nvr-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.nvr-actions .custom-select { flex: 1; min-width: min(180px, 100%); }
-.nvr-device-row { border-top: 1px solid var(--line); padding-block: 14px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-.nvr-device-row p, .nvr-discovery { overflow-wrap: anywhere; }
-.nvr-ptz-controls { display: flex; flex-wrap: wrap; gap: 20px; padding-block: 14px; align-items: center; }
-.nvr-direction-pad { display: grid; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(3, 44px); gap: 4px; }
-.nvr-direction-pad > button { width: 44px; height: 44px; touch-action: none; user-select: none; }
-.nvr-direction-up { grid-area: 1 / 2; }.nvr-direction-left { grid-area: 2 / 1; }.nvr-direction-stop { grid-area: 2 / 2; }.nvr-direction-right { grid-area: 2 / 3; }.nvr-direction-down { grid-area: 3 / 2; }
-.nvr-ptz-feedback { display: flex; flex: 1; flex-direction: column; gap: 10px; min-width: 0; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
-.nvr-presets, .nvr-events, .nvr-recordings, .nvr-discovery { list-style: none; padding: 0; margin: 12px 0; }
-.nvr-presets > li, .nvr-events > li, .nvr-recordings > li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
-.nvr-presets > li > span, .nvr-events > li > div, .nvr-recordings > li > div { display: flex; flex-wrap: wrap; min-width: 0; gap: 8px; align-items: center; overflow-wrap: anywhere; }
-.nvr-events > li[data-gap="true"] { color: var(--warning-text); }
-.nvr-download { display: grid; place-items: center; min-width: 44px; min-height: 44px; border: 1px solid var(--line); color: var(--text); }
-.nvr-timeline { position: relative; display: flex; justify-content: space-between; height: 68px; margin-block: 16px; border-bottom: 1px solid var(--line); font-size: 11px; color: var(--muted); }
-.nvr-timeline > .nvr-timeline-segment { position: absolute; top: 24px; height: 32px; min-width: 2px; padding: 0; background: var(--accent); border: 0; }
-@container (min-width: 601px) { .nvr-camera-grid .nvr-preview, .nvr-camera-grid .nvr-video { max-height: 20dvh; } }
-@container (max-width: 600px) { .nvr-camera-grid { grid-template-columns: minmax(0, 1fr); } }
-@container (max-width: 360px) { .nvr-form { grid-template-columns: minmax(0, 1fr); }.nvr-filters { grid-template-columns: minmax(0, 1fr); }.nvr-ptz-controls { gap: 12px; } }
-@media (max-width: 1040px) { .nvr-tabs > button { min-height: 44px; }.nvr-scroll { padding: 12px; }.nvr-actions > button, .nvr-presets > li > button { min-height: 44px; } }
+@layer app {
+  .nvr-panel, .nvr-panel-content { display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0; overflow: hidden; }
+  .nvr-tabs { flex-shrink: 0; display: flex; border-bottom: 1px solid var(--line); }
+  .nvr-tabs > button { flex: 1; min-width: 0; }
+  .nvr-scroll { flex: 1; overflow: auto; min-height: 0; min-width: 0; padding: 14px; container: nvr / inline-size; }
+  .nvr-scroll > .ui-notice { margin-bottom: 12px; }
+  .nvr-card-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; list-style: none; padding: 0; margin: 0; }
+  .nvr-card { min-width: 0; border: 1px solid var(--line); background: var(--surface); padding: 14px; }
+  .nvr-card-header { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; margin-bottom: 12px; }
+  .nvr-card-header h3 { flex: 1; min-width: 0; margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+  .nvr-card-header > svg { flex-shrink: 0; color: var(--muted); }
+  .nvr-card > p { margin: 0 0 12px; overflow-wrap: anywhere; }
+  .nvr-full-width, .nvr-overview { grid-column: 1 / -1; }
+  .nvr-overview-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 8px; margin: 0 0 14px; }
+  .nvr-overview-stats > div { min-width: 0; }
+  .nvr-overview-stats dt { font-size: 11px; color: var(--muted); overflow-wrap: anywhere; }
+  .nvr-overview-stats dd { margin: 4px 0 0; font-family: var(--font-mono); font-size: 24px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .nvr-storage-summary { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12px; }
+  .nvr-storage-summary > svg { flex-shrink: 0; color: var(--muted); }
+  .nvr-camera { position: relative; padding: 0; }
+  .nvr-camera > .nvr-card-header { padding: 12px; margin: 0; }
+  .nvr-camera > .nvr-card-header h3 { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .nvr-camera-open { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; padding: 0; background: transparent; cursor: pointer; transition: box-shadow 120ms; }
+  .nvr-camera-open:hover { box-shadow: inset 0 0 0 1px var(--cyber-accent2); }
+  .nvr-camera-open:active { box-shadow: inset 0 0 0 2px var(--accent); }
+  .nvr-camera-open:focus-visible { outline: 2px solid var(--cyber-accent2); outline-offset: 3px; }
+  .nvr-preview, .nvr-video { width: 100%; min-width: 0; aspect-ratio: 16 / 9; background: var(--surface); position: relative; }
+  .nvr-preview img, .nvr-video video { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .nvr-preview > span, .nvr-video > p { position: absolute; left: 10px; right: 10px; bottom: 8px; background: var(--surface); color: var(--danger-text); padding: 8px; overflow-wrap: anywhere; font-size: 12px; }
+  .nvr-device-state { margin: 0; padding: 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .nvr-device-state > div { display: flex; flex-wrap: wrap; gap: 4px 6px; min-width: 0; align-items: center; }
+  .nvr-device-state dt { font-size: 11px; color: var(--muted); }
+  .nvr-device-state dd { margin: 0; font-size: 12px; min-width: 0; overflow-wrap: anywhere; }
+  .nvr-device-error { padding: 0 12px; color: var(--warning-text); overflow-wrap: anywhere; font-size: 12px; }
+  .nvr-history, .nvr-devices { display: flex; flex-direction: column; gap: 12px; }
+  .nvr-form, .nvr-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: end; margin: 14px 0 0; }
+  .nvr-form > *, .nvr-filters > * { min-width: 0; }
+  .nvr-form > .nvr-actions { grid-column: 1 / -1; }
+  .nvr-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .nvr-actions .custom-select { flex: 1; min-width: min(180px, 100%); }
+  .nvr-device-row { display: flex; flex-direction: column; gap: 12px; }
+  .nvr-device-row > .nvr-card-header, .nvr-device-row > p { margin: 0; }
+  .nvr-device-row .nvr-device-state { padding: 0; }
+  .nvr-device-row .nvr-actions { margin-top: auto; }
+  .nvr-device-row p, .nvr-discovery { overflow-wrap: anywhere; }
+  .nvr-presets, .nvr-discovery { list-style: none; padding: 0; margin: 12px 0 0; }
+  .nvr-presets > li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .nvr-presets > li > span { min-width: 0; overflow-wrap: anywhere; }
+  .nvr-recording, .nvr-event { display: flex; flex-direction: column; }
+  .nvr-recording .nvr-actions, .nvr-event .nvr-actions { margin-top: auto; }
+  .nvr-recording-time { font-size: 14px; font-variant-numeric: tabular-nums; }
+  .nvr-event[data-gap="true"] { border-inline-start: 2px solid var(--warning-text); }
+  .nvr-gap-label { color: var(--warning-text); font-size: 12px; }
+  .nvr-download { display: grid; place-items: center; min-width: 44px; min-height: 44px; border: 1px solid var(--line); color: var(--text); }
+  .nvr-download:hover { border-color: var(--cyber-accent2); }
+  .nvr-download:focus-visible { outline: 2px solid var(--cyber-accent2); outline-offset: 3px; }
+  .nvr-timeline { position: relative; display: flex; justify-content: space-between; height: 68px; margin-top: 14px; border-bottom: 1px solid var(--line); font-size: 11px; color: var(--muted); }
+  .nvr-timeline > .nvr-timeline-segment { position: absolute; top: 24px; height: 32px; min-width: 2px; padding: 0; background: var(--accent); border: 0; }
+  .nvr-dialog-backdrop { padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+  .nvr-camera-dialog { width: min(1120px, 100%); max-height: calc(100dvh - 24px); display: flex; flex-direction: column; container: nvr-dialog / inline-size; }
+  .nvr-camera-dialog-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; padding: 14px; align-items: start; }
+  .nvr-camera-view, .nvr-ptz { min-width: 0; }
+  .nvr-stream-switch { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .nvr-stream-switch > button { flex: 1; min-width: 0; }
+  .nvr-camera-view .nvr-device-state { padding-inline: 0; }
+  .nvr-ptz { margin: 0; }
+  .nvr-ptz-controls { display: flex; flex-wrap: wrap; gap: 20px; padding-block: 14px; align-items: center; }
+  .nvr-direction-pad { display: grid; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(3, 44px); gap: 4px; }
+  .nvr-direction-pad > button { width: 44px; height: 44px; touch-action: none; user-select: none; }
+  .nvr-direction-up { grid-area: 1 / 2; }
+  .nvr-direction-left { grid-area: 2 / 1; }
+  .nvr-direction-stop { grid-area: 2 / 2; }
+  .nvr-direction-right { grid-area: 2 / 3; }
+  .nvr-direction-down { grid-area: 3 / 2; }
+  .nvr-ptz-feedback { display: flex; flex: 1; flex-direction: column; gap: 10px; min-width: 120px; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+  @container nvr (min-width: 620px) {
+    .nvr-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .nvr-overview-stats { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .nvr-camera .nvr-preview { max-height: 20dvh; }
+  }
+  @container nvr (max-width: 359px) {
+    .nvr-form, .nvr-filters { grid-template-columns: minmax(0, 1fr); }
+  }
+  @container nvr-dialog (min-width: 820px) {
+    .nvr-camera-dialog-body { grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); }
+  }
+  @container nvr-dialog (max-width: 359px) {
+    .nvr-form { grid-template-columns: minmax(0, 1fr); }
+    .nvr-ptz-controls { gap: 12px; }
+  }
+  @media (max-width: 1040px) {
+    .nvr-tabs > button { min-height: 44px; }
+    .nvr-scroll { padding: 12px; }
+    .nvr-actions > button, .nvr-presets > li > button, .nvr-stream-switch > button { min-height: 44px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .nvr-camera-open { transition: none; }
+  }
+}

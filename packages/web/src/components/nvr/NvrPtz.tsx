@@ -1,41 +1,70 @@
 import { Button, Field, Input, Notice, Section } from "@cyberos/ui";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Home, Square } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { NvrPtzCommand, NvrPtzStatus } from "@cyberos/shared";
 import { nvrRequest, PtzLease } from "./api.js";
 
-export function NvrPtz({ deviceId }: { deviceId: string }) {
+export function NvrPtz({ deviceId, onFault }: { deviceId: string; onFault: (message: string) => void }) {
   const { t } = useTranslation(); const [status, setStatus] = useState<NvrPtzStatus | null>(null); const [error, setError] = useState("");
+  const [statusError, setStatusError] = useState("");
+  const faultRef = useRef(onFault); faultRef.current = onFault;
+  const finiteMotion = useRef(false);
+  const motionRequest = useRef<Promise<void> | null>(null);
+  const generation = useRef(0);
+  const faulted = useRef(false);
   const [pan, setPan] = useState("0"); const [tilt, setTilt] = useState("0"); const [name, setName] = useState(""); const [busy, setBusy] = useState(false);
-  const lease = useMemo(() => new PtzLease((command) => nvrRequest<void>(`/devices/${deviceId}/ptz`, "POST", command), (cause) => setError(cause instanceof Error ? cause.message : t("nvr.fault"))), [deviceId, t]);
+  const lease = useMemo(() => new PtzLease((command) => nvrRequest<void>(`/devices/${deviceId}/ptz`, "POST", command), (cause) => {
+    const message = cause instanceof Error ? cause.message : t("nvr.fault");
+    faulted.current = true;
+    setError(message); faultRef.current(message);
+  }), [deviceId, t]);
+  const stopMotion = useCallback(() => {
+    const force = finiteMotion.current; finiteMotion.current = false;
+    const request = motionRequest.current;
+    const stopped = lease.stop();
+    // A finite move may still be awaiting its acknowledgement. Its stop must
+    // follow that request, including when the dialog has already unmounted.
+    return force ? stopped.then(() => request?.catch(() => undefined)).then(() => lease.stop(true)) : stopped;
+  }, [lease]);
   useEffect(() => {
     let disposed = false; let pending = false; const controller = new AbortController();
     const refresh = () => { if (pending || document.hidden) return; pending = true;
-      void nvrRequest<NvrPtzStatus>(`/devices/${deviceId}/ptz`, "GET", undefined, controller.signal).then((value) => { if (!disposed) { setStatus(value); setError(""); } }).catch((cause: unknown) => { if (!disposed) setError(cause instanceof Error ? cause.message : t("nvr.fault")); }).finally(() => { pending = false; });
+      void nvrRequest<NvrPtzStatus>(`/devices/${deviceId}/ptz`, "GET", undefined, controller.signal).then((value) => { if (!disposed) { setStatus(value); setStatusError(""); if (!value.enabled || value.state !== "running" || value.calibrationRequired) void stopMotion(); } }).catch((cause: unknown) => { if (!disposed) { setStatus(null); setStatusError(cause instanceof Error ? cause.message : t("nvr.fault")); void stopMotion(); } }).finally(() => { pending = false; });
     };
-    const stop = () => lease.stop(); refresh(); const timer = setInterval(refresh, 2500);
+    const stop = () => { void stopMotion(); }; refresh(); const timer = setInterval(refresh, 2500);
     for (const event of ["blur", "pagehide", "offline"]) window.addEventListener(event, stop);
     document.addEventListener("visibilitychange", stop);
-    return () => { disposed = true; controller.abort(); clearInterval(timer); lease.stop(); for (const event of ["blur", "pagehide", "offline"]) window.removeEventListener(event, stop); document.removeEventListener("visibilitychange", stop); };
-  }, [deviceId, lease, t]);
+    return () => { disposed = true; generation.current += 1; controller.abort(); clearInterval(timer); stop(); for (const event of ["blur", "pagehide", "offline"]) window.removeEventListener(event, stop); document.removeEventListener("visibilitychange", stop); };
+  }, [deviceId, stopMotion, t]);
   const command = async (value: NvrPtzCommand) => {
-    const stopped = lease.stop(); setBusy(true); setError("");
-    try { await stopped; await nvrRequest<void>(`/devices/${deviceId}/ptz`, "POST", value); setStatus(await nvrRequest<NvrPtzStatus>(`/devices/${deviceId}/ptz`)); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : t("nvr.fault")); } finally { setBusy(false); }
+    const currentGeneration = generation.current;
+    const stopped = stopMotion(); setBusy(true);
+    try {
+      await stopped;
+      if (generation.current !== currentGeneration || faulted.current && value.action !== "stop") return;
+      setError("");
+      if (["absolute_move", "relative_move", "home", "goto_preset"].includes(value.action)) finiteMotion.current = true;
+      const request = nvrRequest<void>(`/devices/${deviceId}/ptz`, "POST", value);
+      motionRequest.current = request;
+      await request;
+      if (value.action === "stop") { finiteMotion.current = false; faulted.current = false; }
+      if (generation.current === currentGeneration) setStatus(await nvrRequest<NvrPtzStatus>(`/devices/${deviceId}/ptz`));
+    } catch (cause) { const message = cause instanceof Error ? cause.message : t("nvr.fault"); setError(message); if (value.action === "stop") { faulted.current = true; faultRef.current(message); } } finally { setBusy(false); }
   };
-  const enabled = Boolean(status?.enabled && status.state === "running" && !status.calibrationRequired && !busy);
+  const enabled = Boolean(status?.enabled && status.state === "running" && !status.calibrationRequired && !busy && !error && !statusError);
   return <Section className="nvr-ptz" title={t("nvr.ptz")} description={t("nvr.holdHint")}>
     {error ? <Notice tone="danger">{error}</Notice> : null}
+    {statusError ? <Notice tone="danger">{statusError}</Notice> : null}
     {status?.lastError ? <Notice tone="warning">{status.lastError}</Notice> : null}
     {status?.simulated ? <Notice>{t("nvr.simulated")}</Notice> : null}
-    {status?.state === "calibration_required" ? <Notice tone="warning">{t("nvr.calibrationRequired")}</Notice> : null}
+    {status && (status.calibrationRequired || status.state === "calibration_required" || status.state === "uncalibrated") ? <Notice tone="warning">{t("nvr.calibrationRequired")}</Notice> : null}
     <div className="nvr-ptz-controls">
       <div className="nvr-direction-pad">
-        {([{ key: "up", pan: 0, tilt: 0.4, Icon: ArrowUp }, { key: "left", pan: -0.4, tilt: 0, Icon: ArrowLeft }, { key: "right", pan: 0.4, tilt: 0, Icon: ArrowRight }, { key: "down", pan: 0, tilt: -0.4, Icon: ArrowDown }] as const).map(({ key, pan: p, tilt: q, Icon }) => <Button key={key} variant="secondary" iconOnly className={`nvr-direction-${key}`} aria-label={t(`nvr.${key}`)} disabled={!enabled}
+        {([{ key: "up", pan: 0, tilt: 0.4, Icon: ArrowUp }, { key: "left", pan: -0.4, tilt: 0, Icon: ArrowLeft }, { key: "right", pan: 0.4, tilt: 0, Icon: ArrowRight }, { key: "down", pan: 0, tilt: -0.4, Icon: ArrowDown }] as const).map(({ key, pan: p, tilt: q, Icon }) => <Button key={key} variant="secondary" iconOnly className={`nvr-direction-${key}`} aria-label={t(`nvr.${key}`)} disabled={!enabled || !status?.continuousMove}
           onPointerDown={(event) => { if (event.button !== 0) return; event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); lease.start(p, q); }} onPointerUp={() => lease.stop()} onPointerCancel={() => lease.stop()} onLostPointerCapture={() => lease.stop()} onBlur={() => lease.stop()}
           onKeyDown={(event) => { if ((event.key === " " || event.key === "Enter") && !event.repeat) { event.preventDefault(); lease.start(p, q); } }} onKeyUp={(event) => { if (event.key === " " || event.key === "Enter") { event.preventDefault(); lease.stop(); } }}><Icon size={19} /></Button>)}
-        <Button variant="danger" iconOnly className="nvr-direction-stop" aria-label={t("nvr.stop")} disabled={!status?.enabled} onClick={() => { void command({ action: "stop" }); }}><Square size={16} /></Button>
+        <Button variant="danger" iconOnly className="nvr-direction-stop" aria-label={t("nvr.stop")} onClick={() => { void command({ action: "stop" }); }}><Square size={16} /></Button>
       </div>
       <div className="nvr-ptz-feedback"><span>{t("nvr.position")}: {status?.position ? `${status.position.pan.toFixed(3)} / ${status.position.tilt.toFixed(3)}` : "—"}</span><span>{t("nvr.movement")}: {status?.position ? t(status.position.moving ? "nvr.moving" : "nvr.stationary") : t("nvr.unknown")}</span><Button variant="secondary" disabled={!enabled} onClick={() => { void command({ action: "home" }); }}><Home size={15} />{t("nvr.home")}</Button></div>
     </div>
