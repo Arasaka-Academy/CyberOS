@@ -1,3 +1,9 @@
+cyberos (2.3.47) unstable; urgency=medium
+
+  * Reduce workspace panel loading delays with compressed assets, nonblocking photo metadata, and cancellable nearby thumbnails.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Sun, 08 Nov 2026 14:42:09 +0000
+
 cyberos (2.3.46) unstable; urgency=medium
 
   * NVR cards, live camera dialog and safe PTZ session cleanup
