@@ -1,5 +1,6 @@
 import { Button as UiButton, Checkbox, DialogActions, DialogHeader, EmptyState, Input } from "@cyberos/ui";
 import { ModalPortal } from "../common/ModalPortal.js";
+import { useNewContentReveal } from "../common/useContentReveal.js";
 import { Fragment, FormEvent, KeyboardEvent, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import ReactMarkdown from "react-markdown";
 import { useTranslation } from "react-i18next";
@@ -287,6 +288,13 @@ function ChatPaneContent({
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const transcriptLoading = transcriptPhase === "idle" || transcriptPhase === "loading";
   useTranscriptScroll(transcriptRef, activeSessionId, active, transcript.at(-1), transcriptPhase === "ready");
+  useNewContentReveal(transcriptRef, {
+    items: activeCapabilityApprovals,
+    scope: activeSessionId,
+    selector: ".message-approval",
+    enabled: active,
+    ready: transcriptPhase === "ready"
+  });
   const approvalDialogRef = useRef<HTMLElement | null>(null);
   const approvalDialogTriggerRef = useRef<HTMLButtonElement | null>(null);
   const workspaceAgentTitle = t("chat.workspaceAgent");

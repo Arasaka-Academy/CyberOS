@@ -117,14 +117,14 @@
 @keyframes app-notification-in {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-4px);
   }
 }
 
 @keyframes app-notification-out {
   to {
     opacity: 0;
-    transform: translateY(-6px);
+    transform: translateY(-4px);
   }
 }
 

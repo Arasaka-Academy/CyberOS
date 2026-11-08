@@ -61,6 +61,7 @@ sourceOfTruth:
   - packages/web/src/components/common/SearchFilterPopover.tsx
   - packages/web/src/styles/search-filter.css
   - packages/web/src/components/common/ModalPortal.tsx
+  - packages/web/src/components/common/useContentReveal.ts
   - packages/web/src/styles/modal.css
   - packages/web/src/styles/select.css
   - eslint.config.js
@@ -250,6 +251,10 @@ CyberOS 是个人 Linux NAS 的本地控制系统。界面要像可操作的设�
 - 启动屏使用一次诊断面板揭示和扫描进度。
 - Agent / Workspace 首次挂载使用约 `260ms` 的短揭示。
 - 当前会话、当前面板和设置导航使用约 `160ms` 的状态轨跳变。
+- 设置只在正文区域使用 `160ms` 淡入，切换时不重挂载导航、标题或表单来触发动画，保留草稿、焦点与滚动语义。
+- 管理面板在首次数据就绪后使用 `240ms`、`4px` 的短揭示；后台刷新、轮询、布局编辑和主题更新不重播入场。
+- 通知中心与 Agent 审批只对当前可见区域内实时新增的条目使用 `160ms`、`4px` 入场，起始不透明度至少 `0.65`。首次读取历史、重新打开、切换通知页签或会话时不重播；流式文字和现有条目的状态更新不触发入场。Toast 沿用现有生命周期，入场与离场位移统一为 `4px`。
+- 上述正文动效复用浏览器原生动画，不新增动画运行时依赖；内容默认可见，动画不阻塞操作。切换到减少动态效果时立即取消正在执行的揭示，结束或卸载后释放动画与监听。
 - 文件目录切换只更新列表内容，使用约 `160ms` 的淡入与不超过 `4px` 的轻移；标题、存储池选择器、搜索工具栏、面包屑和表头保持挂载，不随目录请求替换为骨架。等待时保留原列表并降低对比、暂停旧行操作，在列表内显示忙碌提示；成功后一起更新路径和条目并重置列表滚动，失败则保留原目录和条目。键盘进入文件夹后焦点跟随列表，新目录第一项可继续操作；空目录保留列表焦点。短视口保留列表最小可用高度，允许文件工作区自身滚动，不能被顶部控件或底部播放栏挤没。减少动效模式取消位移和渐变。
 - loading spinner 可以持续旋转；其他元素不得持续闪烁、抖动或循环位移。
 - `prefers-reduced-motion: reduce` 下关闭面板揭示、状态跳变、骨架移动和非必要过渡；加载和错误信息仍可被理解。

@@ -900,3 +900,139 @@ for (const locale of ["zh-CN", "en-US"]) for (const width of [1440, 820, 560, 39
     }
   });
 }
+
+async function contentMotionFixture(context, options = {}) {
+  return fixture(context, `
+    const { initI18n } = await import("/src/i18n/index.ts");
+    const motionI18n = await initI18n();
+    await motionI18n.changeLanguage("en");
+    const { ManagementDashboardGrid, useManagementDashboard } = await import("/src/components/workspace/ManagementDashboard.tsx");
+    const { NotificationCenter } = await import("/src/components/notifications/NotificationCenter.tsx");
+    const { useNewContentReveal } = await import("/src/components/common/useContentReveal.ts");
+    const nativeAnimate = Element.prototype.animate;
+    globalThis.window.__contentMotions = [];
+    Element.prototype.animate = function(frames, options) {
+      const animation = nativeAnimate.call(this, frames, options);
+      if (this.matches(".management-dashboard-container, .notification-item, .message-approval")) {
+        globalThis.window.__contentMotions.push({ target: this.className, frames: animation.effect.getKeyframes(), duration: animation.effect.getTiming().duration });
+        if (globalThis.window.__pauseContentMotion) animation.pause();
+      }
+      return animation;
+    };
+    const noop = () => undefined;
+    const notification = id => ({ id, jobId: "job-" + id, sessionId: "session-1", operationId: id,
+      kind: "file", status: "succeeded", summary: "Operation " + id, error: null, readAt: null,
+      createdAt: "2026-11-08T00:00:00Z", updatedAt: "2026-11-08T00:00:00Z" });
+    globalThis.window.__motionNotification = notification;
+    function MotionExample() {
+      const [state, setState] = React.useState({ loading: true, open: false, notifications: [notification("history")], approvals: ["old"], session: "session-1" });
+      const dashboard = useManagementDashboard("storage");
+      const approvalRef = React.useRef(null);
+      const close = React.useCallback(() => setState(current => ({ ...current, open: false })), []);
+      globalThis.window.__updateContentMotion = patch => setState(current => ({ ...current, ...patch }));
+      globalThis.window.__editContentMotionLayout = dashboard.setEditing;
+      useNewContentReveal(approvalRef, { items: state.approvals, scope: state.session, selector: ".message-approval", ready: !state.loading });
+      return React.createElement(React.Fragment, null,
+        React.createElement(ManagementDashboardGrid, { dashboard, loading: state.loading, items: [{ id: "overview", title: "Overview", content: React.createElement("strong", null, "Live storage overview") }] }),
+        React.createElement("div", { ref: approvalRef }, state.loading ? null : state.approvals.map(id => React.createElement("article", { key: id, className: "message-approval" }, "Approval " + id))),
+        React.createElement(NotificationCenter, { open: state.open, loading: state.loading, notifications: state.notifications, bluetoothTransfers: [], alertIncidents: [],
+          unreadCount: state.notifications.length, operationUnreadCount: state.notifications.length, bluetoothUnreadCount: 0, alertUnreadCount: 0,
+          locale: "en", onClose: close, onRead: noop, onReadAll: noop, onReadBluetooth: noop, onReadAllBluetooth: noop, onReadAlert: noop, onReadAllAlerts: noop, onAcknowledgeAlert: noop }));
+    }
+    createRoot(globalThis.document.getElementById("root")).render(React.createElement(MotionExample));
+  `, { reducedMotion: "no-preference", ...options });
+}
+
+async function contentMotionCount(page, selector) {
+  return page.evaluate(selector => globalThis.window.__contentMotions.filter(record => record.target.split(" ").includes(selector)).length, selector);
+}
+
+test("management content reveals once when ready and survives refresh, editing and breakpoint changes", async context => {
+  const page = await contentMotionFixture(context);
+  assert.equal(await contentMotionCount(page, "management-dashboard-container"), 0);
+  await page.evaluate(() => globalThis.window.__updateContentMotion({ loading: false }));
+  await page.getByText("Live storage overview", { exact: true }).waitFor();
+  assert.equal(await contentMotionCount(page, "management-dashboard-container"), 1);
+  const motion = await page.evaluate(() => globalThis.window.__contentMotions.find(record => record.target === "management-dashboard-container"));
+  assert.equal(motion.duration, 240);
+  assert.equal(motion.frames[0].translate, "0px 4px");
+  await page.evaluate(() => globalThis.window.__updateContentMotion({ loading: true }));
+  await page.locator(".management-dashboard-container[aria-busy=true]").waitFor();
+  await page.evaluate(() => globalThis.window.__updateContentMotion({ loading: false }));
+  await page.getByText("Live storage overview", { exact: true }).waitFor();
+  await page.evaluate(() => globalThis.window.__editContentMotionLayout(true));
+  await page.locator(".management-widget-drag-handle").waitFor();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator(".management-dashboard-static").waitFor();
+  assert.equal(await contentMotionCount(page, "management-dashboard-container"), 1);
+  for (const scheme of ["neon", "mono", "graphite", "synthwave", "bloodline", "terminal", "amber"]) {
+    for (const mode of ["dark", "light"]) {
+      await page.evaluate(({ scheme, mode }) => {
+        globalThis.document.documentElement.setAttribute("data-cyber-scheme", scheme);
+        globalThis.document.documentElement.setAttribute("data-cyber-mode", mode);
+      }, { scheme, mode });
+      assert.equal(await page.getByText("Live storage overview", { exact: true }).isVisible(), true);
+    }
+  }
+  assert.equal(await contentMotionCount(page, "management-dashboard-container"), 1);
+});
+
+test("notification history stays still while a live addition reveals once", async context => {
+  const page = await contentMotionFixture(context);
+  await page.evaluate(() => globalThis.window.__updateContentMotion({ open: true }));
+  await page.locator(".notification-drawer").waitFor();
+  await page.evaluate(() => globalThis.window.__updateContentMotion({ loading: false }));
+  await page.getByText("Operation history", { exact: true }).waitFor();
+  assert.equal(await contentMotionCount(page, "notification-item"), 0);
+  await page.evaluate(() => globalThis.window.__updateContentMotion({ notifications: [globalThis.window.__motionNotification("new"), globalThis.window.__motionNotification("history")] }));
+  await page.getByText("Operation new", { exact: true }).waitFor();
+  assert.equal(await contentMotionCount(page, "notification-item"), 1);
+  const motion = await page.evaluate(() => globalThis.window.__contentMotions.find(record => record.target.split(" ").includes("notification-item")));
+  assert.equal(motion.duration, 160);
+  assert.equal(motion.frames[0].opacity, "0.65");
+  await page.evaluate(() => globalThis.window.__updateContentMotion({ notifications: [{ ...globalThis.window.__motionNotification("new"), summary: "Updated without replay", readAt: "2026-11-08T00:01:00Z" }, globalThis.window.__motionNotification("history")] }));
+  await page.getByText("Updated without replay", { exact: true }).waitFor();
+  await page.getByRole("tab", { name: /Bluetooth/ }).click();
+  await page.getByRole("tab", { name: /Operations/ }).click();
+  assert.equal(await contentMotionCount(page, "notification-item"), 1);
+  await page.keyboard.press("Escape");
+  await page.locator(".notification-drawer").waitFor({ state: "detached" });
+  await page.evaluate(() => globalThis.window.__updateContentMotion({ open: true, notifications: [globalThis.window.__motionNotification("while-closed"), globalThis.window.__motionNotification("history")] }));
+  await page.getByText("Operation while-closed", { exact: true }).waitFor();
+  assert.equal(await contentMotionCount(page, "notification-item"), 1);
+});
+
+test("approval history and session switches do not replay live card entrances", async context => {
+  const page = await contentMotionFixture(context);
+  await page.evaluate(() => globalThis.window.__updateContentMotion({ loading: false }));
+  await page.getByText("Approval old", { exact: true }).waitFor();
+  assert.equal(await contentMotionCount(page, "message-approval"), 0);
+  await page.evaluate(() => globalThis.window.__updateContentMotion({ approvals: ["old", "new"] }));
+  await page.getByText("Approval new", { exact: true }).waitFor();
+  assert.equal(await contentMotionCount(page, "message-approval"), 1);
+  await page.evaluate(() => globalThis.window.__updateContentMotion({ session: "session-2", approvals: ["other-history"] }));
+  await page.getByText("Approval other-history", { exact: true }).waitFor();
+  await page.evaluate(() => globalThis.window.__updateContentMotion({ loading: true }));
+  await page.locator(".message-approval").waitFor({ state: "detached" });
+  await page.evaluate(() => globalThis.window.__updateContentMotion({ loading: false }));
+  await page.getByText("Approval other-history", { exact: true }).waitFor();
+  assert.equal(await contentMotionCount(page, "message-approval"), 1);
+});
+
+test("reduced motion keeps content visible and cancels an in-flight reveal", async context => {
+  const page = await contentMotionFixture(context, { reducedMotion: "reduce" });
+  await page.evaluate(() => globalThis.window.__updateContentMotion({ loading: false, open: true }));
+  await page.getByText("Operation history", { exact: true }).waitFor();
+  await page.evaluate(() => globalThis.window.__updateContentMotion({ notifications: [globalThis.window.__motionNotification("reduced")], approvals: ["old", "reduced"] }));
+  await page.getByText("Operation reduced", { exact: true }).waitFor();
+  assert.deepEqual(await page.evaluate(() => globalThis.window.__contentMotions), []);
+  assert.equal(await page.locator(".management-dashboard-container").evaluate(element => globalThis.getComputedStyle(element).opacity), "1");
+
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.evaluate(() => { globalThis.window.__pauseContentMotion = true; globalThis.window.__updateContentMotion({ approvals: ["old", "reduced", "in-flight"] }); });
+  await page.getByText("Approval in-flight", { exact: true }).waitFor();
+  assert.equal(await page.getByText("Approval in-flight", { exact: true }).evaluate(element => element.getAnimations().length), 1);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.waitForFunction(() => [...globalThis.document.querySelectorAll(".message-approval")].every(element => element.getAnimations().length === 0));
+  assert.equal(await page.getByText("Approval in-flight", { exact: true }).evaluate(element => globalThis.getComputedStyle(element).opacity), "1");
+});

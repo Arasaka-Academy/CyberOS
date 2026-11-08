@@ -6,6 +6,19 @@
   overflow: hidden;
 }
 
+.settings-detail {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.settings-detail > :not(.settings-resource-errors):not(.settings-power-section) {
+  flex: 1;
+  min-height: 0;
+}
+
 .settings-page-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

@@ -29,6 +29,7 @@ import {
 } from "../../lib/management-dashboard-layout.js";
 import { ManagementWidgetSkeleton } from "./ManagementSkeleton.js";
 import { PanelHeaderAction } from "./PanelHeader.js";
+import { useContentReveal } from "../common/useContentReveal.js";
 
 // The library's exported forwardRef erases its breakpoint generic to string.
 const ManagementResponsiveGrid = Responsive as ComponentType<
@@ -172,6 +173,7 @@ export function ManagementDashboardGrid({
 }) {
   const { t } = useTranslation();
   const { width, containerRef, mounted } = useContainerWidth({ initialWidth: 900 });
+  useContentReveal(containerRef, { enabled: mounted && !loading, once: true, duration: 240, distance: 4 });
   const compact = mounted && width < MANAGEMENT_DASHBOARD_MOBILE_MAX_WIDTH;
   const { editing, layouts, setBreakpoint, setCompact, setEditing, setLayouts } = dashboard;
   const breakpoint = width > MANAGEMENT_DASHBOARD_BREAKPOINTS.desktop ? "desktop" : "tablet";

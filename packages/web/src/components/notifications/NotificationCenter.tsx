@@ -26,6 +26,7 @@ import { formatBytes } from "../../i18n/format.js";
 import { formatDate, formatRelativeTime } from "../../i18n/format.js";
 import type { SupportedLocale } from "../../i18n/locale.js";
 import { usePopoverBack } from "../common/ModalPortal.js";
+import { useNewContentReveal } from "../common/useContentReveal.js";
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -74,6 +75,14 @@ export function NotificationCenter({
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [activeTab, setActiveTab] = useState<"operations" | "bluetooth" | "alerts">("operations");
+  const listRef = useRef<HTMLDivElement | null>(null);
+  useNewContentReveal(listRef, {
+    items: activeTab === "operations" ? notifications : activeTab === "bluetooth" ? bluetoothTransfers : alertIncidents,
+    scope: activeTab,
+    selector: ".notification-item",
+    enabled: open,
+    ready: !loading
+  });
   usePopoverBack(open, onClose, 9);
   const activeUnreadCount = activeTab === "operations"
     ? operationUnreadCount
@@ -175,7 +184,7 @@ export function NotificationCenter({
           </UiButton>
         </div>
 
-        <div className="notification-list" role="tabpanel">
+        <div ref={listRef} className="notification-list" role="tabpanel">
           {activeTab === "operations" ? (
             <OperationsList
               loading={loading}

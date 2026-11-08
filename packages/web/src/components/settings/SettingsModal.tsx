@@ -1,5 +1,6 @@
 import { Button as UiButton, DescriptionList, DialogActions, DialogHeader, Field, Input, InputGroup, Notice, Section, ThemePicker } from "@cyberos/ui";
 import { ModalPortal } from "../common/ModalPortal.js";
+import { useContentReveal } from "../common/useContentReveal.js";
 import { MobileAppHeader, useAppHeadingFocus } from "../../mobile/MobileAppHeader.js";
 import { useMobileBack, useMobileNavigation } from "../../mobile/MobileNavigation.js";
 import { PowerControl } from "../power/PowerControl.js";
@@ -246,6 +247,8 @@ export function SettingsModal({
   useEffect(() => { if (activeSection !== "overview") setMobileDetail(true); }, [activeSection]);
   const [settingsSearch, setSettingsSearch] = useState("");
   const dialogRef = useRef<HTMLElement | null>(null);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  useContentReveal(bodyRef, { enabled: !compact || mobileDetail, transitionKey: activeSection });
   const activeSectionButtonRef = useRef<HTMLButtonElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -407,6 +410,7 @@ export function SettingsModal({
               <X aria-hidden="true" size={18} />
             </UiButton></>} /> : null}
 
+          <div ref={bodyRef} className="settings-detail">
           {activeSection === "overview" ? (
             <SettingsOverview
               systemInfo={systemInfo}
@@ -667,6 +671,7 @@ export function SettingsModal({
             />
           ) : null}
 
+          </div>
         </section> : null}
       </section>
   );
