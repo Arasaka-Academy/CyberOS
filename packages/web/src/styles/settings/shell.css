@@ -43,6 +43,7 @@
 .settings-nav {
   min-height: 0;
   padding: 6px;
+  scroll-padding: 6px;
   overflow: auto;
   scrollbar-gutter: stable;
 }

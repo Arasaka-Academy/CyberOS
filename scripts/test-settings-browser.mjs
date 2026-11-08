@@ -168,6 +168,7 @@ test("settings navigation groups keep their order, search and selection on deskt
         assert.deepEqual(await navigation.locator("section").evaluateAll(groups => groups.map(group => group.querySelectorAll("button").length)), [4, 4, 4, 3, 5, 5]);
         const clippedLabels = await navigation.locator("h3, button strong").evaluateAll(elements => elements.filter(element => element.scrollWidth > element.clientWidth + 1).map(element => element.textContent));
         assert.deepEqual(clippedLabels, []);
+        await expect(navigation).toHaveCSS("scroll-padding-bottom", "6px");
         await view.page.screenshot({ path: path.join(directory, `navigation-top-${viewport.width}-${language}.png`) });
         const search = view.page.locator(".settings-search input");
         await search.fill(labels[2]);
@@ -187,8 +188,7 @@ test("settings navigation groups keep their order, search and selection on deskt
         await view.page.keyboard.press("Shift+Tab");
         await view.page.keyboard.press("Tab");
         await expect(current).toBeFocused();
-        const focused = await current.evaluate(element => ({ visible: element.matches(":focus-visible"), width: globalThis.getComputedStyle(element).outlineWidth }));
-        assert.deepEqual(focused, { visible: true, width: "2px" });
+        await assertFocusRing(current, { alreadyFocused: true });
         await view.page.screenshot({ path: path.join(directory, `navigation-${viewport.width}-${language}.png`) });
         assert.deepEqual(view.errors, []);
         assert.deepEqual(view.mutations, []);
@@ -211,9 +211,11 @@ async function translated(page, key) {
   return page.evaluate(async key => (await import("/src/i18n/index.ts")).i18n.t(key), key);
 }
 
-async function assertFocusRing(control) {
-  await control.page().keyboard.press("Tab");
-  await control.focus();
+async function assertFocusRing(control, { alreadyFocused = false } = {}) {
+  if (!alreadyFocused) {
+    await control.page().keyboard.press("Tab");
+    await control.focus();
+  }
   const focus = await control.evaluate(element => {
     const style = globalThis.getComputedStyle(element), bounds = element.getBoundingClientRect();
     const inset = Number.parseFloat(style.outlineWidth) + Number.parseFloat(style.outlineOffset);

@@ -1,3 +1,9 @@
+cyberos (2.3.45) unstable; urgency=medium
+
+  * Unify CyberUI settings, navigation rails, file pickers and Voice, and organize settings into task-focused groups.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Sun, 08 Nov 2026 04:27:55 +0000
+
 cyberos (2.3.44) unstable; urgency=medium
 
   * Add independent NVR recording, playback, AI events and CyberVisual PTZ integration.
