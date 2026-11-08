@@ -39,7 +39,7 @@ export type SettingsSectionId =
   | "downloads"
   | "appearance";
 
-export type SettingsGroupId = "cyberos" | "devices" | "ai" | "workspace" | "administration";
+export type SettingsGroupId = "general" | "network" | "storage" | "media" | "ai" | "system";
 export type SettingsState = "ready" | "missing" | "loading";
 
 type Translate = TFunction<"translation">;
@@ -74,15 +74,63 @@ export const AGENT_CAPABILITY_POLICY_OPTIONS: AgentCapabilityPolicyMode[] = ["au
 export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     id: "overview",
-    group: "cyberos"
+    group: "general"
+  },
+  {
+    id: "appearance",
+    group: "general"
   },
   {
     id: "system-profile",
-    group: "cyberos"
+    group: "general"
   },
   {
     id: "version",
-    group: "cyberos"
+    group: "general"
+  },
+  {
+    id: "wireless",
+    group: "network"
+  },
+  {
+    id: "bluetooth",
+    group: "network"
+  },
+  {
+    id: "proxy",
+    group: "network"
+  },
+  {
+    id: "tailscale",
+    group: "network"
+  },
+  {
+    id: "files",
+    group: "storage"
+  },
+  {
+    id: "indexer",
+    group: "storage"
+  },
+  {
+    id: "shares",
+    group: "storage"
+  },
+  {
+    id: "backup",
+    group: "storage"
+  },
+  {
+    id: "photos",
+    group: "media"
+  },
+  {
+    id: "media",
+    group: "media"
+  },
+  {
+    id: "downloads",
+    group: "media"
   },
   {
     id: "model-providers",
@@ -90,10 +138,6 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   },
   {
     id: "pi-agent",
-    group: "ai"
-  },
-  {
-    id: "audio",
     group: "ai"
   },
   {
@@ -105,72 +149,28 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     group: "ai"
   },
   {
-    id: "wireless",
-    group: "devices"
-  },
-  {
-    id: "proxy",
-    group: "devices"
-  },
-  {
-    id: "tailscale",
-    group: "devices"
-  },
-  {
-    id: "bluetooth",
-    group: "devices"
+    id: "audio",
+    group: "ai"
   },
   {
     id: "docker",
-    group: "administration"
+    group: "system"
   },
   {
     id: "virtual-machines",
-    group: "administration"
-  },
-  {
-    id: "shares",
-    group: "administration"
-  },
-  {
-    id: "operations",
-    group: "administration"
+    group: "system"
   },
   {
     id: "monitoring",
-    group: "administration"
-  },
-  {
-    id: "backup",
-    group: "administration"
+    group: "system"
   },
   {
     id: "alerts",
-    group: "administration"
+    group: "system"
   },
   {
-    id: "files",
-    group: "workspace"
-  },
-  {
-    id: "indexer",
-    group: "workspace"
-  },
-  {
-    id: "photos",
-    group: "workspace"
-  },
-  {
-    id: "media",
-    group: "workspace"
-  },
-  {
-    id: "downloads",
-    group: "workspace"
-  },
-  {
-    id: "appearance",
-    group: "cyberos"
+    id: "operations",
+    group: "system"
   }
 ];
 
@@ -231,11 +231,12 @@ const SECTION_DESCRIPTION_KEYS = {
 } as const satisfies Record<SettingsSectionId, string>;
 
 const GROUP_LABEL_KEYS = {
-  cyberos: "settings.groups.cyberos",
+  general: "settings.groups.general",
+  network: "settings.groups.network",
+  storage: "settings.groups.storage",
+  media: "settings.groups.media",
   ai: "settings.groups.ai",
-  devices: "settings.groups.devices",
-  workspace: "settings.groups.workspace",
-  administration: "settings.groups.administration"
+  system: "settings.groups.system"
 } as const satisfies Record<SettingsGroupId, string>;
 
 export function modelSettingsToForm(settings: ModelProviderSettings | null): ModelProviderFormState {

@@ -1,162 +1,90 @@
-.settings-form label,
-.settings-section-card label:not(.hud-switch) {
+.settings-preference-field,
+.settings-secret-field {
   display: grid;
-  gap: 7px;
+  align-content: start;
+  gap: 6px;
   min-width: 0;
 }
 
-.settings-form label:not(.hud-switch) > span,
-.settings-section-card label:not(.hud-switch) > span {
-  color: var(--muted);
-  font-size: 11.5px;
-  font-family: var(--font-emphasis);
-  font-weight: 800;
+.settings-content-body label:not(.hud-switch) {
+  margin: 0;
+  color: var(--cyber-muted);
+  font: 600 12px/1.5 var(--cyberos-font-ui);
 }
 
-.settings-form input:not(.hud-switch-input),
-.settings-section-card input:not(.hud-switch-input) {
-  width: 100%;
-  height: 40px;
-  border: 1px solid var(--line-soft);
-  border-radius: 5px;
-  padding: 0 10px;
-  color: var(--text);
-  background: var(--surface);
-}
-
-.settings-form input::placeholder,
-.settings-section-card input::placeholder {
-  color: var(--muted-2);
-}
-
-.settings-form textarea {
-  width: 100%;
-  min-height: 88px;
-  padding: 10px;
-  border: 1px solid var(--line-soft);
-  border-radius: 5px;
-  color: var(--text);
-  background: var(--surface);
-  resize: vertical;
-}
-
-.settings-form textarea::placeholder {
-  color: var(--muted-2);
-}
-
-.settings-textarea {
-  min-height: 88px;
-}
-
-.settings-preference-field {
-  display: grid;
-  gap: 7px;
-  max-width: none;
-  min-width: 0;
-}
-
-.settings-size-field {
-  max-width: none;
+.settings-content-body .ui-field-label {
+  min-height: 24px;
 }
 
 .settings-preference-field > span,
 .settings-preference-field > label {
-  color: var(--muted);
-  font-size: 11.5px;
-  font-family: var(--font-emphasis);
-  font-weight: 800;
+  color: var(--cyber-muted);
+  font: 600 12px/1.5 var(--cyberos-font-ui);
+}
+
+.settings-preference-field small,
+.settings-help,
+.settings-empty-note {
+  margin: 0;
+  color: var(--cyber-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .settings-unit-input {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  overflow: hidden;
-  border: 1px solid var(--line-soft);
-  border-radius: 5px;
-  background: var(--surface);
+  min-width: 0;
+  border: 1px solid var(--cyber-line);
+  background: var(--cyber-bg);
 }
 
 .settings-unit-input:focus-within {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: 2px solid var(--cyber-accent2);
+  outline-offset: 3px;
 }
 
-.settings-unit-input input {
+.settings-unit-input > input {
   width: 100%;
+  min-width: 0;
   height: 40px;
   border: 0;
-  padding: 0 10px;
-  color: var(--text);
+  padding: 8px 10px;
+  color: var(--cyber-ink);
   background: transparent;
 }
 
-.settings-unit-input input:focus-visible {
+.settings-unit-input > input:focus-visible {
   outline: 0;
+  box-shadow: none;
 }
 
 .settings-unit-input > span {
   padding: 0 10px;
-  color: var(--muted-2);
-  font-size: 11.5px;
-  font-family: var(--font-emphasis);
-  font-weight: 800;
-}
-
-.settings-preference-field small {
-  color: var(--muted-2);
-  font-size: 11.5px;
-  line-height: 1.4;
+  color: var(--cyber-muted);
+  font: 12px/1.5 var(--cyberos-font-mono);
 }
 
 .settings-check {
-  display: flex !important;
+  display: flex;
   align-items: center;
-  gap: 9px !important;
-  width: fit-content;
-  color: var(--muted);
+  gap: 8px;
+  min-width: 0;
+  color: var(--cyber-ink);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .settings-check input {
+  flex: 0 0 16px;
   width: 16px;
   height: 16px;
 }
 
-.settings-empty-note {
-  margin: 0;
-  color: var(--muted-2);
-  font-size: 12px;
-  line-height: 1.45;
-}
-
 .settings-icon-button {
-  display: inline-grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border: 1px solid var(--line-soft);
-  border-radius: 0;
-  color: var(--muted);
-  background: var(--surface);
-  cursor: pointer;
-  transition:
-    color 140ms ease,
-    background 140ms ease,
-    border-color 140ms ease,
-    transform 140ms ease;
-}
-
-.settings-icon-button:hover:not(:disabled),
-.settings-icon-button:focus-visible {
-  color: var(--text);
-  border-color: color-mix(in srgb, var(--cyberos-color-text) 13%, transparent);
-  background: var(--surface-hover);
-}
-
-.settings-secret-field {
-  display: grid;
-  gap: 7px;
-  min-width: 0;
+  color: var(--cyber-ink);
 }
 
 .settings-secret-input[data-clear-pending] > input {
@@ -179,17 +107,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
-  min-height: 66px;
-  padding: 14px 30px;
-  border-top: 1px solid var(--line-soft);
-  background: var(--cyberos-color-surface-raised);
+  min-height: 68px;
+  padding: 14px 24px;
+  border-top: 1px solid var(--cyber-line);
+  background: var(--cyber-soft);
 }
 
 .settings-actions > span {
   min-width: 0;
-  color: var(--muted-2);
-  font-size: 12.5px;
+  color: var(--cyber-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .settings-actions > span:empty {
@@ -198,6 +129,16 @@
 
 .settings-actions > div {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
   margin-left: auto;
+}
+
+@media (max-width: 1040px), (pointer: coarse) {
+  .settings-unit-input > input {
+    min-height: 44px;
+    font-size: 16px;
+  }
 }

@@ -62,6 +62,8 @@ type WifiHotspot = WifiSummary["hotspots"][number];
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 interface SystemWifiManagementProps {
+  className?: string;
+  icon?: ReactNode;
   wifi: WifiSummary;
   canManageWifi: boolean;
   canManageHotspot: boolean;
@@ -105,6 +107,8 @@ interface HotspotDialogState {
 }
 
 export function SystemWifiManagement({
+  className,
+  icon,
   wifi,
   canManageWifi,
   canManageHotspot,
@@ -436,8 +440,8 @@ export function SystemWifiManagement({
 
   return (
     <>
-      <section className="management-section system-wifi-section">
-        <SectionHeader className="management-section-header system-wifi-header" title={t("workspace.management.network.wifi.title")} description={t("workspace.management.network.wifi.statusDescription")} actions={<><div className="system-wifi-toolbar">
+      <section className={["management-section system-wifi-section", className].filter(Boolean).join(" ")}>
+        <SectionHeader className="management-section-header system-wifi-header" icon={icon} title={t("workspace.management.network.wifi.title")} description={t("workspace.management.network.wifi.statusDescription")} actions={<><div className="system-wifi-toolbar">
             {wifi.devices.length > 1 ? (
               <Field label={t("workspace.management.network.wifi.device")}>
 

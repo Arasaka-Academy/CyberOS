@@ -11,7 +11,8 @@
 
   .storage-file-picker-layout {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(180px, 1fr);
+    grid-template-rows: auto minmax(240px, 1fr);
+    scroll-padding: 8px;
     overflow-y: auto;
   }
 
@@ -33,8 +34,7 @@
 
   .storage-file-picker-header,
   .storage-file-picker-toolbar,
-  .storage-file-picker-breadcrumbs,
-  .storage-file-picker-footer {
+  .storage-file-picker > .storage-file-picker-footer {
     padding-left: 12px;
     padding-right: 12px;
   }
@@ -43,22 +43,29 @@
     display: none;
   }
 
-  .storage-file-picker-row {
+  .storage-file-picker .storage-file-picker-row {
     grid-template-columns: 30px minmax(0, 1fr) 20px;
   }
 
-  .storage-file-picker-footer {
+  .storage-file-picker > .storage-file-picker-footer {
     align-items: stretch;
     flex-direction: column;
   }
 
   .storage-file-picker-footer > span {
     white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .storage-file-picker-footer > div {
     display: grid;
     grid-template-columns: 1fr 1.3fr;
+    width: 100%;
+  }
+
+  .storage-file-picker-footer > div > .cyberos-button {
+    min-width: 0;
+    white-space: normal;
   }
 
   .storage-file-picker-toolbar {
@@ -72,6 +79,18 @@
 
   .storage-file-picker-create-folder {
     flex: 1 1 auto;
-    grid-template-columns: minmax(0, 1fr) 30px 30px;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+}
+
+@media (max-width: 1040px), (pointer: coarse) {
+  .storage-file-picker-breadcrumbs button {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .storage-file-picker :is(.storage-file-picker-row, .storage-file-picker-pool) {
+    transition: none;
   }
 }

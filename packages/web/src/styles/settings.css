@@ -15,3 +15,6 @@
 @import "./settings/devices.css";
 @import "./settings/bluetooth.css";
 @import "./settings/music-library.css";
+@import "./settings/audio.css";
+@import "./settings/alerts.css";
+@import "./settings/responsive.css";

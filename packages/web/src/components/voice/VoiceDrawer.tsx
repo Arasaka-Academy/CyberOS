@@ -1,4 +1,4 @@
-import { Button as UiButton, DialogActions, DialogHeader, EmptyState } from "@cyberos/ui";
+import { Button as UiButton, DialogActions, DialogHeader, EmptyState, Notice, StatusBadge } from "@cyberos/ui";
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowDown, ArrowUp, ArrowUpRight, AudioLines, Bot, Check, CircleStop, Mic, Pause, Play, RotateCcw, Send, Settings, ShieldCheck, X } from "lucide-react";
@@ -13,7 +13,7 @@ import { useVoiceRecorder, type VoiceDraft } from "./useVoiceRecorder.js";
 export function VoiceButton({ open, unread, state, onClick }: { open: boolean; unread: boolean; state: ReturnType<typeof voiceState>; onClick: () => void; mobilePrimary?: boolean }) {
   const { t } = useTranslation();
   const label = `${t("voice.title")} · ${t(`voice.states.${state}`)}${unread ? ` · ${t("voice.newMessages")}` : ""}`;
-  return <UiButton variant="ghost" type="button" className="voice-entry" data-active={open} data-state={state} onClick={onClick}
+  return <UiButton iconOnly variant="ghost" type="button" className="voice-entry" data-active={open} data-state={state} onClick={onClick}
     aria-label={label} data-tooltip={label} aria-expanded={open} aria-controls="voice-drawer">
     <Mic size={18} aria-hidden="true" />{unread ? <i className="voice-unread" aria-hidden="true" /> : null}
   </UiButton>;
@@ -175,11 +175,12 @@ export function VoiceDrawer({ open, onClose, history, onOpenSession, onOpenSetti
   if (!open) return null;
   return <ModalPortal className="voice-backdrop" data-modal-drawer role="presentation" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <aside id="voice-drawer" ref={dialogRef} className="voice-drawer" role="dialog" aria-modal="true" aria-labelledby="voice-title" tabIndex={-1}>
-      <DialogHeader className="voice-header" title={t("voice.title")} description={<><i aria-hidden="true" />{t(`voice.states.${state}`)}</>} headingId="voice-title" actions={<><span className="voice-heading-icon"><AudioLines size={20} aria-hidden="true" /></span><div className="voice-header-actions">
+      <DialogHeader className="voice-header" icon={<AudioLines size={20} />} title={t("voice.title")}
+        description={<StatusBadge className="voice-status" state={state} role="status">{t(`voice.states.${state}`)}</StatusBadge>} headingId="voice-title" actions={<div className="voice-header-actions">
           <UiButton iconOnly variant="ghost" type="button" disabled={!session} onClick={() => { if (session) { onClose(); onOpenSession(session); } }} aria-label={t("voice.fullSession")} data-tooltip={t("voice.fullSession")}><ArrowUpRight size={18} aria-hidden="true" /></UiButton>
           <UiButton iconOnly variant="ghost" type="button" onClick={() => { onClose(); onOpenSettings(); }} aria-label={t("voice.settings")} data-tooltip={t("voice.settings")}><Settings size={17} aria-hidden="true" /></UiButton>
           <UiButton iconOnly variant="ghost" ref={closeRef} type="button" onClick={onClose} aria-label={t("common.actions.close")} data-tooltip={t("common.actions.close")}><X size={19} aria-hidden="true" /></UiButton>
-        </div></>} />
+        </div>} />
       <div className="voice-history-region">
         <div className="voice-history" ref={scrollRef} tabIndex={0} aria-label={t("voice.history")} onScroll={(event) => {
           const element = event.currentTarget;
@@ -187,10 +188,10 @@ export function VoiceDrawer({ open, onClose, history, onOpenSession, onOpenSetti
           nearBottom.current = element.scrollHeight - element.clientHeight - element.scrollTop < 48;
           if (nearBottom.current) setNewMessages(false);
         }}>
-          {history.cursor ? <UiButton variant="ghost" type="button" className="voice-older" onClick={() => void loadOlder()} disabled={history.olderLoading}><ArrowUp size={13} aria-hidden="true" />{t(history.olderLoading ? "voice.loading" : "voice.older")}</UiButton> : null}
-          {history.error ? <div className="voice-inline-error" role="status"><span>{t("voice.loadFailed")}</span><UiButton variant="ghost" type="button" onClick={() => void history.refresh()}>{t("voice.retry")}</UiButton></div> : null}
+          {history.cursor ? <UiButton variant="secondary" type="button" className="voice-older" onClick={() => void loadOlder()} busy={history.olderLoading}><ArrowUp size={13} aria-hidden="true" />{t(history.olderLoading ? "voice.loading" : "voice.older")}</UiButton> : null}
+          {history.error ? <Notice className="voice-inline-error" tone="warning" role="status" actions={<UiButton variant="secondary" type="button" onClick={() => void history.refresh()}>{t("voice.retry")}</UiButton>}>{t("voice.loadFailed")}</Notice> : null}
           {history.loading ? <EmptyState className="voice-empty" role="status" icon={<AudioLines size={26} aria-hidden="true" />} description={t("voice.loading")}></EmptyState>
-            : !history.items.length && !history.error ? <EmptyState className="voice-empty" title={t("voice.emptyTitle")} description={t("voice.emptyBody")}><span className="voice-empty-icon"><Mic size={28} aria-hidden="true" /></span></EmptyState> : null}
+            : !history.items.length && !history.error ? <EmptyState className="voice-empty" icon={<Mic size={24} />} title={t("voice.emptyTitle")} description={t("voice.emptyBody")} /> : null}
           {history.items.map((turn, index) => {
             const date = new Date(turn.createdAt);
             const previous = history.items[index - 1];
@@ -210,31 +211,31 @@ export function VoiceDrawer({ open, onClose, history, onOpenSession, onOpenSetti
                   <div className="voice-message-meta"><Bot size={12} aria-hidden="true" /><span>Agent</span><time dateTime={turn.updatedAt}>{new Date(turn.updatedAt).toLocaleTimeString(i18n.language, { hour: "2-digit", minute: "2-digit" })}</time></div>
                   <div className="voice-bubble">
                     {turn.assistantText ? <p>{turn.assistantText}</p> : null}
-                    {turn.awaitingApproval ? <UiButton variant="ghost" type="button" className="voice-approval" onClick={() => { if (session) { onClose(); onOpenSession(session); } }}><ShieldCheck size={15} aria-hidden="true" />{t("voice.approval") }<ArrowUpRight size={14} aria-hidden="true" /></UiButton>
+                    {turn.awaitingApproval ? <UiButton variant="secondary" type="button" className="voice-approval" onClick={() => { if (session) { onClose(); onOpenSession(session); } }}><ShieldCheck size={15} aria-hidden="true" />{t("voice.approval") }<ArrowUpRight size={14} aria-hidden="true" /></UiButton>
                       : !turn.assistantText && !["completed", "failed", "interrupted"].includes(turn.status) ? <span className="voice-pending"><i aria-hidden="true" />{t(`voice.turnStates.${turn.status}`)}</span> : null}
                     {turn.assistantAudio.length ? audioBar(`assistant:${turn.recordingId}`, clipsFor(turn.assistantAudio), "Agent") : turn.assistantText ? <span className="voice-no-audio">{t(["synthesizing", "speaking"].includes(turn.status) ? "voice.synthesizing" : "voice.noAudio")}</span> : null}
                     {turn.assistantAudioState === "incomplete" ? <span className="voice-no-audio">{t("voice.incompleteAudio")}</span> : null}
                     {turn.error ? <span className="voice-turn-error">{t(turn.jobId ? "voice.replyFailed" : "voice.transcriptionFailed")}</span> : null}
-                    {manualReply === turn.recordingId && playback.state.key === `assistant:${turn.recordingId}` && playback.state.blocked ? <UiButton variant="ghost" type="button" className="voice-manual-reply" onClick={() => playback.toggle(`assistant:${turn.recordingId}`, clipsFor(turn.assistantAudio))}><Play size={14} aria-hidden="true" />{t("voice.playReply")}</UiButton> : null}
+                    {manualReply === turn.recordingId && playback.state.key === `assistant:${turn.recordingId}` && playback.state.blocked ? <UiButton variant="secondary" type="button" className="voice-manual-reply" onClick={() => playback.toggle(`assistant:${turn.recordingId}`, clipsFor(turn.assistantAudio))}><Play size={14} aria-hidden="true" />{t("voice.playReply")}</UiButton> : null}
                   </div>
                 </div> : null}
               </article>
             </Fragment>;
           })}
         </div>
-        {newMessages ? <UiButton variant="ghost" type="button" className="voice-new-messages" onClick={jumpLatest}><ArrowDown size={14} aria-hidden="true" />{t("voice.newMessages")}</UiButton> : null}
+        {newMessages ? <UiButton variant="secondary" type="button" className="voice-new-messages" onClick={jumpLatest}><ArrowDown size={14} aria-hidden="true" />{t("voice.newMessages")}</UiButton> : null}
       </div>
       <DialogActions className="voice-composer">
-        {recorder.error || sendError ? <div className="voice-record-error" role="alert">{t(sendError ? "voice.sendFailed" : `voice.errors.${recorder.error ?? "recordingFailed"}`)}</div> : null}
+        {recorder.error || sendError ? <Notice className="voice-record-error" tone="danger">{t(sendError ? "voice.sendFailed" : `voice.errors.${recorder.error ?? "recordingFailed"}`)}</Notice> : null}
         {recorder.recording ? <div className="voice-capture">
           <div className="voice-capture-summary"><Mic size={15} aria-hidden="true" /><span>{t("voice.states.recording")}</span><time>{voiceTime(recorder.elapsed)} / {voiceTime(history.snapshot?.maxRecordingSeconds ?? 30)}</time></div>
-          <div className="voice-capture-controls"><div className="voice-energy" aria-hidden="true">{Array.from({ length: 28 }, (_, index) => <i key={index} style={{ height: `${4 + recorder.energy * (12 + Math.sin(index * 1.8) * 9)}px` }} />)}</div><UiButton variant="ghost" type="button" onClick={recorder.stop} className="voice-stop"><CircleStop size={17} aria-hidden="true" />{t("voice.stopRecording")}</UiButton></div>
+          <div className="voice-capture-controls"><div className="voice-energy" aria-hidden="true">{Array.from({ length: 28 }, (_, index) => <i key={index} style={{ height: `${4 + recorder.energy * (12 + Math.sin(index * 1.8) * 9)}px` }} />)}</div><UiButton variant="danger" type="button" onClick={recorder.stop} className="voice-stop"><CircleStop size={17} aria-hidden="true" />{t("voice.stopRecording")}</UiButton></div>
         </div> : recorder.draft ? <div className="voice-preview">
           <div className="voice-draft-label"><Check size={13} aria-hidden="true" /><span>{t(sending ? "voice.states.uploading" : "voice.preview")}</span></div>
           {audioBar(`draft:${recorder.draft.key}`, [{ url: recorder.draft.url, duration: recorder.draft.duration }], t("voice.preview"))}
-          <div className="voice-preview-actions"><UiButton iconOnly variant="ghost" type="button" disabled={sending} onClick={() => { submittedDraft.current = null; playback.stop(); recorder.setDraft(null); setSendError(false); }} aria-label={t("common.actions.cancel")}><X size={16} aria-hidden="true" /></UiButton><UiButton variant="ghost" type="button" disabled={sending} onClick={() => { submittedDraft.current = null; setSendError(false); void recorder.start(); }}><RotateCcw size={14} aria-hidden="true" />{t("voice.rerecord")}</UiButton><UiButton variant="ghost" type="button" disabled={sending || !canRecord} onClick={() => void send()} className="voice-send"><Send size={14} aria-hidden="true" />{t(sending ? "voice.states.uploading" : "voice.send")}</UiButton></div>
+          <div className="voice-preview-actions"><UiButton iconOnly variant="ghost" type="button" disabled={sending} onClick={() => { submittedDraft.current = null; playback.stop(); recorder.setDraft(null); setSendError(false); }} aria-label={t("common.actions.cancel")}><X size={16} aria-hidden="true" /></UiButton><UiButton variant="secondary" type="button" disabled={sending} onClick={() => { submittedDraft.current = null; setSendError(false); void recorder.start(); }}><RotateCcw size={14} aria-hidden="true" />{t("voice.rerecord")}</UiButton><UiButton variant="primary" type="button" disabled={!canRecord} busy={sending} onClick={() => void send()} className="voice-send"><Send size={14} aria-hidden="true" />{t(sending ? "voice.states.uploading" : "voice.send")}</UiButton></div>
         </div> : <div className="voice-record-idle">
-          <UiButton variant="ghost" type="button" className="voice-record-button" disabled={!canRecord || recorder.requesting} onClick={() => { submittedDraft.current = null; pending.current.clear(); setSendError(false); void recorder.start(); }}><Mic size={17} aria-hidden="true" />{t(recorder.requesting ? "voice.requesting" : "voice.startRecording")}</UiButton>
+          <UiButton variant="primary" type="button" className="voice-record-button" disabled={!canRecord} busy={recorder.requesting} onClick={() => { submittedDraft.current = null; pending.current.clear(); setSendError(false); void recorder.start(); }}><Mic size={17} aria-hidden="true" />{t(recorder.requesting ? "voice.requesting" : "voice.startRecording")}</UiButton>
           <span>{t(!history.snapshot?.enabled ? "voice.enableHint" : !history.snapshot.configured ? "voice.configureHint" : "voice.recordHint", { seconds: history.snapshot?.maxRecordingSeconds ?? 30 })}</span>
         </div>}
       </DialogActions>

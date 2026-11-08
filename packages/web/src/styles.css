@@ -1,11 +1,11 @@
 @layer theme, base, legacy, components, app, utilities;
+@import "@js-preview/excel/lib/index.css" layer(legacy);
 @import "maplibre-gl/dist/maplibre-gl.css" layer(legacy);
 @import "./styles/base.css" layer(legacy);
 @import "./styles/select.css" layer(legacy);
 @import "./styles/switch.css" layer(legacy);
 @import "./styles/layout.css" layer(legacy);
 @import "./styles/chat.css" layer(legacy);
-@import "./styles/settings.css" layer(legacy);
 @import "./styles/workspace.css" layer(legacy);
 @import "./styles/panel-loading.css" layer(legacy);
 @import "./styles/search-filter.css" layer(legacy);
@@ -30,7 +30,12 @@
 @import "./styles/playback-dock.css" layer(legacy);
 @import "./styles/mobile.css" layer(legacy);
 @import "./styles/help-tip.css" layer(legacy);
-@import "./styles/voice.css" layer(legacy);
 
 @import "@cyberos/shared/appearance.css";
 @import "./styles/cyberui.css";
+@import "./styles/settings.css" layer(app);
+@import "./styles/navigation-rails.css";
+@import "./styles/files/picker.css" layer(app);
+@import "./styles/files/picker-navigation.css" layer(app);
+@import "./styles/files/picker-responsive.css" layer(app);
+@import "./styles/voice.css" layer(app);

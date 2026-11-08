@@ -2454,11 +2454,12 @@ export const en = {
       undoClear: "Undo clear"
     },
     groups: {
-      cyberos: "CyberOS",
-      devices: "Devices",
-      ai: "AI",
-      workspace: "Workspace",
-      administration: "Administration"
+      general: "General",
+      network: "Network & Connections",
+      storage: "Files & Data",
+      media: "Media & Downloads",
+      ai: "AI & Voice",
+      system: "System & Maintenance"
     },
     sections: {
       overview: {
@@ -5954,11 +5955,12 @@ export const zhCN = {
       undoClear: "撤销清除"
     },
     groups: {
-      cyberos: "CyberOS",
-      devices: "设备",
-      ai: "AI",
-      workspace: "工作区",
-      administration: "管理"
+      general: "常规",
+      network: "网络与连接",
+      storage: "文件与数据",
+      media: "媒体与下载",
+      ai: "AI 与语音",
+      system: "系统与维护"
     },
     sections: {
       overview: {

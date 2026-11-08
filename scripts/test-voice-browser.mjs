@@ -12,6 +12,7 @@ const timestamp = "2026-11-05T03:00:00.000Z";
 const clients = new Set();
 let server, browser, baseUrl, state;
 const session = { id: "voice-session", kind: "voice", currentPath: ".", createdAt: timestamp, updatedAt: timestamp, firstMessage: "Voice", lastMessage: null, pendingApprovalCount: 0 };
+const chatSession = { ...session, id: "chat-session", kind: "chat", firstMessage: "Workspace chat" };
 const clip = (segment = 0) => ({ id: `media-${segment}`, role: "assistant", segment, durationMs: 1000, sizeBytes: 32044 });
 const turn = (sequence) => ({ recordingId: `capture-${sequence}`, deviceId: "remote", sessionId: session.id, messageId: `message-${sequence}`, jobId: `job-${sequence}`,
   status: "completed", speechSuppressed: false, error: null, audioError: null, timings: {}, createdAt: timestamp, updatedAt: timestamp,
@@ -21,7 +22,7 @@ function snapshot(before) {
   const available = state.items.filter((item) => !before || item.sequence < Number(before));
   const items = available.slice(-20);
   return { items, nextCursor: available.length > 20 ? String(items[0].sequence) : null,
-    sessionId: session.id, enabled: state.enabled, configured: true, speechEnabled: true, maxRecordingSeconds: state.maxSeconds,
+    sessionId: session.id, enabled: state.enabled, configured: state.configured, speechEnabled: true, maxRecordingSeconds: state.maxSeconds,
     status: { sessionId: session.id, awaitingApproval: state.items.some((item) => item.awaitingApproval), turns: state.items.slice(-30), error: null,
       daemon: { available: false, connected: false, protocol: "disabled", recordingId: null, recordings: [], generation: 0, playing: false, error: null }, test: { armed: false, transcript: null, error: null } } };
 }
@@ -50,8 +51,9 @@ function audioBytes() {
   return buffer;
 }
 async function open(t, options = {}) {
-  state = { items: Array.from({ length: 35 }, (_, index) => turn(index + 1)), enabled: true, maxSeconds: 30, failUpload: false, uploads: [], accepted: new Map(), failHistory: false, ...options.state };
-  const context = await browser.newContext({ viewport: { width: options.width ?? 1440, height: 900 }, locale: options.locale ?? "en-US", reducedMotion: options.motion ?? "no-preference" });
+  state = { items: Array.from({ length: 35 }, (_, index) => turn(index + 1)), enabled: true, configured: true, maxSeconds: 30, failUpload: false, uploads: [], accepted: new Map(), failHistory: false,
+    sessions: [session, chatSession], createdChats: [], deletedSessions: [], transcriptRequests: [], ...options.state };
+  const context = await browser.newContext({ viewport: { width: options.width ?? 1440, height: options.height ?? 900 }, locale: options.locale ?? "en-US", reducedMotion: options.motion ?? "no-preference" });
   t.after(() => context.close());
   if (options.withoutRandomUUID) await context.addInitScript(() => {
     Object.defineProperty(globalThis.crypto, "randomUUID", { value: undefined });
@@ -86,6 +88,23 @@ async function open(t, options = {}) {
   await context.route("**/health", (route) => route.fulfill({ json: { ok: true } }));
   await context.route("**/api/**", async (route) => {
     const url = new URL(route.request().url()); const path = url.pathname;
+    if (path === "/api/sessions") {
+      if (route.request().method() === "POST") {
+        const created = { ...chatSession, id: `created-chat-${state.createdChats.length + 1}`, firstMessage: null };
+        state.createdChats.push(created); state.sessions = [created, ...state.sessions];
+        return route.fulfill({ json: { session: created } });
+      }
+      return route.fulfill({ json: { sessions: state.sessions } });
+    }
+    if (/^\/api\/sessions\/[^/]+$/.test(path) && route.request().method() === "DELETE") {
+      const sessionId = path.split("/").at(-1);
+      state.deletedSessions.push(sessionId); state.sessions = state.sessions.filter(item => item.id !== sessionId);
+      return route.fulfill({ json: { ok: true } });
+    }
+    if (/^\/api\/sessions\/[^/]+\/transcript$/.test(path)) {
+      state.transcriptRequests.push(path.split("/").at(-2));
+      return route.fulfill({ json: { transcript: [], lastEventId: 0, activeJob: null, liveEvents: [] } });
+    }
     if (path === "/api/audio/history/events") return route.continue();
     // Unused fixture services must not occupy HTTP/1 connection slots in a
     // multi-tab test. Production Tailnet HTTPS multiplexes these over HTTP/2.
@@ -122,6 +141,188 @@ async function record(page) {
   await expect(page.locator(".voice-preview")).toBeVisible();
 }
 const liveTracks = (page) => page.evaluate(() => globalThis.voiceMicStreams.flatMap((stream) => stream.getTracks()).filter((track) => track.readyState === "live").length);
+test("Agent navigation excludes system voice and starts the newest ordinary session", async context => {
+  const { page } = await open(context);
+  await closeDrawer(page);
+  await expect(page.locator(".session-list .session-item")).toHaveCount(1);
+  await expect(page.locator(".session-item")).toHaveAttribute("aria-current", "page");
+  await expect(page.locator(".chat-header h2")).toHaveText("Workspace chat");
+  await expect(page.locator(".chat-header-index")).toHaveText("01");
+  await expect(page.locator(".agent-footer .voice-entry")).toBeVisible();
+  assert.equal(state.transcriptRequests[0], "chat-session");
+});
+test("mobile Agent navigation also excludes system voice", async context => {
+  const { page } = await open(context, { width: 390 });
+  await closeDrawer(page);
+  await page.getByRole("button", { name: "Conversations", exact: true }).click();
+  await expect(page.locator(".mobile-sessions-dialog .session-item")).toHaveCount(1);
+  await expect(page.locator(".mobile-sessions-dialog .session-item")).toHaveAccessibleName(/Workspace chat/);
+});
+test("mobile voice entry retains the current-entry accent without changing its target size", async context => {
+  const { page } = await open(context, { width: 390, motion: "reduce", state: { items: [] } });
+  const entry = page.locator(".voice-entry");
+  const bounds = await entry.boundingBox();
+  const colors = await entry.evaluate(element => ({
+    active: globalThis.getComputedStyle(element).backgroundColor,
+    accent: globalThis.getComputedStyle(globalThis.document.querySelector(".voice-header .ui-dialog-icon"), "::before").backgroundColor
+  }));
+  assert.equal(colors.active, colors.accent);
+  await closeDrawer(page);
+  assert.deepEqual(await entry.boundingBox(), bounds);
+});
+test("creates an ordinary session when only the protected voice session exists", async context => {
+  const { page } = await open(context, { state: { sessions: [session] } });
+  await closeDrawer(page);
+  await expect(page.locator(".session-list .session-item")).toHaveCount(1);
+  await expect(page.locator(".session-item[aria-current='page']")).toHaveCount(1);
+  await expect(page.locator(".chat-header h2")).not.toHaveText("System voice session");
+  assert.equal(state.createdChats.length, 1);
+  assert.equal(state.transcriptRequests[0], "created-chat-1");
+  assert.ok(state.sessions.some(item => item.id === session.id));
+});
+test("deleting the final ordinary session never falls back to system voice", async context => {
+  const { page } = await open(context, { state: { sessions: [chatSession, session] } });
+  await closeDrawer(page);
+  await page.locator(".chat-delete-session-button").click();
+  await page.locator(".session-delete-dialog .danger-button").click();
+  await expect.poll(() => state.transcriptRequests.at(-1)).toBe("created-chat-1");
+  await expect(page.locator(".transcript")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator(".chat-header h2")).not.toHaveText("System voice session");
+  await expect(page.locator(".session-item[aria-current='page']")).toHaveCount(1);
+  assert.equal(state.createdChats.length, 1);
+  assert.deepEqual(state.deletedSessions, ["chat-session"]);
+  assert.equal(state.transcriptRequests.at(-1), "created-chat-1");
+});
+test("voice button retains full conversation and approval access without a voice list item", async context => {
+  const { page } = await open(context);
+  await page.getByRole("button", { name: "Open full conversation", exact: true }).click();
+  await expect(page.locator(".voice-drawer")).toHaveCount(0);
+  await expect(page.locator(".chat-header h2")).toHaveText("System voice session");
+  await expect(page.locator(".chat-delete-session-button")).toBeDisabled();
+  await expect(page.locator(".session-list .session-item")).toHaveCount(1);
+  await expect(page.locator(".session-item[aria-current='page']")).toHaveCount(0);
+  await page.locator(".session-item").click();
+  await expect(page.locator(".chat-header h2")).toHaveText("Workspace chat");
+});
+test("voice drawer uses shared heading slots, status and primary recording commands", async context => {
+  const { page } = await open(context, { motion: "reduce" });
+  await page.screenshot({ path: `${directory}/visual-desktop.png` });
+  await page.locator(".voice-drawer").screenshot({ path: `${directory}/visual-drawer.png` });
+  assert.equal(await page.locator(".voice-header > .ui-dialog-icon").count(), 1);
+  await expect(page.locator(".voice-status")).toHaveAttribute("data-state", "offline");
+  await expect(page.locator(".voice-record-button")).toHaveAttribute("data-variant", "primary");
+  await expect(page.locator(".voice-entry")).toHaveAttribute("data-icon-only", "true");
+});
+async function voiceTextContrast(page) {
+  return page.locator(".voice-header h2, .voice-status, .voice-message-meta, .voice-message-meta time, .voice-bubble p, .voice-audio-time, .voice-record-idle > span, .voice-record-button, .voice-approval, .voice-preview-actions button, .voice-stop, .voice-pending, .voice-turn-error, .voice-no-audio, .voice-draft-label, .voice-capture-summary, .voice-date, .voice-older").evaluateAll(elements => elements.map(element => {
+    const canvas = globalThis.document.createElement("canvas");
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext("2d");
+    const rgba = color => {
+      context.clearRect(0, 0, 1, 1); context.fillStyle = color; context.fillRect(0, 0, 1, 1);
+      return [...context.getImageData(0, 0, 1, 1).data];
+    };
+    const composite = (front, back) => front.slice(0, 3).map((channel, index) => channel * front[3] / 255 + back[index] * (1 - front[3] / 255)).concat(255);
+    const ancestors = [];
+    for (let ancestor = element; ancestor; ancestor = ancestor.parentElement) ancestors.unshift(ancestor);
+    let background = ancestors.reduce((color, ancestor) => composite(rgba(globalThis.getComputedStyle(ancestor).backgroundColor), color), [255, 255, 255, 255]);
+    const decoration = element.querySelector("[data-slot='decoration']");
+    if (decoration) background = composite(rgba(globalThis.getComputedStyle(decoration, "::after").backgroundColor), background);
+    const foreground = composite(rgba(globalThis.getComputedStyle(element).color), background);
+    const luminance = color => color.slice(0, 3).map(channel => channel / 255).map(channel => channel <= .04045 ? channel / 12.92 : ((channel + .055) / 1.055) ** 2.4)
+      .reduce((sum, channel, index) => sum + channel * [.2126, .7152, .0722][index], 0);
+    const frontLight = luminance(foreground), backLight = luminance(background);
+    return { selector: element.className, ratio: (Math.max(frontLight, backLight) + .05) / (Math.min(frontLight, backLight) + .05) };
+  }));
+}
+async function checkVoiceThemes(page, screenshotPrefix) {
+  let minimumContrast = Infinity;
+  for (const scheme of ["neon", "mono", "graphite", "synthwave", "bloodline", "terminal", "amber"]) for (const mode of ["dark", "light"]) {
+    await page.evaluate(({ scheme, mode }) => {
+      const key = "cyberos:appearance:v1", value = JSON.stringify({ scheme, mode });
+      globalThis.localStorage.setItem(key, value);
+      globalThis.dispatchEvent(new globalThis.StorageEvent("storage", { key, newValue: value }));
+    }, { scheme, mode });
+    await page.waitForFunction(({ scheme, mode }) => {
+      const provider = globalThis.document.querySelector(".cyberos-ui-root");
+      return provider?.dataset.scheme === scheme && provider.dataset.mode === mode;
+    }, { scheme, mode });
+    await page.waitForTimeout(250);
+    const readings = await voiceTextContrast(page);
+    for (const reading of readings) assert.ok(reading.ratio >= 4.5, `${scheme}/${mode}: ${JSON.stringify(reading)}`);
+    minimumContrast = Math.min(minimumContrast, ...readings.map(reading => reading.ratio));
+    if (screenshotPrefix && scheme === "neon") await page.screenshot({ path: `${directory}/${screenshotPrefix}-${mode}.png` });
+  }
+  return minimumContrast;
+}
+test("voice drawer text and commands remain readable in every theme and mode", async context => {
+  const approvalTurn = { ...turn(1), awaitingApproval: true, assistantText: "", assistantAudio: [], status: "agent" };
+  const { page } = await open(context, { motion: "reduce", state: { items: [turn(2), approvalTurn] } });
+  const minimumContrast = await checkVoiceThemes(page, "visual");
+  context.diagnostic(`Minimum Voice text contrast: ${minimumContrast.toFixed(2)}:1`);
+});
+test("recording, preview, upload and unavailable controls retain readable operational states", async context => {
+  const { page } = await open(context, { motion: "reduce", state: { items: [] } });
+  await record(page);
+  await checkVoiceThemes(page);
+  await page.locator(".voice-preview-actions button").nth(1).click();
+  await expect(page.locator(".voice-status")).toHaveAttribute("data-state", "recording");
+  await checkVoiceThemes(page);
+  await page.locator(".voice-stop").click();
+  await expect(page.locator(".voice-preview")).toBeVisible();
+  let releaseUpload;
+  await page.route("**/api/audio/recordings", async route => {
+    await new Promise(resolve => { releaseUpload = resolve; });
+    await route.fallback();
+  });
+  await page.locator(".voice-send").click();
+  await expect(page.locator(".voice-status")).toHaveAttribute("data-state", "uploading");
+  await expect(page.locator(".voice-send")).toHaveAttribute("aria-busy", "true");
+  await expect(page.locator(".voice-send")).toBeDisabled();
+  await checkVoiceThemes(page);
+  releaseUpload();
+  await expect(page.locator(".voice-preview")).toHaveCount(0);
+  state.enabled = false; broadcast();
+  await expect(page.locator(".voice-status")).toHaveAttribute("data-state", "disabled");
+  await expect(page.locator(".voice-record-button")).toBeDisabled();
+  await checkVoiceThemes(page);
+  state.enabled = true; state.configured = false; broadcast();
+  await expect(page.locator(".voice-status")).toHaveAttribute("data-state", "unconfigured");
+  await expect(page.locator(".voice-record-button")).toBeDisabled();
+  await checkVoiceThemes(page);
+});
+for (const width of [1440, 1041, 1040, 390, 320]) {
+  test(`voice controls remain reachable in a short ${width}x600 viewport`, async context => {
+    const { page } = await open(context, { width, height: 600, motion: "reduce" });
+    for (const selector of [".voice-header-actions button", ".voice-record-button"]) for (const button of await page.locator(selector).all()) {
+      const bounds = await button.boundingBox();
+      assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= width && bounds.y >= 0 && bounds.y + bounds.height <= 600, `${selector}: ${JSON.stringify(bounds)}`);
+      if (width <= 1040) assert.ok(bounds.width >= 44 && bounds.height >= 44, `${selector}: touch target`);
+    }
+    assert.equal(await page.locator(".voice-history").evaluate(element => element.clientHeight > 100 && element.scrollHeight > element.clientHeight), true);
+    const lastAudio = page.locator(".voice-history input[type='range']").last();
+    await page.keyboard.press("Tab");
+    await lastAudio.focus();
+    await expect(lastAudio).toHaveCSS("outline-width", "2px");
+    const audioBounds = await lastAudio.boundingBox();
+    const composerBounds = await page.locator(".voice-composer").boundingBox();
+    assert.ok(audioBounds.y + audioBounds.height <= composerBounds.y);
+    const focus = await lastAudio.evaluate(element => {
+      const style = globalThis.getComputedStyle(element);
+      return { visible: element.matches(":focus-visible"), outline: style.outlineWidth, clipped: style.clipPath };
+    });
+    assert.equal(focus.visible, true);
+    assert.notEqual(focus.outline, "0px", JSON.stringify(focus));
+    assert.equal(focus.clipped, "none");
+    await page.screenshot({ path: `${directory}/short-${width}.png` });
+    await record(page);
+    for (const button of await page.locator(".voice-preview-actions button").all()) {
+      const bounds = await button.boundingBox();
+      assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= width && bounds.y + bounds.height <= 600);
+    }
+    await expect(page.locator(".voice-send")).toHaveAttribute("data-variant", "primary");
+  });
+}
 test("keeps history and recording available when native UUID generation is unavailable", async (t) => {
   const { page, errors } = await open(t, { withoutRandomUUID: true, state: { items: [] } });
   await record(page);
@@ -246,4 +447,6 @@ test("empty, disabled, connection failure and approval remain actionable", async
   state.failHistory = true; await closeDrawer(page); await page.locator(".voice-entry").click(); await expect(page.locator(".voice-inline-error")).toBeVisible();
   state.failHistory = false; await page.locator(".voice-inline-error button").click(); await expect(page.locator(".voice-inline-error")).toHaveCount(0);
   await page.locator(".voice-approval").click(); await expect(page.locator(".voice-drawer")).toHaveCount(0);
+  await expect(page.locator(".chat-header")).toContainText("System voice session");
+  await expect(page.locator(".transcript")).toHaveAttribute("aria-busy", "false");
 });

@@ -50,10 +50,6 @@
   font-size: 12px;
 }
 
-.settings-music-feedback > button {
-  min-height: 32px;
-}
-
 @container settings-music-library (max-width: 520px) {
   .settings-music-library > header {
     flex-wrap: wrap;

@@ -1,0 +1,212 @@
+@layer app {
+  .session-item > .session-number {
+    display: none;
+  }
+
+  @media (min-width: 1041px) {
+    .app-shell :is(.agent-list, .workspace-panel-rail) {
+      --rail-button-width: 48px;
+      --rail-button-height: 44px;
+      --rail-gap: 6px;
+      color: var(--cyberos-color-text);
+      background: var(--cyberos-color-surface);
+      border-color: var(--cyber-line);
+      box-shadow: none;
+    }
+
+    .app-shell .agent-list {
+      grid-template-columns: minmax(0, 1fr);
+      padding: 10px 6px 8px;
+      border-right-width: 1px;
+    }
+
+    .app-shell .brand {
+      height: calc(var(--app-titlebar-height) - 10px);
+      padding-bottom: 9px;
+      border-bottom: 1px solid var(--cyberos-hud-red-soft);
+      background: transparent;
+    }
+
+    .app-shell .agent-list-head {
+      display: grid;
+      justify-content: stretch;
+      justify-items: center;
+      padding: 9px 0 8px;
+    }
+
+    .app-shell .agent-list .session-list {
+      gap: var(--rail-gap);
+      padding: 6px 5px 8px;
+    }
+
+    .app-shell .agent-footer {
+      gap: var(--rail-gap);
+      padding-top: 10px;
+      border-top: 1px solid var(--cyber-line);
+    }
+
+    .app-shell .workspace-panel-rail {
+      --rail-button-height: 52px;
+      justify-items: center;
+      gap: var(--rail-gap);
+      padding: 10px 6px;
+      overflow-y: auto;
+      border-left: 1px solid var(--cyber-line);
+    }
+
+    .app-shell :is(.agent-list, .workspace-panel-rail) .cyberos-button {
+      --rail-cut: 8px;
+      --rail-edge: color-mix(in srgb, var(--cyber-line) 55%, transparent);
+      --rail-face: var(--cyberos-color-surface);
+      --rail-track: transparent;
+      display: inline-grid;
+      place-content: center;
+      justify-items: center;
+      gap: 4px;
+      width: var(--rail-button-width);
+      min-width: var(--rail-button-width);
+      max-width: var(--rail-button-width);
+      height: var(--rail-button-height);
+      min-height: var(--rail-button-height);
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      color: var(--cyberos-color-text-muted);
+      background: transparent;
+      box-shadow: none;
+      overflow: visible;
+      clip-path: none;
+      filter: none;
+      transform: none;
+      translate: none;
+      animation: none;
+      transition: color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .app-shell :is(.agent-list, .workspace-panel-rail) .cyberos-button::before,
+    .app-shell :is(.agent-list, .workspace-panel-rail) .cyberos-button::after {
+      position: absolute;
+      inset: 0;
+      content: "";
+      pointer-events: none;
+      clip-path: polygon(0 0, calc(100% - var(--rail-cut)) 0, 100% var(--rail-cut), 100% 100%, var(--rail-cut) 100%, 0 calc(100% - var(--rail-cut)));
+      transition: background-color 160ms ease;
+    }
+
+    .app-shell :is(.agent-list, .workspace-panel-rail) .cyberos-button::before {
+      z-index: -2;
+      background: var(--rail-edge);
+    }
+
+    .app-shell :is(.agent-list, .workspace-panel-rail) .cyberos-button::after {
+      --rail-cut: 7.4px;
+      z-index: -1;
+      inset: 1px;
+      background-color: var(--rail-face);
+      background-image: linear-gradient(var(--rail-track), var(--rail-track));
+      background-repeat: no-repeat;
+      background-position: left 2px center;
+      background-size: 3px 18px;
+    }
+
+    .app-shell .workspace-panel-rail .cyberos-button::after {
+      background-position: right 2px center;
+    }
+
+    .app-shell :is(.agent-list, .workspace-panel-rail) .cyberos-button > svg {
+      width: 20px;
+      height: 20px;
+      color: inherit;
+    }
+
+    .app-shell .workspace-panel-tab > span {
+      color: inherit;
+      font: 600 11px/1 var(--font-mono);
+    }
+
+    .app-shell .agent-list-head .cyberos-button {
+      --rail-edge: var(--cyber-accent);
+      color: var(--cyberos-color-command-text);
+    }
+
+    .app-shell :is(.agent-list, .workspace-panel-rail) .cyberos-button:where(:hover:not(:disabled):not([aria-disabled="true"]):not([aria-busy="true"])) {
+      --rail-edge: var(--cyber-accent2);
+      --rail-face: color-mix(in srgb, var(--cyber-accent2) 8%, var(--cyberos-color-surface));
+      color: var(--cyberos-color-text);
+    }
+
+    .app-shell :is(.agent-list, .workspace-panel-rail) .cyberos-button:is(.is-active, [aria-current="page"], [aria-expanded="true"], [data-active="true"]) {
+      --rail-edge: var(--cyber-accent);
+      --rail-face: var(--cyber-accent);
+      --rail-track: var(--cyber-on-accent);
+      color: var(--cyber-on-accent);
+      box-shadow: 2px 2px 0 color-mix(in srgb, var(--cyber-accent) 45%, transparent);
+    }
+
+    .app-shell :is(.agent-list, .workspace-panel-rail) .cyberos-button:focus-visible {
+      outline: 2px solid var(--cyber-accent2);
+      outline-offset: 3px;
+    }
+
+    .app-shell :is(.agent-list, .workspace-panel-rail) .cyberos-button:is(:disabled, [aria-disabled="true"], [aria-busy="true"]) {
+      --rail-edge: var(--cyber-line);
+      --rail-face: var(--cyberos-color-surface);
+      --rail-track: transparent;
+      color: var(--cyberos-color-text-muted);
+      box-shadow: none;
+      cursor: not-allowed;
+      opacity: 1;
+    }
+
+    .app-shell :is(.agent-list, .workspace-panel-rail) .cyberos-button[aria-busy="true"] {
+      cursor: progress;
+    }
+
+    .app-shell .agent-list .session-number {
+      position: absolute;
+      top: 4px;
+      left: 5px;
+      display: block;
+      width: 14px;
+      height: 8px;
+      color: inherit;
+      font: 600 8px/1 var(--font-mono);
+      pointer-events: none;
+    }
+
+    .app-shell .agent-list .session-number::after {
+      content: counter(cyber-session, decimal-leading-zero);
+    }
+
+    .app-shell .agent-list :is(.session-approval-badge, .notification-badge) {
+      top: 4px;
+      right: 4px;
+      min-width: 14px;
+      height: 14px;
+      padding: 0 2px;
+      border: 1px solid var(--cyberos-color-surface);
+      border-radius: 0;
+      color: var(--cyber-on-accent2);
+      background: var(--cyber-accent2);
+      font: 600 9px/1 var(--font-mono);
+    }
+
+    .app-shell .agent-list .chat-skeleton-control {
+      width: var(--rail-button-width);
+      height: var(--rail-button-height);
+    }
+
+    .app-shell .agent-list .chat-skeleton-status {
+      width: 10px;
+      height: 18px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .app-shell :is(.agent-list, .workspace-panel-rail) .cyberos-button,
+      .app-shell :is(.agent-list, .workspace-panel-rail) .cyberos-button::before,
+      .app-shell :is(.agent-list, .workspace-panel-rail) .cyberos-button::after {
+        transition: none;
+      }
+    }
+  }
+}

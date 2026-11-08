@@ -1,4 +1,5 @@
 import { EmptyState } from "@cyberos/ui";
+import { Wifi } from "lucide-react";
 import type { NetworkSummary, WifiStatus } from "../../api.js";
 import { useTranslation } from "react-i18next";
 import { SystemWifiManagement } from "../workspace/SystemWifiManagement.js";
@@ -21,6 +22,8 @@ export function SettingsWirelessPage({
     <div className="settings-content-body settings-device-page">
       {network ? (
         <SystemWifiManagement
+          className="ui-section settings-section-card"
+          icon={<Wifi size={18} aria-hidden="true" />}
           wifi={network.wifi}
           canManageWifi={network.capabilities.canManageWifi}
           canManageHotspot={network.capabilities.canManageHotspot}

@@ -1,6 +1,7 @@
 .settings-overview {
   display: grid;
   align-content: start;
+  gap: 0;
 }
 
 .settings-overview-details {
@@ -21,8 +22,8 @@
   min-width: 0;
   padding: 12px;
   border: 1px solid color-mix(in srgb, var(--cyberos-color-text) 5%, transparent);
-  border-radius: 5px;
-  background: rgb(0 0 0 / 14%);
+  border-radius: 0;
+  background: var(--cyber-soft);
 }
 
 .settings-metric-grid strong,
@@ -31,31 +32,34 @@
 }
 
 .settings-metric-grid strong {
-  color: var(--text);
+  color: var(--cyber-ink);
   font-size: 20px;
   line-height: 1;
 }
 
 .settings-metric-grid span {
   margin-top: 6px;
-  color: var(--muted-2);
-  font-size: 11.5px;
-  font-family: var(--font-emphasis);
-  font-weight: 800;
+  color: var(--cyber-muted);
+  font-size: 12px;
+  font-family: var(--cyberos-font-ui);
+  font-weight: 600;
   text-transform: uppercase;
 }
 
 .settings-summary-list {
   display: grid;
-  gap: 10px;
+  min-width: 0;
+  gap: 0;
   margin: 0;
 }
 
 .settings-summary-list div {
   display: grid;
-  grid-template-columns: 120px minmax(0, 1fr);
+  grid-template-columns: minmax(100px, .45fr) minmax(0, 1fr);
   gap: 12px;
   min-width: 0;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--cyber-line);
 }
 
 .settings-summary-list dt,
@@ -65,24 +69,24 @@
 }
 
 .settings-summary-list dt {
-  color: var(--muted-2);
-  font-size: 11.5px;
-  font-family: var(--font-emphasis);
-  font-weight: 800;
-  text-transform: uppercase;
+  color: var(--cyber-muted);
+  font-size: 12px;
+  font-family: var(--cyberos-font-ui);
+  font-weight: 500;
+  line-height: 1.5;
 }
 
 .settings-summary-list dd {
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 12.5px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--cyber-ink);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .settings-photo-context dd.is-mono {
-  font-family: var(--code-font-family);
-  font-size: 11.5px;
+  font-family: var(--cyberos-font-mono);
+  font-size: 12px;
 }
 
 .settings-photo-library-actions {
@@ -122,7 +126,7 @@
 .settings-indexer-status-list div {
   grid-template-columns: 88px minmax(0, 1fr);
   padding: 9px 0;
-  border-top: 1px solid var(--line-soft);
+  border-top: 1px solid var(--cyber-line);
 }
 
 .settings-indexer-status-list div:nth-child(-n + 2) {
@@ -130,14 +134,14 @@
   border-top: 0;
 }
 
-.settings-section-card .settings-inline-alert {
+.settings-section-card .settings-inline-alert:not(.ui-notice) {
   display: flex;
   align-items: flex-start;
   gap: 8px;
   margin: 0;
   padding: 10px 12px;
   border: 1px solid var(--warning-border);
-  border-radius: 5px;
+  border-radius: 0;
   color: var(--warning-text);
   background: var(--warning-bg);
   overflow-wrap: anywhere;
@@ -166,7 +170,7 @@
 }
 
 .settings-system-list {
-  gap: 8px;
+  gap: 0;
 }
 
 .settings-system-list div {
@@ -181,13 +185,12 @@
 .settings-system-list dd small {
   display: block;
   margin-top: 3px;
-  overflow: hidden;
-  color: var(--muted-2);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--cyber-muted);
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .settings-system-list dd.is-mono {
-  font-family: var(--code-font-family);
-  font-size: 11.5px;
+  font-family: var(--cyberos-font-mono);
+  font-size: 12px;
 }

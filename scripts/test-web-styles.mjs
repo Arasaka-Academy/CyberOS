@@ -57,6 +57,190 @@ async function fixture(t, render, options = {}) {
   return page;
 }
 
+async function filePickerFixture(context, { pickerMode = "files", language = "zh-CN", initialState = "ready", ...pageOptions } = {}) {
+  const page = await fixture(context, `
+    localStorage.setItem("cyberos:language", ${JSON.stringify(language)});
+    const { initI18n } = await import("/src/i18n/index.ts");
+    await initI18n();
+    await import("/@fs/${fileURLToPath(new URL("../packages/ui/src/fonts.css", import.meta.url))}");
+    const { StorageFilePickerDialog } = await import("/src/components/workspace/StorageFilePickerDialog.tsx");
+    const entries = [
+      { name: "Documents / 文档", path: "documents", kind: "directory", isSafe: true, sizeBytes: 0, modifiedAt: "2026-11-08T00:00:00Z" },
+      { name: "很长的文件名称 Long operational notes.txt", path: "notes.txt", kind: "file", isSafe: true, sizeBytes: 2048, modifiedAt: "2026-11-08T00:00:00Z" },
+      { name: "CyberOS installer.iso", path: "installer.iso", kind: "file", isSafe: true, sizeBytes: 1048576, modifiedAt: "2026-11-08T00:00:00Z" },
+      { name: "agent-skill.zip", path: "agent-skill.zip", kind: "file", isSafe: true, sizeBytes: 4096, modifiedAt: "2026-11-08T00:00:00Z" },
+      { name: "unsafe.iso", path: "unsafe.iso", kind: "symlink", isSafe: false, sizeBytes: 0, modifiedAt: "2026-11-08T00:00:00Z" }
+    ];
+    globalThis.window.__pickerLoadState = ${JSON.stringify(initialState)};
+    globalThis.window.__pickerSelection = null;
+    function PickerExample() {
+      const [open, setOpen] = React.useState(false);
+      const triggerRef = React.useRef(null);
+      const close = () => setOpen(false);
+      return React.createElement(React.Fragment, null,
+        React.createElement(Button, { ref: triggerRef, variant: "secondary", onClick: () => setOpen(true) }, "Open picker"),
+        open && React.createElement(StorageFilePickerDialog, {
+          pools: [
+            { id: "primary", name: "Main pool / 数据池", path: ".", filesystem: "btrfs", status: "ready" },
+            { id: "archive", name: "Archive / 归档", path: ".", filesystem: "ext4", status: "warning" }
+          ], initialPoolId: "primary", locale: ${JSON.stringify(language)}, mode: ${JSON.stringify(pickerMode)}, returnFocusRef: triggerRef,
+          loadEntries: async () => {
+            if (globalThis.window.__pickerLoadState === "loading") await new Promise(resolve => { globalThis.window.__finishPickerLoad = resolve; });
+            if (globalThis.window.__pickerLoadState === "error") throw new Error("Directory unavailable / 目录暂不可用");
+            if (globalThis.window.__pickerLoadState === "empty") return [];
+            return entries;
+          },
+          onCancel: close,
+          onSelect: selection => { globalThis.window.__pickerSelection = selection; close(); },
+          onSelectMany: selections => { globalThis.window.__pickerSelection = selections; close(); },
+          onRequestCreateFolder: async input => { globalThis.window.__pickerFolderRequest = input; await new Promise(resolve => { globalThis.window.__finishPickerCreate = resolve; }); }
+        }));
+    }
+    createRoot(globalThis.document.getElementById("root")).render(React.createElement(PickerExample));
+  `, pageOptions);
+  await page.getByRole("button", { name: "Open picker", exact: true }).click();
+  await page.locator(".storage-file-picker").waitFor();
+  if (initialState === "ready") await page.locator(".storage-file-picker-row").first().waitFor();
+  await page.evaluate(() => globalThis.document.fonts.ready);
+  return page;
+}
+
+test("file picker uses the shared heading slots and square operational surfaces", async context => {
+  const page = await filePickerFixture(context);
+  await page.locator(".storage-file-picker-row").filter({ hasText: ".txt" }).click();
+  await mkdir(fileURLToPath(new URL("../.cyberos/file-picker-visual/screenshots/", import.meta.url)), { recursive: true });
+  await page.screenshot({ path: fileURLToPath(new URL("../.cyberos/file-picker-visual/screenshots/desktop.png", import.meta.url)) });
+  assert.equal(await page.locator(".storage-file-picker-header > .ui-dialog-icon").count(), 1);
+  assert.equal(await page.locator(".storage-file-picker-header .ui-dialog-heading > .ui-dialog-eyebrow").count(), 1);
+  assert.equal(await page.locator(".storage-file-picker-header .ui-dialog-header-actions").locator(":scope > *").count(), 1);
+  const radii = await page.locator(".storage-file-picker-pool-icon, .storage-file-picker-file-icon, .storage-file-picker-pool-state").evaluateAll(elements => elements.map(element => globalThis.getComputedStyle(element).borderRadius));
+  assert.ok(radii.every(radius => radius === "0px"), JSON.stringify(radii));
+});
+
+test("file picker selected names, metadata and status remain readable across every theme", async context => {
+  const page = await filePickerFixture(context);
+  const row = page.locator(".storage-file-picker-row").filter({ hasText: ".txt" });
+  await row.click();
+  let minimumContrast = Infinity;
+  for (const scheme of ["neon", "mono", "graphite", "synthwave", "bloodline", "terminal", "amber"]) for (const mode of ["dark", "light"]) {
+    await page.evaluate(({ scheme, mode }) => Object.assign(globalThis.document.documentElement.dataset, { cyberScheme: scheme, cyberMode: mode }), { scheme, mode });
+    await page.waitForTimeout(250);
+    const readings = await textContrast(page.locator(".storage-file-picker-pool-copy strong, .storage-file-picker-pool-copy small, .storage-file-picker-pool-state, .storage-file-picker-file-name, .storage-file-picker-file-meta"));
+    for (const reading of readings) assert.ok(reading.ratio >= 4.5, `${scheme}/${mode}: ${JSON.stringify(reading)}`);
+    minimumContrast = Math.min(minimumContrast, ...readings.map(reading => reading.ratio));
+    assert.equal(await row.evaluate(element => globalThis.getComputedStyle(element).color), await themeColor(page, "--cyber-on-accent"));
+    const bounds = await row.boundingBox();
+    await row.hover();
+    assert.deepEqual(await row.boundingBox(), bounds);
+  }
+  context.diagnostic(`Minimum file picker text contrast: ${minimumContrast.toFixed(2)}:1`);
+});
+
+for (const language of ["en", "zh-CN"]) for (const viewport of [{ width: 1440, height: 900 }, { width: 820, height: 600 }, { width: 390, height: 844 }, { width: 320, height: 600 }]) {
+  test(`file picker keeps heading, folder tools and footer inside ${viewport.width}px (${language})`, async context => {
+    const page = await filePickerFixture(context, { pickerMode: "directory", language, viewport });
+    await page.locator(".storage-file-picker-create-folder-trigger").click();
+    const input = page.locator(".storage-file-picker-create-folder input");
+    await input.fill("Evidence");
+    for (const selector of [".storage-file-picker", ".storage-file-picker-header", ".storage-file-picker-footer", ".storage-file-picker-create-folder input", ".storage-file-picker-create-folder button", ".storage-file-picker-up"]) {
+      for (const element of await page.locator(selector).all()) {
+        const bounds = await element.boundingBox();
+        assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= viewport.width && bounds.y >= 0 && bounds.y + bounds.height <= viewport.height, `${selector}: ${JSON.stringify(bounds)}`);
+        if (viewport.width <= 1040 && (selector.endsWith("button") || selector.endsWith("-up"))) assert.ok(bounds.width >= 44 && bounds.height >= 44, `${selector}: touch target`);
+      }
+    }
+    const form = await page.locator(".storage-file-picker-create-folder").boundingBox();
+    const toolbar = await page.locator(".storage-file-picker-toolbar").boundingBox();
+    assert.ok(form.x >= toolbar.x && form.x + form.width <= toolbar.x + toolbar.width);
+    await mkdir(fileURLToPath(new URL("../.cyberos/file-picker-visual/screenshots/", import.meta.url)), { recursive: true });
+    await page.screenshot({ path: fileURLToPath(new URL(`../.cyberos/file-picker-visual/screenshots/folder-${viewport.width}-${language}.png`, import.meta.url)) });
+    const create = page.locator('.storage-file-picker-create-folder button[type="submit"]');
+    await create.click();
+    assert.equal(await create.getAttribute("aria-busy"), "true");
+    await page.evaluate(() => globalThis.window.__finishPickerCreate());
+    await page.locator(".storage-file-picker").waitFor({ state: "hidden" });
+    assert.deepEqual(await page.evaluate(() => globalThis.window.__pickerFolderRequest), { storagePoolId: "primary", parentPath: ".", name: "Evidence" });
+    await page.waitForFunction(() => globalThis.document.activeElement?.textContent === "Open picker");
+    assert.equal(await page.getByRole("button", { name: "Open picker", exact: true }).evaluate(element => element === globalThis.document.activeElement), true);
+  });
+}
+
+test("file picker preserves filtering, selection, directory navigation and Escape focus", async context => {
+  for (const pickerMode of ["iso", "files", "skill-zip", "directory"]) {
+    const page = await filePickerFixture(context, { pickerMode });
+    const rows = page.locator(".storage-file-picker-row");
+    assert.equal(await rows.count(), pickerMode === "files" ? 4 : pickerMode === "directory" ? 1 : 2);
+    assert.equal(await rows.filter({ hasText: "unsafe" }).count(), 0);
+    if (pickerMode === "directory") {
+      await rows.first().click();
+      await page.locator(".storage-file-picker-up:not(:disabled)").waitFor();
+      await page.locator(".storage-file-picker-up").click();
+      assert.equal(await page.locator(".storage-file-picker-up").isDisabled(), true);
+    } else {
+      await rows.last().click();
+      assert.equal(await rows.last().getAttribute("aria-selected"), "true");
+      await page.locator(".storage-file-picker-footer [data-variant='primary']").click();
+      await page.locator(".storage-file-picker").waitFor({ state: "hidden" });
+      assert.ok(await page.evaluate(() => globalThis.window.__pickerSelection));
+      await page.getByRole("button", { name: "Open picker", exact: true }).click();
+    }
+    await page.keyboard.press("Escape");
+    await page.locator(".storage-file-picker").waitFor({ state: "hidden" });
+    await page.waitForFunction(() => globalThis.document.activeElement?.textContent === "Open picker");
+    assert.equal(await page.getByRole("button", { name: "Open picker", exact: true }).evaluate(element => element === globalThis.document.activeElement), true);
+  }
+});
+
+test("file picker preserves loading, retry, empty and keyboard focus feedback", async context => {
+  const loading = await filePickerFixture(context, { initialState: "loading" });
+  assert.equal(await loading.locator(".storage-file-picker-list .is-spinning").count(), 1);
+  assert.equal(await loading.locator(".storage-file-picker-footer [data-variant='primary']").isDisabled(), true);
+  await loading.evaluate(() => globalThis.window.__finishPickerLoad());
+  await loading.locator(".storage-file-picker-row").first().waitFor();
+  await loading.locator(".storage-file-picker-row").first().focus();
+  await loading.keyboard.press("Tab");
+  const focus = await loading.evaluate(() => {
+    const element = globalThis.document.activeElement;
+    const style = globalThis.getComputedStyle(element);
+    return { outline: style.outlineWidth, offset: style.outlineOffset, clip: style.clipPath };
+  });
+  assert.deepEqual(focus, { outline: "2px", offset: "3px", clip: "none" });
+
+  const error = await filePickerFixture(context, { initialState: "error" });
+  await error.getByRole("alert").waitFor();
+  assert.equal(await error.locator(".storage-file-picker-footer [data-variant='primary']").isDisabled(), true);
+  await error.evaluate(() => { globalThis.window.__pickerLoadState = "empty"; });
+  await error.locator(".storage-file-picker-error button").click();
+  await error.locator(".storage-file-picker-list .ui-empty-state").waitFor();
+  assert.equal(await error.locator(".storage-file-picker-row").count(), 0);
+  assert.equal(await error.locator(".storage-file-picker-footer [data-variant='primary']").isDisabled(), true);
+});
+
+test("file picker keeps a complete file row reachable in short mobile viewports", async context => {
+  const page = await filePickerFixture(context, { pickerMode: "directory", language: "en", viewport: { width: 320, height: 600 } });
+  await page.locator(".storage-file-picker-create-folder-trigger").click();
+  const row = page.locator(".storage-file-picker-row").first();
+  const list = await page.locator(".storage-file-picker-list").boundingBox();
+  const bounds = await row.boundingBox();
+  assert.ok(list.height >= bounds.height + 16, `list ${list.height}px cannot contain a ${bounds.height}px row and its focus padding`);
+  await row.focus();
+  const focused = await row.boundingBox();
+  const layout = await page.locator(".storage-file-picker-layout").boundingBox();
+  assert.ok(focused.y >= layout.y && focused.y + focused.height <= layout.y + layout.height);
+});
+
+test("file picker pool hover changes its edge and surface without changing geometry", async context => {
+  const page = await filePickerFixture(context);
+  const pool = page.locator('.storage-file-picker-pool[aria-selected="false"]').first();
+  const bounds = await pool.boundingBox();
+  const normal = await pool.evaluate(element => ({ background: globalThis.getComputedStyle(element).backgroundColor, border: globalThis.getComputedStyle(element).borderTopColor }));
+  await pool.hover();
+  const hovered = await pool.evaluate(element => ({ background: globalThis.getComputedStyle(element).backgroundColor, border: globalThis.getComputedStyle(element).borderTopColor }));
+  assert.notEqual(hovered.background, normal.background);
+  assert.equal(hovered.border, await themeColor(page, "--cyber-accent2"));
+  assert.deepEqual(await pool.boundingBox(), bounds);
+});
+
 async function themeColor(page, token) {
   return page.evaluate(token => {
     const probe = globalThis.document.createElement("span"); probe.style.color = `var(${token})`;

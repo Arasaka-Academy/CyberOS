@@ -219,7 +219,7 @@ export function SettingsSkillsPage({
               </div>
               <DialogActions className="settings-inline-actions">
                 <UiButton variant="secondary" type="button" className="secondary-button" onClick={closeGitDialog} disabled={busyId !== null}>{t("common.actions.cancel")}</UiButton>
-                <UiButton variant="primary" type="submit" className="primary-button" disabled={busyId !== null}>{busyId !== null ? <LoaderCircle aria-hidden="true" size={14} className="is-spinning" /> : null}{t("settings.skills.install")}</UiButton>
+                <UiButton variant="primary" type="submit" className="primary-button" disabled={busyId !== null} aria-busy={busyId !== null || undefined}>{busyId !== null ? <LoaderCircle aria-hidden="true" size={14} className="is-spinning" /> : <Plus aria-hidden="true" size={14} />}{t("settings.skills.install")}</UiButton>
               </DialogActions>
             </form>
           </section>

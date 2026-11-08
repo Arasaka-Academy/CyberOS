@@ -13,7 +13,6 @@ import {
   LoaderCircle,
   MessageSquare,
   MessageSquarePlus,
-  Mic,
   Plus,
   RotateCcw,
   Send,
@@ -43,7 +42,7 @@ import {
   resolveWorkspaceMessagePath,
   splitWorkspaceMessagePaths
 } from "../../lib/chat-paths.js";
-import { sessionTitle } from "../../lib/session.js";
+import { isAgentSession, sessionTitle } from "../../lib/session.js";
 import type { TranscriptPhase } from "../../lib/transcript.js";
 import { PowerControl } from "../power/PowerControl.js";
 import { MobileAppHeader, useAppHeadingFocus } from "../../mobile/MobileAppHeader.js";
@@ -158,7 +157,7 @@ function SessionList({
   return (
     <nav className="session-list" aria-label={ariaLabel}>
       {sessions.map((item) => {
-        const title = item.kind === "voice" ? t("settings.audio.voiceSession") : sessionTitle(item, workspaceAgentTitle);
+        const title = sessionTitle(item, workspaceAgentTitle);
         const relativeTime = formatRelativeTime(item.updatedAt, locale, now);
         const baseLabel = `${title} - ${relativeTime} (${formatDate(item.updatedAt, locale)})`;
         const label = item.pendingApprovalCount > 0
@@ -175,7 +174,8 @@ function SessionList({
             aria-label={label}
             aria-current={item.id === activeSessionId ? "page" : undefined}
           >
-            {item.kind === "voice" ? <Mic aria-hidden="true" size={19} /> : <Bot aria-hidden="true" size={19} />}
+            <span className="session-number" aria-hidden="true" />
+            <Bot aria-hidden="true" size={19} />
             {item.pendingApprovalCount > 0 ? (
               <span className="session-approval-badge" aria-hidden="true">
                 {item.pendingApprovalCount > 9 ? "9+" : item.pendingApprovalCount}
@@ -294,7 +294,8 @@ function ChatPaneContent({
     || activeCapabilityApprovals.length > 0
     || agentToolActivities.length > 0;
   const activeSessionTitle = agentSessionHeaderTitle(activeSessionSummary, t("chat.newSessionTitle"), workspaceAgentTitle, t("settings.audio.voiceSession"));
-  const activeSessionIndex = sessions.findIndex((item) => item.id === activeSessionId);
+  const agentSessions = sessions.filter(isAgentSession);
+  const activeSessionIndex = agentSessions.findIndex((item) => item.id === activeSessionId);
   const activeSessionCode = String((activeSessionIndex >= 0 ? activeSessionIndex : 0) + 1).padStart(2, "0");
   const composerFeedback = composerFeedbackState({ activeJobId, activeJobStatus, messageSubmitting, status });
   const activeAgentTurn = hasActiveAgentTurn(activeJobId, activeJobStatus);
@@ -465,7 +466,7 @@ function ChatPaneContent({
         </div>
 
         <SessionList
-          sessions={sessions}
+          sessions={agentSessions}
           activeSessionId={activeSessionId}
           workspaceAgentTitle={workspaceAgentTitle}
           locale={locale}
@@ -744,7 +745,7 @@ function ChatPaneContent({
         </form>
       </section> : null}
 
-      {compact && sessionsOpen ? <ModalPortal className="mobile-sessions-backdrop" onRequestClose={() => setSessionsOpen(false)} onMouseDown={() => setSessionsOpen(false)}><section ref={sessionsRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="mobile-sessions-title" className="mobile-sessions-dialog" onMouseDown={(event) => event.stopPropagation()}><DialogHeader title={t("mobile.sessions")} headingId="mobile-sessions-title" actions={<><UiButton iconOnly variant="ghost" type="button" onClick={() => setSessionsOpen(false)} aria-label={t("common.actions.close")}><X size={20} aria-hidden="true" /></UiButton></>} /><UiButton variant="secondary" type="button" className="secondary-button" onClick={() => { onCreateAgent(); setSessionsOpen(false); }}><Plus size={18} aria-hidden="true" />{t("common.actions.newAgent")}</UiButton><SessionList sessions={sessions} activeSessionId={activeSessionId} workspaceAgentTitle={workspaceAgentTitle} locale={locale} ariaLabel={t("chat.agentSessions")} onSelectSession={(item) => { onSelectSession(item); setSessionsOpen(false); }} /></section></ModalPortal> : null}
+      {compact && sessionsOpen ? <ModalPortal className="mobile-sessions-backdrop" onRequestClose={() => setSessionsOpen(false)} onMouseDown={() => setSessionsOpen(false)}><section ref={sessionsRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="mobile-sessions-title" className="mobile-sessions-dialog" onMouseDown={(event) => event.stopPropagation()}><DialogHeader title={t("mobile.sessions")} headingId="mobile-sessions-title" actions={<><UiButton iconOnly variant="ghost" type="button" onClick={() => setSessionsOpen(false)} aria-label={t("common.actions.close")}><X size={20} aria-hidden="true" /></UiButton></>} /><UiButton variant="secondary" type="button" className="secondary-button" onClick={() => { onCreateAgent(); setSessionsOpen(false); }}><Plus size={18} aria-hidden="true" />{t("common.actions.newAgent")}</UiButton><SessionList sessions={agentSessions} activeSessionId={activeSessionId} workspaceAgentTitle={workspaceAgentTitle} locale={locale} ariaLabel={t("chat.agentSessions")} onSelectSession={(item) => { onSelectSession(item); setSessionsOpen(false); }} /></section></ModalPortal> : null}
 
       {deleteConfirmOpen ? (
         <ModalPortal className="session-delete-backdrop" role="presentation" onRequestClose={() => setDeleteConfirmOpen(false)}>

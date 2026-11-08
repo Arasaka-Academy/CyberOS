@@ -26,6 +26,7 @@ import {
   Image as ImageIcon,
   Images,
   KeyRound,
+  LoaderCircle,
   MemoryStick,
   Network,
   MonitorCog,
@@ -376,6 +377,7 @@ export function SettingsModal({
                     key={section.id}
                     type="button"
                     className={section.id === activeSection ? "is-active" : ""}
+                    aria-current={section.id === activeSection ? "page" : undefined}
                     onClick={() => { onSectionChange(section.id); setMobileDetail(true); }}
                   >
                     {settingsSectionIcon(section.id)}
@@ -395,8 +397,8 @@ export function SettingsModal({
           </div>
         </aside>
 
-        {!compact || mobileDetail ? <section className="settings-content">
-          {!compact ? <DialogHeader className="settings-content-header" title={settingsSectionTitle(currentSection, t)} description={settingsSectionDescription(currentSection, t)} headingId="settings-title" actions={<><UiButton iconOnly variant="ghost"
+        {!compact || mobileDetail ? <section className="settings-content" data-settings-section={activeSection}>
+          {!compact ? <DialogHeader className="settings-content-header" icon={settingsSectionIcon(currentSection.id)} title={settingsSectionTitle(currentSection, t)} description={settingsSectionDescription(currentSection, t)} headingId="settings-title" actions={<><UiButton iconOnly variant="ghost"
               type="button"
               onClick={onClose}
               data-tooltip={t("common.actions.closeSettings")}
@@ -496,7 +498,8 @@ export function SettingsModal({
                     {t("common.actions.cancel")}
                   </UiButton>
                   <UiButton variant="primary" className="primary-button" type="submit" disabled={loading || saving} aria-busy={loading || saving || undefined}>
-                    {saving ? t("common.actions.saving") : t("common.actions.saveChanges")}
+                    {saving ? <LoaderCircle aria-hidden="true" size={14} className="is-spinning" /> : <Check aria-hidden="true" size={14} />}
+                    {t("common.actions.saveChanges")}
                   </UiButton>
                 </div>
               </DialogActions>
@@ -1203,7 +1206,8 @@ export function SettingsPhotosPage({
           <div>
             <UiButton variant="secondary" className="secondary-button" type="button" onClick={onClose} disabled={saving}>{t("common.actions.cancel")}</UiButton>
             <UiButton variant="primary" className="primary-button" type="submit" disabled={loading || saving || (!processingSettings && !libraryChanged)} aria-busy={saving || undefined}>
-              {saving ? t("common.actions.saving") : saved ? <><Check aria-hidden="true" size={14} />{t("settings.photos.saved")}</> : t("common.actions.saveChanges")}
+              {saving ? <LoaderCircle aria-hidden="true" size={14} className="is-spinning" /> : <Check aria-hidden="true" size={14} />}
+              {t("common.actions.saveChanges")}
             </UiButton>
           </div>
         </footer>
@@ -1426,7 +1430,8 @@ export function SettingsDownloadsPage({
             {t("common.actions.cancel")}
           </UiButton>
           <UiButton variant="primary" className="primary-button" type="submit" disabled={loading || saving || !settings} aria-busy={loading || saving || undefined}>
-            {saving ? t("settings.downloads.saving") : saved ? <><Check aria-hidden="true" size={14} />{t("settings.downloads.saved")}</> : t("common.actions.saveChanges")}
+            {saving ? <LoaderCircle aria-hidden="true" size={14} className="is-spinning" /> : <Check aria-hidden="true" size={14} />}
+            {t("common.actions.saveChanges")}
           </UiButton>
         </div>
       </footer>
@@ -1606,7 +1611,8 @@ function SettingsToolPolicyPage({
             {t("common.actions.cancel")}
           </UiButton>
           <UiButton variant="primary" className="primary-button" type="submit" disabled={loading || saving} aria-busy={loading || saving || undefined}>
-            {saving ? t("common.actions.saving") : t("common.actions.saveChanges")}
+            {saving ? <LoaderCircle aria-hidden="true" size={14} className="is-spinning" /> : <Check aria-hidden="true" size={14} />}
+            {t("common.actions.saveChanges")}
           </UiButton>
         </div>
       </footer>
@@ -1659,7 +1665,8 @@ function SettingsVmPage({
             {t("common.actions.cancel")}
           </UiButton>
           <UiButton variant="primary" className="primary-button" type="submit" disabled={loading || saving} aria-busy={loading || saving || undefined}>
-            {saving ? t("common.actions.saving") : t("common.actions.saveChanges")}
+            {saving ? <LoaderCircle aria-hidden="true" size={14} className="is-spinning" /> : <Check aria-hidden="true" size={14} />}
+            {t("common.actions.saveChanges")}
           </UiButton>
         </div>
       </footer>

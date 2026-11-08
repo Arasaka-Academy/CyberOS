@@ -10,10 +10,7 @@
 
 .monitoring-alert-page-header,
 .monitoring-alert-page-header > div:last-child,
-.monitoring-alert-row-actions,
-.settings-alerts-actions,
-.settings-alerts-test,
-.settings-alerts-create {
+.monitoring-alert-row-actions {
   display: flex;
   align-items: center;
 }
@@ -29,8 +26,7 @@
 }
 
 .monitoring-alert-page-header > div:last-child,
-.monitoring-alert-row-actions,
-.settings-alerts-actions {
+.monitoring-alert-row-actions {
   gap: 6px;
 }
 
@@ -50,9 +46,7 @@
 }
 
 .monitoring-alert-add,
-.monitoring-alert-form footer button,
-.settings-alerts-page button.primary-button,
-.settings-alerts-page button.secondary-button {
+.monitoring-alert-form footer button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -100,9 +94,7 @@
 }
 
 .monitoring-alert-table td > strong,
-.monitoring-alert-table td > small,
-.settings-alerts-list span > strong,
-.settings-alerts-list span > small {
+.monitoring-alert-table td > small {
   display: block;
   min-width: 0;
 }
@@ -114,8 +106,7 @@
   white-space: nowrap;
 }
 
-.monitoring-alert-table td > small,
-.settings-alerts-list span > small {
+.monitoring-alert-table td > small {
   margin-top: 3px;
   color: var(--muted-2);
   font-size: 10px;
@@ -172,9 +163,7 @@
   justify-content: flex-end;
 }
 
-.monitoring-alert-row-actions button,
-.settings-alerts-delete,
-.settings-alerts-list small button {
+.monitoring-alert-row-actions button {
   display: inline-grid;
   width: 32px;
   height: 32px;
@@ -185,14 +174,12 @@
   color: var(--muted);
 }
 
-.monitoring-alert-row-actions button[data-danger="true"],
-.settings-alerts-delete {
+.monitoring-alert-row-actions button[data-danger="true"] {
   color: var(--danger-text);
 }
 
 .monitoring-alert-error,
-.monitoring-alert-empty,
-.settings-alerts-loading {
+.monitoring-alert-empty {
   display: flex;
   align-items: center;
   gap: 8px;

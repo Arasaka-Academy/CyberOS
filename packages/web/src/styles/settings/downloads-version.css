@@ -26,8 +26,8 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-  color: var(--muted);
-  font-family: var(--code-font-family);
+  color: var(--cyber-muted);
+  font-family: var(--cyberos-font-mono);
 }
 
 .settings-download-directory-value svg {
@@ -59,7 +59,7 @@
   min-width: 0;
   height: 40px;
   padding: 0 12px;
-  border: 1px solid var(--line-soft);
+  border: 1px solid var(--cyber-line);
   border-radius: 0;
   color: var(--accent-soft-text);
   background: var(--subtle-bg);
@@ -70,16 +70,16 @@
 }
 
 .settings-download-visual strong {
-  color: var(--text);
+  color: var(--cyber-ink);
   font-size: 22px;
   line-height: 1;
 }
 
 .settings-download-visual span {
-  color: var(--muted-2);
-  font-size: 10px;
-  font-family: var(--font-emphasis);
-  font-weight: 800;
+  color: var(--cyber-muted);
+  font-size: 11px;
+  font-family: var(--cyberos-font-ui);
+  font-weight: 600;
   text-transform: uppercase;
 }
 
@@ -98,24 +98,24 @@
   align-items: end;
   gap: 4px 18px;
   padding: 16px;
-  border: 1px solid color-mix(in srgb, var(--cyberos-color-text) 5%, transparent);
-  border-radius: 5px;
-  background: rgb(0 0 0 / 14%);
+  border: 1px solid var(--cyber-line);
+  border-radius: 0;
+  background: var(--cyber-soft);
 }
 
 .settings-version-release span,
 .settings-version-release small {
-  color: var(--muted-2);
-  font-size: 11.5px;
-  font-family: var(--font-emphasis);
-  font-weight: 800;
+  color: var(--cyber-muted);
+  font-size: 12px;
+  font-family: var(--cyberos-font-ui);
+  font-weight: 600;
   text-transform: uppercase;
 }
 
 .settings-version-release strong {
   grid-row: 1 / span 2;
   grid-column: 2;
-  color: var(--text);
+  color: var(--cyber-ink);
   font-size: 24px;
   line-height: 1;
 }
@@ -126,9 +126,9 @@
   gap: 1px;
   overflow: hidden;
   margin: 0;
-  border: 1px solid var(--line-soft);
-  border-radius: 5px;
-  background: var(--line-soft);
+  border: 1px solid var(--cyber-line);
+  border-radius: 0;
+  background: var(--cyber-line);
 }
 
 .settings-version-details > div {
@@ -157,10 +157,10 @@
   grid-column: 1 / -1;
   align-items: center;
   gap: 7px;
-  color: var(--muted-2);
+  color: var(--cyber-muted);
   font-size: 11px;
-  font-family: var(--font-emphasis);
-  font-weight: 800;
+  font-family: var(--cyberos-font-ui);
+  font-weight: 600;
   text-transform: uppercase;
 }
 
@@ -170,14 +170,14 @@
 
 .settings-version-details dd {
   overflow-wrap: anywhere;
-  color: var(--muted);
-  font-size: 12.5px;
+  color: var(--cyber-muted);
+  font-size: 13px;
   line-height: 1.45;
 }
 
 .settings-version-details dd.is-mono {
-  font-family: var(--code-font-family);
-  font-size: 11.5px;
+  font-family: var(--cyberos-font-mono);
+  font-size: 12px;
 }
 
 .settings-version-details dd[data-dirty="true"] {
@@ -192,14 +192,14 @@
   height: 32px;
   margin-top: -3px;
   border-radius: 0;
-  color: var(--muted);
+  color: var(--cyber-muted);
   background: var(--surface);
   cursor: pointer;
 }
 
 .settings-version-copy:hover,
 .settings-version-copy[data-state="copied"] {
-  color: var(--text);
+  color: var(--cyber-ink);
   background: var(--surface-hover);
 }
 
@@ -211,6 +211,6 @@
   overflow-wrap: anywhere;
   padding: 10px 12px;
   border-left: 3px solid var(--cyberos-color-warning);
-  color: var(--muted);
+  color: var(--cyber-muted);
   background: color-mix(in srgb, var(--cyberos-color-command) 8%, transparent);
 }

@@ -1,4 +1,4 @@
-import { Button as UiButton, Field, Input, Notice } from "@cyberos/ui";
+import { Button as UiButton, Field, Input, Notice, SectionHeader } from "@cyberos/ui";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Check, KeyRound, LoaderCircle, Share2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -175,14 +175,8 @@ export function SettingsSharesContent({
     <div className="settings-content-body">
       {error ? <Notice className="settings-inline-error" role="alert" tone="danger">{error}</Notice> : null}
       <div className="settings-page-grid settings-shares-grid">
-        <form className="settings-section-card settings-field-wide" onSubmit={onPublishingSubmit}>
-          <header>
-            <div>
-              <h3>{t("settings.shares.publishingTitle")}</h3>
-              <p>{t("settings.shares.publishingDescription")}</p>
-            </div>
-            <Share2 aria-hidden="true" size={18} />
-          </header>
+        <form className="ui-section settings-section-card settings-field-wide" onSubmit={onPublishingSubmit}>
+          <SectionHeader title={t("settings.shares.publishingTitle")} description={t("settings.shares.publishingDescription")} icon={<Share2 aria-hidden="true" size={18} />} />
           <div className="settings-switch-row">
             <strong><HelpLabel label={t("settings.shares.enabled")} content={enabled ? t("settings.shares.enabledDescription") : t("settings.shares.disabledDescription")} /></strong>
             <Switch
@@ -207,14 +201,8 @@ export function SettingsSharesContent({
           </div>
         </form>
 
-        <form className="settings-section-card settings-field-wide" onSubmit={onAccountSubmit}>
-          <header>
-            <div>
-              <h3>{t("settings.shares.accountTitle")}</h3>
-              <p>{t("settings.shares.accountDescription")}</p>
-            </div>
-            <KeyRound aria-hidden="true" size={18} />
-          </header>
+        <form className="ui-section settings-section-card settings-field-wide" onSubmit={onAccountSubmit}>
+          <SectionHeader title={t("settings.shares.accountTitle")} description={t("settings.shares.accountDescription")} icon={<KeyRound aria-hidden="true" size={18} />} />
 
           <div className="settings-credential-status" data-configured={settings?.account.passwordConfigured ?? false}>
             <KeyRound aria-hidden="true" size={16} />

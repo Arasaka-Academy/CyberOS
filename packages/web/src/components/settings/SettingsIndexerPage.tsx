@@ -1,7 +1,7 @@
 import { Button as UiButton, Field, Input, Section } from "@cyberos/ui";
 import { FormEvent, useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Database, RefreshCw } from "lucide-react";
+import { Check, Database, LoaderCircle, RefreshCw } from "lucide-react";
 import type { IndexerOverview, IndexerSettings, StoragePool } from "../../api.js";
 import { Switch } from "../common/Switch.js";
 
@@ -116,7 +116,7 @@ export function SettingsIndexerPage({
                         onClick={() => void reindex(storagePool.id)}
                       >
                         <RefreshCw aria-hidden="true" size={14} className={rebuilding ? "is-spinning" : undefined} />
-                        {rebuilding ? t("settings.indexer.reindexing") : t("settings.indexer.reindex")}
+                        {t("settings.indexer.reindex")}
                       </UiButton>
                     </div>
                   );
@@ -149,7 +149,8 @@ export function SettingsIndexerPage({
         <div>
           <UiButton variant="secondary" className="secondary-button" type="button" onClick={onClose} disabled={saving}>{t("common.actions.cancel")}</UiButton>
           <UiButton variant="primary" className="primary-button" type="submit" disabled={disabled} aria-busy={saving || undefined}>
-            {saving ? t("common.actions.saving") : saved ? <><Check aria-hidden="true" size={14} />{t("settings.indexer.saved")}</> : t("common.actions.saveChanges")}
+            {saving ? <LoaderCircle aria-hidden="true" size={14} className="is-spinning" /> : <Check aria-hidden="true" size={14} />}
+            {t("common.actions.saveChanges")}
           </UiButton>
         </div>
       </footer>

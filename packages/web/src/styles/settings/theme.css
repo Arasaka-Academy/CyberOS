@@ -1,5 +1,3 @@
-/* Settings as a large system menu */
-
 .settings-backdrop,
 .session-delete-backdrop,
 .file-action-backdrop,
@@ -10,78 +8,6 @@
   backdrop-filter: blur(2px);
 }
 
-.settings-modal {
-  grid-template-columns: 250px minmax(0, 1fr);
-}
-
-.settings-rail {
-  padding-top: 18px;
-}
-
-.settings-search input {
-  border-color: color-mix(in srgb, var(--cyberos-color-command) 52%, transparent) !important;
-  color: var(--accent-text) !important;
-  background: transparent !important;
-}
-
-.settings-search input::placeholder {
-  color: var(--muted);
-}
-
-.settings-search svg {
-  color: var(--focus-text);
-}
-
-.settings-nav button {
-  position: relative;
-  border: 1px solid transparent;
-  background: transparent;
-}
-
-.settings-nav button:hover {
-  border-color: var(--hud-cyan);
-}
-
-.settings-nav button.is-active {
-  border-color: var(--hud-yellow);
-}
-
-.settings-rail-footer {
-  border-top-color: color-mix(in srgb, var(--cyberos-color-command) 34%, transparent);
-  color: var(--muted);
-}
-
-.settings-content-header {
-  padding: 25px 32px 19px;
-  border-bottom: 2px solid var(--hud-ink);
-}
-
-.settings-content-header p,
-.settings-preference-field small {
-  color: var(--muted);
-}
-
-.settings-content-header button {
-  border: 1px solid var(--hud-ink);
-}
-
-.settings-content-body {
-  padding: 22px 32px 32px;
-}
-
-.settings-page-grid,
-.settings-overview {
-  gap: 12px;
-}
-
-.settings-actions {
-  border-top: 2px solid var(--hud-ink);
-  background: var(--cyberos-color-warning);
-}
-
-.settings-area-list em,
-.settings-metric-grid article,
-.settings-policy-row,
 .approval-card-details div {
   border: 1px solid var(--hud-ink);
   border-radius: 0;

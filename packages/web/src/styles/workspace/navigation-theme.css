@@ -32,7 +32,6 @@
   text-transform: uppercase;
 }
 
-.agent-list-head::before,
 .dock-title::before {
   color: var(--danger-text);
   content: "//";

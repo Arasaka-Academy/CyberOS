@@ -87,6 +87,7 @@ export function PowerControl({
   return (
     <>
       <UiButton variant="secondary"
+        iconOnly={!labelled}
         ref={triggerRef}
         className={labelled ? "settings-power-button secondary-button" : "agent-power-button"}
         type="button"

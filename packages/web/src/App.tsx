@@ -180,7 +180,7 @@ import {
   readStoredPreviewFileSizeLimitBytes,
   writeStoredPreviewFileSizeLimitBytes
 } from "./lib/preview-settings.js";
-import { loadFileListingForView } from "./lib/session.js";
+import { isAgentSession, loadFileListingForView } from "./lib/session.js";
 import { readStoredStoragePoolId, writeStoredStoragePoolId } from "./lib/storage-pool-settings.js";
 import { scheduleToastDismissal } from "./lib/toast.js";
 import { createTrailingSingleFlight } from "./lib/trailing-single-flight.js";
@@ -482,7 +482,10 @@ function AppContent() {
       setStatus("loading");
       setError(null);
       const nextSessions = await getSessions();
-      let nextSession: Session | SessionSummary | null = nextSessions[0] ?? null;
+      if (!active || !isCurrentSessionViewRequest(sessionRequestId)) {
+        return;
+      }
+      let nextSession: Session | SessionSummary | null = nextSessions.find(isAgentSession) ?? null;
       let nextSessionList = nextSessions;
 
       if (!nextSession) {
@@ -1485,8 +1488,9 @@ function AppContent() {
     try {
       await deleteSession(activeSessionId);
       const remainingSessions = await getSessions();
-      const nextSession = remainingSessions[0] ?? (await createSession("."));
-      const nextSessions = remainingSessions.length ? remainingSessions : await getSessions();
+      const nextAgentSession = remainingSessions.find(isAgentSession);
+      const nextSession = nextAgentSession ?? (await createSession("."));
+      const nextSessions = nextAgentSession ? remainingSessions : await getSessions();
       setSessions(nextSessions);
       commitActiveAgentJob(EMPTY_ACTIVE_AGENT_JOB);
       setMessage("");

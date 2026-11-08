@@ -1,4 +1,4 @@
-import { Button as UiButton, DescriptionList, EmptyState, Field, Input, Section, StatusBadge } from "@cyberos/ui";
+import { Button as UiButton, DescriptionList, EmptyState, Field, Input, Section, SectionHeader, StatusBadge } from "@cyberos/ui";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   Check,
@@ -388,13 +388,8 @@ export function SettingsMediaContent({
   ])), [data.scans, data.sources]);
   return (
     <>
-        <form className="settings-section-card" onSubmit={onSaveSettings}>
-          <header>
-            <div>
-              <h3>{t("settings.media.metadataTitle")}</h3>
-              <p>{t("settings.media.metadataDescription")}</p>
-            </div>
-          </header>
+        <form className="ui-section settings-section-card" onSubmit={onSaveSettings}>
+          <SectionHeader title={t("settings.media.metadataTitle")} description={t("settings.media.metadataDescription")} icon={<Film size={18} aria-hidden="true" />} />
           <fieldset className="settings-field-grid settings-media-metadata" disabled={busy === "settings"}>
             <SettingsSecretField
               id="tmdb-read-access-token"
@@ -427,7 +422,8 @@ export function SettingsMediaContent({
           <div className="settings-card-actions">
             <UiButton variant="secondary" className="secondary-button" type="button" disabled={busy === "settings"} onClick={onOpenProxy}>{t("settings.media.configureProxy")}</UiButton>
             <UiButton variant="primary" className="primary-button" type="submit" disabled={busy === "settings"} aria-busy={busy === "settings" || undefined}>
-              {busy === "settings" ? t("common.actions.saving") : t("common.actions.saveChanges")}
+              {busy === "settings" ? <LoaderCircle className="is-spinning" size={15} aria-hidden="true" /> : <Check size={15} aria-hidden="true" />}
+              {t("common.actions.saveChanges")}
             </UiButton>
           </div>
         </form>

@@ -1,6 +1,6 @@
 import { HelpTip } from "../common/HelpTip.js";
-import { Button as UiButton, DialogHeader, Field, Input, Notice, Section, Textarea } from "@cyberos/ui";
-import { useCallback, useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
+import { Button as UiButton, DescriptionList, DialogActions, DialogHeader, Field, Input, Notice, Section, Textarea } from "@cyberos/ui";
+import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
 import { AlertTriangle, Check, ExternalLink, LoaderCircle, Network, RefreshCw, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { parseTailscaleStatus, type TailscaleAction, type TailscaleStatus } from "@cyberos/shared";
@@ -154,7 +154,10 @@ export function SettingsTailscalePage({ onNotifySuccess }: { onNotifySuccess: (m
 
         {!status.available ? <Notice className="settings-inline-alert" role="status" tone="warning">{t(["unknown", "unavailable"].includes(status.service.state) ? "settings.tailscale.errors.unavailable" : status.service.installed ? "settings.tailscale.serviceStopped" : "settings.tailscale.notInstalled")}</Notice> : null}
         {status.error && status.available ? <Notice className="settings-inline-alert" role="status" tone="warning">{t("settings.tailscale.errors.recovery")}</Notice> : null}
-        <dl className="tailscale-facts"><Fact label={t("settings.tailscale.version")}>{status.version}</Fact><Fact label={t("settings.tailscale.service")}>{t(SERVICE_LABELS[status.service.state as keyof typeof SERVICE_LABELS] ?? SERVICE_LABELS.unknown)}</Fact></dl>
+        <DescriptionList className="tailscale-facts" items={[
+          { label: t("settings.tailscale.version"), value: status.version || "—", mono: true },
+          { label: t("settings.tailscale.service"), value: t(SERVICE_LABELS[status.service.state as keyof typeof SERVICE_LABELS] ?? SERVICE_LABELS.unknown) }
+        ]} />
         <div className="tailscale-switches">
           <Switch label={t("settings.tailscale.autoStart")} checked={status.service.autoStart} disabled={locked || !status.service.installed} onCheckedChange={(autoStart) => void perform(() => updateSystemTailscaleService({ autoStart, expectedRevision: status.revision, confirmed: true }))} />
           <Switch label={t("settings.tailscale.connected")} checked={status.backendState === "Running"} disabled={locked || !status.available || !signedIn} onCheckedChange={(value) => action(value ? "connect" : "disconnect")} />
@@ -177,11 +180,15 @@ export function SettingsTailscalePage({ onNotifySuccess }: { onNotifySuccess: (m
 
       <Section className="settings-section-card" title={t("settings.tailscale.localInfo")}>
 
-        <dl className="tailscale-facts">
-          <Fact label={t("settings.tailscale.device")}>{status.hostname}</Fact><Fact label={t("settings.tailscale.account")}>{status.account}</Fact><Fact label="Tailnet">{status.tailnet}</Fact>
-          <Fact label={t("settings.tailscale.controlUrl")}>{status.controlUrl}</Fact><Fact label="IPv4 / IPv6">{status.ips.join("\n")}</Fact>
-          <Fact label="MagicDNS">{status.dnsName}</Fact><Fact label={t("settings.tailscale.keyExpiry")}>{date(status.keyExpiry)}</Fact>
-        </dl>
+        <DescriptionList className="tailscale-facts" items={[
+          { label: t("settings.tailscale.device"), value: status.hostname || "—", mono: true },
+          { label: t("settings.tailscale.account"), value: status.account || "—" },
+          { label: "Tailnet", value: status.tailnet || "—", mono: true },
+          { label: t("settings.tailscale.controlUrl"), value: status.controlUrl || "—", mono: true },
+          { label: "IPv4 / IPv6", value: status.ips.join("\n") || "—", mono: true },
+          { label: "MagicDNS", value: status.dnsName || "—", mono: true },
+          { label: t("settings.tailscale.keyExpiry"), value: date(status.keyExpiry) }
+        ]} />
         {status.health.length ? <ul className="tailscale-health" aria-label={t("settings.tailscale.health")}>{status.health.map((health, index) => <li key={index}><AlertTriangle size={14} aria-hidden="true" />{health}</li>)}</ul> : <p className="settings-field-help">{t(status.available ? "settings.tailscale.noHealth" : "settings.tailscale.unknown")}</p>}
       </Section>
 
@@ -217,7 +224,12 @@ export function SettingsTailscalePage({ onNotifySuccess }: { onNotifySuccess: (m
             <Field label={t("settings.tailscale.subnets")} help={<HelpTip label={String(t("settings.tailscale.subnets"))} content={String(t("settings.tailscale.subnetHelp"))} />}><Textarea rows={4} value={draft.routesText} onChange={(event) => edit({ routesText: event.target.value })} spellCheck={false} placeholder={"192.168.20.0/24\nfd00::/64"} /></Field>
             <Switch label={t("settings.tailscale.advertiseExit")} disabled={!!draft.exitNodeId} checked={draft.advertiseExitNode} onCheckedChange={(advertiseExitNode) => edit({ advertiseExitNode, ...(advertiseExitNode ? { exitNodeId: "" } : {}) })} />
           </fieldset>
-          <dl className="tailscale-facts"><Fact label={t("settings.tailscale.forwardingV4")}>{yn(status.ipv4Forwarding)}</Fact><Fact label={t("settings.tailscale.forwardingV6")}>{yn(status.ipv6Forwarding)}</Fact><Fact label={t("settings.tailscale.published")}>{status.settings.advertisedRoutes.join("\n")}</Fact><Fact label={t("settings.tailscale.advertiseExit")}>{yn(status.settings.advertiseExitNode)}</Fact></dl>
+          <DescriptionList className="tailscale-facts" items={[
+            { label: t("settings.tailscale.forwardingV4"), value: yn(status.ipv4Forwarding) },
+            { label: t("settings.tailscale.forwardingV6"), value: yn(status.ipv6Forwarding) },
+            { label: t("settings.tailscale.published"), value: status.settings.advertisedRoutes.join("\n") || "—", mono: true },
+            { label: t("settings.tailscale.advertiseExit"), value: yn(status.settings.advertiseExitNode) }
+          ]} />
           {status.primaryRoutes.length ? <p className="settings-field-help">{t("settings.tailscale.primaryRoutes", { routes: status.primaryRoutes.join(", ") })}</p> : null}
         </Section>
         <Section className="settings-section-card">
@@ -234,12 +246,8 @@ export function SettingsTailscalePage({ onNotifySuccess }: { onNotifySuccess: (m
 
         <p id={`${dialogId}-description`}>{t(`settings.tailscale.confirm.${confirmation.action}.description`)}</p>
         {message ? <Notice className="settings-inline-error" role="alert" tone="danger">{message}</Notice> : null}
-        <div className="settings-card-actions"><UiButton variant="secondary" type="button" className="secondary-button" disabled={busy} onClick={closeConfirmation}>{t("common.actions.cancel")}</UiButton><UiButton variant="primary" type="button" className="primary-button" disabled={busy || pending !== null} onClick={() => void perform(confirmation.run, confirmation.action === "apply").then((ok) => { if (ok) setConfirmation(null); })}>{busy ? <LoaderCircle size={14} className="is-spinning" aria-hidden="true" /> : null}{t("settings.tailscale.confirmAction")}</UiButton></div>
+        <DialogActions><UiButton variant="secondary" type="button" className="secondary-button" disabled={busy} onClick={closeConfirmation}>{t("common.actions.cancel")}</UiButton><UiButton variant="primary" type="button" className="primary-button" disabled={busy || pending !== null} aria-busy={busy || undefined} onClick={() => void perform(confirmation.run, confirmation.action === "apply").then((ok) => { if (ok) setConfirmation(null); })}>{busy ? <LoaderCircle size={14} className="is-spinning" aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}{t("settings.tailscale.confirmAction")}</UiButton></DialogActions>
       </section>
     </ModalPortal> : null}
   </div>;
-}
-
-function Fact({ label, children }: { label: string; children: ReactNode }) {
-  return <div><dt>{label}</dt><dd>{children || "—"}</dd></div>;
 }

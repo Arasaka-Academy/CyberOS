@@ -28,6 +28,7 @@
     "test:downloads-browser": "node --test scripts/test-download-settings.mjs",
     "test:photos-browser": "node --test scripts/test-photos-semantic-browser.mjs",
     "test:styles-browser": "node --test scripts/test-web-styles.mjs",
+    "test:settings-browser": "node --import tsx --test scripts/test-settings-browser.mjs",
     "build": "npm run build:metadata && npm run build:rust && npm run build --workspaces --if-present && npm run docs:build",
     "build:rust": "cargo build --locked --release --workspace",
     "build:metadata": "node scripts/generate-build-info.mjs",

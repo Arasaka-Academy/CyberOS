@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { FileMeta } from "../../api.js";
-import "@js-preview/excel/lib/index.css";
+import { loadSpreadsheetPreview } from "../../lib/spreadsheet-preview.js";
 
 type OfficePreviewKind = "document" | "spreadsheet" | "presentation";
 type PreviewStatus = "loading" | "ready" | "error";
@@ -48,7 +48,7 @@ export function OfficePreview({ blobUrl, meta }: { blobUrl: string; meta: FileMe
           useBase64URL: true
         });
       } else if (meta.previewKind === "spreadsheet") {
-        const { default: excelPreview } = await import("@js-preview/excel");
+        const { default: excelPreview } = await loadSpreadsheetPreview();
         if (disposed) return;
         const renderer = excelPreview.init(host, { showContextmenu: false });
         disposeRenderer = () => renderer.destroy();

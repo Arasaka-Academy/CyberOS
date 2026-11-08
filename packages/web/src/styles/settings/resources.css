@@ -1,33 +1,33 @@
 .settings-resource-page {
   display: grid;
   align-content: start;
-  gap: 14px;
+  gap: 0;
 }
 
 .settings-resource-page > .settings-inline-alert {
   margin: 0;
 }
 
-.settings-resource-primary {
-  border-left: 3px solid var(--accent);
+.settings-resource-primary .ui-section-icon {
+  color: var(--cyber-accent-text);
 }
 
 .settings-resource-command,
 .settings-resource-actions button,
 .settings-resource-editor > header > button {
   display: inline-grid;
-  min-width: 32px;
-  min-height: 32px;
   place-items: center;
-  border: 1px solid var(--line);
+  border: 1px solid var(--cyber-line);
   border-radius: 0;
-  color: var(--text);
+  color: var(--cyber-ink);
   background: var(--surface-strong);
 }
 
 .settings-resource-command {
   display: inline-flex;
   gap: 7px;
+  min-width: var(--control-compact-height);
+  min-height: var(--control-compact-height);
   padding: 0 10px;
 }
 
@@ -45,7 +45,7 @@
 
 .settings-resource-list {
   display: grid;
-  border-top: 1px solid var(--line-soft);
+  border-top: 1px solid var(--cyber-line);
 }
 
 .settings-resource-row {
@@ -55,7 +55,7 @@
   gap: 10px;
   min-width: 0;
   padding: 11px 0;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--cyber-line);
 }
 
 .settings-resource-row[data-state="error"] {
@@ -73,8 +73,8 @@
   width: 34px;
   height: 34px;
   place-items: center;
-  border: 1px solid var(--line-soft);
-  color: var(--muted);
+  border: 1px solid var(--cyber-line);
+  color: var(--cyber-muted);
   background: var(--surface);
 }
 
@@ -89,7 +89,7 @@
 
 .settings-resource-copy strong {
   overflow: hidden;
-  color: var(--text);
+  color: var(--cyber-ink);
   font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -97,17 +97,17 @@
 
 .settings-resource-copy strong small {
   display: inline;
-  color: var(--muted);
-  font: 500 10px/1.2 var(--font-mono);
+  color: var(--cyber-muted);
+  font: 500 11px/1.5 var(--cyberos-font-mono);
 }
 
 .settings-resource-copy span,
 .settings-resource-copy small {
   overflow: hidden;
   margin-top: 2px;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.4;
+  color: var(--cyber-muted);
+  font-size: 12px;
+  line-height: 1.5;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -125,8 +125,8 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  color: var(--muted);
-  font: 600 10px/1.2 var(--font-mono);
+  color: var(--cyber-muted);
+  font: 600 11px/1.5 var(--cyberos-font-mono);
   white-space: nowrap;
 }
 
@@ -153,7 +153,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: var(--muted);
+  color: var(--cyber-muted);
   font-size: 12px;
 }
 
@@ -168,7 +168,7 @@
 .settings-resource-fields textarea {
   min-height: 88px;
   resize: vertical;
-  font-family: var(--font-mono);
+  font-family: var(--cyberos-font-mono);
 }
 
 .settings-resource-editor > footer {

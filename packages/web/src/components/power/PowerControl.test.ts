@@ -2,11 +2,30 @@ import { createElement, createRef } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { initI18n } from "../../i18n/index.js";
-import { PowerDialog } from "./PowerControl.js";
+import { PowerControl, PowerDialog } from "./PowerControl.js";
 
 await initI18n();
 
 const noop = () => undefined;
+
+describe("PowerControl", () => {
+  it("marks the unlabelled navigation trigger as icon-only", () => {
+    const html = renderToStaticMarkup(createElement(PowerControl, { onRequest: async () => false }));
+
+    expect(html).toContain('data-icon-only="true"');
+    expect(html).toContain('class="cyberos-button agent-power-button"');
+    expect(html).toContain('aria-haspopup="dialog"');
+    expect(html).not.toContain('data-slot="decoration"');
+  });
+
+  it("preserves the labelled settings command", () => {
+    const html = renderToStaticMarkup(createElement(PowerControl, { labelled: true, onRequest: async () => false }));
+
+    expect(html).not.toContain('data-icon-only="true"');
+    expect(html).toContain('settings-power-button secondary-button');
+    expect(html).toContain('data-slot="decoration"');
+  });
+});
 
 describe("PowerDialog", () => {
   it("renders restart and shutdown choices before confirmation", () => {

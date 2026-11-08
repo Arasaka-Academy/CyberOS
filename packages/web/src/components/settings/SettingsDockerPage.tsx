@@ -1,6 +1,6 @@
 import { Button as UiButton, Notice, Section } from "@cyberos/ui";
 import { useEffect, useState, type FormEvent } from "react";
-import { LoaderCircle, RefreshCw, Settings2 } from "lucide-react";
+import { Check, LoaderCircle, RefreshCw, Settings2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getDockerSummary, type DockerDaemonStatus, type DockerSummary } from "../../api.js";
 import type { DockerSettingsFormState } from "../../config/settings.js";
@@ -114,7 +114,8 @@ export function SettingsDockerPage({
             {t("common.actions.cancel")}
           </UiButton>
           <UiButton variant="primary" className="primary-button" type="submit" disabled={loading || saving} aria-busy={loading || saving || undefined}>
-            {saving ? t("common.actions.saving") : t("common.actions.saveChanges")}
+            {saving ? <LoaderCircle aria-hidden="true" size={14} className="is-spinning" /> : <Check aria-hidden="true" size={14} />}
+            {t("common.actions.saveChanges")}
           </UiButton>
         </div>
       </footer>

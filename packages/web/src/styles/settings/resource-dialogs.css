@@ -7,7 +7,7 @@
   max-height: calc(100dvh - 36px);
   overflow: hidden;
   padding: 0;
-  border: 1px solid var(--line);
+  border: 1px solid var(--cyber-line);
   border-radius: 0;
   background: var(--dialog-bg);
 }
@@ -17,7 +17,7 @@
   flex-direction: row;
   align-items: flex-start;
   padding: 16px;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--cyber-line);
 }
 
 .settings-git-skill-dialog > header > div,
@@ -64,7 +64,7 @@
 .settings-mcp-form > footer {
   justify-content: flex-end;
   padding: 12px 16px;
-  border-top: 1px solid var(--line-soft);
+  border-top: 1px solid var(--cyber-line);
   background: var(--footer-bg);
 }
 

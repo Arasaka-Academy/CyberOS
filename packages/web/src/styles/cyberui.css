@@ -4,7 +4,7 @@
     background: var(--cyberos-color-canvas);
   }
   .app-shell::after { display: none; }
-  .agent-list, .settings-rail, .workspace-panel-rail { background: var(--cyberos-color-surface); border-color: var(--cyber-line); }
+  .settings-rail { background: var(--cyberos-color-surface); border-color: var(--cyber-line); }
   .brand, .workspace-header, .panel-header, .management-header, .settings-content-header,
   .notification-drawer-header, .preview-toolbar, .editor-header, .editor-footer, .tv-header {
     color: var(--cyber-ink); background: var(--cyber-bg); border-color: var(--cyber-line);
@@ -14,7 +14,7 @@
   .management-title-icon, .mobile-title-icon { color: var(--cyber-on-accent); background: var(--cyber-accent); }
   .management-title-copy h2, .workspace-title, .settings-content-header h2 { color: var(--cyber-ink); font-weight: 600; }
   .management-title-copy h2::before, .workspace-title::before { color: var(--cyber-accent-text); }
-  .workspace-panel-tab.is-active, .agent-row.is-active, .agent-item.is-active, .settings-nav button.is-active {
+  .agent-row.is-active, .agent-item.is-active, .settings-nav button.is-active {
     color: var(--cyber-ink); background: var(--cyber-soft); border-color: var(--cyber-accent);
   }
   :is(.custom-select-trigger, .search-filter-trigger, .hud-switch-track) { border-color: var(--cyber-line); background: var(--cyber-bg); color: var(--cyber-ink); box-shadow: none; }

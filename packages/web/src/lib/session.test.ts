@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getFiles, searchFiles, updateSessionPath } from "../api.js";
-import { loadEntriesForSession, loadFileListingForView, sessionTitle, syncSessionPath } from "./session.js";
+import { isAgentSession, loadEntriesForSession, loadFileListingForView, sessionTitle, syncSessionPath } from "./session.js";
 import type { FileEntry, FileListing, Session, SessionSummary } from "../api.js";
 
 vi.mock("../api.js", () => ({
@@ -53,6 +53,14 @@ const gitStatus: FileListing["git"] = {
 };
 
 describe("session helpers", () => {
+  it("excludes voice sessions by kind rather than their localized title", () => {
+    const voiceSession: SessionSummary = { ...baseSession, kind: "voice", firstMessage: "Inspect storage" };
+    const ordinarySession: SessionSummary = { ...baseSession, kind: "chat", firstMessage: "System voice session" };
+    expect(isAgentSession(voiceSession)).toBe(false);
+    expect(isAgentSession(ordinarySession)).toBe(true);
+    expect(isAgentSession(baseSession)).toBe(true);
+  });
+
   beforeEach(() => {
     mockedGetFiles.mockReset();
     mockedSearchFiles.mockReset();

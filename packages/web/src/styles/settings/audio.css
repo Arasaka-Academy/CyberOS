@@ -1,0 +1,51 @@
+.audio-settings input[type="range"] {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 20px 0;
+  border: 0;
+  border-radius: 0;
+  appearance: none;
+  color: var(--cyber-ink);
+  background: transparent;
+  cursor: pointer;
+}
+
+.audio-settings input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: var(--cyber-line);
+}
+
+.audio-settings input[type="range"]::-moz-range-track {
+  height: 4px;
+  background: var(--cyber-line);
+}
+
+.audio-settings input[type="range"]::-webkit-slider-thumb {
+  width: 8px;
+  height: 12px;
+  margin-top: -4px;
+  border: 0;
+  border-radius: 0;
+  appearance: none;
+  background: var(--cyber-accent2);
+}
+
+.audio-settings input[type="range"]::-moz-range-thumb {
+  width: 8px;
+  height: 12px;
+  border: 0;
+  border-radius: 0;
+  background: var(--cyber-accent2);
+}
+
+.audio-settings input[type="range"]:focus-visible {
+  outline: 2px solid var(--cyber-accent2);
+  outline-offset: 3px;
+}
+
+.audio-settings input[type="range"]:disabled {
+  opacity: 1;
+  cursor: not-allowed;
+}

@@ -1,4 +1,4 @@
-import { Button as UiButton, Field, Input, Notice, Section } from "@cyberos/ui";
+import { Button as UiButton, Field, Input, Notice, Section, SectionHeader } from "@cyberos/ui";
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { ArchiveRestore, Check, FolderOpen, KeyRound, LoaderCircle, ShieldCheck, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -168,8 +168,8 @@ export function SettingsBackupContent({
     <div className="settings-content-body">
       {error ? <Notice className="settings-inline-error" role="alert" tone="danger">{error}</Notice> : null}
       {form ? <div className="settings-page-grid">
-        <form className="settings-section-card settings-field-wide" onSubmit={onSubmit}>
-          <header><div><h3>{t("settings.backup.title")}</h3><p>{t("settings.backup.description")}</p></div><ArchiveRestore size={18} aria-hidden="true" /></header>
+        <form className="ui-section settings-section-card settings-field-wide" onSubmit={onSubmit}>
+          <SectionHeader title={t("settings.backup.title")} description={t("settings.backup.description")} icon={<ArchiveRestore size={18} aria-hidden="true" />} />
           <div className="settings-switch-row"><div><strong>{t("settings.backup.enabled")}</strong><span>{form.validatedAt ? t("settings.backup.validated") : t("settings.backup.validationRequired")}</span></div><Switch checked={form.enabled} disabled={busy !== null || (!form.validatedAt && !form.enabled)} ariaLabel={t("settings.backup.enabled")} onCheckedChange={(enabled) => onFormChange({ ...form, enabled })} /></div>
           <fieldset className="settings-field-grid" disabled={busy !== null}>
             <label className="settings-field-wide">

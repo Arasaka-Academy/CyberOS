@@ -1,117 +1,115 @@
 .settings-backdrop {
   padding: 20px;
+  background: var(--modal-backdrop);
 }
 
 .settings-modal {
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
   width: min(1120px, calc(100vw - 40px));
-  height: min(860px, calc(100vh - 40px));
+  height: min(860px, calc(100dvh - 40px));
   overflow: hidden;
+  color: var(--cyber-ink);
+  background: var(--cyber-bg);
+  border: 1px solid var(--cyber-line);
+  box-shadow: 4px 4px 0 var(--cyber-soft);
 }
 
 .settings-rail {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
+  min-width: 0;
   min-height: 0;
-  padding: 16px 10px;
-  background: var(--server-bg);
-  border-right: 1px solid rgb(0 0 0 / 34%);
+  padding: 18px 12px 12px;
+  background: var(--cyber-soft);
+  border-right: 1px solid var(--cyber-line);
 }
 
 .settings-rail-brand {
-  display: grid;
-  align-content: center;
-  justify-items: start;
-  min-width: 0;
-  padding: 0 8px 14px;
+  padding: 0 8px 18px;
 }
 
 .settings-brand-logo {
   display: block;
   width: 36px;
   height: 36px;
-  filter: drop-shadow(0 7px 14px color-mix(in srgb, var(--cyberos-color-focus) 18%, transparent));
+  filter: var(--cyberos-logo-filter);
 }
 
 .settings-search {
-  position: relative;
-  display: block;
-  margin: 0 6px 16px;
+  margin-bottom: 16px;
 }
-
-
-
-
-
-
 
 .settings-nav {
   min-height: 0;
+  padding: 6px;
   overflow: auto;
-  padding: 0 2px;
+  scrollbar-gutter: stable;
 }
 
 .settings-nav section {
   display: grid;
-  gap: 2px;
-  margin-bottom: 12px;
+  gap: 4px;
+  margin-bottom: 18px;
 }
 
 .settings-nav h3 {
   margin: 0;
-  padding: 8px 8px 5px;
-  color: var(--muted-2);
-  font-size: 10.5px;
-  font-family: var(--font-emphasis);
-  font-weight: 800;
+  padding: 8px 8px 6px;
+  color: var(--cyber-muted);
+  font: 600 11px/16px var(--cyberos-font-mono);
   text-transform: uppercase;
 }
 
-.settings-nav button {
+.settings-nav .cyberos-button {
+  position: relative;
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
+  grid-template-columns: 20px minmax(0, 1fr);
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
-  min-height: 38px;
-  padding: 5px 8px;
-  border-radius: 0;
-  color: var(--muted);
+  min-height: 40px;
+  padding: 8px;
+  border: 1px solid transparent;
+  color: var(--cyber-ink);
   background: transparent;
-  cursor: pointer;
   text-align: left;
+  box-shadow: none;
+  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
 }
 
-.settings-nav button:hover,
-.settings-nav button.is-active {
-  color: var(--text);
-  background: var(--surface-hover);
+.settings-nav .cyberos-button:hover {
+  border-color: var(--cyber-accent2);
+  color: var(--cyber-ink);
+  background: var(--cyber-bg);
 }
 
-.settings-nav button.is-active {
-  box-shadow: inset 3px 0 0 var(--accent);
+.settings-nav .cyberos-button.is-active {
+  border-color: var(--cyber-accent);
+  color: var(--cyber-on-accent);
+  background: var(--cyber-accent);
+  box-shadow: inset 3px 0 0 currentColor;
 }
 
-.settings-nav button svg {
+.settings-nav .cyberos-button svg {
+  width: 18px;
+  height: 18px;
   color: inherit;
 }
 
-.settings-nav button strong {
+.settings-nav strong {
   display: block;
   overflow: hidden;
+  font: 600 12px/20px var(--cyberos-font-ui);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.settings-nav button strong {
-  font-size: 12.5px;
-}
-
 .settings-empty-search,
 .settings-rail-footer {
-  color: var(--muted-2);
-  font-size: 11.5px;
+  color: var(--cyber-muted);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .settings-empty-search {
@@ -122,13 +120,14 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 34px;
-  margin: 8px 6px 0;
-  padding: 0 8px;
-  border-top: 1px solid color-mix(in srgb, var(--cyberos-color-text) 6%, transparent);
+  min-height: 40px;
+  margin-top: 8px;
+  padding: 10px 8px 0;
+  border-top: 1px solid var(--cyber-line);
 }
 
 .settings-rail-footer svg {
+  flex: 0 0 auto;
   color: var(--success-text);
 }
 
@@ -137,74 +136,59 @@
   grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
-  background: var(--cyberos-color-surface-raised);
+  overflow: hidden;
+  color: var(--cyber-ink);
+  background: var(--cyber-bg);
+  container: settings / inline-size;
 }
 
 .settings-content-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 38px;
-  align-items: start;
-  gap: 18px;
-  padding: 24px 30px 18px;
-  border-bottom: 1px solid var(--line-soft);
+  gap: 12px;
+  min-height: 92px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--cyber-line);
+  background: var(--cyber-soft);
+  --dialog-title-size: 20px;
 }
 
-.settings-content-header h2 {
-  margin: 0;
-  font-size: 21px;
-  line-height: 1.15;
+.settings-content-header .ui-dialog-header-actions {
+  margin-left: auto;
 }
 
-.settings-content-header p {
-  max-width: 720px;
-  margin: 7px 0 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.45;
+.settings-content-header .ui-dialog-icon {
+  position: relative;
+  isolation: isolate;
+  flex-basis: 36px;
+  width: 36px;
+  height: 36px;
+  color: var(--cyber-on-accent);
 }
 
-.settings-area-list em {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 24px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  color: var(--muted);
-  background: var(--surface);
-  font-size: 11.5px;
-  font-style: normal;
-  font-family: var(--font-emphasis);
-  font-weight: 800;
-  white-space: nowrap;
+.settings-content-header .ui-dialog-icon::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: var(--cyber-accent);
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  content: "";
+  pointer-events: none;
 }
 
-.settings-area-list em[data-state="ready"] {
-  color: var(--cyberos-color-success-text);
-  background: color-mix(in srgb, var(--cyberos-color-success) 14%, transparent);
-}
-
-.settings-area-list em[data-state="missing"] {
-  color: var(--cyberos-color-warning-text);
-  background: color-mix(in srgb, var(--cyberos-color-command) 15%, transparent);
-}
-
-.settings-area-list em[data-state="loading"] {
-  color: var(--cyberos-color-text-muted);
-  background: color-mix(in srgb, var(--cyberos-color-text) 7%, transparent);
-}
-
-.settings-content-header button {
-  width: 38px;
-  height: 38px;
-  border-radius: 0;
-  color: var(--muted);
-  background: transparent;
-  cursor: pointer;
+.settings-content-header .ui-dialog-icon > svg {
+  width: 20px;
+  height: 20px;
 }
 
 .settings-content-body {
+  min-width: 0;
   min-height: 0;
   overflow: auto;
-  padding: 20px 30px 24px;
+  padding: 20px 24px 24px;
+  scrollbar-gutter: stable;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-nav .cyberos-button {
+    transition: none;
+  }
 }

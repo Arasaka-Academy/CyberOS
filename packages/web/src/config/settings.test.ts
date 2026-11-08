@@ -1,18 +1,47 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+import { i18n, initI18n } from "../i18n/index.js";
 import {
   SETTINGS_SECTIONS,
   dockerSettingsToForm,
   modelSettingsToForm,
+  settingsGroupLabel,
   settingsSectionState,
   vmSettingsToForm,
   type SettingsSection
 } from "./settings.js";
 
+beforeAll(async () => {
+  await initI18n();
+});
+
 describe("settings helpers", () => {
+  it("keeps all 25 sections once in the agreed task-oriented order", () => {
+    const groups = [...new Set(SETTINGS_SECTIONS.map((section) => section.group))];
+    expect(groups.map((group) => ({ group, sections: SETTINGS_SECTIONS.filter((section) => section.group === group).map((section) => section.id) }))).toEqual([
+      { group: "general", sections: ["overview", "appearance", "system-profile", "version"] },
+      { group: "network", sections: ["wireless", "bluetooth", "proxy", "tailscale"] },
+      { group: "storage", sections: ["files", "indexer", "shares", "backup"] },
+      { group: "media", sections: ["photos", "media", "downloads"] },
+      { group: "ai", sections: ["model-providers", "pi-agent", "mcp", "skills", "audio"] },
+      { group: "system", sections: ["docker", "virtual-machines", "monitoring", "alerts", "operations"] }
+    ]);
+    expect(SETTINGS_SECTIONS).toHaveLength(25);
+    expect(new Set(SETTINGS_SECTIONS.map((section) => section.id)).size).toBe(25);
+  });
+
+  it.each([
+    { language: "en", labels: ["General", "Network & Connections", "Files & Data", "Media & Downloads", "AI & Voice", "System & Maintenance"] },
+    { language: "zh-CN", labels: ["常规", "网络与连接", "文件与数据", "媒体与下载", "AI 与语音", "系统与维护"] }
+  ])("localizes every task-oriented group in $language", async ({ language, labels }) => {
+    await i18n.changeLanguage(language);
+    const groups = [...new Set(SETTINGS_SECTIONS.map((section) => section.group))];
+    expect(groups.map((group) => settingsGroupLabel(group, i18n.t.bind(i18n)))).toEqual(labels);
+  });
+
   it("treats saved Docker settings as configured even when disabled", () => {
     const section: SettingsSection = {
       id: "docker",
-      group: "administration"
+      group: "system"
     };
 
     expect(settingsSectionState(section, null, null)).toBe("missing");
@@ -52,7 +81,7 @@ describe("settings helpers", () => {
   it("reports the running version in the dedicated settings section", () => {
     const section: SettingsSection = {
       id: "version",
-      group: "cyberos"
+      group: "general"
     };
     const buildInfo = {
       version: "0.2.0",
@@ -72,7 +101,7 @@ describe("settings helpers", () => {
   it("reflects photo library scan state in the settings navigation", () => {
     const section: SettingsSection = {
       id: "photos",
-      group: "workspace"
+      group: "media"
     };
     const photoStatus = {
       state: "processing" as const,
@@ -101,10 +130,5 @@ describe("settings helpers", () => {
 
   it("keeps runtime details in Overview instead of exposing an Advanced section", () => {
     expect(SETTINGS_SECTIONS.map((section) => section.id)).not.toContain("advanced");
-  });
-
-  it("groups wireless, proxy, Tailscale and Bluetooth settings under devices", () => {
-    expect(SETTINGS_SECTIONS.filter((section) => section.group === "devices").map((section) => section.id))
-      .toEqual(["wireless", "proxy", "tailscale", "bluetooth"]);
   });
 });

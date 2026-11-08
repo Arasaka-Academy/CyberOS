@@ -18,6 +18,23 @@ beforeAll(async () => {
 });
 
 describe("SettingsModal", () => {
+  it("renders six ordered task-oriented groups", () => {
+    const html = renderSettings();
+    const navigation = html.match(/<nav class="settings-nav">[\s\S]*?<\/nav>/u)?.[0] ?? "";
+    const groups = [...navigation.matchAll(/<section><h3>([^<]+)<\/h3>([\s\S]*?)<\/section>/gu)].map((match) => ({
+      title: match[1]!.replaceAll("&amp;", "&"),
+      count: [...match[2]!.matchAll(/<button/gu)].length
+    }));
+    expect(groups).toEqual([
+      { title: "General", count: 4 },
+      { title: "Network & Connections", count: 4 },
+      { title: "Files & Data", count: 4 },
+      { title: "Media & Downloads", count: 3 },
+      { title: "AI & Voice", count: 5 },
+      { title: "System & Maintenance", count: 5 }
+    ]);
+  });
+
   it("renders a title-only navigation and a header without persistent status labels", () => {
     const html = renderSettings();
     const header = html.match(/<header\b[^>]*class="[^"]*\bsettings-content-header\b[^"]*"[^>]*>[\s\S]*?<\/header>/u)?.[0] ?? "";
@@ -74,7 +91,7 @@ describe("SettingsModal", () => {
     expect(html).toContain("QEMU, KVM, and libvirt");
   });
 
-  it("includes sharing in the administration settings navigation", () => {
+  it("includes sharing in the files and data settings navigation", () => {
     const html = renderSettings({ activeSection: "shares" });
 
     expect(html).toContain("Global publishing state and credentials");

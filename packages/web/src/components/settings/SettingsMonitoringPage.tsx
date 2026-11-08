@@ -1,4 +1,4 @@
-import { Button as UiButton, Field, Input, Notice, Section } from "@cyberos/ui";
+import { Button as UiButton, DialogActions, Field, Input, Notice, Section } from "@cyberos/ui";
 import { useEffect, useState, type FormEvent } from "react";
 import { Activity, Check, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -66,21 +66,23 @@ export function SettingsMonitoringContent({
 }) {
   const { t } = useTranslation();
   return (
-    <form className="settings-content-body" onSubmit={onSubmit}>
-      {error ? <Notice className="settings-inline-error" role="alert" tone="danger">{error}</Notice> : null}
-      {form ? <div className="settings-page-grid">
-        <Section className="settings-section-card settings-field-wide" title={t("settings.monitoring.title")} description={t("settings.monitoring.description")} icon={<Activity size={18} aria-hidden="true" />}>
+    <form className="settings-form" onSubmit={onSubmit}>
+      <div className="settings-content-body">
+        {error ? <Notice className="settings-inline-error" role="alert" tone="danger">{error}</Notice> : null}
+        {form ? <div className="settings-page-grid">
+          <Section className="settings-section-card settings-field-wide" title={t("settings.monitoring.title")} description={t("settings.monitoring.description")} icon={<Activity size={18} aria-hidden="true" />}>
 
-          <div className="settings-switch-row"><strong><HelpLabel label={t("settings.monitoring.enabled")} content={t("settings.monitoring.enabledDescription")} /></strong><Switch checked={form.enabled} disabled={busy} ariaLabel={t("settings.monitoring.enabled")} onCheckedChange={(enabled) => onFormChange({ ...form, enabled })} /></div>
-          <fieldset className="settings-field-grid" disabled={busy}>
-            <NumberField label={t("settings.monitoring.rawRetention")} value={form.rawRetentionDays} min={1} max={14} onChange={(rawRetentionDays) => onFormChange({ ...form, rawRetentionDays })} />
-            <NumberField label={t("settings.monitoring.minuteRetention")} value={form.minuteRetentionDays} min={7} max={180} onChange={(minuteRetentionDays) => onFormChange({ ...form, minuteRetentionDays })} />
-            <NumberField label={t("settings.monitoring.hourRetention")} value={form.hourRetentionDays} min={30} max={1825} onChange={(hourRetentionDays) => onFormChange({ ...form, hourRetentionDays })} />
-            <NumberField label={t("settings.monitoring.maxDatabaseMiB")} value={Math.round(form.maxDatabaseBytes / MIB)} min={16} max={16384} onChange={(value) => onFormChange({ ...form, maxDatabaseBytes: value * MIB })} />
-          </fieldset>
-          <div className="settings-card-actions"><UiButton variant="primary" className="primary-button" type="submit" disabled={busy} aria-busy={busy || undefined}>{busy ? <LoaderCircle className="is-spinning" size={15} /> : <Check size={15} />}{t("common.actions.saveChanges")}</UiButton></div>
-        </Section>
-      </div> : null}
+            <div className="settings-switch-row"><strong><HelpLabel label={t("settings.monitoring.enabled")} content={t("settings.monitoring.enabledDescription")} /></strong><Switch checked={form.enabled} disabled={busy} ariaLabel={t("settings.monitoring.enabled")} onCheckedChange={(enabled) => onFormChange({ ...form, enabled })} /></div>
+            <fieldset className="settings-field-grid" disabled={busy}>
+              <NumberField label={t("settings.monitoring.rawRetention")} value={form.rawRetentionDays} min={1} max={14} onChange={(rawRetentionDays) => onFormChange({ ...form, rawRetentionDays })} />
+              <NumberField label={t("settings.monitoring.minuteRetention")} value={form.minuteRetentionDays} min={7} max={180} onChange={(minuteRetentionDays) => onFormChange({ ...form, minuteRetentionDays })} />
+              <NumberField label={t("settings.monitoring.hourRetention")} value={form.hourRetentionDays} min={30} max={1825} onChange={(hourRetentionDays) => onFormChange({ ...form, hourRetentionDays })} />
+              <NumberField label={t("settings.monitoring.maxDatabaseMiB")} value={Math.round(form.maxDatabaseBytes / MIB)} min={16} max={16384} onChange={(value) => onFormChange({ ...form, maxDatabaseBytes: value * MIB })} />
+            </fieldset>
+          </Section>
+        </div> : null}
+      </div>
+      {form ? <DialogActions className="settings-actions"><div><UiButton variant="primary" className="primary-button" type="submit" disabled={busy} aria-busy={busy || undefined}>{busy ? <LoaderCircle className="is-spinning" size={15} /> : <Check size={15} />}{t("common.actions.saveChanges")}</UiButton></div></DialogActions> : null}
     </form>
   );
 }

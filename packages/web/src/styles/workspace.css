@@ -40,8 +40,6 @@
 @import "./terminal/console.css";
 @import "./components/management-dialog.css";
 @import "./components/create-form.css";
-@import "./files/picker.css";
-@import "./files/picker-navigation.css";
 @import "./docker/images.css";
 @import "./docker/image-details.css";
 @import "./docker/images-responsive.css";

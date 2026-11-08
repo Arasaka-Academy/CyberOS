@@ -5,20 +5,6 @@
   border: 1px solid transparent;
 }
 
-.workspace-panel-tab::after {
-  position: absolute;
-  right: 4px;
-  bottom: 4px;
-  width: 5px;
-  height: 2px;
-  background: color-mix(in srgb, var(--cyberos-color-command) 30%, transparent);
-  content: "";
-}
-
-.workspace-panel-tab.is-active::after {
-  background: var(--hud-red);
-}
-
 .file-browser,
 .management-dashboard-widget,
 .management-section,

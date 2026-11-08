@@ -21,7 +21,10 @@ export function ChatPaneSkeleton({ active }: { active: boolean }) {
         <div className="brand"><img className="agent-brand-logo" src="/cyberos-icon.svg" alt="" /></div>
         <div className="agent-list-head"><span className="management-skeleton-block chat-skeleton-control" /></div>
         <div className="session-list">{[0, 1, 2].map((index) => <span key={index} className="management-skeleton-block chat-skeleton-control" />)}</div>
-        <div className="agent-footer">{[0, 1, 2, 3].map((index) => <span key={index} className="management-skeleton-block chat-skeleton-control" />)}</div>
+        <div className="agent-footer">
+          <span className="management-skeleton-block chat-skeleton-status" />
+          {[0, 1, 2, 3, 4].map((index) => <span key={index} className="management-skeleton-block chat-skeleton-control" />)}
+        </div>
       </aside> : null}
       {!compact || active ? <section className="chat-main" aria-label={t("chat.agentChat")}>
         {compact ? <MobileAppHeader

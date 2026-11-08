@@ -1,6 +1,6 @@
 import { Button as UiButton, DialogActions, DialogHeader, Field, Input, Notice, Section, Textarea } from "@cyberos/ui";
 import { useEffect, useId, useState, type FormEvent } from "react";
-import { AlertTriangle, CheckCircle2, KeyRound, LoaderCircle, Pencil, Plus, RefreshCw, Server, Trash2, X } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, KeyRound, LoaderCircle, Pencil, Plus, RefreshCw, Server, Trash2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PanelContentSkeleton } from "../workspace/ManagementSkeleton.js";
 import {
@@ -273,7 +273,7 @@ export function SettingsMcpPage() {
               </div>
               <DialogActions className="settings-inline-actions">
                 <UiButton variant="secondary" type="button" className="secondary-button" onClick={closeEditor} disabled={busyId !== null}>{t("common.actions.cancel")}</UiButton>
-                <UiButton variant="primary" type="submit" className="primary-button" disabled={busyId !== null}>{busyId !== null ? <LoaderCircle aria-hidden="true" size={14} className="is-spinning" /> : null}{t("common.actions.saveChanges")}</UiButton>
+                <UiButton variant="primary" type="submit" className="primary-button" disabled={busyId !== null} aria-busy={busyId !== null || undefined}>{busyId !== null ? <LoaderCircle aria-hidden="true" size={14} className="is-spinning" /> : <Check aria-hidden="true" size={14} />}{t("common.actions.saveChanges")}</UiButton>
               </DialogActions>
             </form>
           </section>

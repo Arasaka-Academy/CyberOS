@@ -15,6 +15,10 @@ export interface LoadedSessionEntries {
   didResetPath: boolean;
 }
 
+export function isAgentSession(session: Session): boolean {
+  return session.kind !== "voice";
+}
+
 export async function loadEntriesForSession(
   storagePoolId: string,
   targetSession: Session | SessionSummary
