@@ -1,6 +1,6 @@
 {
   "name": "@cyberos/ui",
-  "version": "2.3.47",
+  "version": "2.3.48",
   "private": true,
   "type": "module",
   "exports": {
@@ -10,7 +10,7 @@
     "./fonts.css": "./src/fonts.css"
   },
   "dependencies": {
-    "@cyberos/shared": "2.3.47",
+    "@cyberos/shared": "2.3.48",
     "react-aria": "3.53.1",
     "react-aria-components": "^1.22.1",
     "react": "^19.1.1",

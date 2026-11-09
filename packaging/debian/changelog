@@ -1,3 +1,9 @@
+cyberos (2.3.48) unstable; urgency=medium
+
+  * Add a web terminal workbench with output search, fullscreen, and confirmed safe paste while preserving tmux sessions.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Mon, 09 Nov 2026 04:36:00 +0000
+
 cyberos (2.3.47) unstable; urgency=medium
 
   * Reduce workspace panel loading delays with compressed assets, nonblocking photo metadata, and cancellable nearby thumbnails.
