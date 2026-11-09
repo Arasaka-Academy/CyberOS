@@ -2,13 +2,6 @@
   margin-top: 8px;
 }
 
-.approval-card:hover {
-  border-color: color-mix(in srgb, var(--cyberos-color-text) 14%, transparent);
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--cyberos-color-text) 7%, transparent), transparent 56%),
-    var(--cyberos-color-surface-raised);
-}
-
 .approval-card-icon {
   grid-area: icon;
   display: grid;
@@ -131,9 +124,6 @@
 .approval-card-details div {
   min-width: 0;
   padding: 7px 8px;
-  border: 1px solid color-mix(in srgb, var(--cyberos-color-text) 5%, transparent);
-  border-radius: 5px;
-  background: rgb(0 0 0 / 14%);
 }
 
 .approval-card-details dt {

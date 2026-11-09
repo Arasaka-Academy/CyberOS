@@ -5,10 +5,11 @@
   .nvr-scroll { flex: 1; overflow: auto; min-height: 0; min-width: 0; padding: 14px; container: nvr / inline-size; }
   .nvr-scroll > .ui-notice { margin-bottom: 12px; }
   .nvr-card-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; list-style: none; padding: 0; margin: 0; }
-  .nvr-card { min-width: 0; border: 1px solid var(--line); background: var(--surface); padding: 14px; }
+  .nvr-card { min-width: 0; }
   .nvr-card-header { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; margin-bottom: 12px; }
-  .nvr-card-header h3 { flex: 1; min-width: 0; margin: 0; font-size: 14px; overflow-wrap: anywhere; }
-  .nvr-card-header > svg { flex-shrink: 0; color: var(--muted); }
+  .nvr-card-header h3 { flex: 1; min-width: 0; margin: 0; font: 600 15px/24px var(--cyberos-font-ui); overflow-wrap: anywhere; }
+  .nvr-card-header > svg { flex-shrink: 0; color: var(--cyber-accent2-text); }
+  .nvr-card-header > .ui-section-actions { flex-basis: auto; }
   .nvr-card > p { margin: 0 0 12px; overflow-wrap: anywhere; }
   .nvr-full-width, .nvr-overview { grid-column: 1 / -1; }
   .nvr-overview-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 8px; margin: 0 0 14px; }
@@ -39,7 +40,7 @@
   .nvr-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .nvr-actions .custom-select { flex: 1; min-width: min(180px, 100%); }
   .nvr-device-row { display: flex; flex-direction: column; gap: 12px; }
-  .nvr-device-row > .nvr-card-header, .nvr-device-row > p { margin: 0; }
+  .nvr-device-row > .ui-card-header, .nvr-device-row > p { margin: 0; }
   .nvr-device-row .nvr-device-state { padding: 0; }
   .nvr-device-row .nvr-actions { margin-top: auto; }
   .nvr-device-row p, .nvr-discovery { overflow-wrap: anywhere; }

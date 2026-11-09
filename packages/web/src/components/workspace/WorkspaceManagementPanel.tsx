@@ -443,7 +443,7 @@ export function WorkspaceManagementPanel({
           {config.metrics.map((metric) => {
             const MetricIcon = metric.Icon;
             return (
-              <article key={metric.labelKey} className="management-metric" data-state={metric.state}>
+              <article key={metric.labelKey} className="ui-card management-metric" data-state={metric.state}>
                 <MetricIcon aria-hidden="true" size={18} />
                 <span>{t(metric.labelKey)}</span>
                 <strong>{metric.value}</strong>
@@ -689,10 +689,10 @@ function VirtualMachineManagementPanel({
                   </section>
                 )
               },
-              { id: "metric-instances", title: String(t("workspace.management.virtualMachines.metrics.instances")), content: <article className="management-metric" data-state="ready"><Server size={18} /><span>{t("workspace.management.virtualMachines.metrics.instances")}</span><strong>{summary?.metrics.total ?? 0}</strong><small>{summary?.metrics.running ?? 0} running</small></article> },
-              { id: "metric-vcpu", title: String(t("workspace.management.virtualMachines.metrics.vcpu")), content: <article className="management-metric" data-state="neutral"><Cpu size={18} /><span>{t("workspace.management.virtualMachines.metrics.vcpu")}</span><strong>{summary?.metrics.vcpu ?? 0}</strong><small>{t("workspace.management.virtualMachines.metrics.vcpuDetail")}</small></article> },
-              { id: "metric-memory", title: String(t("workspace.management.virtualMachines.metrics.memory")), content: <article className="management-metric" data-state="neutral"><Activity size={18} /><span>{t("workspace.management.virtualMachines.metrics.memory")}</span><strong>{formatBytes(summary?.metrics.memoryBytes ?? 0, "en")}</strong><small>{t("workspace.management.virtualMachines.metrics.memoryDetail")}</small></article> },
-              { id: "metric-network", title: String(t("workspace.management.virtualMachines.facts.network")), content: <article className="management-metric" data-state={host?.status === "ready" ? "ready" : "warning"}><Network size={18} /><span>{t("workspace.management.virtualMachines.facts.network")}</span><strong>{summary?.networks.length ?? 0}</strong><small>{host?.networkName ?? "-"}</small></article> },
+              { id: "metric-instances", title: String(t("workspace.management.virtualMachines.metrics.instances")), content: <article className="ui-card management-metric" data-state="ready"><Server size={18} /><span>{t("workspace.management.virtualMachines.metrics.instances")}</span><strong>{summary?.metrics.total ?? 0}</strong><small>{summary?.metrics.running ?? 0} running</small></article> },
+              { id: "metric-vcpu", title: String(t("workspace.management.virtualMachines.metrics.vcpu")), content: <article className="ui-card management-metric" data-state="neutral"><Cpu size={18} /><span>{t("workspace.management.virtualMachines.metrics.vcpu")}</span><strong>{summary?.metrics.vcpu ?? 0}</strong><small>{t("workspace.management.virtualMachines.metrics.vcpuDetail")}</small></article> },
+              { id: "metric-memory", title: String(t("workspace.management.virtualMachines.metrics.memory")), content: <article className="ui-card management-metric" data-state="neutral"><Activity size={18} /><span>{t("workspace.management.virtualMachines.metrics.memory")}</span><strong>{formatBytes(summary?.metrics.memoryBytes ?? 0, "en")}</strong><small>{t("workspace.management.virtualMachines.metrics.memoryDetail")}</small></article> },
+              { id: "metric-network", title: String(t("workspace.management.virtualMachines.facts.network")), content: <article className="ui-card management-metric" data-state={host?.status === "ready" ? "ready" : "warning"}><Network size={18} /><span>{t("workspace.management.virtualMachines.facts.network")}</span><strong>{summary?.networks.length ?? 0}</strong><small>{host?.networkName ?? "-"}</small></article> },
               {
                 id: "instances",
                 title: String(t("workspace.management.virtualMachines.instancesTitle")),
@@ -1449,7 +1449,7 @@ function DockerManagementPanel({
                   id: metric.id,
                   title: metric.label,
                   content: (
-                    <article className="management-metric" data-state={metric.state}>
+                    <article className="ui-card management-metric" data-state={metric.state}>
                       <MetricIcon aria-hidden="true" size={18} />
                       <span>{metric.label}</span>
                       <strong>{metric.value}</strong>

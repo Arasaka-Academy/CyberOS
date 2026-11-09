@@ -163,9 +163,6 @@
   grid-template-columns: 18px minmax(0, 1fr);
   gap: 8px;
   padding: 8px 9px;
-  border: 1px solid var(--line-soft);
-  border-radius: 5px;
-  background: var(--subtle-bg);
 }
 
 .monitoring-incident-detail-empty {

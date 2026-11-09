@@ -1,0 +1,27 @@
+/* Card geometry follows CyberUI v0.2.2; dense app layouts own their spacing.
+   The class contract also supports native buttons, links, sections and grid items. */
+@layer app {
+  .ui-card {
+    min-width: 0;
+    border: 0;
+    border-radius: 0;
+    color: var(--cyber-ink);
+    background: var(--cyber-soft);
+    background-image: none;
+    box-shadow: none;
+  }
+  .ui-card-frame {
+    border: 1px solid var(--cyber-line);
+    background: var(--cyber-bg);
+  }
+  .ui-card[data-padding="normal"] { padding: 22px; }
+  .ui-card[data-padding="compact"] { padding: 14px; }
+  .ui-card[data-padding="none"] { padding: 0; }
+  .ui-card > .ui-card-header { margin-bottom: 14px; padding: 0; border: 0; }
+  .ui-card-description { margin: 0 0 14px; color: var(--cyber-muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+  .ui-card-footer { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--cyber-line); }
+  .ui-card:focus-visible { outline: 2px solid var(--cyber-accent2); outline-offset: 3px; }
+  @media (max-width: 560px) {
+    .ui-card[data-padding="normal"] { padding: 18px; }
+  }
+}

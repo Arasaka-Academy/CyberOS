@@ -124,8 +124,6 @@
   .app-shell .mobile-action-menu :is(button, .panel-header-action) { display: flex; align-items: center; justify-content: flex-start; gap: 10px; width: 100%; height: auto; padding: 8px; text-align: left; }
   .mobile-action-menu .mobile-action-label { display: inline; overflow-wrap: anywhere; }
   .mobile-action-menu .activity-menu { width: 100%; }
-  .app-shell .files-header-actions .files-header-button { width: 44px; height: 44px; }
-  .app-shell .files-header-actions .mobile-action-menu .files-header-button { width: 100%; }
   .app-shell .files-list-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; }
   .files-list-title-block { flex: 1; min-width: 0; }
   .mobile-file-select { order: 2; flex: none; padding: 4px 10px; }

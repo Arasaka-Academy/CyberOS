@@ -693,13 +693,14 @@ export function VideoLibraryPanel({
           </SearchFilterPopover>
         </div>
       ) : null}
-      <nav className="video-navigation" data-tv-region="navigation" aria-label={t("video.library")}>
+      <nav className="video-navigation view-tabs" data-tv-region="navigation" aria-label={t("video.library")}>
         {(["home", "movie", "series", "collections", "watchlist"] as const).map(
           (tab) => (
-            <UiButton variant="plain"
+            <UiButton variant="ghost"
               data-tv-focusable
               key={tab}
               aria-pressed={view === tab && !detail}
+              aria-current={view === tab && !detail ? "page" : undefined}
               onClick={() => {
                 closeDetail(false);
                 setView(tab);
@@ -1205,7 +1206,7 @@ function VideoPoster({
   onOpen: () => void;
 }) {
   return (
-    <UiButton variant="ghost" data-tv-focusable data-tv-title={title.id} className="plain-button video-poster" onClick={onOpen}>
+    <UiButton variant="ghost" data-tv-focusable data-tv-title={title.id} className="plain-button ui-card video-poster" onClick={onOpen}>
       <VideoArtwork title={title} />
       <strong>{title.title}</strong>
       <small>

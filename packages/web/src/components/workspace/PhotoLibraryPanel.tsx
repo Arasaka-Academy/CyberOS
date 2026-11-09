@@ -1021,7 +1021,7 @@ export function PhotoLibraryPanel({
                     const mediaKind = photoMediaKindForAsset(photo);
                     const aspectRatio = photoAspectRatio(photo.width, photo.height);
                     return (
-                      <article className={`photo-tile${isSelected ? " is-selected" : ""}`} key={photo.id} style={{ aspectRatio }}>
+                      <article className={`ui-card photo-tile${isSelected ? " is-selected" : ""}`} key={photo.id} style={{ aspectRatio }}>
                         <UiButton variant="ghost" className="photo-open" type="button" onClick={(event) => openLightbox(photo, event.currentTarget)} aria-label={t("workspace.photos.openPhoto", { name: photo.name })}>
                           <PhotoThumbnail photo={photo} scrollRoot={libraryContentRef} />
                           {mediaKind === "video" ? <span className="photo-media-badge is-video" aria-hidden="true"><Play size={13} fill="currentColor" /></span> : null}

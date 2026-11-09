@@ -304,9 +304,6 @@
 .docker-compose-delete-confirmation dl > div {
   min-width: 0;
   padding: 9px 10px;
-  border: 1px solid var(--line-soft);
-  border-radius: 5px;
-  background: var(--channel-bg);
 }
 
 .docker-compose-delete-confirmation dt {

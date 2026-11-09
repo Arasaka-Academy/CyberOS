@@ -376,7 +376,7 @@ function ChatPaneContent({
     const secrets = capabilitySecretRequirements(approval);
     const title = typeof proposal.title === "string" ? proposal.title : approval.run.capabilityId;
     return (
-      <article className="approval-card" aria-label={t("chat.pendingApprovals")}>
+      <article className="ui-card ui-card-frame approval-card" aria-label={t("chat.pendingApprovals")}>
         <div className="approval-card-icon" aria-hidden="true" data-kind="capability">
           <Settings size={18} />
         </div>

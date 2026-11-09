@@ -186,8 +186,6 @@
       padding: 0 2px;
       border: 1px solid var(--cyberos-color-surface);
       border-radius: 0;
-      color: var(--cyber-on-accent2);
-      background: var(--cyber-accent2);
       font: 600 9px/1 var(--font-mono);
     }
 

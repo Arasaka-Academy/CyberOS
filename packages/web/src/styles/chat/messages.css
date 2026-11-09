@@ -279,12 +279,6 @@
   gap: 12px;
   min-height: 94px;
   padding: 12px;
-  border: 1px solid var(--line-soft);
-  border-radius: 6px;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--cyberos-color-text) 5%, transparent), transparent 56%),
-    var(--cyberos-color-surface-raised);
-  box-shadow: 0 12px 30px rgb(0 0 0 / 16%);
   transition:
     border-color 140ms ease,
     background 140ms ease,

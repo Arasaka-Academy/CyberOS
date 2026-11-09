@@ -21,9 +21,6 @@
 .settings-metric-grid article {
   min-width: 0;
   padding: 12px;
-  border: 1px solid color-mix(in srgb, var(--cyberos-color-text) 5%, transparent);
-  border-radius: 0;
-  background: var(--cyber-soft);
 }
 
 .settings-metric-grid strong,

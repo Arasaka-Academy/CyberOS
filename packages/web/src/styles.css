@@ -33,9 +33,15 @@
 
 @import "@cyberos/shared/appearance.css";
 @import "./styles/cyberui.css";
+@import "./styles/components/cards.css";
+@import "./styles/components/card-details.css";
+@import "./styles/management/header-actions.css" layer(app);
 @import "./styles/settings.css" layer(app);
 @import "./styles/navigation-rails.css";
 @import "./styles/files/picker.css" layer(app);
 @import "./styles/files/picker-navigation.css" layer(app);
 @import "./styles/files/picker-responsive.css" layer(app);
+@import "./styles/shares/panel.css" layer(app);
+@import "./styles/shares/protocols.css" layer(app);
+@import "./styles/shares/create.css" layer(app);
 @import "./styles/voice.css" layer(app);

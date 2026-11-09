@@ -1,4 +1,4 @@
-import { Button, Field, Input, Notice, Section } from "@cyberos/ui";
+import { Button, Card, Field, Input, Notice, Section } from "@cyberos/ui";
 import { Camera, HardDrive, Plus } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
@@ -25,12 +25,12 @@ export function NvrDevices({ overview, storagePools, refresh }: { overview: NvrO
       </form><p className="metadata">{t("nvr.policyHint")}</p>
     </Section>
     <div className="nvr-card-grid" aria-label={t("nvr.devices")}>
-      {overview.devices.filter((d) => !d.removedAt).map((device) => <article className="nvr-card nvr-device-row" key={device.id}><header className="nvr-card-header"><Camera size={17} aria-hidden="true" /><h3>{device.name}</h3></header><p className="metadata">{device.onvifUrl}</p><NvrDeviceState device={device} />{device.lastError ? <Notice tone="warning">{device.lastError}</Notice> : null}
+      {overview.devices.filter((d) => !d.removedAt).map((device) => <Card className="nvr-card nvr-device-row" padding="compact" key={device.id} title={device.name} icon={<Camera size={18} aria-hidden="true" />}><p className="metadata">{device.onvifUrl}</p><NvrDeviceState device={device} />{device.lastError ? <Notice tone="warning">{device.lastError}</Notice> : null}
         <div className="nvr-actions"><CustomSelect ariaLabel={`${device.name} · ${t("nvr.profile")}`} value={device.recordingProfile} onChange={(recordingProfile) => { void run(() => nvrRequest(`/devices/${device.id}`, "PATCH", { recordingProfile })); }} disabled={busy} options={device.profiles.map((p) => ({ value: p.token, label: t(p.token === "raw" ? "nvr.raw" : "nvr.annotated") }))} />
           <Button variant={device.recordingEnabled ? "secondary" : "primary"} disabled={busy || !device.recordingEnabled && !overview.policy.storagePoolId} onClick={() => { void run(() => nvrRequest(`/devices/${device.id}`, "PATCH", { recordingEnabled: !device.recordingEnabled })); }}>{t(device.recordingEnabled ? "nvr.stopRecording" : "nvr.startRecording")}</Button>
           <Button variant="plain" disabled={busy} onClick={() => setRemoving(device.id)}>{t("nvr.remove")}</Button></div>
         {removing === device.id ? <Notice tone="warning" actions={<><Button variant="danger" disabled={busy} onClick={() => { void run(async () => { await nvrRequest(`/devices/${device.id}`, "DELETE"); setRemoving(""); }); }}>{t("nvr.confirmRemove")}</Button><Button variant="secondary" onClick={() => setRemoving("")}>{t("nvr.cancel")}</Button></>}>{t("nvr.removeHint")}</Notice> : null}
-      </article>)}
+      </Card>)}
     </div>
     <Section className="nvr-card" title={t("nvr.add")} icon={<Plus size={18} aria-hidden="true" />} actions={<Button variant="secondary" disabled={busy} onClick={() => { void run(async () => setDiscovered(await nvrRequest<NvrDiscovery[]>("/discover", "POST"))); }}>{t("nvr.discover")}</Button>}>
       {discovered.length ? <ul className="nvr-discovery">{discovered.map((item) => <li key={item.id}><Button variant="plain" onClick={() => setAddress(item.onvifUrl)}>{item.onvifUrl}</Button></li>)}</ul> : null}

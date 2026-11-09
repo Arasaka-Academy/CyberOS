@@ -32,12 +32,10 @@
 @import "./network/traffic.css";
 @import "./network/readiness.css";
 @import "./storage/health.css";
-@import "./shares/panel.css";
 @import "./components/management-modal.css";
 @import "./docker/daemon-settings.css";
 @import "./management/resource-details.css";
 @import "./docker/inspect.css";
-@import "./shares/create.css";
 @import "./terminal/console.css";
 @import "./components/management-dialog.css";
 @import "./components/create-form.css";
@@ -48,4 +46,3 @@
 @import "./components/host-access.css";
 @import "./docker/compose.css";
 @import "./docker/compose-responsive.css";
-@import "./shares/protocols.css";

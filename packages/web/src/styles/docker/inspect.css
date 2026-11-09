@@ -30,9 +30,6 @@
 .docker-inspect-container-list article {
   min-width: 0;
   padding: 10px 11px;
-  border: 1px solid var(--line-soft);
-  border-radius: 5px;
-  background: var(--subtle-bg);
 }
 
 .docker-inspect-container-list {

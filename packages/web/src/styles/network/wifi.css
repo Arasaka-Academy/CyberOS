@@ -178,9 +178,6 @@
   align-items: center;
   gap: 16px;
   padding: 10px 12px;
-  border: 1px solid var(--line-soft);
-  border-radius: 6px;
-  background: var(--channel-bg);
 }
 
 .system-wifi-device-identity {

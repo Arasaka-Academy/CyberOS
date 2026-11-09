@@ -6,11 +6,7 @@
 }
 
 .file-browser,
-.management-dashboard-widget,
-.management-section,
-.management-metric,
 .download-task,
-.approval-card,
 .settings-section-card,
 .settings-policy-row {
   border: 1px solid var(--hud-ink);

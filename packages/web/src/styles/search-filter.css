@@ -131,8 +131,8 @@
   border-color: var(--hud-cyan);
 }
 
-/* Media headers share the same compact actions; panel button defaults must not shrink their icons. */
-.library-header-actions > .panel-header-action {
+/* TV retains its existing media controls; workspace titlebars have a shared owner. */
+:where(.tv-app) .library-header-actions > .panel-header-action {
   width: 32px;
   min-width: 32px;
   height: 32px;
@@ -144,12 +144,12 @@
   font: inherit;
 }
 
-.library-header-actions > .panel-header-action > svg {
+:where(.tv-app) .library-header-actions > .panel-header-action > svg {
   flex-shrink: 0;
 }
 
-.library-header-actions > .panel-header-action:hover:not(:disabled),
-.library-header-actions > .panel-header-action:focus-visible {
+:where(.tv-app) .library-header-actions > .panel-header-action:hover:not(:disabled),
+:where(.tv-app) .library-header-actions > .panel-header-action:focus-visible {
   border-color: var(--hud-cyan);
   color: var(--text);
   background: var(--surface-hover);

@@ -2,14 +2,6 @@
   overflow: visible;
 }
 
-.files-header-actions .files-header-button,
-.files-header-actions .activity-menu-button {
-  width: 32px;
-  height: 32px;
-  min-height: 32px;
-  padding: 0;
-}
-
 .files-git-status {
   justify-content: flex-start;
   gap: 6px;

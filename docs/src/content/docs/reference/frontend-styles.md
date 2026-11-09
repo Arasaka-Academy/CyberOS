@@ -7,6 +7,12 @@ audience: [developer]
 sourceOfTruth:
   - packages/shared/src/appearance.ts
   - packages/ui/UPSTREAM.md
+  - packages/ui/src/Card.tsx
+  - packages/ui/src/cards.css
+  - packages/web/src/styles/components/cards.css
+  - packages/web/src/styles/components/card-details.css
+  - packages/web/src/tv/styles/cards.css
+  - scripts/test-card-surfaces.mjs
   - packages/web/src/styles/cyberui.css
   - packages/web/src/styles.css
   - packages/web/src/styles/workspace.css
@@ -33,6 +39,7 @@ sidebar:
 | 聚合入口 | 规则归属 |
 | --- | --- |
 | `@cyberos/ui` | `Button`、`Field`、`InputGroup`、`Section`、`DescriptionList`、`Notice`、`EmptyState`、`StatusBadge`、`DialogHeader` 和 `DialogActions` 的结构和组件样式；由 `controls.css`、`sections.css`、`feedback.css`、`dialog.css` 维护。 |
+| 卡片 | `@cyberos/ui` 导出的 `Card`、`CardHeader` 与 `cards.css` 定义 soft/frame；Web 的 `components/cards.css` 与 `card-details.css` 只适配业务家族，TV 的 `styles/cards.css` 适配远距焦点，文档的 `content.css` 适配 Starlight。 |
 | `styles/cyberui.css` | 应用外壳与旧组件的主题映射；禁止推测按钮角色或重复定义共享控件状态。 |
 | `@cyberos/shared/appearance.css` | 14 种主题的生成令牌；通过 `appearance.ts` 和生成脚本修改。 |
 | `workspace.css` | `files/`、`downloads/`、`network/`、`storage/`、`docker/`、`shares/`、`terminal/`、`management/`，共享创建流程在 `components/create-form.css`。 |
@@ -65,6 +72,31 @@ sidebar:
 
 继续复用 `PanelHeader`、`MobileAppHeader`、`Switch`、`SearchFilterPopover`、`HelpTip`、`TooltipLayer` 和公共骨架。保留媒体海报、文件列表、终端和 TV 的业务布局与操作尺度。
 
+## 卡片家族全量检查清单
+
+卡片、独立工具和开放区块的具体尺度见[视觉契约](/docs/reference/frontend-design/#cardpanel-与-section-的视觉契约)。新增家族必须显式选择其中一种，不能在深色皮肤中追加通用 card 覆盖。
+
+| 家族与入口 | 分类与视觉归属 | 保留的业务特征 |
+| --- | --- | --- |
+| Docker、VM、网络、存储、共享、监控 Dashboard | 拖拽外框为 frame，内部 Section 与资源记录开放，独立指标为 soft；`components/cards.css` | 布局持久化、键盘调整、内部滚动、骨架及状态图标。 |
+| Docker 容器、镜像、网络、卷与 VM 详情/Compose | 详情分组开放，资源摘要 soft，IPAM/注册表/容器记录用分隔线；`card-details.css` | 表格、版本、日志、控制台、创建及删除确认。 |
+| 网卡、Ethernet/Wi-Fi、流量详情 | 连接摘要 soft，地址事实与路由/资源为开放记录；`card-details.css` | 网络事务确认、草稿、扫描、连接和回退边界。 |
+| 存储池、磁盘、SMART 与 iSCSI | 容量摘要 soft，详情及成员分组开放，磁盘选择保持选择语义；`card-details.css` | 健康图表、容量比例、危险确认、单一 Dashboard 外框。 |
+| Share 服务与协议 | Section、DescriptionList 与开放列表，最外层 frame；`shares/` | 协议分组、编辑与删除弹窗、权限和焦点恢复。 |
+| NVR 概览、摄像机、设备、录像与事件 | soft；`Card` 与 `nvr.css` | 16:9 预览、4 路上限、全宽概览/表单、PTZ 停止与播放器生命周期。 |
+| NVR 筛选、策略与添加表单 | Section，透明底与分隔线 | 双列字段及窄容器单列、不新增嵌套卡片。 |
+| Agent 审批 | frame，详情事实开放；`components/cards.css` | 风险文字、预览、允许/拒绝与审批边界；普通聊天消息保持开放。 |
+| 设置概览、版本/身份、服务、策略、设备与资源 | Section，只有独立统计 soft；`sections.css`、`settings/` | 所有分类、嵌套编辑、加载、错误、保存、焦点和草稿。 |
+| 影视海报与音乐专辑 | soft，图片区域结构线；`components/cards.css` | 2:3/1:1 图片、长标题省略、进度与收藏入口；曲目/艺术家/播放列表仍是记录。 |
+| 照片时间轴与选择 | soft，选中主强调色内轨，焦点独立外环 | 相片比例、顺序、分页、选择与打开；地图和查看器保留专用框架。 |
+| 下载、通知、告警、操作/传输记录 | 开放列表；未读用主强调色轨，无卡片投影 | 进度、状态、取消、筛选、阅读与通知生命周期。 |
+| 手机主屏 App 入口 | 原生导航项，装饰层切角；`mobile.css` | 触控热区、路由、角标、安全区；不套 Card 或裁切焦点。 |
+| 播放浮窗、文件/目录选择、终端工具 | 独立工具，沿用专用共享弹窗/工作台框架 | 全屏层、目录边界、终端连接、播放与焦点；不作为摘要卡片重绘。 |
+| TV 海报、搜索结果与剧集 | soft，无投影，完整 3px/4px 遥控焦点环；`tv/styles/cards.css` | 操作面、字幕/音轨、搜索、IME 和遥控顺序。 |
+| 文档 Card/LinkCard 与目录链接 | Card soft，交互链接保留外环；`docs/styles/content.css` | 阅读字号、目录导航；当前首页继续使用开放目录，不新增卡片网格。 |
+
+`scripts/test-card-surfaces.mjs` 检查家族在 14 种主题、中英文与五种宽度下的计算外观、开放区块、草稿保留、相机打开及 TV 焦点。它使用隔离只读数据，不能替代实际页面、设备部署或物理摄像机/电视验收。
+
 ## 验证入口
 
 ```bash
@@ -77,6 +109,7 @@ npx vitest run packages/web/src/styles packages/web/src/components/common packag
 npm run test:styles-browser
 npm run test:tv-browser
 npm run test:chat-browser
+node --test scripts/test-card-surfaces.mjs
 
 # 完整应用移动布局及状态恢复
 cd docs

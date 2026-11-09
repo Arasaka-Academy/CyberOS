@@ -1469,7 +1469,7 @@ function Fact({ label, value }: { label: string; value: string }) {
 function MetricCard({ metric }: { metric: Metric }) {
   const Icon = metric.Icon;
   return (
-    <article className="management-metric" data-state={metric.state}>
+    <article className="ui-card management-metric" data-state={metric.state}>
       <Icon aria-hidden="true" size={18} />
       <span>{metric.label}</span>
       <strong>{metric.value}</strong>

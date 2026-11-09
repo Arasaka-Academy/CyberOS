@@ -12,11 +12,18 @@ sourceOfTruth:
   - packages/ui/src/Button.tsx
   - packages/ui/src/Field.tsx
   - packages/ui/src/Section.tsx
+  - packages/ui/src/Card.tsx
+  - packages/ui/src/cards.css
+  - packages/web/src/styles/components/cards.css
+  - packages/web/src/styles/components/card-details.css
+  - packages/web/src/tv/styles/cards.css
+  - scripts/test-card-surfaces.mjs
   - packages/ui/src/Feedback.tsx
   - packages/ui/src/Dialog.tsx
   - packages/ui/src/DescriptionList.tsx
   - packages/web/src/styles/cyberui.css
   - packages/web/src/styles/navigation-rails.css
+  - packages/web/src/styles/management/header-actions.css
   - packages/web/src/styles/voice.css
   - packages/web/src/styles/files/picker.css
   - packages/web/src/styles/files/picker-navigation.css
@@ -67,6 +74,10 @@ sourceOfTruth:
   - eslint.config.js
   - packages/web/src/components/workspace/ManagementDashboard.tsx
   - packages/web/src/components/workspace/PanelHeader.tsx
+  - packages/web/src/components/workspace/ShareManagementPanel.tsx
+  - packages/web/src/styles/shares/panel.css
+  - packages/web/src/styles/shares/protocols.css
+  - packages/web/src/styles/shares/create.css
   - packages/web/src/components/workspace/WorkspacePane.tsx
   - packages/web/src/components/workspace/PhotoLibraryPanel.tsx
   - packages/web/src/components/workspace/PhotoSearchFilterMenu.tsx
@@ -214,10 +225,27 @@ NVR 采用卡片组织四个页签：实时页以全宽总览卡开头，摄像�
 - **所有按钮必须直角**：原生 `button`、按钮类型的 `input` 和语义为 `role="button"` 的控件，四角均为 `0`；普通按钮、图标按钮、关闭按钮、页签、菜单操作与 Switch 一并遵守。`summary` 折叠入口及其内部绘制可见边框或背景的触发外框也必须直角，不能只检查可聚焦根元素。禁止圆角、胶囊形或圆形按钮，也禁止通过按钮伪元素背景变相添加圆角。
 - 主操作使用主强调色和配套反色文字；次操作使用主题表面、正文色与结构边框；危险操作复用危险色及已有确认流程。颜色、字体、间距和硬偏移底板复用共享令牌，不另建页面风格。
 - default、hover、active、selected、focus-visible、disabled 和 busy 状态均保持四角为 `0`、操作面尺寸稳定。图标按钮至少 `32px`；直角造型不能缩小触控区域或裁掉次强调色焦点外环。
+- 所有 Workspace 面板页头右侧操作统一复用 `PanelHeaderAction` 与 `management/header-actions.css`，以文件面板为基准：桌面 `32×32px`、`18px` 图标、`6px` 间距、细结构边框和低强调底色；悬停使用次强调色填充、配套反色图标与 `3px` 主强调色硬偏移阴影，按下收紧偏移。选中与忙碌使用共享主强调色，危险操作保留危险色，禁用保持尺寸稳定。键盘焦点环不裁切；移动端和触控至少 `44×44px`，次操作继续进入带文字的更多菜单。文件、媒体或管理面板不得另行覆盖页头按钮外观，内容区按钮不受此规则影响。
 - **规则不依赖挂载位置**：弹窗、嵌套弹窗、全屏层和挂载到 `document.body` 的 Portal 都必须生效。Web 的 `brand.css`、TV 的 `tv.css` 与文档站的 `custom.css` 均使用全局 `border-radius: 0 !important` 约束按钮、语义按钮及其伪元素，不能依赖局部工作区祖先；基础主、次、危险按钮也直接定义为 `0`。
 - 新增或修改按钮时禁止通过局部 CSS、内联样式、单角半径、交互状态或 `!important` 覆盖直角约束。验收检查浏览器计算样式中的四个角均为 `0px`，并覆盖主按钮、次按钮、危险按钮、图标按钮及 Portal 场景。
 
 ### 组件结构与归属
+
+#### Card、Panel 与 Section 的视觉契约
+
+以固定的 CyberUI v0.2.2 为准，三者不能混用：
+
+| 容器 | 视觉效果 | 适用对象 |
+| --- | --- | --- |
+| `Card` / `.ui-card` | `--cyber-soft` 底面、正文色、直角；无边框、渐变、光晕和投影。默认内边距 22px，手机 18px；密集内容显式 compact 为 14px，媒体显式 none。 | 可独立理解的摘要、设备、录像、事件、专辑和影片；媒体继续保持原图像比例。 |
+| `Card variant="frame"` / `.ui-card.ui-card-frame` | `--cyber-bg` 底面与单层 1px `--cyber-line` 结构框，无默认阴影。是 CyberOS 对上游 Panel 的密集适配；上游 Panel 默认 2px，原组件及 shape API 保持不变。 | 可拖拽管理组件、审批等独立工具；只在最外层绘制框，内部 Section、指标和列表不再叠框。 |
+| `Section` / `SectionHeader` | 透明底、顶部结构线，标题 15px/24px、说明 12px，图标槽 24px、图形 18px。 | 常驻设置、协议服务、详情分组、筛选与表单。类名含 card 不构成使用封闭卡片的理由。 |
+
+`CardHeader` 复用 SectionHeader 的图标、标题与操作槽，卡片头不重复绘制分隔框。上游 Card 的标题 20px 在高密度 Web 中适配为 15px；TV 保留现有远距字号，文档保留阅读字号。组件接收原生 article 属性和 ref，不引入点击、选择、请求或连接状态。
+
+原生 button、a、li、section 和网格容器可以消费 `.ui-card` 外观契约，保留原语义；不能为套卡片新增可点击 div、嵌套按钮或改变列表结构。已有媒体卡保持比例和标题省略，照片选择使用主强调色轨与选择语义；普通 hover 只加强次强调色边线，不移动卡片、不增加阴影。键盘焦点使用独立外环，TV 为 3px/4px，Web 为 2px/3px；只裁切图片，不裁切整个交互容器。审批保留风险文字及确认，未读记录使用主强调色轨，错误和忙碌仍由共享反馈组件表达。
+
+卡片家族的呈现由共享 `cards.css` 和 Web 的 `components/cards.css`、`card-details.css` 适配层维护；业务 CSS 只维护布局、尺寸与实际数据状态，不再在 files/theme、dark-surfaces、settings/theme 等通用皮肤中重复绘制卡片。管理摘要及 Dashboard、Docker/VM/网络/存储详情、iSCSI、NVR、Agent 审批、媒体缩略图、下载/通知/告警记录、设置指标、手机入口、TV 海报/搜索/剧集和文档 Card/LinkCard 均按此分类。下载、通知、资源和设备列表仍是结构线分隔的记录，避免把每行转换成独立工具面板。
 
 | 契约 | 唯一呈现所有者 | 消费约束 |
 | --- | --- | --- |
@@ -227,6 +255,7 @@ NVR 采用卡片组织四个页签：实时页以全宽总览卡开头，摄像�
 | 键值详情 | `DescriptionList`，`sections.css` | 使用语义化 dl/dt/dd，统一标签、值和补充说明的对齐与换行；业务值允许链接、图标及其他 React 内容。 |
 | 选择与开关 | `CustomSelect` / `Switch` | 选择器接入 Field 上下文，保留必填校验与菜单焦点；Switch 保留原生布尔事件。checkbox 不冒充服务开关。 |
 | 常驻区块 | `Section` / `SectionHeader`，`sections.css` | 全宽纵向、顶部结构线；图标、标题/说明和操作各有固定槽位。可拖拽管理组件保留自己的封闭框。 |
+| 卡片与独立工具 | `Card` / `CardHeader`，`cards.css` | soft 默认，独立工具显式 frame；padding 显式选择，外观不承载业务状态与事件。原生元素可消费同一类契约。 |
 | 错误、空状态、标记 | `Notice` / `EmptyState` / `StatusBadge`，`feedback.css` | tone/state 为显式属性；操作和图标进入独立槽位；后台状态不用反复 alert，状态标记不自动建立 live region。 |
 | 模态标题与操作区 | `DialogHeader` / `DialogActions`，`dialog.css` | 标题/说明 ID 不变，长内容在正文内滚动。层级、Escape 和焦点仍由 ModalPortal/useModalDialog 管理，不能建立第二套模态状态。 |
 | 面板与移动骨架 | `PanelHeader` / `MobileAppHeader` | 保留 70px/104px 标题、返回栈、直接操作及更多菜单；移动设置详情只呈现 MobileAppHeader；跨断点不重建播放器和会话。 |
@@ -240,7 +269,8 @@ NVR 采用卡片组织四个页签：实时页以全宽总览卡开头，摄像�
 - 命令使用 `Button variant="primary|secondary|danger"`；轻量操作使用 `plain`，有业务布局的导航入口使用 `ghost`。图标操作显式使用 `iconOnly` 或 `IconButton`，不从业务 class 推测角色。原有类只承载布局和特征定位。默认命令高 `34px`，显式 `size="compact"` 为 `32px`，不得通过 `.某页面 button` 改变公共按钮尺寸、禁用透明度或忙碌颜色。移动触控至少 `44px`，TV 默认命令为 `48px`。
 - 所有 Web/TV 下拉框统一使用 `CustomSelect`，ESLint 检查全部 Web TSX。字段默认高 `40px`；紧凑字段通过 `className="control-compact"` 显式选择 `34px`，移动触控至少 `44px`；TV 字段和选项保持 `48px`。菜单统一主题表面、次强调色选中面和明确选中语义，不能按页面重设配色。菜单挂到当前模态或应用浮层，以视口定位并随滚动更新，避免正文裁切；Escape 只关闭当前层。
 - 必填下拉使用 `required`，校验失败后聚焦可见触发器并展示关联错误；`triggerRef` 用于恢复焦点，`ariaBusy` 保留异步状态。业务负责字符串与数值之间的转换及其校验，不能通过伪造原生事件适配。
-- 音乐导航复用 `view-tabs` 外观，保留 `aria-current="page"` 的导航语义；页签使用 `aria-selected`。两者使用同一选中态。
+- 音乐与影视分类导航复用 `view-tabs` 外观，使用 `aria-current="page"` 的导航语义；页签使用 `aria-selected`。两者使用同一选中态，包含主题填充、反色文字、分隔线与左侧状态轨。影视分类在窄面板内继续换行，TV 保留遥控焦点与放大的操作面。
+- 共享面板的服务概览与协议区块复用 `Section`：协议图标进入标题左侧固定图标槽，状态与新增操作进入右侧操作槽，窄容器内操作换行。可拖拽区块只在外框保留一层主题结构线，内部不重复绘制边框；概览事实复用 `DescriptionList`，服务和共享记录采用结构线分隔的列表，不叠加圆角卡片、局部按钮或输入框外观。业务样式在 `app` 层维护布局，避免旧管理卡片样式覆盖共享组件。新增、编辑和删除弹窗复用 `DialogHeader`、`DialogActions` 与共享字段，保留视口居中、正文滚动、底部操作区及关闭后的焦点恢复。现有分组、布局编辑、权限和确认流程保持不变。
 - 创建流程复用 `create-form-*`，Docker 不得引用 VM 的样式类。字段复用公共表单表面和焦点；弹窗复用 `ModalPortal`、`useModalDialog` 与 `modal.css`，业务只调整尺寸、正文布局和信息排列。状态标记与反馈由共享 `StatusBadge`、`Notice`、`EmptyState` 及 `@cyberos/ui` 的组件样式承载，旧 `components/status.css`、`components/feedback.css` 仅保留兼容定位和元数据规则；技术元数据复用 `metadata`。
 - 存储文件与目录选择器复用 `DialogHeader` 的图标、眉题、标题和关闭操作插槽，图标位于标题左侧，不能与眉题一起塞入右侧操作区。专用 `files/picker*.css` 在 `app` 层维护结构与布局，存储池和文件行沿用主强调色选中面及配套反色文字，名称、路径、大小和图标一起继承选中颜色；状态徽标、空态和错误复用共享组件。图标底板保持直角，页头切角只作用于装饰层；工具按钮和输入框保留共享尺寸、禁用与忙碌态，移动触控至少 `44px`。保留桌面存储池侧栏、窄屏横向存储池列表、内部滚动和底部确认区，不改变文件筛选、目录边界及创建目录的审批流程。
 
@@ -376,7 +406,7 @@ NVR 采用卡片组织四个页签：实时页以全宽总览卡开头，摄像�
 - 无线网络设置页只展示网卡连接与热点状态。Scan 打开网络弹窗并扫描附近 SSID；选择、连接、编辑、遗忘已保存网络、射频开关和断开连接都在弹窗内完成。热点配置、启停和删除也放在热点弹窗内，保留风险确认和外部配置只读限制。
 - Tailscale 设置按状态、本机信息、节点、网络和网关纵向展示。实时更新不覆盖未保存草稿；配置版本冲突时保留草稿并要求重新核对。网络变更显示 60 秒确认与恢复入口，断开、注销和重启使用共享确认弹窗；路由发布与控制面审批必须分别表达。
 - 蓝牙设备主区只展示已连接、正在连接或已记住的设备；Scan 打开居中发现弹窗并开始限时扫描，附近设备发现与配对确认在弹窗内完成。设备行操作统一为带本地化名称提示的直角图标按钮，断开连接也使用图标；关闭弹窗后恢复 Scan 焦点并停止该弹窗发起的扫描。
-- 通知中心使用主题 HUD 抽屉，未读项显示强调色状态轨；点击单项只更新该项，不意外关闭抽屉。
+- 通知中心使用主题 HUD 抽屉，未读项显示强调色状态轨；点击单项只更新该项，不意外关闭抽屉。通知入口、分类页签及待审批数字角标统一使用主强调色底板与配套反色数字，随主题切换，并与会话编号保持独立。
 - 语音入口位于桌面播放器入口正上方，移动端位于 Agent 标题操作区及主屏通知旁；选中用主强调色，未读回复使用静态提示点。语音与通知抽屉互斥。语音抽屉桌面宽 460px，覆盖工作区；560px 及以下铺满视口，尊重上下安全区。顶部与录音区固定，中间独立滚动；用户靠右、Agent 靠左，按日期分组，短元信息显示角色、时间与来源。语音条共用一份浏览器播放状态，将同一回复的分段音频显示为连续进度。仅接近底部时跟随新消息；翻阅旧记录时提供“有新消息”，加载更早记录和重新打开时保留阅读位置。侧栏只提供录音、试听和发送，审批跳转完整会话。关闭按钮、外部点击、Escape 或移动返回均停止本地回放、结束录音并保留试听草稿，随后恢复入口焦点；后台停止采集与自动回复，减少动态效果时关闭滑入动画。
 - 语音抽屉复用 `DialogHeader` 的左侧图标与标题插槽，右侧只放完整会话、Audio 设置与关闭操作。36px 图标底板的 8px 切角只作用于装饰层，标题沿用 `//` 工业标识；运行状态复用带文字的 `StatusBadge`，离线、待审批、录音和上传均表达真实状态，不用装饰性扫描或闪烁。历史采用硬分隔、方向状态轨和主题表面，避免消息框与音频控件重复套边框。录音与发送使用共享主命令，重录、加载和审批跳转使用次命令，停止录音使用危险命令，加载/禁用与焦点保留共享语义；错误和空态复用共享组件。专用 `voice.css` 在 `app` 层维护，过渡约 160ms，移动按钮与音频拖动热区至少 44px。
 - Toast 固定在视口层级并自动消失；可追溯的生命周期信息进入通知中心。

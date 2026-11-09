@@ -2,6 +2,7 @@ export { AppearanceProvider, ThemePicker, useAppearance } from "./AppearanceProv
 export { Button, IconButton, type ButtonProps, type ButtonVariant } from "./Button.js";
 export { Field, Input, InputGroup, Textarea, Checkbox, useFieldControl } from "./Field.js";
 export { Section, SectionHeader } from "./Section.js";
+export { Card, CardHeader, type CardProps } from "./Card.js";
 export { Notice, EmptyState, StatusBadge } from "./Feedback.js";
 export { DialogHeader, DialogActions } from "./Dialog.js";
 export { DescriptionList, type DescriptionItem } from "./DescriptionList.js";

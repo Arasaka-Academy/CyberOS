@@ -79,22 +79,6 @@
   color: var(--muted);
 }
 
-.photo-tile {
-  border: 1px solid color-mix(in srgb, var(--cyberos-color-command) 22%, transparent);
-  border-radius: 0;
-  background: var(--cyberos-color-surface-raised);
-}
-
-.photo-tile:hover {
-  border-color: var(--hud-cyan);
-  box-shadow: 0 0 0 2px var(--hud-cyan);
-}
-
-.photo-tile.is-selected {
-  border-color: var(--hud-red);
-  box-shadow: inset 0 0 0 4px var(--hud-red);
-}
-
 .photo-name,
 .photo-media-badge,
 .photo-select {

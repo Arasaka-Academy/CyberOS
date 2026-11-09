@@ -1,4 +1,4 @@
-import { Button as UiButton, DialogHeader, EmptyState, Field, Input, Notice, SectionHeader, StatusBadge } from "@cyberos/ui";
+import { Button as UiButton, DescriptionList, DialogActions, DialogHeader, EmptyState, Field, Input, Notice, Section, StatusBadge } from "@cyberos/ui";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { ShareProtocol } from "@cyberos/shared";
@@ -154,19 +154,20 @@ export function ShareManagementPanel({ storagePools, locale, onWorkQueuesChanged
       {error ? <Notice className="share-add-form-error" role="alert" tone="danger" icon={<CircleAlert size={15} aria-hidden="true" />}>{error}</Notice> : null}
       {!loading && !writable ? <EmptyState className="management-empty">{t("workspace.management.shares.configurationUnavailable")}</EmptyState> : null}
       <ManagementDashboardGrid dashboard={dashboard} loading={loading} items={[
-        { id: "services", title: t("workspace.management.shares.servicesTitle"), content: <section className="management-section share-services-section">
-          <SectionHeader className="management-section-header" title={t("workspace.management.shares.servicesTitle")} description={shareStatusDetail(summary, loading, error, t)} actions={<><StatusBadge className="management-status-pill" data-state={shareStatusTone(summary, loading, error)}>{shareStatusLabel(summary, loading, error, t)}</StatusBadge></>} />
-          <dl className="management-fact-list share-overview-facts">
-            <div><dt>{t("workspace.management.shares.metrics.shares")}</dt><dd>{formatLocaleNumber(settings?.shares.length ?? 0, locale)}</dd></div>
-            <div><dt>{t("workspace.management.shares.metrics.protocols")}</dt><dd>{formatLocaleNumber(summary?.metrics.enabledProtocols ?? 0, locale)}</dd></div>
-            <div><dt>{t("workspace.management.shares.facts.updated")}</dt><dd>{settings?.updatedAt && settings.updatedAt !== new Date(0).toISOString() ? formatDate(settings.updatedAt, locale) : t("workspace.management.shares.notSaved")}</dd></div>
-          </dl>
+        { id: "services", title: t("workspace.management.shares.servicesTitle"), content: <Section className="management-section share-services-section"
+          title={t("workspace.management.shares.servicesTitle")} icon={<Server size={18} aria-hidden="true" />}
+          description={shareStatusDetail(summary, loading, error, t)} actions={<StatusBadge state={shareStatusTone(summary, loading, error)}>{shareStatusLabel(summary, loading, error, t)}</StatusBadge>}>
+          <DescriptionList className="share-overview-facts" items={[
+            { label: t("workspace.management.shares.metrics.shares"), value: formatLocaleNumber(settings?.shares.length ?? 0, locale) },
+            { label: t("workspace.management.shares.metrics.protocols"), value: formatLocaleNumber(summary?.metrics.enabledProtocols ?? 0, locale) },
+            { label: t("workspace.management.shares.facts.updated"), value: settings?.updatedAt && settings.updatedAt !== new Date(0).toISOString() ? formatDate(settings.updatedAt, locale) : t("workspace.management.shares.notSaved") }
+          ]} />
           <div className="share-service-list">{SHARE_PROTOCOLS.map((protocol) => <div className="share-service-row" key={protocol}>
             {protocolIcon(protocol, 16)}<div><strong>{t(`workspace.management.shares.protocolLabels.${protocol}`)}</strong><span>{t("workspace.management.shares.enabledShares", { count: summary?.protocols[protocol].enabledShares ?? 0 })}</span></div>
-            <StatusBadge className="management-row-status" data-state={protocolSummaryTone(summary, protocol)}>{protocolSummaryLabel(summary, protocol, t)}</StatusBadge>
+            <StatusBadge state={protocolSummaryTone(summary, protocol)}>{protocolSummaryLabel(summary, protocol, t)}</StatusBadge>
           </div>)}</div>
-          {summary?.issues.length ? <ul className="share-service-issues">{summary.issues.map((issue, index) => <li key={index}>{issue.source}: {issue.message}</li>)}</ul> : null}
-        </section> },
+          {summary?.issues.length ? <div className="share-service-issues">{summary.issues.map((issue, index) => <Notice tone="warning" key={index}>{issue.source}: {issue.message}</Notice>)}</div> : null}
+        </Section> },
         ...SHARE_PROTOCOLS.map((protocol) => ({ id: `protocol-${protocol}`, title: t(`workspace.management.shares.protocolLabels.${protocol}`),
           content: <ShareProtocolSection protocol={protocol} shares={form.shares.filter((share) => share.protocol === protocol)}
             summary={summary} disabled={disabled} createDisabled={!storagePools.length} t={t} onCreate={() => edit(protocol)} onEdit={(share) => edit(protocol, share)}
@@ -196,10 +197,10 @@ export function ShareManagementPanel({ storagePools, locale, onWorkQueuesChanged
           {dialog.kind === "delete" ? <p className="share-delete-copy">{t("workspace.management.shares.deleteConfirm", { name: dialog.share.name })}</p> : null}
           {dialogError ? <Notice className="share-add-form-error" role="alert" tone="danger" icon={<CircleAlert size={15} aria-hidden="true" />}>{dialogError}</Notice> : null}
         </div>
-        <footer className="share-add-form-actions"><UiButton variant="ghost" type="button" onClick={closeDialog} disabled={busy}>{t("common.actions.cancel")}</UiButton>
+        <DialogActions className="share-add-form-actions"><UiButton variant="secondary" type="button" onClick={closeDialog} disabled={busy}>{t("common.actions.cancel")}</UiButton>
           <UiButton variant={dialog.kind === "delete" ? "danger" : "primary"} type="submit" className={dialog.kind === "delete" ? "is-danger" : "is-primary"} disabled={busy} aria-busy={busy || undefined}>
             {busy ? <LoaderCircle className="is-spinning" size={15} aria-hidden="true" /> : null}{t(dialog.kind === "delete" ? "workspace.management.shares.removeShare" : "common.actions.save")}
-          </UiButton></footer>
+          </UiButton></DialogActions>
       </form>
     </ShareDialog> : null}
   </section>;
@@ -209,9 +210,10 @@ export function ShareProtocolSection({ protocol, shares, summary, disabled, crea
   protocol: ShareProtocol; shares: ShareDefinitionFormState[]; summary: ShareSummary | null; disabled: boolean; createDisabled?: boolean; t: Translate;
   onCreate: () => void; onEdit: (share: ShareDefinitionFormState) => void; onToggle: (share: ShareDefinitionFormState, enabled: boolean) => void; onDelete: (share: ShareDefinitionFormState) => void;
 }) {
-  return <section className="management-section share-protocol-section" data-protocol={protocol}>
-    <SectionHeader className="management-section-header" title={t(`workspace.management.shares.protocolLabels.${protocol}`)} actions={<>{protocolIcon(protocol, 18)}<StatusBadge className="management-row-status" data-state={protocolSummaryTone(summary, protocol)}>{protocolSummaryLabel(summary, protocol, t)}</StatusBadge><UiButton variant="ghost" className="management-row-action" disabled={disabled || createDisabled} onClick={onCreate}><Plus size={14} aria-hidden="true" />{t("workspace.management.shares.addShare")}</UiButton></>} />
-    {protocol === "ftp" ? <p className="share-protocol-hint">{t("workspace.management.shares.ftpLimit")}</p> : null}
+  return <Section className="management-section share-protocol-section" data-protocol={protocol}
+    title={t(`workspace.management.shares.protocolLabels.${protocol}`)} icon={protocolIcon(protocol, 18)}
+    actions={<><StatusBadge state={protocolSummaryTone(summary, protocol)}>{protocolSummaryLabel(summary, protocol, t)}</StatusBadge><UiButton variant="secondary" size="compact" disabled={disabled || createDisabled} onClick={onCreate}><Plus size={16} aria-hidden="true" />{t("workspace.management.shares.addShare")}</UiButton></>}>
+    {protocol === "ftp" ? <Notice className="share-protocol-hint">{t("workspace.management.shares.ftpLimit")}</Notice> : null}
     {shares.length ? <div className="share-protocol-shares">{shares.map((share) => <article className="share-protocol-share-row" key={share.id}>
       <div className="share-protocol-share-copy">
         <div className="share-protocol-share-name"><Share2 size={16} aria-hidden="true" /><strong>{share.name || share.id}</strong></div>
@@ -224,13 +226,13 @@ export function ShareProtocolSection({ protocol, shares, summary, disabled, crea
           <Switch checked={share.protocols[protocol].enabled} disabled={disabled} ariaLabel={`${t("workspace.management.shares.states.enabled")} · ${share.name || share.id}`} onCheckedChange={(enabled) => onToggle(share, enabled)} />
         </div>
         <div className="share-protocol-share-tools">
-          <UiButton variant="ghost" iconOnly className="management-row-action management-icon-action" disabled={disabled} onClick={() => onEdit(share)} data-tooltip={t("common.actions.edit")} aria-label={`${t("common.actions.edit")} · ${share.name || share.id}`}><Pencil size={15} aria-hidden="true" /></UiButton>
-          <UiButton variant="danger" iconOnly className="management-row-action management-icon-action is-danger" disabled={disabled} onClick={() => onDelete(share)} data-tooltip={t("workspace.management.shares.removeShare")} aria-label={`${t("workspace.management.shares.removeShare")} · ${share.name || share.id}`}><Trash2 size={15} aria-hidden="true" /></UiButton>
+          <UiButton variant="plain" iconOnly size="compact" disabled={disabled} onClick={() => onEdit(share)} data-tooltip={t("common.actions.edit")} aria-label={`${t("common.actions.edit")} · ${share.name || share.id}`}><Pencil size={16} aria-hidden="true" /></UiButton>
+          <UiButton variant="danger" iconOnly size="compact" disabled={disabled} onClick={() => onDelete(share)} data-tooltip={t("workspace.management.shares.removeShare")} aria-label={`${t("workspace.management.shares.removeShare")} · ${share.name || share.id}`}><Trash2 size={16} aria-hidden="true" /></UiButton>
         </div>
       </div>
     </article>)}</div> : <EmptyState className="management-empty">{t("workspace.management.shares.noShares")}</EmptyState>}
-    {summary?.protocols[protocol].services.filter((service) => service.status !== "active" && service.status !== "disabled" && summary.enabled && summary.protocols[protocol].enabledShares > 0).map((service) => <p className="share-service-problem" key={service.name}><CircleAlert size={14} aria-hidden="true" />{service.name}: {t(`workspace.management.shares.serviceStates.${service.status}`)}{service.error ? ` · ${service.error}` : ""}</p>)}
-  </section>;
+    {summary?.protocols[protocol].services.filter((service) => service.status !== "active" && service.status !== "disabled" && summary.enabled && summary.protocols[protocol].enabledShares > 0).map((service) => <Notice className="share-service-problem" tone="warning" key={service.name}><span>{service.name}: {t(`workspace.management.shares.serviceStates.${service.status}`)}{service.error ? ` · ${service.error}` : ""}</span></Notice>)}
+  </Section>;
 }
 
 function ShareDialog({ title, busy, onClose, children, returnFocus, closeLabel }: { title: string; busy: boolean; onClose: () => void; children: ReactNode; returnFocus: HTMLElement | null; closeLabel: string }) {
@@ -259,7 +261,7 @@ function ShareDialog({ title, busy, onClose, children, returnFocus, closeLabel }
   }, []);
   return <ModalPortal className="management-modal-backdrop share-add-modal-backdrop" role="presentation" onRequestClose={onClose} closeDisabled={busy} onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
     <section ref={ref} tabIndex={-1} className="management-modal share-add-modal share-protocol-modal" role="dialog" aria-modal="true" aria-labelledby="share-dialog-title" aria-busy={busy || undefined}>
-      <DialogHeader title={title} headingId="share-dialog-title" actions={<><UiButton variant="ghost" iconOnly type="button" className="management-icon-action" onClick={onClose} disabled={busy} aria-label={closeLabel} data-tooltip={closeLabel}><X size={16} aria-hidden="true" /></UiButton></>} />
+      <DialogHeader title={title} icon={<Share2 size={20} aria-hidden="true" />} headingId="share-dialog-title" actions={<><UiButton variant="ghost" iconOnly type="button" className="management-icon-action" onClick={onClose} disabled={busy} aria-label={closeLabel} data-tooltip={closeLabel}><X size={16} aria-hidden="true" /></UiButton></>} />
       {children}
     </section>
   </ModalPortal>;

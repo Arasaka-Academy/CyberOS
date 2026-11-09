@@ -134,13 +134,6 @@
   background: color-mix(in srgb, var(--cyberos-color-surface-raised) 78%, transparent);
 }
 
-.chat-pane .approval-card {
-  border-color: var(--hud-line);
-  color: var(--hud-text);
-  background: var(--hud-panel);
-  box-shadow: 4px 4px 0 color-mix(in srgb, var(--cyberos-color-danger) 25%, transparent);
-}
-
 .chat-pane .approval-card :where(strong, p, dd) {
   color: var(--hud-text);
 }

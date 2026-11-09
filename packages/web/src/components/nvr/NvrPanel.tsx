@@ -114,13 +114,13 @@ export function NvrPanel({ storagePools }: { storagePools: StoragePool[] }) {
               })}</div>
               {!segments.length ? <EmptyState title={t("nvr.noRecordings")} /> : null}
             </Section>
-            <ul className="nvr-card-grid nvr-recordings">{segments.map((segment) => <li className="nvr-card nvr-recording" key={segment.id}>
+            <ul className="nvr-card-grid nvr-recordings">{segments.map((segment) => <li className="ui-card nvr-card nvr-recording" data-padding="compact" key={segment.id}>
               <header className="nvr-card-header"><h3>{name(segment.deviceId)}</h3><StatusBadge state={segment.status}>{statusText(t, segment.status)}</StatusBadge></header>
               <p className="nvr-recording-time">{time(segment.startedAt)} – {time(segment.endedAt)}</p>
               <p className="metadata">{Math.round(segment.durationSeconds)} {t("nvr.seconds")} · {(segment.sizeBytes / 2 ** 20).toLocaleString(i18n.language, { maximumFractionDigits: 1 })} MiB</p>
               {segment.status === "ready" || segment.status === "recovered" ? <div className="nvr-actions"><Button variant="secondary" onClick={() => play(segment.deviceId, segment.startedAt)}><Play size={16} aria-hidden="true" />{t("nvr.openPlayback")}</Button><a className="nvr-download" href={`/api/nvr/segments/${segment.id}/download`} download aria-label={t("nvr.download")} data-tooltip={t("nvr.download")}><Download size={16} aria-hidden="true" /></a></div> : null}
             </li>)}</ul>
-          </> : !events.length ? <EmptyState className="nvr-card" title={t("nvr.noEvents")} /> : <ul className="nvr-card-grid nvr-events">{events.map((event) => <li className="nvr-card nvr-event" key={event.id} data-gap={event.gap}>
+          </> : !events.length ? <EmptyState className="nvr-card" title={t("nvr.noEvents")} /> : <ul className="nvr-card-grid nvr-events">{events.map((event) => <li className="ui-card nvr-card nvr-event" data-padding="compact" key={event.id} data-gap={event.gap}>
             <header className="nvr-card-header"><h3>{eventText(t, event.category)}</h3><time className="metadata" dateTime={event.occurredAt}>{time(event.occurredAt)}</time></header>
             <p>{name(event.deviceId)}</p><p className={event.gap ? "nvr-gap-label" : "metadata"}>{event.gap ? t("nvr.gap") : t(event.state === null ? "nvr.unknown" : event.state ? "nvr.on" : "nvr.off")}</p>
             {!event.gap ? <div className="nvr-actions"><Button variant="secondary" onClick={() => play(event.deviceId, event.occurredAt)}>{t("nvr.openPlayback")}</Button></div> : null}

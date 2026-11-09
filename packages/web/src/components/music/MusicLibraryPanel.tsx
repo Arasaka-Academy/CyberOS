@@ -590,7 +590,7 @@ export function MusicLibraryPanel({
   const albumGrid = (albums: MusicAlbum[]) => (
     <div className="music-album-grid">
       {albums.map((album) => (
-        <article className="music-album" key={album.id}>
+        <article className="ui-card music-album" key={album.id}>
           <UiButton variant="ghost"
             type="button"
             className="plain-button music-album-open"

@@ -282,7 +282,7 @@ function DashboardWidget({
   }
 
   return (
-    <div className="management-dashboard-widget" data-widget-id={item.id} data-editing={editable || undefined}>
+    <div className="ui-card ui-card-frame management-dashboard-widget" data-widget-id={item.id} data-editing={editable || undefined}>
       {editable ? (
         <div className="management-widget-chrome">
           <UiButton iconOnly variant="ghost"

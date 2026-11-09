@@ -1,0 +1,29 @@
+@layer app {
+  .tv-poster, .tv-episode, .tv-search-result {
+    border-color: transparent;
+    border-radius: 0;
+    color: var(--cyber-ink);
+    background: var(--cyber-soft);
+    box-shadow: none;
+  }
+  .tv-poster:hover, .tv-episode:hover:not(:disabled), .tv-search-result:hover {
+    border-color: var(--cyber-accent2);
+  }
+  .tv-poster:focus-visible, .tv-episode:focus-visible, .tv-search-result:focus-visible {
+    border-color: var(--cyber-accent2);
+    color: var(--cyber-ink);
+    background: var(--cyber-soft);
+    outline: 3px solid var(--cyber-accent2);
+    outline-offset: 4px;
+    box-shadow: none;
+  }
+  .tv-poster-art { border-color: var(--cyber-line); background: var(--cyber-soft); }
+  .tv-status::before {
+    border-color: var(--cyber-line);
+    border-left-color: var(--cyber-accent2);
+    background: var(--cyber-soft);
+    box-shadow: none;
+  }
+  .tv-status[data-error]::before { border-left-color: var(--cyber-danger); background: var(--cyber-soft); }
+  .tv-status::after { display: none; }
+}

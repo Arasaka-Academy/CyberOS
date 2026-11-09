@@ -141,7 +141,7 @@ function OverviewSkeleton() {
 
 function MetricSkeleton() {
   return (
-    <article className="management-metric management-skeleton-metric management-widget-skeleton" data-skeleton-kind="metric" aria-hidden="true">
+    <article className="ui-card management-metric management-skeleton-metric management-widget-skeleton" data-skeleton-kind="metric" aria-hidden="true">
       <SkeletonBlock className="management-skeleton-icon" />
       <SkeletonBlock width="62%" />
       <SkeletonBlock className="management-skeleton-metric-value" width="42%" />

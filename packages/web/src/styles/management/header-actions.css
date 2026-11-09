@@ -1,0 +1,96 @@
+/* All workspace titlebar actions share the File panel's compact HUD controls. */
+:where(.workspace-pane) .app-titlebar .panel-header-actions {
+  max-width: none;
+  overflow: visible;
+}
+
+:where(.workspace-pane) .app-titlebar .panel-header-actions :is(.panel-header-action, .activity-menu-button, .mobile-more-button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 1px solid var(--hud-line-soft);
+  color: var(--hud-muted);
+  background: color-mix(in srgb, var(--cyberos-color-text) 2%, transparent);
+  box-shadow: none;
+  translate: none;
+  font: inherit;
+  transition: color 140ms ease, border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+
+:where(.workspace-pane) .app-titlebar .panel-header-actions :is(.panel-header-action, .activity-menu-button, .mobile-more-button) > svg {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+}
+
+:where(.workspace-pane) .app-titlebar .panel-header-actions :is(.panel-header-action, .activity-menu-button, .mobile-more-button):hover:not(:disabled):not([aria-busy="true"]) {
+  border-color: var(--cyber-accent2);
+  color: var(--cyber-on-accent2);
+  background: var(--cyber-accent2);
+  box-shadow: 3px 3px 0 var(--cyber-accent);
+}
+
+:where(.workspace-pane) .app-titlebar .panel-header-actions :is(.panel-header-action, .activity-menu-button, .mobile-more-button):active:not(:disabled):not([aria-busy="true"]) {
+  box-shadow: 1px 1px 0 var(--cyber-accent);
+  translate: 1px 1px;
+}
+
+:where(.workspace-pane) .app-titlebar .panel-header-actions :is(.panel-header-action, .activity-menu-button, .mobile-more-button):is([aria-pressed="true"], [aria-selected="true"]):not(:disabled) {
+  border-color: var(--cyber-accent);
+  color: var(--cyber-on-accent);
+  background: var(--cyber-accent);
+}
+
+:where(.workspace-pane) .app-titlebar .panel-header-actions .panel-header-action.is-danger:not(:disabled):not([aria-busy="true"]) {
+  color: var(--cyber-danger-text);
+}
+
+:where(.workspace-pane) .app-titlebar .panel-header-actions .panel-header-action.is-danger:hover:not(:disabled):not([aria-busy="true"]) {
+  border-color: var(--cyber-danger);
+  background: var(--cyber-soft);
+  box-shadow: 3px 3px 0 var(--cyber-danger);
+}
+
+:where(.workspace-pane) .app-titlebar .panel-header-actions :is(.panel-header-action, .activity-menu-button, .mobile-more-button):disabled:not([aria-busy="true"]) {
+  border-color: var(--hud-line-soft);
+  color: var(--hud-dim);
+  background: transparent;
+  box-shadow: none;
+}
+
+:where(.workspace-pane) .app-titlebar .panel-header-actions :is(.panel-header-action, .activity-menu-button, .mobile-more-button)[aria-busy="true"] {
+  border-color: var(--cyber-accent);
+  color: var(--cyber-on-accent);
+  background: var(--cyber-accent);
+  box-shadow: none;
+}
+
+@media (max-width: 1040px), (pointer: coarse) {
+  :where(.workspace-pane) .app-titlebar .panel-header-actions :is(.panel-header-action, .activity-menu-button, .mobile-more-button) {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 1040px) {
+  :where(.workspace-pane) .app-titlebar .panel-header-actions .mobile-action-menu :is(.panel-header-action, .activity-menu-button) {
+    justify-content: flex-start;
+    width: 100%;
+    height: auto;
+    padding: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.workspace-pane) .app-titlebar .panel-header-actions :is(.panel-header-action, .activity-menu-button, .mobile-more-button) {
+    transition: none;
+  }
+}

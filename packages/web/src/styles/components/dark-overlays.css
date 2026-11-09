@@ -2,11 +2,6 @@
   border-left-color: var(--hud-red);
 }
 
-.notification-item[data-unread="true"] {
-  background: var(--cyberos-hud-red-wash);
-  box-shadow: inset 4px 0 0 var(--hud-red);
-}
-
 .notification-unread-dot,
 .activity-unread-dot {
   border-color: var(--hud-ink);

@@ -1,12 +1,3 @@
-.management-command-panel,
-.management-section,
-.management-metric {
-  border: 1px solid var(--line-soft);
-  border-radius: 6px;
-  background: var(--channel-bg);
-  box-shadow: var(--shadow);
-}
-
 .management-command-panel {
   display: grid;
   grid-template-columns: 62px minmax(0, 1fr);
@@ -14,9 +5,6 @@
   gap: 14px;
   min-width: 0;
   padding: 16px;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--cyberos-color-text) 5%, transparent), transparent 58%),
-    var(--channel-bg);
 }
 
 .management-emblem {
@@ -24,10 +12,6 @@
   place-items: center;
   width: 54px;
   height: 54px;
-  border: 1px solid color-mix(in srgb, var(--cyberos-color-text) 8%, transparent);
-  border-radius: 6px;
-  color: var(--accent-soft-text);
-  background: var(--accent-soft-bg);
 }
 
 .management-command-copy {
@@ -78,9 +62,6 @@
 .management-fact-list div {
   min-width: 0;
   padding: 9px 10px;
-  border: 1px solid var(--line-soft);
-  border-radius: 5px;
-  background: var(--subtle-bg);
 }
 
 .management-fact-list dt {
@@ -117,7 +98,6 @@
   min-width: 0;
   min-height: 112px;
   padding: 13px;
-  box-shadow: none;
 }
 
 .management-metric svg {

@@ -13,7 +13,7 @@
 .video-panel > .video-content {
   grid-row: 5;
 }
-.video-panel button[aria-pressed="true"] {
+.video-panel button[aria-pressed="true"]:not(.view-tabs > button) {
   background: var(--accent);
   color: var(--app-bg);
   border-left: 3px solid var(--red);
@@ -21,10 +21,9 @@
 .video-navigation {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--line);
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
   min-width: 0;
 }
 .video-navigation button,
@@ -364,9 +363,6 @@
   }
   .video-poster-wall {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .video-navigation {
-    padding: 8px;
   }
 }
 @media (max-width: 620px) {

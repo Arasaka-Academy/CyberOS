@@ -7,7 +7,7 @@
     "dev": "astro dev --host 127.0.0.1 --port 4321",
     "check": "astro check",
     "test": "node --test tests/content.test.mjs tests/search-index.test.mjs",
-    "build": "node scripts/verify-search-index.mjs --prepare && astro check && astro build && node scripts/verify-search-index.mjs",
+    "build": "node scripts/verify-search-index.mjs --prepare && astro check && astro build && pagefind --site dist && node scripts/verify-search-index.mjs",
     "preview": "astro preview --host 127.0.0.1 --port 4321",
     "browser": "playwright test"
   },

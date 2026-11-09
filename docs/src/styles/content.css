@@ -163,10 +163,10 @@
   height: auto;
 }
 
-:where(.card, .sl-link-card) {
-  border: 1px solid var(--cyberos-hud-line-neutral);
-  color: var(--cyberos-hud-text);
-  background: var(--cyberos-hud-panel);
+:is(.sl-markdown-content .card, .sl-link-card) {
+  border: 1px solid transparent;
+  color: var(--cyber-ink);
+  background: var(--cyber-soft);
   box-shadow: none;
 }
 

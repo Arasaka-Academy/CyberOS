@@ -5,9 +5,6 @@
 
 .management-command-panel {
   padding: 10px 4px 20px;
-  border: 0;
-  border-bottom: 2px solid var(--hud-ink);
-  border-radius: 0;
 }
 
 .management-command-copy h3 {
@@ -17,11 +14,6 @@
 
 .management-metric {
   min-height: 104px;
-  border-top: 3px solid var(--hud-ink);
-}
-
-.management-emblem {
-  border: 2px solid var(--hud-ink);
 }
 
 .management-dashboard-grid > .react-grid-item.react-grid-placeholder {

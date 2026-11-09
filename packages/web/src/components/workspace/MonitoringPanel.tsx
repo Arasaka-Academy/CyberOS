@@ -525,7 +525,7 @@ function metricItem(
   return {
     id,
     title: label,
-    content: <article className="management-metric"><Icon aria-hidden="true" size={18} /><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>
+    content: <article className="ui-card management-metric"><Icon aria-hidden="true" size={18} /><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>
   };
 }
 

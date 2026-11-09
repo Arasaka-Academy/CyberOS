@@ -64,27 +64,6 @@
   grid-area: meta;
 }
 
-.files-header-actions .files-header-button,
-.files-header-actions .activity-menu-button {
-  border-color: var(--hud-line-soft);
-  color: var(--hud-muted);
-  background: color-mix(in srgb, var(--cyberos-color-text) 2%, transparent);
-}
-
-.files-header-actions :where(.files-header-button, .activity-menu-button):hover:not(:disabled) {
-  border-color: var(--hud-cyan);
-  color: var(--hud-void);
-  background: var(--hud-cyan);
-  box-shadow: 3px 3px 0 var(--hud-red);
-}
-
-.app-shell .files-header-actions .files-header-button:disabled,
-.app-shell .files-header-actions .activity-menu-button:disabled {
-  border-color: var(--hud-line-soft);
-  color: var(--hud-dim);
-  background: transparent;
-}
-
 .files-navigation-bar {
   padding: 10px 14px 12px;
   border-bottom: 1px solid var(--hud-line);

@@ -7,9 +7,3 @@
   background: var(--modal-backdrop);
   backdrop-filter: blur(2px);
 }
-
-.approval-card-details div {
-  border: 1px solid var(--hud-ink);
-  border-radius: 0;
-  background: color-mix(in srgb, var(--cyberos-color-surface-raised) 7%, transparent);
-}

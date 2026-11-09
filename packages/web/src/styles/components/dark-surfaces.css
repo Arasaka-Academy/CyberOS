@@ -38,19 +38,12 @@
   background: var(--input-bg);
 }
 
-.management-dashboard-widget,
-.management-section,
-.management-metric,
-.management-command-panel,
 .download-task,
 .settings-section-card,
 .settings-policy-row,
 .monitoring-alert-table-wrap,
-.monitoring-incident-list article,
-.monitoring-incident-detail-section,
 .settings-alerts-section,
 .activity-popover,
-.notification-item,
 .workspace-empty-state,
 .preview-empty {
   border-color: var(--line);
@@ -59,18 +52,12 @@
   box-shadow: inset 3px 0 0 color-mix(in srgb, var(--cyberos-color-danger) 22%, transparent);
 }
 
-.management-dashboard-widget:hover,
-.download-task:hover,
-.monitoring-incident-list article:hover,
-.notification-item:hover {
+.download-task:hover {
   border-color: var(--hud-cyan);
   background: var(--surface-hover);
 }
 
-.management-command-panel,
-.management-section,
 .settings-section-card,
-.monitoring-incident-detail-section,
 .settings-alerts-section {
   box-shadow: none;
 }
@@ -84,18 +71,6 @@
   box-shadow: none;
 }
 
-.management-emblem {
-  border-radius: 0;
-  border-color: var(--hud-red);
-  color: var(--accent-text);
-  background: var(--hud-ink);
-  box-shadow: 3px 3px 0 var(--hud-red);
-}
-
 .management-fact-list div {
   padding-inline: 4px;
-  border: 0;
-  border-top: 1px solid var(--line);
-  border-radius: 0;
-  background: transparent;
 }

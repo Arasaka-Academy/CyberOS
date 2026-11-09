@@ -30,9 +30,6 @@
 .docker-pressure-stat {
   min-width: 0;
   padding: 10px;
-  border: 1px solid var(--line-soft);
-  border-radius: 5px;
-  background: var(--subtle-bg);
 }
 
 .docker-pressure-stat > div {

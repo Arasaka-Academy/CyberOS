@@ -11,7 +11,8 @@
   }
   .brand-banner, .brand-banner-wordmark { color: var(--cyber-ink); }
   .agent-brand-logo, .settings-brand-logo, .brand-banner-mark, .mobile-home-brand img, .tv-brand img { filter: var(--cyberos-logo-filter); }
-  .management-title-icon, .mobile-title-icon { color: var(--cyber-on-accent); background: var(--cyber-accent); }
+  .management-title-icon, .mobile-title-icon, .chat-header-index { color: var(--cyber-on-accent); background: var(--cyber-accent); }
+  .notification-badge, .view-tab-badge, .session-approval-badge, .mobile-app-badge { color: var(--cyber-on-accent); background: var(--cyber-accent); }
   .management-title-copy h2, .workspace-title, .settings-content-header h2 { color: var(--cyber-ink); font-weight: 600; }
   .management-title-copy h2::before, .workspace-title::before { color: var(--cyber-accent-text); }
   .agent-row.is-active, .agent-item.is-active, .settings-nav button.is-active {
@@ -22,7 +23,6 @@
   .custom-select-option.is-selected, .custom-select-option.is-active { color: var(--cyber-on-accent2); background: var(--cyber-accent2); }
   .hud-switch[data-state='on'] .hud-switch-track { background: var(--cyber-accent); border-color: var(--cyber-accent); }
   .hud-switch[data-state='on'] .hud-switch-thumb { background: var(--cyber-on-accent); }
-  .management-card, .approval-card { border-color: var(--cyber-line); background: var(--cyber-bg); box-shadow: none; }
   .management-card > header { border-color: var(--cyber-line); }
   .modal, .settings-modal, .editor-modal, .file-preview-dialog, .notification-drawer { background: var(--cyber-bg); border-color: var(--cyber-line); box-shadow: 6px 6px 0 var(--cyber-soft); }
   .chat-pane, .chat-messages, .message-list { background: var(--cyber-bg); color: var(--cyber-ink); }

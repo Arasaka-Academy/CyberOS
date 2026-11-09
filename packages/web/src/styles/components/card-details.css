@@ -1,0 +1,56 @@
+/* Details use open sections, soft summaries and separated records, including portals. */
+@layer app {
+  :is(.docker-container-detail-section, .network-interface-detail-section, .network-interface-flags,
+    .storage-disk-detail-section, .storage-pool-members) {
+    border: 0;
+    border-top: 1px solid var(--cyber-line);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .docker-container-detail-overview { background: transparent; }
+  :is(.network-interface-detail-section, .network-interface-flags) > header { background: transparent; }
+  :is(.docker-container-detail-section-heading, .network-interface-detail-section, .network-interface-flags, .storage-disk-detail-section) h3 {
+    color: var(--cyber-ink);
+    font: 600 15px/24px var(--cyberos-font-ui);
+  }
+  :is(.network-interface-overview, .storage-disk-capacity-overview, .storage-pool-details-overview,
+    .system-wifi-device-summary, .docker-container-detail-stat, .docker-pressure-stat) {
+    border: 0;
+    border-radius: 0;
+    color: var(--cyber-ink);
+    background: var(--cyber-soft);
+    box-shadow: none;
+  }
+  .network-interface-detail-facts > div,
+  .storage-pool-details-facts > div,
+  .docker-image-detail-grid > div,
+  .docker-compose-delete-confirmation dl > div,
+  .network-traffic-stats > div {
+    border: 0;
+    border-top: 1px solid var(--cyber-line);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .management-resource-row,
+  .docker-inspect-ipam-list > div,
+  .docker-inspect-container-list article,
+  .docker-registry-list article,
+  .monitoring-incident-deliveries article {
+    border: 0;
+    border-bottom: 1px solid var(--cyber-line);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  :is(.docker-container-detail-icon, .network-interface-details-icon, .system-wifi-device-icon,
+    .system-ethernet-device-icon, .docker-compose-app-icon, .network-interface-family,
+    .network-interface-overview-status .management-row-status-icon, .system-ethernet-family,
+    .network-interface-flags > div > span, .storage-pool-member, .storage-disk-selection,
+    .storage-disk-option, .storage-pool-delete-panel, .storage-pool-confirmation,
+    .docker-compose-environment, .photo-metadata-inspector details, .photo-metadata-warnings,
+    .photo-map-download-state, .photo-map-loading, .monitoring-incident-snapshots pre) { border-radius: 0; }
+  .storage-disk-option { background: var(--cyber-soft); }
+  .photo-filter-menu { border-radius: 0; box-shadow: 4px 4px 0 var(--cyber-soft); }
+}

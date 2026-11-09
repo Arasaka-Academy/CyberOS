@@ -1,0 +1,74 @@
+/* Business adapters for the shared Card / Panel / Section contract.
+   Layout and data states stay in their owning modules. */
+@layer app {
+  .management-command-panel:not(.ui-section),
+  .management-section:not(.ui-section) {
+    border: 0;
+    border-top: 1px solid var(--cyber-line);
+    border-radius: 0;
+    color: var(--cyber-ink);
+    background: transparent;
+    box-shadow: none;
+  }
+  .management-widget-content > :is(.management-command-panel, .management-section, .management-metric) {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .management-widget-content > .management-command-panel { padding: 14px; }
+  .management-section:not(.ui-section) > .management-section-header { padding: 12px 14px; }
+  .management-section-header { flex-wrap: wrap; border-color: var(--cyber-line); }
+  .management-section-header h3 { margin: 0; font: 600 15px/24px var(--cyberos-font-ui); }
+  .management-section-header p { color: var(--cyber-muted); font-size: 12px; }
+  .management-section-header .panel-header-action:not(:disabled) {
+    border-color: var(--cyber-line);
+    color: var(--cyber-ink);
+    background: var(--cyber-soft);
+    box-shadow: none;
+  }
+  .management-section-header .panel-header-action:hover:not(:disabled) {
+    border-color: var(--cyber-accent2);
+    color: var(--cyber-on-accent2);
+    background: var(--cyber-accent2);
+  }
+  .management-workload {
+    border: 0;
+    border-bottom: 1px solid var(--cyber-line);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .management-emblem { border: 1px solid var(--cyber-line); color: var(--cyber-accent2-text); background: var(--cyber-soft); box-shadow: none; }
+  .management-fact-list > div { border: 0; border-top: 1px solid var(--cyber-line); border-radius: 0; background: transparent; }
+  .settings-metric-grid > :is(article, div) { padding: 14px; border: 0; border-radius: 0; background: var(--cyber-soft); box-shadow: none; }
+  .approval-card-icon { border: 0; border-radius: 0; }
+  .approval-card-preview pre { border-color: var(--cyber-line); border-radius: 0; background: var(--cyber-soft); }
+  .approval-card-details > div { border: 0; border-top: 1px solid var(--cyber-line); border-radius: 0; background: transparent; }
+  /* Rows remain open records, rather than nested framed cards. */
+  .monitoring-incident-list article,
+  .monitoring-incident-detail-section,
+  .notification-item {
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .monitoring-incident-list article[data-unread="true"],
+  .notification-item[data-unread="true"] { background: var(--cyber-soft); box-shadow: inset 3px 0 0 var(--cyber-accent); }
+  .notification-item:hover { background: var(--cyberos-color-surface-hover); }
+  .notification-status-icon { border-radius: 0; }
+  .notification-unread-dot, .activity-unread-dot { box-shadow: none; }
+  .monitoring-incident-marker, .monitoring-range, .monitoring-notice { border-radius: 0; }
+  /* Images own the aspect ratio; their interactive roots retain an outer focus ring. */
+  .video-panel .video-poster.ui-card { border: 0; background: var(--cyber-soft); box-shadow: none; }
+  .video-poster.ui-card > :is(strong, small) { padding-inline: 6px; }
+  .video-poster.ui-card > small { padding-bottom: 6px; }
+  .music-album.ui-card { background: var(--cyber-soft); }
+  .music-album.ui-card .music-album-meta,
+  .music-album.ui-card .music-album-open > :is(strong, small) { padding-inline: 6px; }
+  .video-artwork, .music-cover { border-color: var(--cyber-line); background-color: var(--cyber-soft); }
+  .video-poster.ui-card:hover .video-artwork { border-color: var(--cyber-accent2); }
+  .photo-tile.ui-card { border: 1px solid var(--cyber-line); background: var(--cyber-soft); }
+  .photo-tile.ui-card:hover { border-color: var(--cyber-accent2); box-shadow: none; }
+  .photo-tile.ui-card.is-selected { border-color: var(--cyber-accent); box-shadow: inset 0 0 0 3px var(--cyber-accent); }
+  .photo-tile.ui-card:focus-within { outline: 2px solid var(--cyber-accent2); outline-offset: 3px; }
+}
