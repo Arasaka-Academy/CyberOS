@@ -1,0 +1,162 @@
+.workspace-terminal-frame.has-search {
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+.workspace-terminal-panel:fullscreen {
+  width: 100%;
+  height: 100dvh;
+  background: var(--footer-bg);
+}
+
+.terminal-toolbar,
+.terminal-desktop-tools {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.terminal-toolbar {
+  gap: 0;
+  padding: 0 4px;
+  border-left: 1px solid var(--line);
+}
+
+.terminal-tool {
+  display: inline-grid;
+  flex: 0 0 36px;
+  place-items: center;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  color: var(--muted);
+}
+
+.terminal-tool[aria-pressed="true"] {
+  color: var(--accent-soft-text);
+  background: var(--surface-hover);
+}
+
+.terminal-mobile-tools {
+  position: relative;
+  display: none;
+}
+
+.terminal-more-menu {
+  position: absolute;
+  z-index: 12;
+  top: calc(100% + 5px);
+  right: 0;
+  display: grid;
+  width: min(230px, calc(100vw - 32px));
+  max-height: calc(100dvh - 180px);
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--line);
+  background: var(--modal-bg);
+  box-shadow: var(--shadow);
+}
+
+.terminal-more-menu button {
+  display: flex;
+  justify-content: flex-start;
+  gap: 10px;
+  min-height: 44px;
+  text-align: left;
+}
+
+.terminal-search {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  background: var(--channel-bg);
+}
+
+.terminal-search > svg {
+  flex: 0 0 auto;
+  margin-right: 4px;
+}
+
+.terminal-search input {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  font-family: var(--code-font-family);
+}
+
+.terminal-search-result {
+  flex: 0 0 auto;
+  color: var(--warning-text);
+  font-size: 11px;
+}
+
+.terminal-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  background: var(--channel-bg);
+  font-family: var(--code-font-family);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.terminal-connection {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.terminal-connection i {
+  width: 5px;
+  height: 5px;
+  background: currentColor;
+}
+
+.terminal-statusbar[data-status="connected"] .terminal-connection {
+  color: var(--success-text);
+}
+
+.terminal-statusbar[data-status="connecting"] .terminal-connection {
+  color: var(--warning-text);
+}
+
+.terminal-statusbar[data-status="error"] .terminal-connection {
+  color: var(--danger-text);
+}
+
+.terminal-status-detail {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terminal-dimensions,
+.terminal-encoding {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.terminal-clipboard-dialog textarea {
+  width: 100%;
+  max-height: 36dvh;
+  min-height: 100px;
+  resize: vertical;
+  font-family: var(--code-font-family);
+  font-size: var(--code-font-size);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

@@ -54,6 +54,8 @@ impl TmuxManager {
     ) -> Result<(), TerminalError> {
         let _guard = self.command_lock.lock().await;
         if self.has_session_unlocked(session_name).await? {
+            self.set_option_unlocked(session_name, "status", "off")
+                .await?;
             self.set_option_unlocked(session_name, "@cyberos_managed", "1")
                 .await?;
             self.set_option_unlocked(
@@ -86,6 +88,8 @@ impl TmuxManager {
         ])
         .await?;
         let initialization = async {
+            self.set_option_unlocked(session_name, "status", "off")
+                .await?;
             self.set_option_unlocked(session_name, "@cyberos_managed", "1")
                 .await?;
             self.set_option_unlocked(

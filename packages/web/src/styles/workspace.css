@@ -8,6 +8,7 @@
 @import "./downloads/create.css";
 @import "./downloads/torrent.css";
 @import "./terminal/workspace.css";
+@import "./terminal/controls.css";
 @import "./management/header.css";
 @import "./docker/create-fields.css";
 @import "./components/status.css";

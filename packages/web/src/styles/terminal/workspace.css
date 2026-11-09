@@ -18,23 +18,23 @@
 
 .workspace-terminal-frame {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
   min-width: 0;
   min-height: 0;
   margin: 12px 14px 14px;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 0;
   background: var(--code-bg);
 }
 
 .workspace-terminal-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0;
   min-width: 0;
-  min-height: 46px;
-  padding: 0 10px;
+  min-height: 44px;
+  padding: 0;
   border-bottom: 1px solid var(--header-border);
   background: var(--channel-bg);
 }
@@ -44,7 +44,7 @@
   flex: 1 1 auto;
   align-items: stretch;
   min-width: 0;
-  height: 45px;
+  height: 44px;
 }
 
 .workspace-terminal-tabs {
@@ -64,7 +64,7 @@
   gap: 7px;
   min-width: 92px;
   max-width: 190px;
-  height: 45px;
+  height: 44px;
   padding: 0 12px;
   overflow: hidden;
   border: 0;
@@ -124,10 +124,10 @@
 
 .workspace-terminal-new-tab {
   display: inline-grid;
-  flex: 0 0 38px;
+  flex: 0 0 36px;
   place-items: center;
-  width: 38px;
-  height: 45px;
+  width: 36px;
+  height: 44px;
   padding: 0;
   border: 0;
   border-right: 1px solid var(--line-soft);
@@ -163,7 +163,7 @@
   width: min(132px, 34%);
   height: 29px;
   flex: 0 1 132px;
-  border-radius: 4px;
+  border-radius: 0;
 }
 
 .workspace-terminal-tab-skeleton.is-short {
@@ -175,7 +175,7 @@
   width: 30px;
   height: 30px;
   flex: 0 0 30px;
-  border-radius: 4px;
+  border-radius: 0;
 }
 
 .workspace-terminal-actions {
@@ -195,10 +195,10 @@
 
 .workspace-terminal {
   position: absolute;
-  inset: 0;
+  inset: 10px;
   min-width: 0;
   min-height: 0;
-  padding: 10px;
+  padding: 0;
   overflow: hidden;
   background: var(--code-bg);
 }
@@ -236,6 +236,7 @@
 .workspace-terminal .xterm {
   width: 100%;
   height: 100%;
+  background: var(--code-bg);
 }
 
 .workspace-terminal .xterm-viewport,
@@ -287,7 +288,7 @@
   padding: 12px 14px;
   transform: translateX(-50%);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 0;
   color: var(--muted);
   background: var(--modal-bg);
   box-shadow: var(--shadow);
@@ -311,7 +312,7 @@
   max-width: min(520px, calc(100% - 24px));
   padding: 9px 10px 9px 12px;
   border: 1px solid var(--danger-border);
-  border-radius: 5px;
+  border-radius: 0;
   color: var(--danger-text);
   background: var(--modal-bg);
   box-shadow: var(--shadow);

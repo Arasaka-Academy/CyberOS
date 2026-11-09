@@ -9,6 +9,7 @@ use tokio::time::{MissedTickBehavior, interval, timeout};
 #[tokio::test]
 async fn attaches_to_a_real_tmux_session_through_a_pty() {
     let directory = tempfile::tempdir().unwrap();
+    let _cleanup = TmuxCleanup(directory.path().join("tmux.sock"));
     let account = Account {
         name: std::env::var("USER").unwrap_or_else(|_| "cyberos-test".to_owned()),
         uid: Uid::current().as_raw(),
@@ -24,6 +25,10 @@ async fn attaches_to_a_real_tmux_session_through_a_pty() {
 
     let session = "cyberos-integration";
     manager.ensure_session(session, true).await.unwrap();
+    assert_eq!(
+        session_status(&directory.path().join("tmux.sock"), session),
+        "off"
+    );
     let mut process = pty::spawn(manager.attach_command(session), 120, 32).unwrap();
     pty::write_all(&process.master, b"printf 'terminal-integration-ready\\n'\r")
         .await
@@ -136,8 +141,21 @@ async fn starts_in_account_home_and_preserves_shell_and_directory_on_reattach() 
 
     // A new manager models a daemon restart; ensure_session must attach to
     // the existing shell rather than reset its directory or environment.
+    assert!(
+        std::process::Command::new("tmux")
+            .arg("-S")
+            .arg(&socket)
+            .args(["set-option", "-t", session, "status", "on"])
+            .status()
+            .unwrap()
+            .success()
+    );
     let restarted = TmuxManager::new(socket, account, 4);
     restarted.ensure_session(session, true).await.unwrap();
+    assert_eq!(
+        session_status(&home.join(".cyberos/tmux.sock"), session),
+        "off"
+    );
     let mut reattached = pty::spawn(restarted.attach_command(session), 120, 32).unwrap();
     pty::write_all(
         &reattached.master,
@@ -192,6 +210,65 @@ async fn read_probe(
 }
 
 struct TmuxCleanup(PathBuf);
+
+#[tokio::test]
+async fn hides_only_managed_session_status_without_changing_other_tmux_sessions() {
+    let directory = tempfile::tempdir().unwrap();
+    let socket = directory.path().join("tmux.sock");
+    let _cleanup = TmuxCleanup(socket.clone());
+    let account = Account {
+        name: std::env::var("USER").unwrap_or_else(|_| "cyberos-test".to_owned()),
+        uid: Uid::current().as_raw(),
+        gid: Gid::current().as_raw(),
+        home: directory.path().to_owned(),
+        shell: PathBuf::from("/bin/sh"),
+    };
+    let manager = TmuxManager::new(socket.clone(), account, 4);
+    if manager.ensure_available().await.is_err() {
+        eprintln!("tmux is unavailable; skipping managed status integration test");
+        return;
+    }
+    manager
+        .ensure_session("cyberos-managed", true)
+        .await
+        .unwrap();
+    for arguments in [
+        vec!["new-session", "-d", "-s", "user-owned"],
+        vec!["set-option", "-t", "user-owned", "status", "on"],
+        vec!["set-option", "-t", "cyberos-managed", "status", "on"],
+    ] {
+        assert!(
+            std::process::Command::new("tmux")
+                .arg("-S")
+                .arg(&socket)
+                .args(arguments)
+                .status()
+                .unwrap()
+                .success()
+        );
+    }
+    manager
+        .ensure_session("cyberos-managed", true)
+        .await
+        .unwrap();
+    assert_eq!(session_status(&socket, "cyberos-managed"), "off");
+    assert_eq!(session_status(&socket, "user-owned"), "on");
+}
+
+fn session_status(socket: &std::path::Path, session: &str) -> String {
+    let output = std::process::Command::new("tmux")
+        .arg("-S")
+        .arg(socket)
+        .args(["show-options", "-v", "-t", session, "status"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8(output.stdout).unwrap().trim().to_owned()
+}
 
 impl Drop for TmuxCleanup {
     fn drop(&mut self) {

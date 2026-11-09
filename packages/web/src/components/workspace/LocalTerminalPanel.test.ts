@@ -73,7 +73,8 @@ describe("LocalTerminalPanel", () => {
     expect(html).toContain('class="workspace-terminal-skeleton"');
     expect(html).toContain('role="status"');
     expect(html).toContain("Loading");
-    expect(html.match(/disabled=""/gu)).toHaveLength(3);
+    expect(html.match(/disabled=""/gu)).toHaveLength(7);
+    expect(html).toContain('aria-label="Terminal tools"');
   });
 
   it("keeps the skeleton only until the current root request settles", () => {

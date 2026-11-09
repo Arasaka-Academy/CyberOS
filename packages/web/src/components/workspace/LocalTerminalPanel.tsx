@@ -1,5 +1,4 @@
 import { Button as UiButton, DialogActions, DialogHeader, Field, Input } from "@cyberos/ui";
-import { APPEARANCE_EVENT } from "@cyberos/shared/appearance";
 import { ModalPortal } from "../common/ModalPortal.js";
 import {
   useCallback,
@@ -11,9 +10,6 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { LoaderCircle, Pencil, Plus, RefreshCw, TerminalSquare, X } from "lucide-react";
-import { FitAddon } from "@xterm/addon-fit";
-import { Terminal } from "@xterm/xterm";
-import "@xterm/xterm/css/xterm.css";
 import {
   activateTerminalTab,
   createTerminalTab,
@@ -31,26 +27,14 @@ import {
   terminalTabNavigationTarget,
   type TerminalTabNavigationKey
 } from "../../lib/terminal-tabs.js";
-import { applyTerminalOptions, terminalOptions } from "../../lib/terminal-theme.js";
+import type { TerminalViewState } from "../../lib/terminal-workbench.js";
+import { TerminalSessionView } from "./terminal/TerminalSessionView.js";
+import { TerminalToolbar, TerminalSearchBar, TerminalStatusBar } from "./terminal/TerminalControls.js";
+import { TerminalClipboardDialog } from "./terminal/TerminalClipboardDialog.js";
+import { useTerminalWorkbench } from "./terminal/useTerminalWorkbench.js";
+export { terminalReconnectDelay } from "../../lib/terminal-workbench.js";
 import { SkeletonBlock } from "./ManagementSkeleton.js";
 import { PanelHeader, PanelHeaderAction, PanelHeaderActions } from "./PanelHeader.js";
-
-type TerminalStatus = "connecting" | "connected" | "disconnected" | "error" | "exited" | "takenOver";
-
-interface TerminalMessage {
-  type: "ready" | "output" | "exit" | "error" | "taken_over";
-  cwd?: string;
-  sessionId?: string;
-  data?: string;
-  truncated?: boolean;
-  exitCode?: number;
-  error?: string;
-}
-
-interface TerminalViewState {
-  status: TerminalStatus;
-  diagnostic: string | null;
-}
 
 export function LocalTerminalPanel({
   active
@@ -142,7 +126,9 @@ export function LocalTerminalPanel({
   const updateViewState = useCallback((tabId: string, nextState: TerminalViewState) => {
     setViewStates((current) => {
       const previous = current[tabId];
-      if (previous?.status === nextState.status && previous.diagnostic === nextState.diagnostic) {
+      if (previous?.status === nextState.status && previous.diagnostic === nextState.diagnostic
+        && previous.cols === nextState.cols && previous.rows === nextState.rows
+        && previous.hasSelection === nextState.hasSelection && previous.connectionId === nextState.connectionId) {
         return current;
       }
       return { ...current, [tabId]: nextState };
@@ -306,9 +292,11 @@ export function LocalTerminalPanel({
   const atLocalLimit = Boolean(tabState && tabs.length >= tabState.maxSessions);
   const visibleTabs = tabs.filter((tab) => visitedTabIds.has(tab.id));
   const currentLoadError = loadError;
+  const workbench = useTerminalWorkbench({ active, tabId: activeTab?.id ?? null, busy: Boolean(pendingAction), viewState: activeViewState });
 
   return (
     <section
+      ref={workbench.panelRef}
       className="workspace-terminal-panel"
       hidden={!active}
       aria-hidden={!active}
@@ -352,7 +340,7 @@ export function LocalTerminalPanel({
         </PanelHeaderActions>}
       />
 
-      <div className="workspace-terminal-frame">
+      <div className={`workspace-terminal-frame${workbench.searchOpen ? " has-search" : ""}`}>
         <div className="workspace-terminal-header">
           {initialLoading ? (
             <div className="workspace-terminal-tabs-skeleton" aria-hidden="true">
@@ -373,7 +361,20 @@ export function LocalTerminalPanel({
           ) : (
             <div className="workspace-terminal-tabs-placeholder" aria-hidden="true" />
           )}
+          <TerminalToolbar
+            disabled={initialLoading || !activeTab || Boolean(pendingAction)}
+            connected={activeViewState?.status === "connected"}
+            hasSelection={Boolean(activeViewState?.hasSelection)}
+            searchOpen={workbench.searchOpen}
+            fullscreen={workbench.fullscreen}
+            fullscreenSupported={workbench.fullscreenSupported}
+            onSearch={workbench.searchOpen ? workbench.closeSearch : workbench.openSearch}
+            onCopy={() => void workbench.copy()}
+            onPaste={() => void workbench.pasteFromClipboard()}
+            onFullscreen={() => void workbench.toggleFullscreen()}
+          />
         </div>
+        {workbench.searchOpen ? <TerminalSearchBar query={workbench.query} found={workbench.found} onSearch={workbench.search} onClose={workbench.closeSearch} /> : null}
 
         <div className="workspace-terminal-stage">
           {initialLoading ? <span className="visually-hidden" role="status">{t("common.states.loading")}</span> : null}
@@ -403,13 +404,18 @@ export function LocalTerminalPanel({
           {visibleTabs.map((tab) => (
             <TerminalSessionView
               key={tab.id}
-              tab={tab}
+              tabId={tab.id}
+              inputEnabled={!pendingAction}
               label={terminalTabLabel(tab, t)}
               active={active && tab.id === tabState?.activeTabId}
               connectionVersion={connectionVersions[tab.id] ?? 0}
               connectionError={String(t("workspace.terminal.connectionError"))}
               disconnectedError={String(t("workspace.terminal.disconnectedError"))}
               onStateChange={updateViewState}
+              onController={workbench.onController}
+              onPaste={workbench.onPaste}
+              onShortcut={workbench.onShortcut}
+              onInputError={workbench.onInputError}
             />
           ))}
 
@@ -442,7 +448,9 @@ export function LocalTerminalPanel({
             </div>
           ) : null}
         </div>
+        <TerminalStatusBar state={activeViewState} feedback={workbench.feedback} />
       </div>
+      {workbench.clipboard ? <TerminalClipboardDialog key={workbench.clipboard.kind} state={workbench.clipboard} onClose={workbench.closeClipboard} onSubmit={workbench.submitClipboard} /> : null}
 
       {renameCandidate ? (
         <ModalPortal className="file-action-backdrop" role="presentation" onRequestClose={() => setRenameCandidate(null)} closeDisabled={Boolean(pendingAction)} onMouseDown={(event) => event.currentTarget === event.target && setRenameCandidate(null)}>
@@ -571,233 +579,8 @@ export function TerminalTabBar({
   );
 }
 
-function TerminalSessionView({
-  tab,
-  label,
-  active,
-  connectionVersion,
-  connectionError,
-  disconnectedError,
-  onStateChange
-}: {
-  tab: TerminalTab;
-  label: string;
-  active: boolean;
-  connectionVersion: number;
-  connectionError: string;
-  disconnectedError: string;
-  onStateChange: (tabId: string, state: TerminalViewState) => void;
-}) {
-  const hostRef = useRef<HTMLDivElement | null>(null);
-  const terminalRef = useRef<Terminal | null>(null);
-  const fitAddonRef = useRef<FitAddon | null>(null);
-  const socketRef = useRef<WebSocket | null>(null);
-  const activeRef = useRef(active);
-
-  activeRef.current = active;
-
-  useEffect(() => {
-    const host = hostRef.current;
-    if (!host) {
-      return;
-    }
-    const terminal = new Terminal({
-      cursorBlink: true,
-      convertEol: true,
-      scrollback: 2_000,
-      ...terminalOptions(host)
-    });
-    const fitAddon = new FitAddon();
-    terminal.loadAddon(fitAddon);
-    terminal.open(host);
-    terminalRef.current = terminal;
-    fitAddonRef.current = fitAddon;
-
-    const fit = () => {
-      if (!activeRef.current || host.clientWidth === 0 || host.clientHeight === 0) {
-        return;
-      }
-      fitAddon.fit();
-      const socket = socketRef.current;
-      if (socket?.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ type: "resize", cols: terminal.cols, rows: terminal.rows }));
-      }
-    };
-    const resizeObserver = new ResizeObserver(fit);
-    resizeObserver.observe(host);
-    const dataDisposable = terminal.onData((data) => {
-      const socket = socketRef.current;
-      if (socket?.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ type: "input", data }));
-      }
-    });
-
-    return () => {
-      resizeObserver.disconnect();
-      dataDisposable.dispose();
-      socketRef.current?.close();
-      socketRef.current = null;
-      fitAddonRef.current = null;
-      terminalRef.current = null;
-      terminal.dispose();
-    };
-  }, []);
-
-  useEffect(() => {
-    const terminal = terminalRef.current;
-    const host = hostRef.current;
-    if (!terminal || !host) {
-      return;
-    }
-    applyTerminalOptions(terminal, host);
-    if (active) {
-      window.setTimeout(() => {
-        if (terminalRef.current !== terminal || !fitAddonRef.current || host.clientWidth === 0 || host.clientHeight === 0) {
-          return;
-        }
-        fitAddonRef.current.fit();
-        terminal.focus();
-      }, 0);
-    }
-  }, [active]);
-
-  useEffect(() => {
-    const update = () => { if (terminalRef.current && hostRef.current) applyTerminalOptions(terminalRef.current, hostRef.current); };
-    window.addEventListener(APPEARANCE_EVENT, update);
-    return () => window.removeEventListener(APPEARANCE_EVENT, update);
-  }, []);
-
-  useEffect(() => {
-    if (!active) {
-      const currentSocket = socketRef.current;
-      socketRef.current = null;
-      if (currentSocket && currentSocket.readyState < WebSocket.CLOSING) {
-        currentSocket.close();
-      }
-      return;
-    }
-
-    let disposed = false;
-    let stopped = false;
-    let retryTimer: number | null = null;
-    let retryAttempt = 0;
-
-    const report = (status: TerminalStatus, diagnostic: string | null = null) => {
-      if (!disposed) {
-        onStateChange(tab.id, { status, diagnostic });
-      }
-    };
-    const fitAndResize = () => {
-      const terminal = terminalRef.current;
-      const fitAddon = fitAddonRef.current;
-      const host = hostRef.current;
-      if (!terminal || !fitAddon || !host || host.clientWidth === 0 || host.clientHeight === 0) {
-        return;
-      }
-      fitAddon.fit();
-      if (socketRef.current?.readyState === WebSocket.OPEN) {
-        socketRef.current.send(JSON.stringify({ type: "resize", cols: terminal.cols, rows: terminal.rows }));
-      }
-    };
-    const scheduleReconnect = () => {
-      if (disposed || stopped || retryTimer !== null) {
-        return;
-      }
-      const delay = terminalReconnectDelay(retryAttempt);
-      retryAttempt += 1;
-      retryTimer = window.setTimeout(() => {
-        retryTimer = null;
-        connect();
-      }, delay);
-    };
-    const connect = () => {
-      const existing = socketRef.current;
-      if (disposed || stopped || existing?.readyState === WebSocket.OPEN || existing?.readyState === WebSocket.CONNECTING) {
-        return;
-      }
-      const socket = new WebSocket(terminalWebSocketUrl(), terminalWebSocketProtocols(tab.id));
-      socketRef.current = socket;
-      report("connecting");
-      socket.addEventListener("open", () => {
-        if (disposed || socketRef.current !== socket) {
-          return;
-        }
-        fitAndResize();
-      });
-      socket.addEventListener("message", (event) => {
-        if (disposed || socketRef.current !== socket) {
-          return;
-        }
-        const message = parseTerminalMessage(event.data);
-        if (!message) {
-          return;
-        }
-        if (message.type === "ready") {
-          retryAttempt = 0;
-          report("connected");
-          fitAndResize();
-        } else if (message.type === "output" && message.data) {
-          terminalRef.current?.write(message.data);
-        } else if (message.type === "error") {
-          report("error", message.error ?? connectionError);
-        } else if (message.type === "exit") {
-          stopped = true;
-          report("exited");
-        } else if (message.type === "taken_over") {
-          stopped = true;
-          report("takenOver");
-        }
-      });
-      socket.addEventListener("error", () => {
-        if (!disposed && socketRef.current === socket && !stopped) {
-          report("error", connectionError);
-        }
-      });
-      socket.addEventListener("close", () => {
-        if (socketRef.current !== socket) {
-          return;
-        }
-        socketRef.current = null;
-        if (disposed || stopped) {
-          return;
-        }
-        report("disconnected", disconnectedError);
-        scheduleReconnect();
-      });
-    };
-
-    connect();
-    return () => {
-      disposed = true;
-      if (retryTimer !== null) {
-        window.clearTimeout(retryTimer);
-      }
-      const socket = socketRef.current;
-      socketRef.current = null;
-      if (socket && socket.readyState < WebSocket.CLOSING) {
-        socket.close();
-      }
-    };
-  }, [active, connectionError, connectionVersion, disconnectedError, onStateChange, tab.id]);
-
-  return (
-    <div
-      ref={hostRef}
-      id={`terminal-panel-${tab.id}`}
-      className="workspace-terminal"
-      role="tabpanel"
-      aria-label={label}
-      hidden={!active}
-    />
-  );
-}
-
 export function terminalInitialLoadPending(terminalScope: string | undefined, settledScope: string | null): boolean {
   return Boolean(terminalScope && terminalScope !== settledScope);
-}
-
-export function terminalReconnectDelay(attempt: number): number {
-  return Math.min(5_000, 250 * 2 ** Math.min(Math.max(0, attempt), 5));
 }
 
 function TerminalEmptyState({
@@ -826,28 +609,6 @@ function TerminalEmptyState({
       ) : null}
     </div>
   );
-}
-
-function terminalWebSocketUrl(): string {
-  const url = new URL("/api/terminal", window.location.href);
-  url.protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return url.toString();
-}
-
-function terminalWebSocketProtocols(sessionId: string): string[] {
-  return ["cyberos-terminal-v1", `cyberos-session.${sessionId}`];
-}
-
-function parseTerminalMessage(raw: unknown): TerminalMessage | null {
-  try {
-    const parsed = JSON.parse(String(raw)) as TerminalMessage;
-    if (!["ready", "output", "exit", "error", "taken_over"].includes(parsed.type)) {
-      return null;
-    }
-    return parsed;
-  } catch {
-    return null;
-  }
 }
 
 function isTerminalNavigationKey(key: string): key is TerminalTabNavigationKey {
