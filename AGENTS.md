@@ -5,7 +5,8 @@ short Claude-specific handoff; this file is the project source of truth.
 
 ## Project And Runtime
 
-CyberOS is a mixed TypeScript/Rust monorepo for a single-user Linux NAS appliance.
+CyberOS is a personal operating system for the cyber era.
+The mixed TypeScript/Rust monorepo currently targets a single-user Linux host.
 It is deployed as native processes and systemd units, not as a Docker
 container. TypeScript workspaces live only under `packages/`; Rust workspace
 members live only under `crates/`. The repository has no source `apps/`

@@ -1,5 +1,6 @@
 {
   "name": "cyberos",
+  "description": "A personal operating system for the cyber era",
   "version": "2.4.0",
   "private": true,
   "license": "Apache-2.0",

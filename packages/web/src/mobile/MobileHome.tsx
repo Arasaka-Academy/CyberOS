@@ -95,7 +95,7 @@ export function MobileHome({ connection, unreadCount, approvalCount, onOpenApp, 
       <nav className="mobile-app-grid" aria-label={t("mobile.apps")}>
         {MOBILE_GRID_APPS.map((app) => <AppButton key={app.id} app={app} approvalCount={approvalCount} onOpenApp={onOpenApp} />)}
       </nav>
-      <div className="mobile-home-signature" aria-hidden="true"><span>CYBEROS</span><span>PERSONAL NETWORK SYSTEM</span></div>
+      <div className="mobile-home-signature" aria-hidden="true"><span>CYBEROS</span><span>{t("mobile.tagline")}</span></div>
     </section>
   );
 }

@@ -11,7 +11,7 @@ export default defineConfig({
     mermaid(),
     starlight({
       title: "CyberOS",
-      description: "CyberOS Linux NAS appliance 的技术实现、架构与运维文档。",
+      description: "CyberOS — a personal operating system for the cyber era. Technical implementation, architecture, and operations documentation.",
       customCss: ["./src/styles/custom.css"],
       components: {
         Head: "./src/components/Head.astro",

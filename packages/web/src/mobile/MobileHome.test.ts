@@ -1,13 +1,24 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n, initI18n } from "../i18n/index.js";
 import { MobileAppLoading, MobileDock, MobileHome } from "./MobileHome.js";
 import { WORKSPACE_PANEL_IDS } from "../lib/workspace-panel-settings.js";
 
-beforeAll(async () => { await initI18n(); await i18n.changeLanguage("en"); });
+beforeAll(async () => { await initI18n(); });
+beforeEach(async () => { await i18n.changeLanguage("en"); });
 
 describe("mobile home", () => {
+  it.each([
+    ["en", "PERSONAL OS FOR THE CYBER ERA"],
+    ["zh-CN", "赛博时代的个人操作系统"]
+  ])("shows the project positioning in %s", async (language, tagline) => {
+    await i18n.changeLanguage(language);
+    const html = renderToStaticMarkup(createElement(MobileHome, { connection: "online", unreadCount: 0, approvalCount: 0, onOpenApp: vi.fn(), onOpenNotifications: vi.fn() }));
+    expect(html).toContain(`<span>${tagline}</span>`);
+    expect(html).not.toContain("PERSONAL NETWORK SYSTEM");
+  });
+
   it("exposes fourteen named app buttons across home and Dock", () => {
     const html = renderToStaticMarkup(createElement("div", null,
       createElement(MobileHome, { connection: "online", unreadCount: 3, approvalCount: 0, onOpenApp: vi.fn(), onOpenNotifications: vi.fn() }),

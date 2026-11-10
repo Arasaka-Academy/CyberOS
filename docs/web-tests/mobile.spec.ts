@@ -13,6 +13,24 @@ async function noOverflow(page: Page) {
   }
 }
 
+for (const locale of ["en", "zh-CN"]) {
+  test(`${locale}: project positioning stays readable across mobile widths`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await fixtures(page, locale);
+    await page.goto("/#/home");
+    await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", "CyberOS — a personal operating system for the cyber era.");
+    const tagline = page.locator(".mobile-home-signature > span").last();
+    await expect(tagline).toHaveText(locale === "zh-CN" ? "赛博时代的个人操作系统" : "PERSONAL OS FOR THE CYBER ERA");
+    for (const width of [820, 560, 390, 320]) {
+      await page.setViewportSize({ width, height: 844 });
+      await expect(tagline).toBeVisible();
+      expect(await tagline.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+      await noOverflow(page);
+      await page.screenshot({ path: testInfo.outputPath(`positioning-${width}.png`) });
+    }
+  });
+}
+
 for (const locale of ["en", "zh-CN"]) for (const width of [320, 390, 560, 820, 1440]) {
   test(`${locale} ${width}px: App entries, touch chrome and breakpoint`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 });

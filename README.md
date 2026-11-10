@@ -5,10 +5,10 @@
 <h1 align="center">CyberOS</h1>
 
 <p align="center">
-  A local-first Linux NAS appliance with a web workspace, approval-gated AI operations, search, and host management.
+  A personal operating system for the cyber era.
 </p>
 
-CyberOS is a single-user control plane for a personal Linux NAS. It combines a responsive file workspace with an AI agent, keeps state in a local SQLite database, and runs as a set of native `systemd` services instead of inside containers.
+CyberOS is a personal operating system for the cyber era. It brings personal files, media, AI workflows, and host management into one local-first web workspace. The current implementation targets a single-user Linux host, keeps state in a local SQLite database, and runs as a set of native `systemd` services instead of inside containers.
 
 The project combines a strict TypeScript npm-workspaces application with Rust storage daemons. Its production target is Node.js 22 and Rust 1.95 on Debian-based systems, with a React/Vite frontend and a Fastify API.
 
