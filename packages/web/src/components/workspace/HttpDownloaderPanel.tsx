@@ -38,7 +38,7 @@ import {
 } from "../../api.js";
 import { formatBytes, formatLocaleNumber } from "../../i18n/format.js";
 import type { SupportedLocale } from "../../i18n/locale.js";
-import { SkeletonBlock } from "./ManagementSkeleton.js";
+import { DownloadsInitialSkeleton } from "./PanelLoadingSkeletons.js";
 import { PanelHeader, PanelHeaderAction, PanelHeaderActions } from "./PanelHeader.js";
 import { StorageFilePickerDialog, type StorageFilePickerPool, type StorageFileSelection } from "./StorageFilePickerDialog.js";
 
@@ -718,56 +718,6 @@ export function downloadCreateControlState(
 ): "loading" | "ready" | "needs-storage" {
   if (initialLoading || storagePoolsLoading) return "loading";
   return hasMountedPool ? "ready" : "needs-storage";
-}
-
-function DownloadsInitialSkeleton() {
-  const { t } = useTranslation();
-  return (
-    <>
-      <span className="visually-hidden" role="status">{t("common.states.loading")}</span>
-      <div className="downloads-toolbar downloads-toolbar-skeleton" aria-hidden="true">
-        <div className="downloads-filters downloads-filters-skeleton">
-          {[52, 58, 76, 54].map((width) => <SkeletonBlock key={width} width={`${width}px`} />)}
-        </div>
-        <div className="downloads-summary downloads-summary-skeleton">
-          {Array.from({ length: 4 }, (_, index) => (
-            <div className="download-header-stat" key={index}>
-              <SkeletonBlock width={index === 2 ? "56px" : "32px"} />
-              <SkeletonBlock width={index === 3 ? "48px" : "38px"} />
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="downloads-list downloads-list-skeleton" aria-hidden="true">
-        {Array.from({ length: 5 }, (_, index) => (
-          <article className="download-task-row download-task-row-skeleton" key={index}>
-            <div className="download-task-main">
-              <div className="download-task-heading">
-                <SkeletonBlock className="download-skeleton-icon" />
-                <div>
-                  <SkeletonBlock width={index % 2 ? "58%" : "72%"} />
-                  <SkeletonBlock width={index % 2 ? "34%" : "42%"} />
-                </div>
-                <SkeletonBlock className="download-skeleton-status" />
-              </div>
-              <SkeletonBlock width={index % 2 ? "68%" : "82%"} />
-              <SkeletonBlock className="download-skeleton-progress" />
-              <div className="download-skeleton-meta">
-                <SkeletonBlock width="76px" />
-                <SkeletonBlock width="48px" />
-                <SkeletonBlock width="58px" />
-              </div>
-            </div>
-            <div className="download-task-actions">
-              {Array.from({ length: 3 }, (_, actionIndex) => (
-                <SkeletonBlock className="download-skeleton-action" key={actionIndex} />
-              ))}
-            </div>
-          </article>
-        ))}
-      </div>
-    </>
-  );
 }
 
 export function TorrentFileSelector({

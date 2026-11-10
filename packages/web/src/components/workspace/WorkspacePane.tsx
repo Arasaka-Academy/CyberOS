@@ -4,7 +4,7 @@ import { useModalDialog } from "./useModalDialog.js";
 import { ChangeEvent, DragEvent, FormEvent, KeyboardEvent, MouseEvent, PointerEvent as ReactPointerEvent, lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { WORKSPACE_APPS } from "../../mobile/apps.js";
 import { useAppScroll, useMobileBack } from "../../mobile/MobileNavigation.js";
-import { MobileAppLoading } from "../../mobile/MobileHome.js";
+import { WorkspacePanelLoading } from "./WorkspacePanelLoading.js";
 import { useTranslation } from "react-i18next";
 import {
   ArrowDown,
@@ -1199,7 +1199,7 @@ export function WorkspacePane({
       />
       <div className="workspace-shell">
         <div className="workspace-stage" data-panel={activePanel}>
-          <Suspense fallback={<MobileAppLoading app={activePanel} />}>
+          <Suspense fallback={<WorkspacePanelLoading panel={activePanel} />}>
           {!workspaceVisible ? null : activePanel === "files" ? (
             <>
               <PanelHeader
@@ -1736,7 +1736,7 @@ export function WorkspacePane({
           )}
           </Suspense>
           {terminalMounted && (!compactLayout || activePanel === "terminal" && workspaceVisible) ? (
-            <Suspense fallback={activePanel === "terminal" && workspaceVisible ? <MobileAppLoading app="terminal" /> : null}>
+            <Suspense fallback={activePanel === "terminal" && workspaceVisible ? <WorkspacePanelLoading panel="terminal" /> : null}>
               <LocalTerminalPanel
                 active={activePanel === "terminal" && workspaceVisible}
               />

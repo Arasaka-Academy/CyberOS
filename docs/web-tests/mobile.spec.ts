@@ -57,7 +57,7 @@ for (const locale of ["en", "zh-CN"]) for (const width of [320, 390, 560, 820, 1
     await page.screenshot({ path: testInfo.outputPath("home.png") });
     for (const id of appIds) {
       await open(page, id);
-      await expect(page.locator(".mobile-app-loading")).toHaveCount(0);
+      await expect(page.locator(".workspace-panel-loading")).toHaveCount(0);
       await expect(page.locator(".mobile-app-home:visible")).toBeVisible();
       for (const notice of await page.locator(".app-notification button").all()) await notice.click();
       await noOverflow(page);

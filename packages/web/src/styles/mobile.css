@@ -1,6 +1,4 @@
 .mobile-action-label { display: none; }
-.mobile-app-loading { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); min-width: 0; min-height: 0; height: 100%; color: var(--muted); }
-.workspace-stage > .mobile-app-loading { grid-area: 1 / 1 / -1 / -1; }
 
 @media (max-width: 1040px) {
   .app-shell,

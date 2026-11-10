@@ -27,6 +27,10 @@
   grid-template-rows: auto auto minmax(0, 1fr);
 }
 
+.workspace-stage > .workspace-panel-loading {
+  grid-area: 1 / 1 / -1 / -1;
+}
+
 .workspace-stage[data-panel="docker"],
 .workspace-stage[data-panel="virtualMachines"],
 .workspace-stage[data-panel="network"],

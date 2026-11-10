@@ -75,7 +75,7 @@ import type {
 } from "@cyberos/shared";
 import { formatBytes, formatLocaleNumber } from "../../i18n/format.js";
 import type { SupportedLocale } from "../../i18n/locale.js";
-import { SkeletonBlock } from "./ManagementSkeleton.js";
+import { PhotoQuerySkeleton, PhotoTimelineSkeleton } from "./PanelLoadingSkeletons.js";
 import { PanelHeader, PanelHeaderAction, PanelHeaderActions } from "./PanelHeader.js";
 import { CustomSelect, type CustomSelectOption } from "../common/CustomSelect.js";
 import {
@@ -1214,42 +1214,6 @@ export function photoLibraryLoadMode(
   if (!initialLoadComplete) return "loading";
   if (loadError && !hasLoadedSnapshot) return "error";
   return "content";
-}
-
-function PhotoQuerySkeleton() {
-  return (
-    <div className="photo-query-panel photo-query-panel-skeleton" aria-hidden="true">
-      <div className="photo-query-toolbar photo-query-toolbar-skeleton">
-        <SkeletonBlock className="photo-skeleton-search" />
-        <SkeletonBlock className="photo-skeleton-view" />
-        <SkeletonBlock className="photo-skeleton-sort" />
-        <SkeletonBlock className="photo-skeleton-advanced" />
-      </div>
-      <div className="photo-query-summary photo-query-summary-skeleton">
-        <SkeletonBlock width="72px" />
-      </div>
-    </div>
-  );
-}
-
-function PhotoTimelineSkeleton() {
-  return (
-    <div className="photo-timeline photo-timeline-skeleton" aria-hidden="true">
-      {Array.from({ length: 2 }, (_, groupIndex) => (
-        <section className="photo-day" key={groupIndex}>
-          <header>
-            <SkeletonBlock width={groupIndex === 0 ? "128px" : "104px"} />
-            <SkeletonBlock width="24px" />
-          </header>
-          <div className="photo-wall photo-skeleton-wall">
-            {Array.from({ length: groupIndex === 0 ? 10 : 6 }, (_, tileIndex) => (
-              <SkeletonBlock className="photo-skeleton-tile" key={tileIndex} />
-            ))}
-          </div>
-        </section>
-      ))}
-    </div>
-  );
 }
 
 export function groupPhotosByDate<T extends PhotoAsset & {

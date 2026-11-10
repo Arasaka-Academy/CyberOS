@@ -33,7 +33,7 @@ import { TerminalToolbar, TerminalSearchBar, TerminalStatusBar } from "./termina
 import { TerminalClipboardDialog } from "./terminal/TerminalClipboardDialog.js";
 import { useTerminalWorkbench } from "./terminal/useTerminalWorkbench.js";
 export { terminalReconnectDelay } from "../../lib/terminal-workbench.js";
-import { SkeletonBlock } from "./ManagementSkeleton.js";
+import { TerminalContentSkeleton, TerminalTabsSkeleton } from "./PanelLoadingSkeletons.js";
 import { PanelHeader, PanelHeaderAction, PanelHeaderActions } from "./PanelHeader.js";
 
 export function LocalTerminalPanel({
@@ -343,11 +343,7 @@ export function LocalTerminalPanel({
       <div className={`workspace-terminal-frame${workbench.searchOpen ? " has-search" : ""}`}>
         <div className="workspace-terminal-header">
           {initialLoading ? (
-            <div className="workspace-terminal-tabs-skeleton" aria-hidden="true">
-              <SkeletonBlock className="workspace-terminal-tab-skeleton" />
-              <SkeletonBlock className="workspace-terminal-tab-skeleton is-short" />
-              <SkeletonBlock className="workspace-terminal-new-tab-skeleton" />
-            </div>
+            <TerminalTabsSkeleton />
           ) : tabState ? (
             <TerminalTabBar
               tabs={tabs}
@@ -379,11 +375,7 @@ export function LocalTerminalPanel({
         <div className="workspace-terminal-stage">
           {initialLoading ? <span className="visually-hidden" role="status">{t("common.states.loading")}</span> : null}
           {initialLoading ? (
-            <div className="workspace-terminal-skeleton" aria-hidden="true">
-              <SkeletonBlock width="38%" />
-              <SkeletonBlock width="64%" />
-              <SkeletonBlock width="52%" />
-            </div>
+            <TerminalContentSkeleton />
           ) : currentLoadError && !tabState ? (
             <TerminalEmptyState
               title={t("workspace.terminal.loadFailed")}

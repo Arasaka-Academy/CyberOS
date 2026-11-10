@@ -11,6 +11,7 @@ import { formatBytes } from "../../i18n/format.js";
 import type { SupportedLocale } from "../../i18n/locale.js";
 import { Switch } from "../common/Switch.js";
 import { useModalDialog } from "./useModalDialog.js";
+import { IscsiInitialSkeleton } from "./PanelLoadingSkeletons.js";
 
 const KEY = "workspace.management.storage.iscsi";
 type Mutation = IscsiAction extends infer Action ? Action extends IscsiAction ? Omit<Action, "confirmed" | "expectedRevision"> : never : never;
@@ -148,13 +149,13 @@ export function IscsiManagementCard({ locale, onNotifySuccess, onWorkQueuesChang
 
   const target = modal?.kind === "target" ? summary?.targets.find((item) => item.id === modal.id) : undefined;
   const image = modal?.kind === "image" ? summary?.images.find((item) => item.id === modal.id) : undefined;
+  if (loading && !summary) return <IscsiInitialSkeleton />;
   return <section className="management-section iscsi-card" aria-label={text("title")} aria-busy={busy || loading || undefined}>
     <SectionHeader className="management-section-header" title={text("title")} description={text("description")} icon={<Server aria-hidden="true" size={16} />} actions={<><div className="iscsi-actions">
         <UiButton variant="ghost" iconOnly type="button" className="icon-button" data-tooltip={text("refresh")} aria-label={text("refresh")} disabled={loading || busy} aria-busy={loading || undefined} onClick={() => void refresh()}>{loading ? <LoaderCircle className="is-spinning" size={16} aria-hidden="true" /> : <RefreshCw size={16} aria-hidden="true" />}</UiButton>
         <UiButton variant="primary" type="button" className="primary-button" disabled={!summary?.available || loading || busy} onClick={() => open({ kind: "create" })}><Plus size={15} aria-hidden="true" />{text("createTarget")}</UiButton>
       </div></>} />
     <div className="iscsi-card-body">
-      {loading && !summary ? <EmptyState className="management-empty" role="status">{text("loading")}</EmptyState> : null}
       {error ? <Notice className="iscsi-error" role="alert" tone="danger" icon={<CircleAlert size={16} aria-hidden="true" />}>{text("loadError")} {error}</Notice> : null}
       {summary ? <>
         <div className="iscsi-summary"><StatusBadge className="management-status-pill" data-state={summary.available ? "ready" : "warning"}>{text(summary.available ? "ready" : "unavailable")}</StatusBadge><span>{summary.targets.length} {text("targets")}</span><span>{summary.targets.reduce((count, item) => count + item.luns.length, 0)} {text("luns")}</span><span>{text("sessionCount", { count: summary.targets.reduce((count, item) => count + item.sessions.length, 0) })}</span></div>
