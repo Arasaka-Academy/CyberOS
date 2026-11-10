@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeAll, describe, expect, it } from "vitest";
 import { i18n, initI18n } from "../../i18n/index.js";
-import { SettingsPhotosPage } from "./SettingsModal.js";
+import { SettingsPhotosPage } from "./SettingsContent.js";
 
 beforeAll(async () => {
   await initI18n();

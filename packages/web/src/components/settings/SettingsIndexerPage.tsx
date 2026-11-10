@@ -4,12 +4,14 @@ import { useTranslation } from "react-i18next";
 import { Check, Database, LoaderCircle, RefreshCw } from "lucide-react";
 import type { IndexerOverview, IndexerSettings, StoragePool } from "../../api.js";
 import { Switch } from "../common/Switch.js";
+import { PanelContentSkeleton } from "../workspace/ManagementSkeleton.js";
 
 type IndexerSettingsDraft = Omit<IndexerSettings, "updatedAt">;
 
 export function SettingsIndexerPage({
   settings,
   status,
+  statusLoading = false,
   storagePools,
   loading,
   onSettingsChange,
@@ -18,6 +20,7 @@ export function SettingsIndexerPage({
 }: {
   settings: IndexerSettings | null;
   status: IndexerOverview | null;
+  statusLoading?: boolean;
   storagePools: StoragePool[];
   loading: boolean;
   onSettingsChange: (patch: Partial<IndexerSettingsDraft>) => Promise<void>;
@@ -126,12 +129,12 @@ export function SettingsIndexerPage({
 
           <Section className="settings-section-card settings-indexer-status" aria-label={t("settings.indexer.statusTitle")} title={t("settings.indexer.statusTitle")} description={t("settings.indexer.statusDescription")} icon={<Database aria-hidden="true" size={17} />}>
 
-            <dl className="settings-summary-list settings-indexer-status-list">
+            {statusLoading ? <PanelContentSkeleton /> : <dl className="settings-summary-list settings-indexer-status-list">
               <StatusRow label={t("settings.indexer.service")} value={status ? t(`settings.indexer.states.${status.service.status}`) : t("common.states.unavailable")} />
               <StatusRow label={t("settings.indexer.watcher")} value={status ? t(`settings.indexer.states.${status.watcher.status}`) : t("common.states.unavailable")} />
               <StatusRow label={t("settings.indexer.queue")} value={status ? t("settings.indexer.queueSummary", { queued: status.queue.queued, running: status.queue.running, failed: status.queue.failed }) : t("common.states.unavailable")} />
               <StatusRow label={t("settings.indexer.contentIndex")} value={status ? t("settings.indexer.contentIndexSummary", { ready: status.rebuild.storagePoolsReady, total: status.rebuild.storagePoolsTotal }) : t("common.states.unavailable")} />
-            </dl>
+            </dl>}
           </Section>
         </div>
       </div>

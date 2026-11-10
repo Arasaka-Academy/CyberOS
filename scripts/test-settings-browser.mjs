@@ -413,9 +413,7 @@ for (const id of ["model-providers", "pi-agent", "docker", "virtual-machines", "
     let finish;
     const response = new Promise(resolve => { finish = resolve; });
     const overrides = await populatedSettings(api);
-    const endpointsToSave = ["model-providers", "pi-agent", "docker", "virtual-machines"].includes(id)
-      ? ["model-provider", "agent-capability-policy", "docker", "vm"]
-      : [endpoints[id]];
+    const endpointsToSave = [endpoints[id]];
     for (const endpoint of endpointsToSave) {
       const settingsPath = `/api/settings/${endpoint}`;
       const savedResponse = overrides.get(settingsPath) ?? { json: (await api.inject({ method: "GET", url: settingsPath })).json() };
@@ -448,6 +446,37 @@ for (const id of ["model-providers", "pi-agent", "docker", "virtual-machines", "
     assert.deepEqual(view.errors, []);
   });
 }
+
+test("Overview keeps partial storage read errors local and retries only its resource", async context => {
+  const info = (await api.inject({ method: "GET", url: "/api/settings/system-info" })).json().info;
+  info.storage.volumes = [{
+    id: "pool-1", label: "Data pool", kind: "storage-pool", path: "/cyberos/data/pool-1", status: "error",
+    blockSizeBytes: null, totalBytes: null, freeBytes: null, availableBytes: null, usedBytes: null,
+    usedPercent: null, storagePoolId: "pool-1", error: "Storage mount unavailable"
+  }];
+  let reads = 0;
+  const overrides = new Map([["/api/settings/system-info", () => { reads += 1; return { json: { info } }; }]]);
+  const view = await openSettings(context, { width: 1041, height: 600 }, "en", overrides);
+  const warning = view.page.locator('.settings-overview [role="alert"]');
+  await expect(warning).toContainText("Data pool: Storage mount unavailable");
+  await expect(view.page.locator(".settings-overview-details")).toContainText("Hardware");
+  for (const scheme of ["neon", "mono", "graphite", "synthwave", "bloodline", "terminal", "amber"]) for (const mode of ["dark", "light"]) {
+    await view.page.evaluate(({ scheme, mode }) => {
+      const key = "cyberos:appearance:v1", newValue = JSON.stringify({ scheme, mode });
+      globalThis.localStorage.setItem(key, newValue);
+      globalThis.dispatchEvent(new globalThis.StorageEvent("storage", { key, newValue }));
+    }, { scheme, mode });
+    await expect(view.page.locator("html")).toHaveAttribute("data-cyber-scheme", scheme);
+    await expect(view.page.locator("html")).toHaveAttribute("data-cyber-mode", mode);
+    await assertContained(view.page);
+    assert.deepEqual((await contrastReadings(view.page)).filter(reading => reading.ratio < 4.5), []);
+  }
+  await warning.getByRole("button", { name: "Refresh", exact: true }).click();
+  await expect.poll(() => reads).toBe(2);
+  await expect(warning).toBeVisible();
+  assert.deepEqual(view.mutations, []);
+  assert.deepEqual(view.errors, []);
+});
 
 test("settings loading and error states retain the same page header and usable actions", async context => {
   const view = await openSettings(context, { width: 1041, height: 600 });

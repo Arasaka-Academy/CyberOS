@@ -220,7 +220,6 @@ function ChatPaneContent({
   onCreateAgent,
   onDeleteSession,
   onOpenSettings,
-  settingsLoading = false,
   onOpenNotifications,
   onRequestSystemPower,
   notificationUnreadCount,
@@ -259,7 +258,6 @@ function ChatPaneContent({
   onCreateAgent: () => void;
   onDeleteSession: () => void;
   onOpenSettings: () => void;
-  settingsLoading?: boolean;
   onOpenNotifications: () => void;
   onRequestSystemPower: (action: SystemPowerAction) => Promise<boolean>;
   notificationUnreadCount: number;
@@ -512,13 +510,11 @@ function ChatPaneContent({
           <UiButton iconOnly variant="ghost"
             className="settings-button agent-settings-button"
             type="button"
-            onClick={() => { if (!settingsLoading) onOpenSettings(); }}
-            aria-disabled={settingsLoading || undefined}
-            aria-busy={settingsLoading || undefined}
+            onClick={onOpenSettings}
             data-tooltip={t("common.actions.systemSettings")}
             aria-label={t("common.actions.systemSettings")}
           >
-            {settingsLoading ? <LoaderCircle aria-hidden="true" className="spin" size={18} /> : <Settings aria-hidden="true" size={18} />}
+            <Settings aria-hidden="true" size={18} />
           </UiButton>
           <PowerControl onRequest={onRequestSystemPower} />
         </div>

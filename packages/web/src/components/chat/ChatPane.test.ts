@@ -343,7 +343,7 @@ describe("ChatPane agent rail", () => {
     }
   );
 
-  it.each([false, true])("keeps the footer settings action accessible while loading=%s", async (settingsLoading) => {
+  it("keeps the footer settings action immediate and accessible", async () => {
     await initI18n();
     const session = {
       id: "session-1",
@@ -379,7 +379,6 @@ describe("ChatPane agent rail", () => {
         onCreateAgent: noop,
         onDeleteSession: noop,
         onOpenSettings: noop,
-        settingsLoading,
         onOpenNotifications: noop,
         onRequestSystemPower: async () => true,
         notificationUnreadCount: 3,
@@ -415,9 +414,9 @@ describe("ChatPane agent rail", () => {
     const settingsButton = html.match(/<button\b(?=[^>]*class="[^"]*\bsettings-button agent-settings-button\b)[^>]*>[\s\S]*?<\/button>/u)?.[0] ?? "";
     expect(settingsButton).not.toBe("");
     expect(settingsButton).toContain('aria-label="System settings"');
-    expect(settingsButton.includes('aria-busy="true"')).toBe(settingsLoading);
-    expect(settingsButton.includes('aria-disabled="true"')).toBe(settingsLoading);
-    expect(settingsButton.includes("lucide-loader-circle")).toBe(settingsLoading);
+    expect(settingsButton).not.toContain('aria-busy="true"');
+    expect(settingsButton).not.toContain('aria-disabled="true"');
+    expect(settingsButton).not.toContain("lucide-loader-circle");
     expect(settingsButton).not.toContain(" disabled=");
     expect(html).toMatch(/class="[^"]*\bagent-power-button\b[^"]*"/u);
     expect(html).toContain('class="composer-model-config" role="status" aria-live="polite" aria-atomic="true" data-tooltip="Not loaded"');

@@ -19,6 +19,19 @@
   min-height: 0;
 }
 
+.settings-resource-errors {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 8px;
+  max-height: 40%;
+  padding-bottom: 0;
+}
+
+.settings-resource-errors .ui-notice {
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
+}
+
 .settings-page-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

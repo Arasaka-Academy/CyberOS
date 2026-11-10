@@ -7,11 +7,11 @@ import { VoiceButton, VoiceDrawer } from "./components/voice/VoiceDrawer.js";
 import { useVoiceHistory, voiceState } from "./components/voice/useVoiceHistory.js";
 import { PlaybackProvider, usePlayback } from "./components/playback/PlaybackProvider.js";
 import { BrowserPlayer } from "./components/playback/BrowserPlayer.js";
-import { FormEvent, KeyboardEvent, PointerEvent, Suspense, lazy, useCallback, useEffect, useMemo, useReducer, useRef, useState, useTransition, type CSSProperties } from "react";
+import { FormEvent, KeyboardEvent, PointerEvent, Suspense, lazy, useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertTriangle, CircleAlert, CircleCheck, X } from "lucide-react";
 import { MobileAppScope, MobileNavigationProvider, useMobileNavigation } from "./mobile/MobileNavigation.js";
-import { MobileAppLoading, MobileDock, MobileHome, useMobileConnection } from "./mobile/MobileHome.js";
+import { MobileDock, MobileHome, useMobileConnection } from "./mobile/MobileHome.js";
 import { isWorkspacePanelId } from "./mobile/apps.js";
 import { readStoredWorkspacePanel, writeStoredWorkspacePanel, type WorkspacePanelId } from "./lib/workspace-panel-settings.js";
 import {
@@ -124,7 +124,8 @@ import { composeAgentMessage, hasActiveAgentTurn } from "./lib/agent-composer.js
 const ChatPane = lazy(() => import("./components/chat/ChatPane.js").then((module) => ({ default: module.ChatPane })));
 import { NotificationCenter } from "./components/notifications/NotificationCenter.js";
 import { FileEditorModal } from "./components/editor/FileEditorModal.js";
-const SettingsModal = lazy(() => import("./components/settings/SettingsModal.js").then((module) => ({ default: module.SettingsModal })));
+import { SettingsModal } from "./components/settings/SettingsModal.js";
+import { SettingsResourceStore, settingsSectionResources, shareInFlight, type SettingsResourceKey } from "./components/settings/settings-resources.js";
 import {
   WorkspacePane,
   defaultWorkspaceSearchOptions,
@@ -314,7 +315,13 @@ function AppContent() {
   const [splitWidth, setSplitWidth] = useState(() => readStoredSplitWidth());
   const [resizing, setResizing] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsPending, startSettingsTransition] = useTransition();
+  const [settingsResources] = useState(() => new SettingsResourceStore(toErrorMessage));
+  const resourceStates = useSyncExternalStore(settingsResources.subscribe, settingsResources.getSnapshot);
+  const settingsRound = settingsResources.getRound();
+  const settingsSaveRequest = useRef<symbol | null>(null);
+  const [visibleSettingsSection, setVisibleSettingsSection] = useState<SettingsSectionId | null>(null);
+  const [readModelProviders] = useState(() => shareInFlight(getModelProviderSettings));
+  const [settingsSaveError, setSettingsSaveError] = useState<{ section: SettingsSectionId; message: string } | null>(null);
   const [activeSettingsSection, setActiveSettingsSection] = useState<SettingsSectionId>("model-providers");
   const [modelSettings, setModelSettings] = useState<ModelProviderSettings | null>(null);
   const [initialModelSettingsLoading, setInitialModelSettingsLoading] = useState(true);
@@ -327,9 +334,7 @@ function AppContent() {
   const [photoStatus, setPhotoStatus] = useState<PhotoLibraryStatus | null>(null);
   const [photoProcessingSettings, setPhotoProcessingSettings] = useState<PhotoProcessingSettings | null>(null);
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
-  const [, setSystemInfoError] = useState<string | null>(null);
   const [buildInfo, setBuildInfo] = useState<BuildInfo | null>(null);
-  const [buildInfoError, setBuildInfoError] = useState<string | null>(null);
   const [modelSettingsForm, setModelSettingsForm] = useState<ModelProviderFormState>(() =>
     modelSettingsToForm(null)
   );
@@ -340,7 +345,6 @@ function AppContent() {
   const [vmSettingsForm, setVmSettingsForm] = useState<VmSettingsFormState>(() =>
     vmSettingsToForm(null)
   );
-  const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsNetwork, setSettingsNetwork] = useState<NetworkSummary | null>(null);
   const [settingsBluetooth, setSettingsBluetooth] = useState<BluetoothStatus | null>(null);
@@ -454,13 +458,12 @@ function AppContent() {
 
   useEffect(() => {
     let active = true;
-    getModelProviderSettings()
+    readModelProviders()
       .then((settings) => {
         if (!active) {
           return;
         }
         setModelSettings(settings);
-        setModelSettingsForm(modelSettingsToForm(settings));
       })
       .catch(() => {
         // Opening settings retries the request and exposes any error details.
@@ -1071,6 +1074,7 @@ function AppContent() {
       const session = nextSessions.find((item) => item.id === sessionId);
       if (!session) return;
       setSessions(nextSessions);
+      settingsResources.close();
       setSettingsOpen(false);
       navigation.openApp("agent");
       await selectSession(session);
@@ -1081,7 +1085,7 @@ function AppContent() {
     if (!navigation.compact) return;
     if (navigation.route === "settings") {
       if (!settingsOpen) void openSettings();
-    } else setSettingsOpen(false);
+    } else { settingsResources.close(); setSettingsOpen(false); setVisibleSettingsSection(null); }
   }, [navigation.compact, navigation.route]);
 
   useEffect(() => {
@@ -1094,158 +1098,59 @@ function AppContent() {
     return () => { document.removeEventListener("visibilitychange", sync); window.removeEventListener("online", sync); };
   }, []);
 
-  async function openSettings(section: SettingsSectionId = "overview") {
-    navigation.openApp("settings");
-    if (navigation.compact) setSettingsOpen(true);
-    else startSettingsTransition(() => setSettingsOpen(true));
-    setActiveSettingsSection(section);
-    setSettingsLoading(true);
-    setError(null);
-    setSystemInfoError(null);
-    setBuildInfoError(null);
-    try {
-      const [
-        settingsResult,
-        toolPolicyResult,
-        dockerSettingsResult,
-        vmSettingsResult,
-        downloadSettingsResult,
-        indexerSettingsResult,
-        indexerStatusResult,
-        photoSettingsResult,
-        photoProcessingSettingsResult,
-        photoStatusResult,
-        systemInfoResult,
-        buildInfoResult,
-        networkResult,
-        bluetoothResult
-      ] = await Promise.allSettled([
-        getModelProviderSettings(),
-        getAgentCapabilityPolicySettings(),
-        getDockerSettings(),
-        getVmSettings(),
-        getDownloadSettings(),
-        getIndexerSettings(),
-        getIndexerOverview(),
-        getPhotoLibrarySettings(),
-        getPhotoProcessingSettings(),
-        getPhotoStatus(),
-        getSystemInfo(),
-        getBuildInfo(),
-        getSystemNetwork(),
-        getSystemBluetooth()
-      ]);
-
-      const errors: string[] = [];
-      if (settingsResult.status === "fulfilled") {
-        setModelSettings(settingsResult.value);
-        setModelSettingsForm(modelSettingsToForm(settingsResult.value));
-      } else {
-        errors.push(toErrorMessage(settingsResult.reason));
-      }
-
-      if (toolPolicyResult.status === "fulfilled") {
-        setToolPolicyForm(toolPolicyResult.value);
-      } else {
-        errors.push(toErrorMessage(toolPolicyResult.reason));
-      }
-
-      if (dockerSettingsResult.status === "fulfilled") {
-        setDockerSettings(dockerSettingsResult.value);
-        setDockerSettingsForm(dockerSettingsToForm(dockerSettingsResult.value));
-      } else {
-        errors.push(toErrorMessage(dockerSettingsResult.reason));
-      }
-
-      if (vmSettingsResult.status === "fulfilled") {
-        setVmSettings(vmSettingsResult.value);
-        setVmSettingsForm(vmSettingsToForm(vmSettingsResult.value));
-      } else {
-        errors.push(toErrorMessage(vmSettingsResult.reason));
-      }
-
-      if (downloadSettingsResult.status === "fulfilled") {
-        setDownloadSettings(downloadSettingsResult.value);
-      } else {
-        setDownloadSettings(null);
-        errors.push(toErrorMessage(downloadSettingsResult.reason));
-      }
-
-      if (indexerSettingsResult.status === "fulfilled") {
-        setIndexerSettings(indexerSettingsResult.value);
-      } else {
-        setIndexerSettings(null);
-        errors.push(toErrorMessage(indexerSettingsResult.reason));
-      }
-
-      if (indexerStatusResult.status === "fulfilled") {
-        setIndexerStatus(indexerStatusResult.value);
-      } else {
-        setIndexerStatus(null);
-        errors.push(toErrorMessage(indexerStatusResult.reason));
-      }
-
-      if (photoSettingsResult.status === "fulfilled") {
-        setPhotoSettings(photoSettingsResult.value);
-      } else {
-        setPhotoSettings(null);
-        errors.push(toErrorMessage(photoSettingsResult.reason));
-      }
-
-      if (photoProcessingSettingsResult.status === "fulfilled") {
-        setPhotoProcessingSettings(photoProcessingSettingsResult.value);
-      } else {
-        setPhotoProcessingSettings(null);
-        errors.push(toErrorMessage(photoProcessingSettingsResult.reason));
-      }
-
-      if (photoStatusResult.status === "fulfilled") {
-        setPhotoStatus(photoStatusResult.value.status);
-      } else {
-        setPhotoStatus(null);
-        errors.push(toErrorMessage(photoStatusResult.reason));
-      }
-
-      if (systemInfoResult.status === "fulfilled") {
-        setSystemInfo(systemInfoResult.value);
-        const volumeErrors = systemInfoResult.value.storage.volumes
-          .filter((volume) => volume.status === "error" && volume.error)
-          .map((volume) => `${volume.label}: ${volume.error}`);
-        errors.push(...volumeErrors);
-      } else {
-        setSystemInfo(null);
-        const message = toErrorMessage(systemInfoResult.reason);
-        setSystemInfoError(message);
-        errors.push(message);
-      }
-
-      if (buildInfoResult.status === "fulfilled") {
-        setBuildInfo(buildInfoResult.value);
-      } else {
-        setBuildInfo(null);
-        setBuildInfoError(toErrorMessage(buildInfoResult.reason));
-      }
-
-      if (networkResult.status === "fulfilled") {
-        setSettingsNetwork(networkResult.value);
-      } else {
-        setSettingsNetwork(null);
-        errors.push(toErrorMessage(networkResult.reason));
-      }
-
-      if (bluetoothResult.status === "fulfilled") {
-        setSettingsBluetooth(bluetoothResult.value);
-      } else {
-        setSettingsBluetooth(null);
-        errors.push(toErrorMessage(bluetoothResult.reason));
-      }
-
-      if (errors.length > 0) {
-        setError(errors.join("\n"));
-      }
-    } finally {
-      setSettingsLoading(false);
+  function openSettings(section: SettingsSectionId = "overview") {
+    if (!settingsOpen) {
+      settingsResources.begin();
+      setVisibleSettingsSection(null);
+      setSettingsSaveError(null);
+      settingsSaveRequest.current = null;
+      setSettingsSaving(false);
     }
+    navigation.openApp("settings");
+    setActiveSettingsSection(section);
+    setSettingsOpen(true);
+  }
+
+  const loadSettingsResource = useCallback((resource: SettingsResourceKey) => {
+    switch (resource) {
+      case "providers":
+        void settingsResources.load(resource, readModelProviders, settings => {
+          setModelSettings(settings);
+          setModelSettingsForm(modelSettingsToForm(settings));
+        });
+        break;
+      case "policy": void settingsResources.load(resource, getAgentCapabilityPolicySettings, setToolPolicyForm); break;
+      case "docker":
+        void settingsResources.load(resource, getDockerSettings, settings => { setDockerSettings(settings); setDockerSettingsForm(dockerSettingsToForm(settings)); });
+        break;
+      case "vm":
+        void settingsResources.load(resource, getVmSettings, settings => { setVmSettings(settings); setVmSettingsForm(vmSettingsToForm(settings)); });
+        break;
+      case "downloads": void settingsResources.load(resource, getDownloadSettings, setDownloadSettings); break;
+      case "indexerSettings": void settingsResources.load(resource, getIndexerSettings, setIndexerSettings); break;
+      case "indexerStatus": void settingsResources.load(resource, getIndexerOverview, setIndexerStatus); break;
+      case "photoLibrary": void settingsResources.load(resource, getPhotoLibrarySettings, setPhotoSettings); break;
+      case "photoProcessing": void settingsResources.load(resource, getPhotoProcessingSettings, setPhotoProcessingSettings); break;
+      case "photoStatus": void settingsResources.load(resource, getPhotoStatus, snapshot => setPhotoStatus(snapshot.status)); break;
+      case "systemInfo": void settingsResources.load(resource, getSystemInfo, setSystemInfo); break;
+      case "buildInfo": void settingsResources.load(resource, getBuildInfo, setBuildInfo); break;
+      case "network": void settingsResources.load(resource, getSystemNetwork, setSettingsNetwork); break;
+      case "bluetooth": void settingsResources.load(resource, getSystemBluetooth, setSettingsBluetooth); break;
+    }
+  }, [readModelProviders, settingsResources]);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    for (const resource of settingsSectionResources(visibleSettingsSection)) loadSettingsResource(resource);
+  }, [settingsOpen, visibleSettingsSection, resourceStates, loadSettingsResource]);
+
+  useEffect(() => () => settingsResources.close(), [settingsResources]);
+
+  function closeSettings() {
+    settingsResources.close();
+    setVisibleSettingsSection(null);
+    setSettingsOpen(false);
+    if (navigation.compact) navigation.goBack();
   }
 
   async function handleSystemPower(action: SystemPowerAction): Promise<boolean> {
@@ -1263,52 +1168,70 @@ function AppContent() {
 
   async function saveSettings(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const section = activeSettingsSection;
+    const resource = settingsSectionResources(section)[0];
+    if (settingsSaveRequest.current || !resource || resourceStates[resource].status !== "ready") return;
+    const round = settingsResources.getRound();
+    const request = Symbol(section);
+    settingsSaveRequest.current = request;
     setSettingsSaving(true);
-    setError(null);
+    setSettingsSaveError(null);
     try {
-      const [settings, toolPolicy, nextDockerSettings, nextVmSettings] = await Promise.all([
-        saveModelProviderSettings({
-          providerName: modelSettingsForm.providerName,
-          baseUrl: modelSettingsForm.baseUrl || null,
-          model: modelSettingsForm.model,
-          ...(modelSettingsForm.apiKey ? { apiKey: modelSettingsForm.apiKey } : {}),
-          clearApiKey: modelSettingsForm.clearApiKey
-        }),
-        saveAgentCapabilityPolicySettings({ policies: toolPolicyForm.policies }),
-        saveDockerSettings({
-          enabled: dockerSettingsForm.enabled
-        }),
-        saveVmSettings({ enabled: vmSettingsForm.enabled })
-      ]);
-      setModelSettings(settings);
-      setDockerSettings(nextDockerSettings);
-      setVmSettings(nextVmSettings);
-      setModelSettingsForm(modelSettingsToForm(settings));
-      setToolPolicyForm(toolPolicy);
-      setDockerSettingsForm(dockerSettingsToForm(nextDockerSettings));
-      setVmSettingsForm(vmSettingsToForm(nextVmSettings));
-      try {
-        const refreshedSystemInfo = await getSystemInfo();
-        setSystemInfo(refreshedSystemInfo);
-        setSystemInfoError(null);
-      } catch (refreshError) {
-        const message = toErrorMessage(refreshError);
-        setSystemInfoError(message);
-        setError(message);
+      switch (section) {
+        case "model-providers": {
+          const settings = await saveModelProviderSettings({
+            providerName: modelSettingsForm.providerName,
+            baseUrl: modelSettingsForm.baseUrl || null,
+            model: modelSettingsForm.model,
+            ...(modelSettingsForm.apiKey ? { apiKey: modelSettingsForm.apiKey } : {}),
+            clearApiKey: modelSettingsForm.clearApiKey
+          });
+          if (!settingsResources.isCurrent(round)) return;
+          setModelSettings(settings);
+          setModelSettingsForm(modelSettingsToForm(settings));
+          break;
+        }
+        case "pi-agent": {
+          const settings = await saveAgentCapabilityPolicySettings({ policies: toolPolicyForm.policies });
+          if (!settingsResources.isCurrent(round)) return;
+          setToolPolicyForm(settings);
+          break;
+        }
+        case "docker": {
+          const settings = await saveDockerSettings({ enabled: dockerSettingsForm.enabled });
+          if (!settingsResources.isCurrent(round)) return;
+          setDockerSettings(settings);
+          setDockerSettingsForm(dockerSettingsToForm(settings));
+          break;
+        }
+        case "virtual-machines": {
+          const settings = await saveVmSettings({ enabled: vmSettingsForm.enabled });
+          if (!settingsResources.isCurrent(round)) return;
+          setVmSettings(settings);
+          setVmSettingsForm(vmSettingsToForm(settings));
+          break;
+        }
+        default: return;
       }
+      settingsResources.invalidate("systemInfo");
     } catch (nextError) {
-      setError(toErrorMessage(nextError));
+      if (settingsResources.isCurrent(round)) setSettingsSaveError({ section, message: toErrorMessage(nextError) });
     } finally {
-      setSettingsSaving(false);
+      if (settingsSaveRequest.current === request) {
+        settingsSaveRequest.current = null;
+        setSettingsSaving(false);
+      }
     }
   }
 
   async function changeDownloadSettings(patch: Partial<Omit<DownloadSettings, "updatedAt">>) {
+    const round = settingsResources.getRound();
     setError(null);
     try {
-      setDownloadSettings(await updateDownloadSettings(patch));
+      const settings = await updateDownloadSettings(patch);
+      if (settingsResources.isCurrent(round)) setDownloadSettings(settings);
     } catch (nextError) {
-      setError(toErrorMessage(nextError));
+      if (settingsResources.isCurrent(round)) setError(toErrorMessage(nextError));
       throw nextError;
     }
   }
@@ -1328,28 +1251,51 @@ function AppContent() {
     } : current);
   }, []);
 
-  async function refreshSettingsNetwork() {
-    setSettingsNetwork(await getSystemNetwork());
-  }
+  const handleCurrentSettingsWifiStatus = useCallback((wifi: WifiStatus) => {
+    if (settingsResources.isCurrent(settingsRound)) handleSettingsWifiStatus(wifi);
+  }, [handleSettingsWifiStatus, settingsResources, settingsRound]);
+
+  const handleCurrentSettingsBluetoothStatus = useCallback((bluetooth: BluetoothStatus) => {
+    if (settingsResources.isCurrent(settingsRound)) setSettingsBluetooth(bluetooth);
+  }, [settingsResources, settingsRound]);
+
+  const notifySettingsSuccess = useCallback((message: string) => {
+    if (settingsResources.isCurrent(settingsRound)) setSuccessNotice(message);
+  }, [settingsResources, settingsRound]);
+
+  const notifySettingsError = useCallback((message: string) => {
+    if (settingsResources.isCurrent(settingsRound)) setError(message);
+  }, [settingsResources, settingsRound]);
+
+  const refreshSettingsNetwork = useCallback(async () => {
+    if (!settingsResources.isCurrent(settingsRound)) return;
+    const network = await getSystemNetwork();
+    if (settingsResources.isCurrent(settingsRound)) setSettingsNetwork(network);
+  }, [settingsResources, settingsRound]);
 
   async function changeIndexerSettings(patch: Partial<Omit<IndexerSettings, "updatedAt">>) {
+    const round = settingsResources.getRound();
     setError(null);
     try {
-      setIndexerSettings(await updateIndexerSettings(patch));
+      const settings = await updateIndexerSettings(patch);
+      if (settingsResources.isCurrent(round)) setIndexerSettings(settings);
     } catch (nextError) {
-      setError(toErrorMessage(nextError));
+      if (settingsResources.isCurrent(round)) setError(toErrorMessage(nextError));
       throw nextError;
     }
   }
 
   async function reindexRoot(storagePoolId: string) {
+    const round = settingsResources.getRound();
     setError(null);
     try {
       await requestReindex({ storagePoolId, path: ".", recursive: true });
-      setIndexerStatus(await getIndexerOverview());
-      setSuccessNotice(String(t("settings.indexer.reindexQueued")));
+      if (settingsResources.isCurrent(round)) {
+        settingsResources.invalidate("indexerStatus");
+        setSuccessNotice(String(t("settings.indexer.reindexQueued")));
+      }
     } catch (nextError) {
-      setError(toErrorMessage(nextError));
+      if (settingsResources.isCurrent(round)) setError(toErrorMessage(nextError));
       throw nextError;
     }
   }
@@ -1357,11 +1303,13 @@ function AppContent() {
   async function changePhotoProcessingSettings(
     patch: Partial<Omit<PhotoProcessingSettings, "updatedAt">>
   ) {
+    const round = settingsResources.getRound();
     setError(null);
     try {
-      setPhotoProcessingSettings(await updatePhotoProcessingSettings(patch));
+      const settings = await updatePhotoProcessingSettings(patch);
+      if (settingsResources.isCurrent(round)) setPhotoProcessingSettings(settings);
     } catch (nextError) {
-      setError(toErrorMessage(nextError));
+      if (settingsResources.isCurrent(round)) setError(toErrorMessage(nextError));
       throw nextError;
     }
   }
@@ -1370,17 +1318,18 @@ function AppContent() {
     storagePoolId: string;
     path: string;
   }): Promise<PhotoLibrarySettings> {
+    const round = settingsResources.getRound();
     setError(null);
     try {
       const result = await savePhotoLibrarySettings(input);
-      setPhotoSettings(result.settings);
-      void getPhotoStatus()
-        .then((snapshot) => setPhotoStatus(snapshot.status))
-        .catch((nextError: unknown) => setError(toErrorMessage(nextError)));
+      if (settingsResources.isCurrent(round)) {
+        setPhotoSettings(result.settings);
+        settingsResources.invalidate("photoStatus");
+      }
       void refreshWorkQueues();
       return result.settings;
     } catch (nextError) {
-      setError(toErrorMessage(nextError));
+      if (settingsResources.isCurrent(round)) setError(toErrorMessage(nextError));
       throw nextError;
     }
   }
@@ -2652,7 +2601,6 @@ function AppContent() {
         onCreateAgent={() => void createAgent()}
         onDeleteSession={() => void deleteActiveSession()}
         onOpenSettings={() => void openSettings()}
-        settingsLoading={settingsPending || settingsLoading}
         onOpenNotifications={openNotificationCenter}
         onRequestSystemPower={handleSystemPower}
         notificationUnreadCount={notificationUnreadCount}
@@ -2850,14 +2798,16 @@ function AppContent() {
       ) : null}
 
       <MobileAppScope.Provider value="settings">
-      {/* Keep the boundary mounted so desktop transitions retain the workspace while settings load. */}
-      <Suspense fallback={navigation.compact ? <MobileAppLoading app="settings" className="mobile-settings-page" /> : null}>
       {settingsOpen && (!navigation.compact || navigation.route === "settings") ? (
         <SettingsModal
           activeSection={activeSettingsSection}
           activeSessionId={activeSessionId}
           form={modelSettingsForm}
-          loading={settingsLoading}
+          loading={false}
+          resourceStates={resourceStates}
+          onSectionVisible={setVisibleSettingsSection}
+          onResourceRetry={(resource) => settingsResources.invalidate(resource)}
+          saveError={settingsSaveError?.section === activeSettingsSection ? settingsSaveError.message : null}
           saving={settingsSaving}
           settings={modelSettings}
           dockerSettings={dockerSettings}
@@ -2873,19 +2823,20 @@ function AppContent() {
           vmForm={vmSettingsForm}
           systemInfo={systemInfo}
           buildInfo={buildInfo}
-          buildInfoError={buildInfoError}
+          buildInfoError={resourceStates.buildInfo.error}
           toolPolicyForm={toolPolicyForm}
           languagePreference={languagePreference}
           previewFileSizeLimitBytes={previewFileSizeLimitBytes}
           networkSummary={settingsNetwork}
           bluetoothStatus={settingsBluetooth}
           resolvedLocale={resolvedLocale}
-          onClose={() => { if (navigation.compact) navigation.goBack(); else setSettingsOpen(false); void getSessions().then(setSessions).catch(() => {}); }}
+          onClose={() => { closeSettings(); void getSessions().then(setSessions).catch(() => {}); }}
           onOpenVoiceSession={(sessionId) => {
             void getSessions().then(async (nextSessions) => {
               const voice = nextSessions.find((item) => item.id === sessionId);
               if (!voice) return;
               setSessions(nextSessions);
+              settingsResources.close();
               setSettingsOpen(false);
               navigation.openApp("agent");
               await selectSession(voice);
@@ -2904,16 +2855,15 @@ function AppContent() {
           onToolPolicyFormChange={setToolPolicyForm}
           onLanguagePreferenceChange={changeLanguagePreference}
           onPreviewFileSizeLimitChange={changePreviewFileSizeLimit}
-          onWifiStatus={handleSettingsWifiStatus}
-          onBluetoothStatus={setSettingsBluetooth}
+          onWifiStatus={handleCurrentSettingsWifiStatus}
+          onBluetoothStatus={handleCurrentSettingsBluetoothStatus}
           onNetworkRefresh={refreshSettingsNetwork}
-          onNotifySuccess={setSuccessNotice}
-          onNotifyError={setError}
+          onNotifySuccess={notifySettingsSuccess}
+          onNotifyError={notifySettingsError}
           onSectionChange={setActiveSettingsSection}
           onSubmit={(event) => void saveSettings(event)}
         />
       ) : null}
-      </Suspense>
       </MobileAppScope.Provider>
       {videoTakeover ? <MusicTakeoverDialog title={t("music.takeoverTitle")} body={t("music.takeoverMusic")} busy={vodPlayerBusy} onCancel={() => setVideoTakeover(null)} onConfirm={() => void playSelectedOnVodPlayer(videoTakeover)} /> : null}
       {navigation.compact ? <PlaybackBar onOpenBluetoothSettings={() => void openSettings("bluetooth")} /> : null}

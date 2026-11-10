@@ -11,6 +11,7 @@ import {
 import type { SystemInfo } from "../../api.js";
 import { i18n, initI18n } from "../../i18n/index.js";
 import { SettingsModal } from "./SettingsModal.js";
+import { SettingsContent } from "./SettingsContent.js";
 
 beforeAll(async () => {
   await initI18n();
@@ -116,6 +117,20 @@ describe("SettingsModal", () => {
     expect(html).toContain("Paths");
     expect(html).toContain("127.0.0.1:3010");
     expect(html).toContain("/cyberos/state/cyberos.sqlite");
+  });
+
+  it("keeps partial storage-read failures local without hiding the ready overview", () => {
+    const info = systemInfoFixture();
+    info.storage.volumes.push({
+      id: "pool-1", label: "Data pool", kind: "storage-pool", path: "/cyberos/data/pool-1", status: "error",
+      blockSizeBytes: null, totalBytes: null, freeBytes: null, availableBytes: null, usedBytes: null,
+      usedPercent: null, storagePoolId: "pool-1", error: "Storage mount unavailable"
+    });
+    const html = renderSettings({ systemInfo: info, onResourceRetry: vi.fn() });
+    expect(html).toContain("Data pool: Storage mount unavailable");
+    expect(html).toContain('role="alert"');
+    expect(html).toContain("Refresh");
+    expect(html).toContain("Cortex-A76");
   });
 });
 
@@ -247,5 +262,5 @@ function renderSettings(overrides: Partial<ComponentProps<typeof SettingsModal>>
     onSubmit: vi.fn(),
     ...overrides
   };
-  return renderToStaticMarkup(createElement(SettingsModal, props));
+  return renderToStaticMarkup(createElement(SettingsModal, props)) + renderToStaticMarkup(createElement(SettingsContent, props));
 }

@@ -19,6 +19,7 @@ export const en = {
   },
   mobile: {
     home: "Home screen", apps: "Apps", dock: "Favorite apps", agent: "Agent", settings: "Settings",
+    tagline: "PERSONAL OS FOR THE CYBER ERA",
     back: "Back", more: "More actions", sessions: "Conversations", select: "Select files", done: "Done",
     settingsDescription: "System preferences and services.",
     connection: { connecting: "Connecting", online: "Connected", offline: "Disconnected" }
@@ -2478,6 +2479,17 @@ export const en = {
     sectionsLabel: "Settings sections",
     searchPlaceholder: "Search settings",
     searchEmpty: "No settings match.",
+    loading: {
+      retry: "Retry",
+      moduleFailed: "Settings details could not be loaded. You can still switch pages or close settings.",
+      reloadPage: "Reload page",
+      resources: {
+        systemInfo: "System overview", buildInfo: "Version", providers: "Model provider", policy: "Pi Agent",
+        docker: "Docker", vm: "Virtual machines", downloads: "Downloads", indexerSettings: "Indexer configuration",
+        indexerStatus: "Indexer status", photoLibrary: "Photo library", photoProcessing: "Photo processing",
+        photoStatus: "Photo status", network: "Wireless network", bluetooth: "Bluetooth"
+      }
+    },
     localProfile: "Local profile",
     secretInput: {
       clearOnSave: "Will be cleared on save",
@@ -3550,6 +3562,7 @@ export const zhCN = {
   },
   mobile: {
     home: "主屏", apps: "应用", dock: "常用应用", agent: "Agent", settings: "设置",
+    tagline: "赛博时代的个人操作系统",
     back: "返回", more: "更多操作", sessions: "会话", select: "选择文件", done: "完成",
     settingsDescription: "系统偏好与服务配置。",
     connection: { connecting: "正在连接", online: "已连接", offline: "连接已断开" }
@@ -6009,6 +6022,17 @@ export const zhCN = {
     sectionsLabel: "设置分区",
     searchPlaceholder: "搜索设置",
     searchEmpty: "没有匹配的设置。",
+    loading: {
+      retry: "重试",
+      moduleFailed: "设置详情加载失败，仍可切换页面或关闭设置。",
+      reloadPage: "重新载入页面",
+      resources: {
+        systemInfo: "系统概览", buildInfo: "版本", providers: "模型 Provider", policy: "Pi Agent",
+        docker: "Docker", vm: "虚拟机", downloads: "下载", indexerSettings: "索引器配置",
+        indexerStatus: "索引器状态", photoLibrary: "照片库", photoProcessing: "照片处理",
+        photoStatus: "照片状态", network: "无线网络", bluetooth: "蓝牙"
+      }
+    },
     localProfile: "本地配置",
     secretInput: {
       clearOnSave: "保存后清除",
