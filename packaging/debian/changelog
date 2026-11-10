@@ -1,3 +1,9 @@
+cyberos (2.4.1) unstable; urgency=medium
+
+  * Stabilize panel layouts, open settings immediately with page-scoped loading, and align CyberOS product positioning.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Tue, 10 Nov 2026 09:10:27 +0000
+
 cyberos (2.4.0) unstable; urgency=medium
 
   * Unify CyberUI card, panel, and media visuals across Web, mobile, TV, and documentation; stabilize documentation search generation.
