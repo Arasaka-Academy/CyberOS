@@ -37,12 +37,12 @@
   grid-template-columns: minmax(170px, 230px) minmax(190px, 1fr) auto;
 }
 
-.files-navigation-bar .search input,
 .files-navigation-bar .breadcrumbs {
   height: 42px;
 }
 
 .files-navigation-bar .search {
+  --field-height: 42px;
   grid-column: 2;
 }
 
@@ -50,6 +50,7 @@
   display: grid;
   grid-column: 2;
   grid-template-columns: minmax(0, 1fr) 42px;
+  align-items: center;
   gap: 6px;
   min-width: 0;
 }
@@ -267,11 +268,6 @@
 .storage-pool-status[data-state="warning"] {
   background: var(--warning-text);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--warning-text) 14%, transparent);
-}
-
-.files-navigation-bar .search svg {
-  top: 50%;
-  transform: translateY(-50%);
 }
 
 .files-skeleton-select {

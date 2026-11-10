@@ -1,13 +1,12 @@
 import { Button as UiButton } from "@cyberos/ui";
-import { useCallback, useEffect, useMemo, useState, type ComponentType, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, GripVertical, PanelsTopLeft, RotateCcw } from "lucide-react";
 import {
-  Responsive,
+  GridLayout,
   useContainerWidth,
   verticalCompactor,
   type Layout,
-  type ResponsiveGridLayoutProps,
   type ResponsiveLayouts
 } from "react-grid-layout";
 import { absoluteStrategy } from "react-grid-layout/core";
@@ -30,11 +29,6 @@ import {
 import { ManagementWidgetSkeleton } from "./ManagementSkeleton.js";
 import { PanelHeaderAction } from "./PanelHeader.js";
 import { useContentReveal } from "../common/useContentReveal.js";
-
-// The library's exported forwardRef erases its breakpoint generic to string.
-const ManagementResponsiveGrid = Responsive as ComponentType<
-  ResponsiveGridLayoutProps<ManagementDashboardBreakpoint>
->;
 
 export interface ManagementDashboardItem {
   id: string;
@@ -221,20 +215,20 @@ export function ManagementDashboardGrid({
           ))}
         </div>
       ) : (
-        <ManagementResponsiveGrid
+        <GridLayout
           className={`management-dashboard-grid${editable ? " is-editing" : ""}${loading ? " is-loading" : ""}`}
           width={width}
-          layouts={dashboard.layouts}
-          breakpoints={MANAGEMENT_DASHBOARD_BREAKPOINTS}
-          cols={MANAGEMENT_DASHBOARD_COLUMNS}
-          rowHeight={9}
-          margin={[12, 12]}
-          containerPadding={[0, 0]}
+          layout={layouts[breakpoint]}
+          gridConfig={{
+            cols: MANAGEMENT_DASHBOARD_COLUMNS[breakpoint],
+            rowHeight: 9,
+            margin: [12, 12],
+            containerPadding: [0, 0]
+          }}
           dragConfig={{ enabled: editable, handle: ".management-widget-drag-handle", bounded: true }}
           resizeConfig={{ enabled: editable, handles: ["se"] }}
           positionStrategy={absoluteStrategy}
           compactor={verticalCompactor}
-          onBreakpointChange={dashboard.setBreakpoint}
           onDragStop={commitLayout}
           onResizeStop={commitLayout}
         >
@@ -243,7 +237,7 @@ export function ManagementDashboardGrid({
               <DashboardWidget item={item} dashboard={dashboard} editable={editable} loading={loading} />
             </div>
           ))}
-        </ManagementResponsiveGrid>
+        </GridLayout>
       )}
       <span className="visually-hidden" id={`${dashboard.dashboardId}-layout-instructions`}>
         {t("workspace.management.layout.keyboardInstructions")}
