@@ -1,3 +1,9 @@
+cyberos (2.4.6) unstable; urgency=medium
+
+  * Rebuild the TV experience with CyberUI, title-level browsing, remote-first search, and native playback controls.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Wed, 11 Nov 2026 17:32:04 +0000
+
 cyberos (2.4.5) unstable; urgency=medium
 
   * Add card-based music browsing, reuse CyberUI 0.3.0 date controls, and remove redundant file totals

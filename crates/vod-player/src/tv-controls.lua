@@ -66,10 +66,31 @@ local function rectangle(ass, left, top, width, height, color, alpha)
     ass:draw_stop()
 end
 
-local function text(ass, left, top, value, size, color, right)
+local function chamfer(ass, left, top, width, height, color, cut)
+    ass:new_event()
+    ass:pos(0, 0)
+    ass:append(string.format("{\\an7\\bord0\\shad0\\1c&H%s&\\alpha&H00&}", color))
+    ass:draw_start()
+    ass:move_to(left, top)
+    ass:line_to(left + width - cut, top)
+    ass:line_to(left + width, top + cut)
+    ass:line_to(left + width, top + height)
+    ass:line_to(left + cut, top + height)
+    ass:line_to(left, top + height - cut)
+    ass:line_to(left, top)
+    ass:draw_stop()
+end
+
+local function face(ass, left, top, width, height, edge, fill, shadow)
+    if shadow then chamfer(ass, left + 6, top + 6, width, height, colors.panel, 12) end
+    chamfer(ass, left, top, width, height, edge, 12)
+    chamfer(ass, left + 2, top + 2, width - 4, height - 4, fill, 10)
+end
+
+local function text(ass, left, top, value, size, color, right, font)
     ass:new_event()
     ass:pos(left, top)
-    ass:append(string.format("{\\an7\\fnNoto Sans CJK SC\\fs%d\\bord0\\shad0\\1c&H%s&\\alpha&H00&}", size, color or colors.text))
+    ass:append(string.format("{\\an7\\fn%s\\fs%d\\bord0\\shad0\\1c&H%s&\\alpha&H00&}", font or "Oxanium", size, color or colors.text))
     if right then ass:append(string.format("{\\clip(%.0f,%.0f,%.0f,%.0f)}", left, top, right, top + size * 2)) end
     ass:append(escape(value))
 end
@@ -116,56 +137,53 @@ render = function()
     if screen_width <= 0 or screen_height <= 0 then return end
     local height = 1080
     local width = screen_width / screen_height * height
-    local panel_width = math.min(1080, width - 64)
+    local panel_width = math.min(1248, width - 96)
     local left = (width - panel_width) / 2
-    local top = height * 0.69
-    local inner = panel_width - 48
+    local top = height * 0.66
+    local inner = panel_width - 64
     local ass = assdraw.ass_new()
     local paused = mp.get_property_native("pause", false)
     local duration = mp.get_property_number("duration", 0)
     local position = math.max(0, mp.get_property_number("time-pos", 0))
     if duration > 0 then position = math.min(position, duration) end
 
-    rectangle(ass, left, top, panel_width, 238, colors.background, "14")
-    rectangle(ass, left, top, 4, 238, colors.red)
-    text(ass, left + 24, top + 12, "CYBEROS  /  播放控制", 23, colors.yellow)
-    text(ass, left + 24, top + 46, time_label(position) .. " / " .. time_label(duration), 25)
+    face(ass, left, top, panel_width, 288, colors.yellow, colors.background, true)
+    text(ass, left + 32, top + 18, "CyberOS  /  播放控制", 26, colors.text)
+    text(ass, left + panel_width - 300, top + 20, time_label(position) .. " / " .. time_label(duration), 26, colors.text, left + panel_width - 24, "Share Tech Mono")
     if row == "progress" and not menu then
-        rectangle(ass, left + 20, top + 81, inner + 8, 18, colors.cyan)
+        rectangle(ass, left + 27, top + 75, inner + 10, 20, colors.cyan)
     end
-    rectangle(ass, left + 24, top + 85, inner, 10, colors.panel)
-    if duration > 0 then rectangle(ass, left + 24, top + 85, inner * position / duration, 10, colors.yellow) end
+    rectangle(ass, left + 32, top + 80, inner, 10, colors.panel)
+    if duration > 0 then rectangle(ass, left + 32, top + 80, inner * position / duration, 10, colors.yellow) end
 
     local labels = { "后退 10秒", paused and "继续播放" or "暂停", "前进 10秒", "音轨", "字幕", "返回媒体库" }
-    local button_width = (inner - 60) / #labels
+    local button_width = (inner - 90) / #labels
     for index, label in ipairs(labels) do
-        local button_left = left + 24 + (index - 1) * (button_width + 12)
+        local button_left = left + 32 + (index - 1) * (button_width + 18)
         if row == "buttons" and selected == index and not menu then
-            rectangle(ass, button_left - 3, top + 114, button_width + 6, 54, colors.cyan)
+            face(ass, button_left - 6, top + 110, button_width + 12, 76, colors.cyan, colors.background, false)
         end
-        rectangle(ass, button_left, top + 117, button_width, 48, colors.panel)
-        text(ass, button_left + 10, top + 124, label, 23, colors.text, button_left + button_width - 4)
+        face(ass, button_left, top + 116, button_width, 64, index == 2 and colors.yellow or colors.muted, colors.background, false)
+        text(ass, button_left + 12, top + 131, label, 24, colors.text, button_left + button_width - 8)
     end
-    text(ass, left + 24, top + 176, "音轨: " .. current_track("audio") .. "     字幕: " .. current_track("sub"), 21, colors.muted, left + panel_width - 24)
-    text(ass, left + 24, top + 208, "方向键选择 · 确定操作 · 返回退出 · Home 回媒体库", 18, colors.muted, left + panel_width - 24)
+    text(ass, left + 32, top + 206, "音轨: " .. current_track("audio") .. "     字幕: " .. current_track("sub"), 22, colors.muted, left + panel_width - 32)
+    text(ass, left + 32, top + 248, "方向键选择 · 确定操作 · 返回退出 · Home 回媒体库", 20, colors.muted, left + panel_width - 32)
 
     if menu then
         local count = math.min(5, #menu.entries)
         local first = math.max(1, math.min(menu.cursor - 2, #menu.entries - count + 1))
-        local menu_width = math.min(800, panel_width)
+        local menu_width = math.min(1000, panel_width)
         local menu_left = (width - menu_width) / 2
-        local menu_top = top - count * 48 - 78
-        rectangle(ass, menu_left, menu_top, menu_width, count * 48 + 64, colors.background)
-        rectangle(ass, menu_left, menu_top, 4, count * 48 + 64, colors.red)
-        text(ass, menu_left + 20, menu_top + 10, menu.property == "aid" and "选择音轨" or "选择字幕", 25, colors.yellow)
+        local menu_top = top - count * 64 - 104
+        face(ass, menu_left, menu_top, menu_width, count * 64 + 80, colors.yellow, colors.background, true)
+        text(ass, menu_left + 24, menu_top + 16, menu.property == "aid" and "选择音轨" or "选择字幕", 28, colors.text)
         for index = first, first + count - 1 do
             local entry = menu.entries[index]
-            local entry_top = menu_top + 52 + (index - first) * 48
+            local entry_top = menu_top + 68 + (index - first) * 64
             if index == menu.cursor then
-                rectangle(ass, menu_left + 12, entry_top - 2, menu_width - 24, 42, colors.cyan)
-                rectangle(ass, menu_left + 15, entry_top + 1, menu_width - 30, 36, colors.panel)
+                face(ass, menu_left + 12, entry_top - 4, menu_width - 24, 56, colors.cyan, colors.panel, false)
             end
-            text(ass, menu_left + 24, entry_top, entry.label, 25, index == menu.cursor and colors.yellow or colors.text, menu_left + menu_width - 24)
+            text(ass, menu_left + 28, entry_top + 7, entry.label, 26, colors.text, menu_left + menu_width - 28)
         end
     end
     overlay.res_x = width

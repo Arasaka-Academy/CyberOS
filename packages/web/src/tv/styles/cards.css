@@ -1,29 +1,22 @@
-@layer app {
-  .tv-poster, .tv-episode, .tv-search-result {
-    border-color: transparent;
-    border-radius: 0;
-    color: var(--cyber-ink);
-    background: var(--cyber-soft);
-    box-shadow: none;
-  }
-  .tv-poster:hover, .tv-episode:hover:not(:disabled), .tv-search-result:hover {
-    border-color: var(--cyber-accent2);
-  }
-  .tv-poster:focus-visible, .tv-episode:focus-visible, .tv-search-result:focus-visible {
-    border-color: var(--cyber-accent2);
-    color: var(--cyber-ink);
-    background: var(--cyber-soft);
-    outline: 3px solid var(--cyber-accent2);
-    outline-offset: 4px;
-    box-shadow: none;
-  }
-  .tv-poster-art { border-color: var(--cyber-line); background: var(--cyber-soft); }
-  .tv-status::before {
-    border-color: var(--cyber-line);
-    border-left-color: var(--cyber-accent2);
-    background: var(--cyber-soft);
-    box-shadow: none;
-  }
-  .tv-status[data-error]::before { border-left-color: var(--cyber-danger); background: var(--cyber-soft); }
-  .tv-status::after { display: none; }
-}
+.tv-artwork { position: relative; display: block; width: 100%; height: 100%; overflow: hidden; background: var(--cyber-soft); }
+.tv-artwork img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.tv-artwork-placeholder { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: var(--tv-space); height: 100%; padding: var(--tv-space); color: var(--cyberos-color-text-muted); border: 1px solid var(--cyber-line); }
+.tv-artwork-placeholder > svg { width: calc(56px * var(--tv-scale)); height: calc(56px * var(--tv-scale)); }
+.tv-artwork-placeholder > span { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; text-align: center; overflow-wrap: anywhere; font-size: var(--tv-small); }
+.tv-artwork-backdrop .tv-artwork-placeholder { align-items: end; padding-right: 15%; border: 0; opacity: .35; }
+.tv-artwork-backdrop .tv-artwork-placeholder > span { display: none; }
+.tv-artwork-backdrop .tv-artwork-placeholder > svg { width: calc(220px * var(--tv-scale)); height: calc(220px * var(--tv-scale)); }
+.tv-app .tv-media-card { position: relative; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 0; min-width: 0; padding: 0; border: 0; text-align: left; background: var(--cyber-soft); }
+.tv-media-art { position: relative; display: block; width: 100%; aspect-ratio: 2 / 3; border: 2px solid var(--cyber-line); }
+.tv-media-art::after { content: ''; position: absolute; top: -2px; right: -2px; width: calc(20px * var(--tv-scale)); height: calc(20px * var(--tv-scale)); background: var(--cyber-accent); clip-path: polygon(0 0, 100% 0, 100% 100%); pointer-events: none; }
+.tv-media-caption { display: grid; gap: calc(6px * var(--tv-scale)); padding: calc(14px * var(--tv-scale)); }
+.tv-media-caption > strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: max(20px, calc(22px * var(--tv-scale))); font-weight: 600; }
+.tv-media-caption small { font-size: var(--tv-small); color: var(--cyberos-color-text-muted); line-height: 1.45; overflow-wrap: anywhere; }
+.tv-media-card:hover .tv-media-art, .tv-media-card:focus-visible .tv-media-art { border-color: var(--cyber-accent2); }
+.tv-media-progress { position: absolute; bottom: 0; left: 0; width: 100%; height: calc(5px * var(--tv-scale)); background: var(--cyber-bg); }
+.tv-media-progress > span { display: block; height: 100%; background: var(--cyber-accent); }
+.tv-poster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--tv-poster), 1fr)); gap: calc(32px * var(--tv-scale)) var(--tv-space); padding: 10px var(--tv-safe) var(--tv-safe); }
+.tv-collection-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(320px * var(--tv-scale)), 1fr)); gap: var(--tv-space); padding: 10px var(--tv-safe) var(--tv-safe); }
+.tv-app .tv-collection-card { min-height: calc(240px * var(--tv-scale)); flex-direction: column; align-items: flex-start; padding: var(--tv-space); border: 2px solid var(--cyber-line); background: var(--cyber-soft); box-shadow: 6px 6px 0 var(--cyber-line); overflow-wrap: anywhere; text-align: left; }
+.tv-collection-card strong { font-size: calc(30px * var(--tv-scale)); }
+.tv-collection-card small { font-size: var(--tv-small); }

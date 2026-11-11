@@ -17,6 +17,10 @@ target/release/cyberos-vod-player usr/lib/cyberos/bin/
 target/release/cyberos-bluetoothd usr/lib/cyberos/bin/
 target/release/cyberos-audiod usr/lib/cyberos/bin/
 target/release/cyberos-tv-gamepad usr/lib/cyberos/bin/
+packages/ui/src/fonts/Oxanium-*.ttf usr/share/fonts/truetype/cyberos/
+packages/shared/src/fonts/ShareTechMono-Regular.ttf usr/share/fonts/truetype/cyberos/
+packages/ui/src/fonts/OFL-Oxanium.txt usr/share/doc/cyberos/fonts/
+packages/shared/src/fonts/share-tech-mono.LICENSE usr/share/doc/cyberos/fonts/
 packages/web/dist/* usr/lib/cyberos/apps/web/dist/
 docs/dist/* usr/lib/cyberos/docs/dist/
 node_modules/* usr/lib/cyberos/node_modules/

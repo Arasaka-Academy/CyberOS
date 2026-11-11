@@ -304,6 +304,10 @@ export const en = {
     }
   },
   tv: {
+    viewDetails: "View details", episodes: "Episodes", applyFilters: "Apply", pause: "Pause",
+    fileName: "File name", filePath: "Path", trackDetails: "Tracks", titleCount: "{{count}} titles",
+    pinyinHint: "Type pinyin to choose a word", englishHint: "English / numbers",
+    keyboardHint: "Arrow keys to navigate · OK to select", searchHint: "Use the on-screen keyboard or a physical keyboard.",
     library: "Library",
     search: "Search",
     searchPlaceholder: "Search movies and series",
@@ -3864,6 +3868,10 @@ export const zhCN = {
     }
   },
   tv: {
+    viewDetails: "查看详情", episodes: "选集", applyFilters: "应用", pause: "暂停",
+    fileName: "文件名", filePath: "路径", trackDetails: "轨道参数", titleCount: "{{count}} 部作品",
+    pinyinHint: "输入拼音，选择候选词", englishHint: "英文 / 数字",
+    keyboardHint: "方向键移动 · 确定键选择", searchHint: "使用屏幕键盘或实体键盘输入。",
     library: "媒体库",
     search: "搜索",
     searchPlaceholder: "搜索电影和剧集",

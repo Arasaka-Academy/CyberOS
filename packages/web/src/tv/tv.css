@@ -1,11 +1,9 @@
-@layer theme, base, legacy, components, app, utilities;
-@import "./styles/imports.css" layer(legacy);
-@import "./styles/foundation.css" layer(legacy);
-@import "./styles/shell.css" layer(legacy);
-@import "./styles/media.css" layer(legacy);
-@import "./styles/remote.css" layer(legacy);
-@import "./styles/overlays.css" layer(legacy);
-
+@layer theme, base, components, app, utilities;
+@import "./styles/imports.css" layer(base);
 @import "@cyberos/shared/appearance.css";
-@import "../styles/cyberui.css";
-@import "./styles/cards.css";
+@import "./styles/foundation.css" layer(app);
+@import "./styles/shell.css" layer(app);
+@import "./styles/cards.css" layer(app);
+@import "./styles/media.css" layer(app);
+@import "./styles/overlays.css" layer(app);
+@import "./styles/remote.css" layer(app);

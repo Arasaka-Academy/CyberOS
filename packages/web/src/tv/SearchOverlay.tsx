@@ -6,9 +6,11 @@ import { createPinyinEngine, PinyinIMEController, type CandidateItem, type Pinyi
 import type { MediaTitleSummary } from "@cyberos/shared";
 import { useModalDialog } from "../components/workspace/useModalDialog.js";
 import { isBackKey } from "../lib/remote-keys.js";
-import { mediaArtworkUrl, searchMedia } from "./api.js";
+import { searchMedia } from "./api.js";
+import { MediaCard } from "./MediaCard.js";
+import { uniqueTitles } from "./library-model.js";
 
-const KEYS = ["qwertyuiop", "asdfghjkl", "zxcvbnm", "1234567890"];
+const KEYS = ["1234567890", "qwertyuiop", "asdfghjkl", "zxcvbnm"];
 
 export function SearchOverlay({ open, onClose, onOpen }: {
   open: boolean;
@@ -18,6 +20,7 @@ export function SearchOverlay({ open, onClose, onOpen }: {
   const { t } = useTranslation();
   const dialogRef = useModalDialog(onClose, false, open);
   const inputRef = useRef<HTMLInputElement>(null);
+  const resultsRef = useRef<HTMLElement>(null);
   const engine = useRef<PinyinEngine | null>(null);
   const value = useRef("");
   const [query, setQuery] = useState("");
@@ -65,8 +68,8 @@ export function SearchOverlay({ open, onClose, onOpen }: {
     const frame = requestAnimationFrame(() => {
       const result = [...(dialogRef.current?.querySelectorAll<HTMLButtonElement>("[data-tv-search-title]") ?? [])].find(element => element.dataset.tvSearchTitle === resultFocus.current);
       const active = document.activeElement;
-      if (result || !active || active === dialogRef.current || !dialogRef.current?.contains(active)) (result ?? inputRef.current)?.focus({ preventScroll: true });
-      if (dialogRef.current) dialogRef.current.scrollTop = scroll.current;
+      if (result || !active || active === dialogRef.current || !dialogRef.current?.contains(active)) (result ?? dialogRef.current?.querySelector<HTMLButtonElement>('[data-tv-key="q"]'))?.focus({ preventScroll: true });
+      if (resultsRef.current) resultsRef.current.scrollTop = scroll.current;
     });
     return () => cancelAnimationFrame(frame);
   }, [open, dialogRef]);
@@ -80,7 +83,7 @@ export function SearchOverlay({ open, onClose, onOpen }: {
     const timer = setTimeout(() => {
       void searchMedia(query, abort.signal).then(page => {
         if (abort.signal.aborted) return;
-        setResults(page.titles);
+        setResults(uniqueTitles(page.titles));
         completedSearch.current = { query, retry };
         setState("ready");
       }).catch(() => { if (!abort.signal.aborted) setState("error"); });
@@ -135,15 +138,20 @@ export function SearchOverlay({ open, onClose, onOpen }: {
 
   if (!open) return null;
   return <section ref={dialogRef} tabIndex={-1} className="tv-search" role="dialog" aria-modal="true" aria-label={t("tv.search")}
-    onScroll={event => { scroll.current = event.currentTarget.scrollTop; }}
     onKeyDown={event => {
       if (isBackKey(event) && controller.getSnapshot().hasActiveComposition) {
         event.preventDefault(); event.stopPropagation(); cancelComposition();
-        inputRef.current?.focus();
+        keepKeyboardFocus(lastKey.current);
+      } else if (event.target !== inputRef.current && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        if (/^[a-z0-9' ]$/i.test(event.key) || event.key === "Backspace") {
+          const target = document.activeElement instanceof HTMLButtonElement ? document.activeElement : lastKey.current;
+          if (target) { event.preventDefault(); event.stopPropagation(); sendKey(event.key.toLowerCase() === "backspace" ? "Backspace" : event.key.toLowerCase(), target); }
+        } else if (event.key === "Shift") controller.handleKeyDown(event.nativeEvent);
       }
-    }}>
-    <div className="tv-search-header" data-tv-region="search-header">
-      <Search aria-hidden="true" />
+    }} onKeyUp={event => { if (event.target !== inputRef.current && event.key === "Shift") controller.handleKeyUp(event.nativeEvent); }}>
+    <div className="tv-search-entry">
+      <header className="tv-search-title"><div><span className="tv-eyebrow">CyberOS / {t("tv.library")}</span><h1><Search aria-hidden="true" />{t("tv.search")}</h1></div><UiButton variant="ghost" iconOnly className="tv-icon-button" data-tv-focusable onClick={onClose} aria-label={t("tv.closeSearch")}><ArrowLeft /></UiButton></header>
+      <div className="tv-search-header" data-tv-region="search-header">
       <Input ref={inputRef} className="tv-search-input" data-tv-focusable data-tv-text-input data-tv-composing={snapshot.hasActiveComposition}
         value={query} aria-label={t("tv.searchPlaceholder")} data-tooltip={t("tv.keyboardLanguage")} placeholder={t("tv.searchPlaceholder")}
         onChange={event => { resultFocus.current = null; change(event.target.value); }}
@@ -159,35 +167,34 @@ export function SearchOverlay({ open, onClose, onOpen }: {
         onKeyUp={event => controller.handleKeyUp(event.nativeEvent)}
         onBlur={() => controller.resetShiftGestureState()}
       />
-      {query ? <UiButton variant="ghost" iconOnly className="tv-icon-button" data-tv-focusable aria-label={t("tv.clearSearch")} data-tooltip={t("tv.clearSearch")} onClick={() => { cancelComposition(); change(""); inputRef.current?.focus(); }}><X /></UiButton> : null}
-      <UiButton variant="ghost" iconOnly className="tv-icon-button" data-tv-focusable onClick={onClose} aria-label={t("tv.closeSearch")} data-tooltip={t("tv.closeSearch")}><ArrowLeft /></UiButton>
     </div>
-    {snapshot.hasActiveComposition ? <section className="tv-ime" aria-label={t("tv.candidates")}>
-      <div className="tv-ime-composition" role="status">{snapshot.pinyinInput}</div>
-      {dictionary === "loading" ? <p role="status">{t("tv.loadingInput")}</p> : dictionary === "error" ? <Notice tone="danger" actions={<UiButton variant="secondary" onClick={() => retryDictionary(v => v + 1)}>{t("tv.retry")}</UiButton>}>{t("tv.inputFailed")}</Notice> :
+    <section className="tv-ime" aria-label={t("tv.candidates")}>
+      <div className="tv-ime-composition" role="status">{snapshot.hasActiveComposition ? snapshot.pinyinInput : t(snapshot.chineseMode ? "tv.pinyinHint" : "tv.englishHint")}</div>
+      {snapshot.chineseMode && dictionary === "loading" ? <p role="status">{t("tv.loadingInput")}</p> : snapshot.chineseMode && dictionary === "error" ? <Notice tone="danger" actions={<UiButton variant="secondary" onClick={() => retryDictionary(v => v + 1)}>{t("tv.retry")}</UiButton>}>{t("tv.inputFailed")}</Notice> : snapshot.hasActiveComposition ?
         <div className="tv-ime-candidates" data-tv-region="candidates">
           <UiButton iconOnly variant="ghost" disabled={snapshot.page === 0} aria-label={t("tv.previousCandidates")} onClick={() => controller.addPage(-1)}><ChevronLeft /></UiButton>
           {snapshot.displayCandidates.map(item => <UiButton variant="ghost" key={item.word} data-tv-candidate data-tv-focusable onClick={() => choose(item, lastKey.current)}>{item.word}</UiButton>)}
           <UiButton iconOnly variant="ghost" disabled={(snapshot.page + 1) * snapshot.pageSize >= snapshot.candidates.length} aria-label={t("tv.nextCandidates")} onClick={() => controller.addPage(1)}><ChevronRight /></UiButton>
-        </div>}
-    </section> : null}
+        </div> : <div className="tv-ime-idle" aria-hidden="true">{t("tv.keyboardHint")}</div>}
+    </section>
     <div className="tv-keyboard" aria-label={t("tv.keyboard")}>
       {KEYS.map(row => <div className="tv-keyboard-row" data-tv-region="keyboard-row" key={row}>
-        {[...row].map(letter => <UiButton variant="ghost" data-tv-focusable key={letter} onClick={event => sendKey(letter, event.currentTarget)}>{letter.toUpperCase()}</UiButton>)}
+        {[...row].map(letter => <UiButton variant="secondary" data-tv-focusable data-tv-key={letter} key={letter} onClick={event => sendKey(letter, event.currentTarget)}>{letter.toUpperCase()}</UiButton>)}
       </div>)}
       <div className="tv-keyboard-row tv-keyboard-tools" data-tv-region="keyboard-row">
-        <UiButton variant="ghost" data-tv-focusable aria-pressed={snapshot.chineseMode} onClick={event => toggleLanguage(event.currentTarget)}><Languages />{t(snapshot.chineseMode ? "tv.chineseInput" : "tv.englishInput")}</UiButton>
-        <UiButton variant="ghost" data-tv-focusable onClick={event => sendKey(" ", event.currentTarget)}>{t(snapshot.hasActiveComposition ? "tv.keyboardSpace" : "tv.space")}</UiButton>
-        <UiButton iconOnly variant="ghost" data-tv-focusable onClick={event => sendKey("Backspace", event.currentTarget)} aria-label={t("tv.keyboardDelete")} data-tooltip={t("tv.keyboardDelete")}><Delete /></UiButton>
+        <UiButton variant="secondary" data-tv-focusable aria-pressed={snapshot.chineseMode} onClick={event => toggleLanguage(event.currentTarget)}><Languages />{t(snapshot.chineseMode ? "tv.chineseInput" : "tv.englishInput")}</UiButton>
+        <UiButton variant="secondary" data-tv-focusable onClick={event => sendKey(" ", event.currentTarget)}>{t(snapshot.hasActiveComposition ? "tv.keyboardSpace" : "tv.space")}</UiButton>
+        <UiButton variant="secondary" data-tv-focusable onClick={event => sendKey("Backspace", event.currentTarget)} aria-label={t("tv.keyboardDelete")}><Delete /></UiButton>
+        <UiButton variant="secondary" data-tv-focusable aria-label={t("tv.clearSearch")} onClick={event => { cancelComposition(); change(""); keepKeyboardFocus(event.currentTarget, 0); }}><X /></UiButton>
       </div>
     </div>
-    {query.trim() ? <section className="tv-search-results" aria-busy={state === "loading"}>
-      <h2>{t("tv.searchResults")}</h2>
+    </div>
+    <section ref={resultsRef} className="tv-search-results" aria-label={t("tv.searchResults")} aria-busy={state === "loading"} onScroll={event => { scroll.current = event.currentTarget.scrollTop; }}>
+      <header><span className="tv-eyebrow">{t("tv.movies")} / {t("tv.series")}</span><h2>{t("tv.searchResults")}</h2></header>
+      {!query.trim() ? <EmptyState className="tv-search-empty" icon={<Search />} title={t("tv.searchPlaceholder")} description={t("tv.searchHint")} /> : <>
       {state === "loading" ? <p role="status">{t("tv.searching")}</p> : state === "error" ? <Notice className="tv-search-error" tone="danger" actions={<UiButton variant="secondary" onClick={() => setRetry(v => v + 1)}>{t("tv.retry")}</UiButton>}>{t("tv.searchFailed")}</Notice> :
-        results.length ? <div className="tv-search-grid" data-tv-region="search-results">{results.map(title => <UiButton variant="ghost" className="tv-search-result" data-tv-focusable data-tv-search-title={title.id} key={title.id} onClick={() => { resultFocus.current = title.id; onOpen(title); }}>
-          <img src={mediaArtworkUrl(title.id, "poster")} alt="" onError={event => { event.currentTarget.hidden = true; }} />
-          <span><strong>{title.title}</strong><small>{title.year ?? ""}</small></span>
-        </UiButton>)}</div> : state === "ready" ? <EmptyState className="tv-search-empty" title={t("tv.noResults")} /> : null}
-    </section> : null}
+        results.length ? <div className="tv-search-grid" data-tv-region="search-results">{results.map(title => <MediaCard search key={title.id} item={{ title }} onOpen={() => { resultFocus.current = title.id; onOpen(title); }} />)}</div> : state === "ready" ? <EmptyState className="tv-search-empty" title={t("tv.noResults")} /> : null}
+      </>}
+    </section>
   </section>;
 }

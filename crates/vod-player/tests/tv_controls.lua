@@ -16,6 +16,7 @@ local function fixture(overrides)
     for name, value in pairs(overrides or {}) do properties[name] = value end
     local keys, events, observers, commands, timers, messages = {}, {}, {}, {}, {}, {}
     local now = 0
+    local polygons = 0
     local overlay = { data = "" }
     function overlay:update() end
     function overlay:remove() self.data = "" end
@@ -65,6 +66,8 @@ local function fixture(overrides)
             function ass:draw_start() end
             function ass:draw_stop() end
             function ass:rect_cw() end
+            function ass:move_to() polygons = polygons + 1 end
+            function ass:line_to() end
             return ass
         end,
     }
@@ -75,6 +78,7 @@ local function fixture(overrides)
         overlay = overlay,
         commands = commands,
         messages = messages,
+        polygons = function() return polygons end,
         press = function(key) assert(keys[key], "Missing binding: " .. key)() end,
         advance = function(seconds)
             now = now + seconds
@@ -99,6 +103,9 @@ for _, key in ipairs({ "HOMEPAGE", "HOME" }) do
 end
 
 local player = fixture()
+assert(player.overlay.data:find("\\fnOxanium", 1, true), "HUD commands must use CyberUI Oxanium")
+assert(player.overlay.data:find("\\fnShare Tech Mono", 1, true), "Time readouts must use CyberUI Share Tech Mono")
+assert(player.polygons() > 0, "HUD must draw chamfered CyberUI faces rather than rectangular panels")
 assert(player.overlay.data:find("暂停", 1, true), "HUD must show pause")
 assert(player.overlay.data:find("音轨", 1, true), "HUD must show audio selection")
 assert(player.overlay.data:find("字幕", 1, true), "HUD must show subtitle selection")

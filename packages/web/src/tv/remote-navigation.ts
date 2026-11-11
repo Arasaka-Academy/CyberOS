@@ -31,7 +31,6 @@ export function useRemoteNavigation(actions: {
       if (target?.closest(".playback-output-menu") && back) return;
       if (target?.matches("[data-tv-text-input]") && (["ArrowLeft", "ArrowRight"].includes(event.key) || (target.dataset.tvComposing === "true" && ["ArrowUp", "ArrowDown", "Enter"].includes(event.key)))) return;
       if (back) {
-        // Modal owners close themselves in the bubble phase and honor busy state.
         if (modal) return;
         event.preventDefault(); current.current.onBack(); return;
       }
@@ -73,6 +72,8 @@ function moveFocus(direction: Direction, scope: ParentNode, memory: WeakMap<HTML
   if (!active || !candidates.includes(active)) { candidates[0]?.focus(); return; }
   const region = active.closest<HTMLElement>("[data-tv-region]");
   if (region) memory.set(region, active);
+  const owner = active.closest<HTMLElement>(".tv-content, .tv-detail, .tv-search-entry, .tv-search-results");
+  if (owner) memory.set(owner, active);
   const origin = active.getBoundingClientRect();
   const scored = candidates.filter(candidate => candidate !== active).map(candidate => {
     const rect = candidate.getBoundingClientRect();
@@ -82,23 +83,34 @@ function moveFocus(direction: Direction, scope: ParentNode, memory: WeakMap<HTML
     const secondary = direction === "left" || direction === "right" ? Math.abs(dy) : Math.abs(dx);
     return { candidate, rect, region: candidate.closest<HTMLElement>("[data-tv-region]"), primary, secondary, score: primary + secondary * 1.8 };
   }).filter(item => item.primary > 4).sort((a, b) => a.score - b.score);
-  const grid = region && ["grid", "navigation", "seasons"].includes(region.dataset.tvRegion ?? "");
+  const regionName = region?.dataset.tvRegion;
+  const grid = regionName && ["grid", "navigation", "seasons", "search-results"].includes(regionName);
+  const rail = regionName === "rail";
   const inline = direction === "left" || direction === "right";
   const rowDistance = (rect: DOMRect) => direction === "up" ? origin.top - rect.bottom : rect.top - origin.bottom;
-  const horizontal = region && ["keyboard-row", "candidates", "search-header"].includes(region.dataset.tvRegion ?? "");
-  const within = grid
+  const horizontal = regionName && ["keyboard-row", "candidates", "search-header"].includes(regionName);
+  const within = grid || rail
     ? scored.filter(item => item.region === region && (inline
       ? Math.min(origin.bottom, item.rect.bottom) > Math.max(origin.top, item.rect.top)
       : rowDistance(item.rect) >= -1))
       .sort((a, b) => inline ? a.primary - b.primary : rowDistance(a.rect) - rowDistance(b.rect) || a.secondary - b.secondary)[0]
     : region && !(horizontal && !inline) ? scored.find(item => item.region === region) : undefined;
-  // Grid rows stop at their horizontal edges; vertical boundaries lead to the next content group.
-  if (grid && inline && !within) return;
-  const content = grid ? region.closest(".video-content") : null;
-  const neighbor = content ? scored.find(item => item.region !== region && item.candidate.closest(".video-content") === content) : undefined;
+  if ((grid || rail) && inline && !within) {
+    if (direction === "right") return;
+    const sidebar = scored.find(item => item.candidate.closest(".tv-sidebar"));
+    const keyboard = regionName === "search-results" ? scored.find(item => item.candidate.closest(".tv-search-entry")) : undefined;
+    const destination = sidebar ?? keyboard;
+    if (!destination) return;
+    const panel = destination.candidate.closest<HTMLElement>(keyboard ? ".tv-search-entry" : "[data-tv-region]");
+    const remembered = panel ? memory.get(panel) : null;
+    (remembered?.isConnected ? remembered : destination.candidate).focus({ preventScroll: true });
+    return;
+  }
+  const neighbor = owner ? scored.find(item => item.region !== region && owner.contains(item.candidate)) : undefined;
   const best = within ?? neighbor ?? scored.find(item => item.region !== region) ?? scored[0];
   if (!best) return;
-  const remembered = best.region !== region && best.region ? memory.get(best.region) : null;
+  const enteringContent = direction === "right" && active.closest(".tv-sidebar") ? best.candidate.closest<HTMLElement>(".tv-content") : null;
+  const remembered = enteringContent ? memory.get(enteringContent) : best.region !== region && best.region && !horizontal ? memory.get(best.region) : null;
   const next = remembered && scored.some(item => item.candidate === remembered) ? remembered : best.candidate;
   next.focus({ preventScroll: true });
   if (best.region) memory.set(best.region, next);

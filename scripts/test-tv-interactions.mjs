@@ -1,568 +1,465 @@
 import assert from "node:assert/strict";
-import { createRequire } from "node:module";
 import { mkdir } from "node:fs/promises";
-import { before, after, test } from "node:test";
+import { test } from "node:test";
 import { fileURLToPath, URL } from "node:url";
-import { createServer } from "vite";
+import { createTvHarness, detail, title, playback, key, openDetail, snapshot, noOverflow, visualRows } from "./lib/tv-browser-fixture.mjs";
 
-const { chromium } = createRequire(new URL("../docs/package.json", import.meta.url))("playwright");
-let server, browser, baseUrl;
-before(async () => {
-  server = await createServer({ configFile: fileURLToPath(new URL("../packages/web/vite.config.ts", import.meta.url)), root: fileURLToPath(new URL("../packages/web", import.meta.url)), optimizeDeps: { include: ["pinyin-ime/dictionary/google_pinyin_dict"] }, server: { host: "127.0.0.1", port: 0 } });
-  await server.listen();
-  baseUrl = server.resolvedUrls.local[0];
-  browser = await chromium.launch();
+const library = createTvHarness();
+const titles = Array.from({ length: 18 }, (_, index) => ({ ...title, id: `title-${index}`, title: `Library title ${index + 1}` }));
+const fullHome = { continueWatching: titles, recentlyAdded: titles, movies: [], series: titles, watchlist: titles, upNext: titles.map(item => ({ title: item, fileId: "file-2", seasonNumber: 1, episodeNumber: 2 })), collections: [] };
+const selected = element => element === globalThis.document.activeElement;
+const frame = page => page.evaluate(() => new Promise(resolve => globalThis.requestAnimationFrame(() => globalThis.requestAnimationFrame(resolve))));
+
+test("TV home uses independent cinematic composition and title-level horizontal rails", async t => {
+  const { page, reads } = await library(t, { home: { ...fullHome, continueWatching: [...titles, titles[0]] } });
+  await page.locator(".tv-hero").waitFor();
+  assert.equal(await page.locator(".video-panel, .playback-bar").count(), 0);
+  assert.equal(await page.locator(".tv-navigation button").count(), 5);
+  assert.equal(await page.locator(".tv-home-rail").count(), 4);
+  assert.equal(await page.locator(".tv-home-rail").first().locator(".tv-media-card").count(), 18);
+  for (const rail of await page.locator(".tv-home-rail").all()) assert.equal((await visualRows(rail.locator("button"))).length, 1);
+  assert.equal(await page.locator(".tv-episode").count(), 0);
+  assert.ok(!reads.some(url => url.pathname === "/api/media/sources"));
+  await noOverflow(page, ".tv-app, .tv-browse-shell, .tv-content");
 });
-after(async () => { await browser?.close(); await server?.close(); });
 
-const title = { id: "series-1", title: "Test Series", kind: "series", sourceId: "source-1", sourcePath: "Series", genres: ["Drama"], year: 2024, posterKey: null, progress: null, personal: { favorite: false, watchlist: false, watched: null }, credits: [], rating: null };
-const file = { id: "file-1", titleId: title.id, episodeId: "episode-1", sourceId: "source-1", storagePoolId: "pool-1", relativePath: "Series/episode.mkv", name: "Test.Series.S01E01.1080p.mkv", sizeBytes: 1024, container: "mkv", videoCodec: "h264", audioCodec: "aac" };
-const detail = { ...title, files: [], seasons: [{ id: "season-1", seasonNumber: 1, name: "Season 1", episodes: [{ id: "episode-1", episodeNumber: 1, name: "Episode one", files: [file, { ...file, id: "file-1-4k", name: "Test.Series.S01E01.2160p.HDR.Extended.Version.mkv", relativePath: "Series/4k/episode.mkv", videoCodec: "hevc" }] }, { id: "episode-2", episodeNumber: 2, name: "Episode two", files: [{ ...file, id: "file-2", episodeId: "episode-2" }] }] }], artwork: [], fileProgress: {}, episodeWatched: {}, technical: { "file-1-4k": [{ type: "video", codec: "hevc", width: 3840, height: 2160, hdr: true }] }, nextFileId: "file-1" };
-const music = { serviceInstanceId: "instance-1", sessionId: "music-1", owner: "music", revision: 1, queueVersion: 1, state: "paused", queue: [{ id: "item-1", fileId: "song-1", title: "Test song", artist: "Test artist", durationSeconds: 100 }], currentItemId: "item-1", positionSeconds: 0, durationSeconds: 100, volume: 50, shuffle: false, repeat: "off", error: null, updatedAt: "2026-11-04T00:00:00Z" };
-const playback = { target: "nas", owner: "music", sessionId: "music-1", serviceInstanceId: "instance-1", revision: 1, music, video: { state: "idle", sessionId: null, audioTracks: [], subtitleTracks: [], capabilities: {} }, preferences: { musicVolume: 50, videoVolume: 50, musicMuted: false, videoMuted: false }, output: { requested: { kind: "default", deviceId: null }, effective: { kind: "default", deviceId: null } } };
+test("horizontal rails reveal offscreen posters, stop at the right edge and remember row focus", async t => {
+  const { page } = await library(t, { home: fullHome });
+  const rails = page.locator(".tv-home-rail");
+  const posters = rails.first().locator("button");
+  await posters.first().focus();
+  for (let index = 1; index < 18; index++) { await page.keyboard.press("ArrowRight"); assert.equal(await posters.nth(index).evaluate(selected), true); }
+  assert.ok(await rails.first().evaluate(element => element.scrollLeft > 0));
+  await page.keyboard.press("ArrowRight");
+  assert.equal(await posters.last().evaluate(selected), true);
+  await page.keyboard.press("ArrowDown");
+  assert.equal(await rails.nth(1).evaluate(element => element.contains(globalThis.document.activeElement)), true);
+  await page.keyboard.press("ArrowUp");
+  assert.equal(await posters.last().evaluate(selected), true);
+});
 
-async function library(t, options = {}) {
-  const context = await browser.newContext({ locale: options.locale ?? "en-US", viewport: options.viewport ?? { width: 1920, height: 1080 }, reducedMotion: options.reducedMotion ?? "no-preference" });
-  t.after(() => context.close());
-  const page = await context.newPage();
-  const writes = [];
-  const reads = [];
-  await page.addInitScript(() => {
-    globalThis.window.__tvSources = [];
-    globalThis.window.EventSource = class extends globalThis.EventTarget {
-      constructor(url) { super(); this.url = url; globalThis.window.__tvSources.push(this); }
-      close() { globalThis.window.__tvSources = globalThis.window.__tvSources.filter(source => source !== this); }
-    };
+test("TV-specific card geometry and selected navigation override generic ghost buttons", async context => {
+  const { page } = await library(context);
+  await page.locator(".tv-media-card").first().waitFor();
+  const poster = await page.locator(".tv-media-card").first().evaluate(element => ({ padding: globalThis.getComputedStyle(element).padding, border: globalThis.getComputedStyle(element).borderWidth }));
+  assert.deepEqual(poster, { padding: "0px", border: "0px" });
+  const navigation = await page.locator('[data-tv-nav="home"]').evaluate(element => {
+    const sample = globalThis.document.createElement("span");
+    sample.style.backgroundColor = "var(--cyber-accent)";
+    element.append(sample);
+    const result = { actual: globalThis.getComputedStyle(element).backgroundColor, expected: globalThis.getComputedStyle(sample).backgroundColor };
+    sample.remove();
+    return result;
   });
-  await page.route("**/api/**", async route => {
-    const request = route.request();
-    const url = new URL(request.url());
-    if (url.pathname === "/api/vod-player/command" && request.postDataJSON()?.type === "set-ui-theme") {
-      return route.fulfill({ json: { status: playback.video } });
-    }
-    if (request.method() !== "GET") {
-      const write = { path: url.pathname, body: request.postDataJSON() };
-      writes.push(write);
-      await options.onWrite?.(write);
-    } else reads.push(url);
-    if (url.pathname.endsWith("/events")) return route.fulfill({ status: 204 });
-    if (url.pathname === "/api/media/titles" && url.searchParams.get("query") && options.searchFailure?.()) return route.fulfill({ status: 503, json: { error: "Search unavailable" } });
-    if (/^\/api\/media\/titles\/[^/]+$/u.test(url.pathname)) return route.fulfill({
-      json: { title: { ...(options.detail ?? detail), id: decodeURIComponent(url.pathname.split("/").at(-1)) } }
-    });
-    const fixtures = {
-      "/api/media/home": options.home ?? { continueWatching: [], recentlyAdded: [title], movies: [], series: [title], watchlist: [], upNext: [], collections: [] },
-      "/api/media/collections": { collections: options.collections ?? [{ id: "collection-1", name: "Test collection", kind: "manual", titleIds: [title.id] }] },
-      "/api/media/sources": { sources: [] },
-      "/api/media/filter-options": { years: [2024, 1999], genres: ["Drama", "Sci-Fi"] },
-      "/api/media/titles": { titles: [title], nextCursor: null },
-      "/api/media/files/file-2/play": { status: globalThis.structuredClone(playback) },
-      "/api/playback/status": { status: globalThis.structuredClone(options.playback ?? playback) },
-      "/api/playback/command": { status: globalThis.structuredClone(options.playback ?? playback) },
-      "/api/music/player": { status: music },
-      "/api/music/player/command": { status: music },
-      "/api/settings/bluetooth": { audioDevices: [] }
-    };
-    await route.fulfill({ status: url.pathname in fixtures ? 200 : 503, json: fixtures[url.pathname] ?? { error: "Not available in TV test" } });
-  });
-  if (options.tv === false) {
-    await page.route("**/__video_fixture__", route => route.fulfill({
-      contentType: "text/html; charset=utf-8",
-      body: `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/src/styles.css"></head><body><main id="root" class="app-shell" style="display:block;height:100dvh;max-width:${options.panelWidth ? `${options.panelWidth}px` : "100%"}"></main><script type="module">
-        import RefreshRuntime from "/@react-refresh";
-        RefreshRuntime.injectIntoGlobalHook(window);
-        window.$RefreshReg$ = () => {};
-        window.$RefreshSig$ = () => type => type;
-        window.__vite_plugin_react_preamble_installed__ = true;
-        const R = await import("/node_modules/.vite/deps/react.js");
-        const React = R.default ?? R;
-        const D = await import("/node_modules/.vite/deps/react-dom_client.js");
-        const createRoot = D.createRoot ?? D.default.createRoot;
-        await (await import("/src/i18n/index.ts")).initI18n();
-        const { PlaybackProvider } = await import("/src/components/playback/PlaybackProvider.tsx");
-        const { VideoLibraryPanel } = await import("/src/components/video/VideoLibraryPanel.tsx");
-        createRoot(document.getElementById("root")).render(React.createElement(PlaybackProvider, null, React.createElement(VideoLibraryPanel)));
-      </script></body></html>`
-    }));
+  assert.equal(navigation.actual, navigation.expected);
+});
+
+test("unavailable playback state cannot start an unguarded video request", async context => {
+  const { page, writes } = await library(context, { playbackFailure: true });
+  await openDetail(page);
+  await page.locator("[data-tv-detail-primary]").click();
+  await page.locator('.tv-detail [role="alert"]').waitFor();
+  assert.equal(writes.length, 0);
+  assert.equal(await page.locator(".music-dialog").count(), 0);
+});
+
+test("empty library omits hero and rails, and failed home loading can retry", async context => {
+  let failed = true;
+  const { page } = await library(context, { homeFailure: () => failed, home: { continueWatching: [], recentlyAdded: [], movies: [], series: [], watchlist: [], upNext: [], collections: [] } });
+  await page.locator(".tv-load-error").waitFor();
+  assert.equal(await page.locator(".tv-home-rail, .tv-hero").count(), 0);
+  failed = false;
+  await page.locator(".tv-load-error button").click();
+  await page.locator(".tv-empty").waitFor();
+  assert.equal(await page.locator(".tv-load-error, .tv-home-rail, .tv-hero").count(), 0);
+});
+
+test("poster grid moves between visual rows, restores sidebar context and isolates filters", async context => {
+  const { page } = await library(context, { titles });
+  await page.locator('[data-tv-nav="movie"]').click();
+  const posters = page.locator(".tv-poster-grid .tv-media-card");
+  await posters.first().waitFor();
+  const rows = await visualRows(posters);
+  await posters.nth(rows[0][1]).focus();
+  await page.keyboard.press("ArrowDown");
+  assert.equal(await posters.nth(rows[1][1]).evaluate(selected), true);
+  await page.keyboard.press("ArrowUp");
+  assert.equal(await posters.nth(rows[0][1]).evaluate(selected), true);
+  await page.keyboard.press("ArrowLeft");
+  await page.keyboard.press("ArrowLeft");
+  assert.equal(await page.locator(".tv-sidebar").evaluate(element => element.contains(globalThis.document.activeElement)), true);
+  await page.keyboard.press("ArrowRight");
+  assert.equal(await posters.first().evaluate(selected), true);
+  await page.getByRole("button", { name: "Filters", exact: true }).click();
+  for (const direction of ["ArrowLeft", "ArrowUp", "ArrowDown", "ArrowRight"]) {
+    await page.keyboard.press(direction);
+    assert.equal(await page.locator(".tv-filter-dialog").evaluate(element => element.contains(globalThis.document.activeElement)), true);
   }
-  await page.goto(`${baseUrl}${options.tv === false ? "__video_fixture__" : "tv/"}`);
-  await page.locator(".video-poster").first().waitFor();
-  return { page, writes, reads };
-}
+  await key(page, "BrowserBack");
+  assert.equal(await page.getByRole("button", { name: "Filters", exact: true }).evaluate(selected), true);
+});
 
-async function key(page, value, keyCode = 0) {
-  return page.evaluate(({ value, keyCode }) => {
-    const event = new globalThis.KeyboardEvent("keydown", { key: value, keyCode, bubbles: true, composed: true, cancelable: true });
-    (globalThis.document.activeElement ?? globalThis.document.body).dispatchEvent(event);
-    return event.defaultPrevented;
-  }, { value, keyCode });
-}
-async function openDetail(page) { await page.locator(".video-poster").first().focus(); await page.keyboard.press("Enter"); await page.locator(".video-detail").waitFor(); }
-async function snapshot(page, status) {
-  await page.evaluate(status => {
-    const source = globalThis.window.__tvSources.find(source => source.url === "/api/playback/events");
-    assertSource(source);
-    function assertSource(source) { if (!source) throw new Error("Playback subscription missing"); }
-    source.dispatchEvent(new globalThis.MessageEvent("snapshot", { data: JSON.stringify(status) }));
-  }, status);
-}
+test("search aborts obsolete queries and distinguishes empty results from loading", async context => {
+  let releaseFirst;
+  const waiting = new Promise(resolve => { releaseFirst = resolve; });
+  const { page } = await library(context, { searchResults: async query => {
+    if (query === "slow") { await waiting; return [{ ...title, id: "old-result", title: "Obsolete result" }]; }
+    return query === "nothing" ? [] : [{ ...title, id: "fresh-result", title: "Current result" }];
+  } });
+  const aborted = [];
+  page.on("requestfailed", request => { if (request.url().includes("query=slow")) aborted.push(request.failure()?.errorText); });
+  try {
+    await page.locator(".tv-search-button").click();
+    const firstRequest = page.waitForRequest(request => request.url().includes("query=slow"));
+    await page.locator(".tv-search-input").fill("slow");
+    await page.waitForFunction(() => globalThis.document.querySelector(".tv-search-results").getAttribute("aria-busy") === "true");
+    await firstRequest;
+    assert.equal(await page.locator(".tv-search-empty").count(), 0);
+    await page.locator(".tv-search-input").fill("current");
+    await page.locator('[data-tv-title="fresh-result"]').waitFor();
+    releaseFirst();
+    await frame(page);
+    assert.equal(await page.locator('[data-tv-title="old-result"]').count(), 0);
+    assert.ok(aborted.length > 0);
+    await page.locator(".tv-search-input").fill("nothing");
+    await page.getByText("No matching titles", { exact: true }).waitFor();
+    assert.equal(await page.locator(".tv-search-result").count(), 0);
+  } finally { releaseFirst(); }
+});
 
-for (const locale of ["en-US", "zh-CN"]) test(`${locale}: shared playback actions and library search retain HUD styling`, async t => {
-  const { page } = await library(t, { locale });
-  await page.locator(".playback-output > button").waitFor();
-  const failures = await page.evaluate(() => {
-    const failures = [];
-    for (const element of globalThis.document.querySelectorAll("button")) {
-      if (!element.getClientRects().length) continue;
-      const style = globalThis.getComputedStyle(element);
-      if (style.backgroundColor === "rgb(107, 107, 107)") failures.push(`Native gray button: ${element.getAttribute("aria-label")}`);
-    }
-    const search = globalThis.document.querySelector(".tv-library-search");
-    const icon = search.querySelector("svg").getBoundingClientRect();
-    const text = [...search.childNodes].find(node => node.nodeType === globalThis.Node.TEXT_NODE && node.textContent.trim());
-    const range = globalThis.document.createRange();
-    range.selectNode(text);
-    if (icon.right + 6 > range.getBoundingClientRect().left) failures.push("Search icon overlaps its label");
-    if (icon.left > search.getBoundingClientRect().left + 24) failures.push("Search content must remain aligned to the leading edge");
-    return failures;
-  });
-  assert.deepEqual(failures, []);
-  const output = page.locator(".playback-output > button");
-  await page.keyboard.press("Shift");
-  await output.focus();
-  const focus = await output.evaluate(element => {
-    const s = globalThis.getComputedStyle(element);
-    const probe = globalThis.document.createElement("span"); probe.style.color = "var(--cyber-accent2)";
-    globalThis.document.body.append(probe); const expected = globalThis.getComputedStyle(probe).color; probe.remove();
-    return { actual: [s.backgroundColor, s.outlineWidth, s.outlineColor, s.outlineOffset], expected };
-  });
-  assert.deepEqual(focus.actual, ["rgba(0, 0, 0, 0)", "3px", focus.expected, "4px"]);
+test("pinyin candidate paging and deletion leave the fixed keyboard in place", async context => {
+  const { page } = await library(context);
+  await page.locator(".tv-search-button").click();
+  const letter = page.locator('[data-tv-key="q"]');
+  await letter.focus();
+  await page.keyboard.press("Enter");
+  await page.locator("[data-tv-candidate]").first().waitFor();
+  const geometry = await letter.boundingBox();
+  const initialCandidates = await page.locator("[data-tv-candidate]").allTextContents();
+  await page.getByRole("button", { name: "Next candidates", exact: true }).click();
+  assert.notDeepEqual(await page.locator("[data-tv-candidate]").allTextContents(), initialCandidates);
+  await page.getByRole("button", { name: "Previous candidates", exact: true }).click();
+  assert.deepEqual(await page.locator("[data-tv-candidate]").allTextContents(), initialCandidates);
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  assert.equal(await page.locator("[data-tv-candidate]").count(), 0);
+  assert.deepEqual(await letter.boundingBox(), geometry);
+});
+
+test("chosen episode resumes its own file progress rather than another episode", async context => {
+  const progress = { "file-1": { fileId: "file-1", positionSeconds: 99, durationSeconds: 120, completed: false }, "file-2": { fileId: "file-2", positionSeconds: 42, durationSeconds: 120, completed: false } };
+  const { page, writes } = await library(context, { detail: { ...detail, nextFileId: "file-2", fileProgress: progress } });
+  await openDetail(page);
+  await page.locator('[data-tv-episode="episode-2"]').click();
+  await page.locator('.music-dialog [data-variant="primary"]').click();
+  await page.waitForFunction(() => !globalThis.document.querySelector(".music-dialog"));
+  const request = writes.find(write => write.path.endsWith("/file-2/play"));
+  assert.equal(request?.body.startPositionSeconds, 42);
+});
+
+test("media progress refreshes home without resetting category grid focus", async context => {
+  const { page, reads } = await library(context, { titles, home: fullHome });
+  const firstRefresh = page.waitForResponse(response => response.url().endsWith("/api/media/home"));
+  await snapshot(page, { status: { stamp: 1 }, progress: { stamp: 1 } }, "/api/media/events");
+  await firstRefresh;
+  await page.locator('[data-tv-nav="series"]').click();
+  const poster = page.locator(".tv-poster-grid .tv-media-card").nth(10);
+  await poster.waitFor();
+  await poster.focus();
+  const listingReads = reads.filter(url => url.pathname === "/api/media/titles").length;
+  const nextRefresh = page.waitForResponse(response => response.url().endsWith("/api/media/home"));
+  await snapshot(page, { status: { stamp: 1 }, progress: { stamp: 2 } }, "/api/media/events");
+  await nextRefresh;
+  await frame(page);
+  assert.equal(reads.filter(url => url.pathname === "/api/media/titles").length, listingReads);
+  assert.equal(await poster.evaluate(selected), true);
+});
+
+test("live progress preserves the chosen detail version and updates its resume position", async context => {
+  const currentDetail = globalThis.structuredClone(detail);
+  const { page, writes } = await library(context, { detailResponse: () => currentDetail });
+  const firstRefresh = page.waitForResponse(response => response.url().endsWith("/api/media/home"));
+  await snapshot(page, { status: { stamp: 1 }, progress: { stamp: 1 } }, "/api/media/events");
+  await firstRefresh;
+  await openDetail(page);
+  const version = page.locator(".tv-version-choice .custom-select-trigger");
+  await version.focus(); await page.keyboard.press("ArrowDown"); await page.keyboard.press("Enter");
+  await page.waitForFunction(() => globalThis.document.querySelector(".tv-version-choice .custom-select-trigger").textContent.includes("2160p"));
+  currentDetail.fileProgress["file-1-4k"] = { fileId: "file-1-4k", positionSeconds: 42, durationSeconds: 120, completed: false };
+  const refreshed = page.waitForResponse(response => response.url().endsWith("/api/media/titles/series-1"));
+  await snapshot(page, { status: { stamp: 1 }, progress: { stamp: 2 } }, "/api/media/events");
+  await refreshed;
+  await page.locator("[data-tv-detail-primary]").filter({ hasText: "Resume" }).waitFor();
+  assert.match(await version.textContent(), /2160p/);
+  assert.equal(await version.evaluate(selected), true);
+  await page.locator("[data-tv-detail-primary]").click();
+  await page.locator('.music-dialog [data-variant="primary"]').click();
+  await page.locator(".music-dialog").waitFor({ state: "detached" });
+  assert.equal(writes.find(write => write.path.endsWith("/file-1-4k/play"))?.body.startPositionSeconds, 42);
+});
+
+test("deferred initial detail focus respects a newer version-selection intent", async context => {
+  const { page } = await library(context);
+  await page.locator(".tv-media-card").first().waitFor();
+  await page.evaluate(() => { globalThis.window.__originalFrame = globalThis.requestAnimationFrame; globalThis.window.__heldFrames = []; globalThis.requestAnimationFrame = callback => { globalThis.window.__heldFrames.push(callback); return 1; }; });
+  await openDetail(page);
+  const version = page.locator(".tv-version-choice .custom-select-trigger");
+  await version.focus();
+  await page.evaluate(() => { globalThis.requestAnimationFrame = globalThis.window.__originalFrame; for (const callback of globalThis.window.__heldFrames) callback(globalThis.performance.now()); });
+  assert.equal(await version.evaluate(selected), true);
+});
+
+test("long multilingual titles, many seasons and missing files keep detail actions reachable", async context => {
+  const longTitle = "超长剧集名称VeryLongUnbrokenMediaTitle".repeat(8);
+  const { page } = await library(context, { viewport: { width: 1280, height: 720 }, detail: { ...detail, title: longTitle, files: [], seasons: Array.from({ length: 24 }, (_, index) => ({ id: `season-${index}`, seasonNumber: index + 1, name: `Season ${index + 1}`, episodes: [] })), nextFileId: null } });
+  await openDetail(page);
+  assert.equal(await page.locator("[data-tv-detail-primary]").isDisabled(), true);
+  const seasons = page.locator(".tv-seasons button");
+  await seasons.last().focus();
+  await page.keyboard.press("ArrowUp");
+  await noOverflow(page, ".tv-detail, .tv-detail-content, .tv-section-heading");
+  await key(page, "BrowserBack");
+  await page.locator(".tv-detail").waitFor({ state: "detached" });
+});
+
+test("QWERTY search starts at Q with fixed rows, CyberUI key faces and independent results", async t => {
+  const { page } = await library(t);
+  await page.locator(".tv-search-button").click();
+  await page.waitForFunction(() => globalThis.document.activeElement?.dataset.tvKey === "q");
+  assert.equal(await page.locator(".tv-keyboard-row").first().locator("[data-tv-key]").allTextContents().then(items => items.join("")), "1234567890");
+  assert.equal(await page.locator(".tv-keyboard [data-slot='decoration']").count(), 40);
+  const position = await page.locator('[data-tv-key="q"]').boundingBox();
+  await page.keyboard.press("Enter");
+  await page.locator("[data-tv-candidate]").first().waitFor();
+  assert.deepEqual(await page.locator('[data-tv-key="q"]').boundingBox(), position);
+  assert.equal(await page.locator('[data-tv-key="q"]').evaluate(selected), true);
+  await noOverflow(page, ".tv-search, .tv-search-entry, .tv-keyboard");
 });
 
 for (const name of ["BrowserHome", "Home", "BrowserBack", "GoBack"]) test(`${name} returns a category to home`, async t => {
   const { page } = await library(t);
-  await page.locator(".video-navigation button").nth(1).click();
+  await page.locator('[data-tv-nav="movie"]').click();
   assert.equal(await key(page, name), true);
-  await page.waitForFunction(() => globalThis.document.querySelector('.video-navigation button')?.getAttribute('aria-pressed') === 'true', null, { timeout: 2000 });
+  await page.waitForFunction(() => globalThis.document.querySelector('[data-tv-nav="home"]').getAttribute("aria-current") === "page");
 });
 
-test("cancelling a pending list request does not leave home loading", async t => {
-  const { page } = await library(t);
-  await page.evaluate(async () => {
-    globalThis.document.querySelectorAll('.video-navigation button')[1].click();
-    await new Promise(resolve => globalThis.setTimeout(resolve, 40));
-    globalThis.document.querySelector('.tv-brand').click();
-  });
-  await page.locator(".video-poster").waitFor({ timeout: 2000 });
-  assert.equal(await page.getByRole("button", { name: "Refresh", exact: true }).isEnabled(), true);
-});
-
-test("media play key controls music without activating the focused category", async t => {
+test("media keys route to the active music session without activating navigation", async t => {
   const { page, writes } = await library(t);
-  await page.locator(".video-navigation button").nth(2).focus();
+  await page.locator('[data-tv-nav="series"]').focus();
   await key(page, "MediaPlayPause");
   await page.waitForTimeout(100);
-  assert.equal(await page.locator(".video-navigation button").first().getAttribute("aria-pressed"), "true");
+  assert.equal(await page.locator('[data-tv-nav="home"]').getAttribute("aria-current"), "page");
   assert.equal(writes.length, 1);
   assert.equal(writes[0].path, "/api/music/player/command");
   assert.equal(writes[0].body.type, "resume");
 });
 
-for (const name of ["BrowserBack", "BrowserHome"]) test(`${name} dismisses the queue dialog`, async t => {
-  const { page } = await library(t);
-  await page.locator(".playback-queue").click();
-  await page.locator(".music-dialog").waitFor();
-  await key(page, name);
-  await page.locator(".music-dialog").waitFor({ state: "detached", timeout: 2000 });
-});
-
-test("detail restores its poster and stays closed after refresh", async t => {
-  const { page } = await library(t);
-  await openDetail(page);
-  await page.waitForFunction(() => globalThis.document.activeElement?.matches('[data-tv-detail-primary]'), null, { timeout: 2000 });
-  await key(page, "BrowserBack");
-  await page.locator(".video-detail").waitFor({ state: "detached" });
-  await page.waitForFunction(() => globalThis.document.activeElement?.matches('.video-poster'));
-  await page.getByRole("button", { name: "Refresh", exact: true }).click();
-  await page.waitForTimeout(400);
-  assert.equal(await page.locator(".video-detail").count(), 0);
-});
-
-test("OK on an episode opens the existing takeover confirmation for that episode", async t => {
-  const { page, writes } = await library(t);
-  await openDetail(page);
-  await page.locator(".video-episode > button").nth(2).focus();
-  await page.keyboard.press("Enter");
-  await page.locator('[role="dialog"]').waitFor({ timeout: 2000 });
+test("idle playback has no dock and media keys cannot activate focused actions", async t => {
+  const idle = globalThis.structuredClone(playback);
+  idle.owner = null; idle.sessionId = null; idle.music = { ...idle.music, owner: null, sessionId: null, queue: [], state: "idle" };
+  const { page, writes } = await library(t, { playback: idle });
+  await page.locator('[data-tv-nav="series"]').focus();
+  for (const name of ["MediaPlayPause", "MediaPlay", "MediaPause", "MediaStop"]) await key(page, name);
   assert.equal(writes.length, 0);
+  assert.equal(await page.locator(".tv-playback-dock").count(), 0);
+});
+
+for (const name of ["BrowserBack", "BrowserHome"]) test(`${name} dismisses the compact playback dialog`, async t => {
+  const { page } = await library(t);
+  await page.locator("[data-playback-restore]").click();
+  await page.locator('[aria-labelledby="tv-playback-title"]').waitFor();
+  await key(page, name);
+  await page.locator('[aria-labelledby="tv-playback-title"]').waitFor({ state: "detached" });
+});
+
+test("detail restores both vertical and horizontal browsing context", async t => {
+  const { page } = await library(t, { home: fullHome });
+  const rail = page.locator(".tv-home-rail").last();
+  const poster = rail.locator("button").nth(15);
+  await poster.scrollIntoViewIfNeeded();
+  const before = await page.locator(".tv-content").evaluate(element => element.scrollTop);
+  const horizontal = await rail.evaluate(element => element.scrollLeft);
+  await poster.click();
+  await page.waitForFunction(() => globalThis.document.activeElement?.hasAttribute("data-tv-detail-primary"));
   await key(page, "BrowserBack");
-  await page.locator('[role="dialog"]').waitFor({ state: "detached", timeout: 2000 });
+  await page.waitForFunction(() => globalThis.document.activeElement?.dataset.tvTitle === "title-15");
+  assert.equal(await page.locator(".tv-content").evaluate(element => element.scrollTop), before);
+  assert.equal(await rail.evaluate(element => element.scrollLeft), horizontal);
 });
 
-test("English virtual typing and delete retain keyboard focus", async t => {
-  const { page } = await library(t);
-  await page.locator(".tv-search-button").click();
-  await page.locator(".tv-keyboard-tools button").first().click();
-  for (const letter of ["Q", "W"]) {
-    await page.getByRole("button", { name: letter, exact: true }).focus();
-    await page.keyboard.press("Enter");
-    await page.waitForFunction(letter => globalThis.document.activeElement?.textContent === letter, letter);
-  }
-  const input = page.locator(".tv-search-input, pinyin-ime-editor input").first();
-  assert.equal(await input.inputValue(), "qw");
-  await page.getByRole("button", { name: "Delete", exact: true }).click();
-  assert.equal(await input.inputValue(), "q");
+test("up-next cards retain the recommended episode and default its correct season", async t => {
+  const { page } = await library(t, { home: fullHome });
+  await page.locator('[data-tv-row-id="upNext"] .tv-media-card').first().click();
+  await page.locator(".tv-detail-content").waitFor();
+  assert.match(await page.locator('.tv-episode-card[data-selected="true"]').textContent(), /Episode two/);
 });
 
-test("English virtual editing preserves the caret between keyboard activations", async t => {
-  const { page } = await library(t);
-  await page.locator(".tv-search-button").click();
-  await page.locator(".tv-keyboard-tools button").first().click();
-  const input = page.locator(".tv-search-input");
-  const frame = () => page.evaluate(() => new Promise(resolve => globalThis.requestAnimationFrame(() => globalThis.requestAnimationFrame(resolve))));
-  await frame();
-  for (const [name, expected] of [["Q", "q"], ["W", "qw"], ["1", "qw1"], ["Delete", "qw"], ["Space", "qw "], ["Z", "qw z"]]) {
-    const button = page.getByRole("button", { name, exact: true });
-    await button.click();
-    await frame();
-    assert.equal(await input.inputValue(), expected);
-    assert.equal(await input.evaluate(element => element.selectionStart), expected.length);
-    assert.equal(await button.evaluate(element => globalThis.document.activeElement === element), true);
-  }
-  await input.focus();
-  await input.evaluate(element => element.setSelectionRange(1, 3));
-  await page.getByRole("button", { name: "A", exact: true }).focus();
-  await page.keyboard.press("Enter");
-  await frame();
-  assert.equal(await input.inputValue(), "qaz");
-  assert.equal(await input.evaluate(element => element.selectionStart), 2);
-});
-
-test("a deferred virtual-key focus does not override newer keyboard navigation", async t => {
-  const { page } = await library(t);
-  await page.locator(".tv-search-button").click();
-  await page.locator(".tv-keyboard-tools button").first().click();
-  await page.evaluate(() => new Promise(resolve => globalThis.requestAnimationFrame(() => globalThis.requestAnimationFrame(resolve))));
-  await page.evaluate(() => {
-    globalThis.window.__originalFrame = globalThis.requestAnimationFrame;
-    globalThis.window.__heldFrames = [];
-    globalThis.requestAnimationFrame = callback => { globalThis.window.__heldFrames.push(callback); return 1; };
-  });
-  await page.getByRole("button", { name: "Q", exact: true }).click();
-  const input = page.locator(".tv-search-input");
-  await page.waitForFunction(() => globalThis.document.querySelector(".tv-search-input").value === "q");
-  const next = page.getByRole("button", { name: "W", exact: true });
-  await next.focus();
-  await page.evaluate(() => {
-    globalThis.requestAnimationFrame = globalThis.window.__originalFrame;
-    for (const callback of globalThis.window.__heldFrames) callback(globalThis.performance.now());
-  });
-  assert.equal(await next.evaluate(element => globalThis.document.activeElement === element), true);
-  await page.keyboard.press("Enter");
-  assert.equal(await input.inputValue(), "qw");
-});
-
-test("Chinese letters keep key focus and candidates can be selected with the remote", async t => {
-  const { page } = await library(t);
-  await page.locator(".tv-search-button").click();
-  const q = page.getByRole("button", { name: "Q", exact: true });
-  await q.focus();
-  await page.keyboard.press("Enter");
-  await page.waitForFunction(() => globalThis.document.activeElement?.textContent === 'Q', null, { timeout: 2000 });
-  const candidate = page.locator(".tv-ime-candidates button[data-tv-candidate]").first();
-  await candidate.waitFor({ timeout: 5000 });
-  const word = await candidate.textContent();
-  await candidate.focus();
-  await page.keyboard.press("Enter");
-  await page.waitForFunction(word => globalThis.document.querySelector('.tv-search-input')?.value === word, word.trim());
-  await page.waitForFunction(() => globalThis.document.activeElement?.textContent === 'Q', null, { timeout: 2000 });
-});
-
-test("search failures support retry and detail Back restores search context", async t => {
-  let fail = true;
-  const { page } = await library(t, { searchFailure: () => fail });
-  await page.locator(".tv-search-button").click();
-  await page.locator(".tv-keyboard-tools button").first().click();
-  const input = page.locator(".tv-search-input, pinyin-ime-editor input").first();
-  await input.fill("Test");
-  await page.locator(".tv-search-error").waitFor({ timeout: 2000 });
-  assert.equal(await page.locator(".tv-search-empty").count(), 0);
-  fail = false;
-  await page.locator(".tv-search-error button").click();
-  await page.locator(".tv-search-result").first().click();
-  await page.locator(".video-detail").waitFor();
-  await key(page, "BrowserBack");
-  await page.locator(".tv-search").waitFor({ timeout: 2000 });
-  assert.equal(await input.inputValue(), "Test");
-  await page.waitForFunction(() => globalThis.document.activeElement?.classList.contains('tv-search-result'));
-});
-
-test("the library search entry opens the same TV keyboard", async t => {
-  const { page } = await library(t);
-  await page.getByRole("button", { name: "Search library", exact: true }).click();
-  await page.locator(".tv-search").waitFor({ timeout: 2000 });
-});
-
-test("year and genre filters support remote selection and nested Back", async t => {
-  const { page, reads } = await library(t);
-  const trigger = page.locator(".workspace-search-filter-trigger");
-  await trigger.click();
-  const year = page.getByRole("button", { name: "Year", exact: true });
-  await year.focus();
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("Enter");
-  assert.match(await year.textContent(), /2024/);
-  const genre = page.getByRole("button", { name: "Genre", exact: true });
-  await genre.focus();
-  await page.keyboard.press("ArrowDown");
-  await key(page, "Unidentified", 461);
-  assert.equal(await page.locator('[role="listbox"]').count(), 0);
-  assert.equal(await page.locator(".workspace-search-filter-menu").count(), 1);
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("Enter");
-  const applied = page.waitForResponse(response => {
-    const url = new URL(response.url());
-    return url.pathname === "/api/media/titles" && url.searchParams.get("year") === "2024" && url.searchParams.get("genre") === "Drama";
-  }, { timeout: 5000 });
-  await page.getByRole("button", { name: "Apply filters", exact: true }).click();
-  assert.equal((await applied).status(), 200);
-  assert.ok(reads.some(url => url.searchParams.get("year") === "2024"));
-  await trigger.click();
-  await key(page, "BrowserBack");
-  assert.equal(await page.locator(".workspace-search-filter-menu").count(), 0);
-  assert.equal(await trigger.evaluate(element => globalThis.document.activeElement === element), true);
-});
-
-test("Back leaves collection contents before the collections category", async t => {
-  const { page } = await library(t);
-  await page.locator(".video-navigation button").nth(3).click();
-  const collection = page.locator("[data-tv-collection]");
-  await collection.click();
-  await page.locator(".video-poster").waitFor();
-  await key(page, "BrowserBack");
-  await collection.waitFor();
-  await page.waitForFunction(() => globalThis.document.activeElement?.hasAttribute('data-tv-collection'));
-  await key(page, "BrowserBack");
-  assert.equal(await page.locator(".video-navigation button").first().getAttribute("aria-pressed"), "true");
-});
-
-test("episode takeover submits the chosen episode and busy confirmation blocks Back and Home", async t => {
+test("episode takeover submits the chosen file with CAS and blocks busy Back and Home", async t => {
   let release;
   const held = new Promise(resolve => { release = resolve; });
   const { page, writes } = await library(t, { onWrite: () => held });
   t.after(() => release());
   await openDetail(page);
-  await page.locator(".video-episode > button").nth(2).click();
+  await page.locator('[data-tv-episode="episode-2"]').click();
   await page.locator(".music-dialog .primary-button").click();
-  await page.waitForFunction(() => globalThis.document.querySelector('.music-dialog .primary-button')?.disabled);
-  await key(page, "BrowserBack");
-  await key(page, "BrowserHome");
+  await page.waitForFunction(() => globalThis.document.querySelector(".music-dialog .primary-button")?.disabled);
+  await key(page, "BrowserBack"); await key(page, "BrowserHome");
   assert.equal(await page.locator(".music-dialog").count(), 1);
-  assert.equal(await page.locator(".video-detail").count(), 1);
+  assert.equal(await page.locator(".tv-detail").count(), 1);
   assert.equal(writes[0].path, "/api/media/files/file-2/play");
+  assert.equal(writes[0].body.expectedSessionId, "music-1");
+  assert.equal(writes[0].body.serviceInstanceId, "instance-1");
   release();
   await page.locator(".music-dialog").waitFor({ state: "detached" });
 });
 
-test("directional navigation remembers a poster in each home group", async t => {
-  const titles = [0, 1, 2].map(index => ({ ...title, id: `title-${index}`, title: `Title ${index}` }));
-  const { page } = await library(t, { home: { continueWatching: [], recentlyAdded: titles, movies: [], series: [], watchlist: titles, upNext: [], collections: [] }, reducedMotion: "reduce" });
-  const groups = page.locator(".video-home-row > div");
-  await groups.nth(0).locator("button").nth(1).focus();
-  await page.keyboard.press("ArrowDown");
-  assert.equal(await groups.nth(1).evaluate(element => element.contains(globalThis.document.activeElement)), true);
-  await page.keyboard.press("ArrowRight");
-  await page.keyboard.press("ArrowUp");
-  assert.equal(await groups.nth(0).locator("button").nth(1).evaluate(element => globalThis.document.activeElement === element), true);
-});
-
-async function assertNoHorizontalOverflow(page, selectors) {
-  const overflow = await page.locator(selectors).evaluateAll(elements => elements
-    .filter(element => element.scrollWidth > element.clientWidth + 1)
-    .map(element => ({ className: element.className, width: element.clientWidth, scroll: element.scrollWidth })));
-  assert.deepEqual(overflow, []);
-}
-
-async function visualRows(buttons) {
-  return buttons.evaluateAll(elements => {
-    const rows = [];
-    elements.forEach((element, index) => {
-      const top = Math.round(element.getBoundingClientRect().top);
-      const row = rows.find(row => Math.abs(row.top - top) < 2);
-      if (row) row.indices.push(index);
-      else rows.push({ top, indices: [index] });
-    });
-    return rows.map(row => row.indices);
-  });
-}
-
-for (const tv of [false, true]) for (const locale of ["en-US", "zh-CN"]) {
-  for (const width of tv ? [1920, 1280, 720, 320] : [1440, 820, 560, 390, 320]) {
-    test(`${tv ? "TV" : "Web"} ${locale} ${width}px: video content wraps inside its panel`, async t => {
-      const longText = "很长的名称VeryLongUnbrokenMediaMetadata".repeat(12);
-      const titles = Array.from({ length: 14 }, (_, index) => ({ ...title, id: `title-${index}`, title: `${longText} ${index}` }));
-      const { page } = await library(t, {
-        tv, locale, viewport: { width, height: tv && width === 720 ? 540 : 900 },
-        panelWidth: !tv && width === 1440 ? 480 : undefined,
-        reducedMotion: "reduce",
-        home: { continueWatching: titles, recentlyAdded: titles, movies: [], series: [], watchlist: titles, upNext: titles.map(title => ({ title, fileId: "file-2" })), collections: [] },
-        detail: { ...detail, title: longText, overview: longText, genres: [longText], credits: [{ name: longText, role: "Actor" }],
-          seasons: Array.from({ length: 12 }, (_, index) => ({ ...detail.seasons[0], id: `season-${index}`, seasonNumber: index + 1, name: index === 11 ? longText : `Season ${index + 1}` })) },
-        collections: [{ id: "collection-1", name: longText, kind: "manual", titleIds: titles.map(title => title.id) }]
-      });
-      const groups = page.locator(".video-home-row > div");
-      assert.equal(await groups.count(), 4);
-      for (let group = 0; group < 4; group++) {
-        const posters = groups.nth(group).locator(".video-poster");
-        assert.equal(await posters.count(), 14);
-        assert.ok((await visualRows(posters)).length > 1, "posters must occupy multiple rows");
-      }
-      await assertNoHorizontalOverflow(page, ".video-panel, .video-content, .video-navigation, .video-home-row > div");
-      await groups.last().locator("button").last().scrollIntoViewIfNeeded();
-      assert.ok(await page.locator(".video-content").evaluate(element => element.scrollTop > 0));
-      const output = fileURLToPath(new URL("../.cyberos/video-review/", import.meta.url));
-      await mkdir(output, { recursive: true });
-      await page.locator(".video-content").evaluate(element => { element.scrollTop = 0; });
-      await page.screenshot({ path: `${output}/${tv ? "tv" : "web"}-${locale}-${width}.png` });
-      await groups.first().locator("button").first().click();
-      await page.locator(".video-detail").waitFor();
-      const seasons = page.locator(".video-seasons nav button");
-      assert.ok((await visualRows(seasons)).length > 1, "season controls must wrap");
-      await assertNoHorizontalOverflow(page, ".video-panel, .video-content, .video-navigation, .video-detail, .video-detail-main, .video-actions, .video-version, .video-seasons nav");
-      await page.locator(".video-back").click();
-      await page.locator(".video-navigation button").nth(3).click();
-      await page.locator(".video-collections").waitFor();
-      await assertNoHorizontalOverflow(page, ".video-panel, .video-content, .video-navigation, .video-collections, .video-collections > div");
-    });
-  }
-}
-
-test("poster grid arrows visit adjacent rows and cross groups only at vertical boundaries", async t => {
-  const titles = Array.from({ length: 14 }, (_, index) => ({ ...title, id: `title-${index}` }));
-  const { page } = await library(t, { viewport: { width: 720, height: 900 }, reducedMotion: "reduce",
-    home: { continueWatching: [], recentlyAdded: titles, movies: [], series: [], watchlist: titles, upNext: [], collections: [] } });
-  const groups = page.locator(".video-home-row > div");
-  const posters = groups.first().locator("button");
-  assert.deepEqual((await visualRows(posters)).slice(0, 2), [[0, 1, 2], [3, 4, 5]]);
-  await posters.first().focus();
-  for (const [key, index] of [["ArrowRight", 1], ["ArrowDown", 4], ["ArrowLeft", 3], ["ArrowUp", 0], ["ArrowLeft", 0]]) {
-    await page.keyboard.press(key);
-    assert.equal(await posters.nth(index).evaluate(element => element === globalThis.document.activeElement), true, `${key} should focus poster ${index}`);
-  }
-  await posters.nth(2).focus();
-  await page.keyboard.press("ArrowRight");
-  assert.equal(await posters.nth(2).evaluate(element => element === globalThis.document.activeElement), true);
-  await posters.last().focus();
-  await page.keyboard.press("ArrowDown");
-  assert.equal(await groups.nth(1).evaluate(element => element.contains(globalThis.document.activeElement)), true);
-  await page.keyboard.press("ArrowUp");
-  assert.equal(await posters.last().evaluate(element => element === globalThis.document.activeElement), true);
-});
-
-test("wrapped navigation and season controls follow their visual rows", async t => {
-  const { page } = await library(t, { viewport: { width: 320, height: 900 }, reducedMotion: "reduce",
-    detail: { ...detail, seasons: Array.from({ length: 12 }, (_, index) => ({ ...detail.seasons[0], id: `season-${index}`, seasonNumber: index + 1, name: `Season ${index + 1}` })) } });
-  for (const buttons of [page.locator(".video-navigation button"), page.locator(".video-seasons nav button")]) {
-    if (await buttons.count() === 0) await openDetail(page);
-    const rows = await visualRows(buttons);
-    assert.ok(rows.length > 1);
-    await buttons.nth(rows[0][0]).focus();
-    await page.keyboard.press("ArrowDown");
-    assert.equal(await buttons.nth(rows[1][0]).evaluate(element => element === globalThis.document.activeElement), true);
-    await page.keyboard.press("ArrowUp");
-    assert.equal(await buttons.nth(rows[0][0]).evaluate(element => element === globalThis.document.activeElement), true);
-    await buttons.nth(rows[0].at(-1)).focus();
-    await page.keyboard.press("ArrowRight");
-    assert.equal(await buttons.nth(rows[0].at(-1)).evaluate(element => element === globalThis.document.activeElement), true);
-  }
-});
-
-test("returning from detail restores a poster in a lower grid row and its vertical scroll", async t => {
-  const titles = Array.from({ length: 24 }, (_, index) => ({ ...title, id: `title-${index}` }));
-  const { page } = await library(t, { viewport: { width: 720, height: 540 }, reducedMotion: "reduce",
-    home: { continueWatching: [], recentlyAdded: titles, movies: [], series: [], watchlist: [], upNext: [], collections: [] } });
-  const poster = page.locator(".video-poster").nth(15);
-  await poster.focus();
-  const scroll = await page.locator(".video-content").evaluate(element => element.scrollTop);
-  assert.ok(scroll > 0);
-  await page.keyboard.press("Enter");
-  await page.locator(".video-detail").waitFor();
-  await key(page, "BrowserBack");
-  await page.waitForFunction(() => globalThis.document.activeElement?.getAttribute("data-tv-title") === "title-15");
-  assert.equal(await page.locator(".video-content").evaluate(element => element.scrollTop), scroll);
-});
-
-test("up-next posters still select the recommended episode", async t => {
-  const { page } = await library(t, { home: { continueWatching: [], recentlyAdded: [title], movies: [], series: [], watchlist: [], upNext: [{ title, fileId: "file-2" }], collections: [] } });
-  await page.locator(".video-home-row").first().locator(".video-poster").click();
-  await page.locator(".video-detail").waitFor();
-  assert.equal(await page.locator(".video-episode.is-selected strong").textContent(), "Episode two");
-});
-
-test("native Home navigates once, ignores historical snapshots, and sends no stop command", async t => {
-  const initial = globalThis.structuredClone(playback);
-  initial.video.tvHomeRequestId = "historical-home";
-  const { page, writes } = await library(t, { playback: initial });
-  await page.locator(".video-navigation button").nth(1).click();
-  await snapshot(page, { ...initial, revision: 2 });
-  assert.equal(await page.locator(".video-navigation button").nth(1).getAttribute("aria-pressed"), "true");
-  const next = { ...initial, revision: 3, video: { ...initial.video, tvHomeRequestId: "new-home" } };
-  await snapshot(page, next);
-  await page.waitForFunction(() => globalThis.document.querySelector('.video-navigation button')?.getAttribute('aria-pressed') === 'true');
-  await page.locator(".video-navigation button").nth(1).click();
-  await snapshot(page, { ...next, revision: 4 });
-  await page.waitForTimeout(100);
-  assert.equal(await page.locator(".video-navigation button").nth(1).getAttribute("aria-pressed"), "true");
+test("a stale takeover is rejected without sending a play request", async t => {
+  const { page, writes } = await library(t);
+  await openDetail(page);
+  await page.locator('[data-tv-episode="episode-2"]').click();
+  await snapshot(page, { ...playback, revision: 2, sessionId: "changed-session" });
+  await page.locator(".music-dialog .primary-button").click();
+  await page.locator(".music-dialog").waitFor({ state: "detached" });
   assert.equal(writes.length, 0);
+  assert.match(await page.locator(".tv-detail [role='alert']").textContent(), /Playback changed/);
 });
 
-test("media keys with no playback session do not activate focused actions", async t => {
-  const idle = globalThis.structuredClone(playback);
-  idle.owner = null;
-  idle.sessionId = null;
-  idle.music = { ...idle.music, owner: null, sessionId: null, queue: [], state: "idle" };
-  const { page, writes } = await library(t, { playback: idle });
-  await page.locator(".video-navigation button").nth(2).focus();
-  for (const name of ["MediaPlayPause", "MediaPlay", "MediaPause", "MediaStop"]) await key(page, name);
-  assert.equal(writes.length, 0);
-  assert.equal(await page.locator(".video-navigation button").first().getAttribute("aria-pressed"), "true");
-});
-
-test("versions can be selected by remote and their full file metadata is available", async t => {
+test("versions are remote-selectable and full technical metadata stays available", async t => {
   const { page, writes } = await library(t);
   await openDetail(page);
   const version = page.getByRole("button", { name: "Version", exact: true });
-  await version.focus();
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("Enter");
+  await version.focus(); await page.keyboard.press("ArrowDown"); await page.keyboard.press("Enter");
   assert.match(await version.textContent(), /Version 2.*2160p.*hevc/);
-  // Let the select restore its trigger focus before moving to the next control.
-  await version.evaluate(() => new Promise(resolve => globalThis.requestAnimationFrame(resolve)));
-  await page.locator(".tv-file-details summary").focus();
-  await page.keyboard.press("Enter");
+  await frame(page);
+  await page.locator(".tv-file-details summary").focus(); await page.keyboard.press("Enter");
   assert.equal(await page.locator(".tv-file-details").getAttribute("open"), "");
   assert.match(await page.locator(".tv-file-details").textContent(), /Test.Series.S01E01.2160p.HDR.Extended.Version.mkv/);
   assert.equal(writes.length, 0);
 });
 
-for (const [locale, width, height] of [["en-US", 1920, 1080], ["zh-CN", 1280, 720], ["en-US", 720, 540], ["zh-CN", 320, 640]]) test(`${locale}: TV layout at ${width}x${height} stays operable`, async t => {
-  const { page } = await library(t, { locale, viewport: { width, height }, reducedMotion: "reduce" });
-  const output = fileURLToPath(new URL("../.cyberos/tv-review/fixed/", import.meta.url));
-  await mkdir(output, { recursive: true });
-  await page.screenshot({ path: `${output}/home-${locale}-${width}.png` });
-  await openDetail(page);
-  assert.equal(await page.locator(".video-episode strong").first().evaluate(element => globalThis.getComputedStyle(element).fontSize), "22px");
-  await page.screenshot({ path: `${output}/detail-${locale}-${width}.png` });
-  await key(page, "BrowserBack");
+test("English virtual editing preserves key focus, caret, replacement, space and clear", async t => {
+  const { page } = await library(t);
+  await page.locator(".tv-search-button").click(); await page.locator(".tv-keyboard-tools button").first().click();
+  const input = page.locator(".tv-search-input");
+  for (const [name, expected] of [["Q", "q"], ["W", "qw"], ["1", "qw1"], ["Delete", "qw"], ["Space", "qw "], ["Z", "qw z"]]) {
+    const button = page.getByRole("button", { name, exact: true }); await button.click(); await frame(page);
+    assert.equal(await input.inputValue(), expected); assert.equal(await input.evaluate(element => element.selectionStart), expected.length); assert.equal(await button.evaluate(selected), true);
+  }
+  await input.focus(); await input.evaluate(element => element.setSelectionRange(1, 3));
+  await page.getByRole("button", { name: "A", exact: true }).focus(); await page.keyboard.press("Enter"); await frame(page);
+  assert.equal(await input.inputValue(), "qaz"); assert.equal(await input.evaluate(element => element.selectionStart), 2);
+  await page.getByRole("button", { name: "Clear search", exact: true }).click(); await frame(page);
+  assert.equal(await input.inputValue(), "");
+});
+
+test("physical keyboard input works while a virtual key has focus", async t => {
+  const { page } = await library(t);
+  await page.locator(".tv-search-button").click(); await page.locator(".tv-keyboard-tools button").first().click();
+  await page.locator('[data-tv-key="q"]').focus(); await page.keyboard.type("test42");
+  assert.equal(await page.locator(".tv-search-input").inputValue(), "test42");
+  await page.keyboard.press("Backspace"); assert.equal(await page.locator(".tv-search-input").inputValue(), "test4");
+});
+
+test("deferred key focus cannot override a newer navigation intent", async t => {
+  const { page } = await library(t);
+  await page.locator(".tv-search-button").click(); await page.locator(".tv-keyboard-tools button").first().click(); await frame(page);
+  await page.evaluate(() => { globalThis.window.__originalFrame = globalThis.requestAnimationFrame; globalThis.window.__heldFrames = []; globalThis.requestAnimationFrame = callback => { globalThis.window.__heldFrames.push(callback); return 1; }; });
+  await page.getByRole("button", { name: "Q", exact: true }).click();
+  await page.locator('[data-tv-key="w"]').focus();
+  await page.evaluate(() => { globalThis.requestAnimationFrame = globalThis.window.__originalFrame; for (const callback of globalThis.window.__heldFrames) callback(globalThis.performance.now()); });
+  assert.equal(await page.locator('[data-tv-key="w"]').evaluate(selected), true);
+});
+
+test("Chinese composition, remote candidate selection and Back keep keyboard context", async t => {
+  const { page } = await library(t);
   await page.locator(".tv-search-button").click();
-  const q = page.getByRole("button", { name: "Q", exact: true });
-  await q.focus();
-  await page.keyboard.press("Enter");
-  await page.locator("[data-tv-candidate]").first().waitFor();
-  assert.equal(await page.locator("[data-tv-candidate]").first().evaluate(element => globalThis.getComputedStyle(element).fontSize), "26px");
-  const overflow = await page.locator(".tv-search").evaluate(element => ({ width: element.clientWidth, scroll: element.scrollWidth }));
-  assert.ok(overflow.scroll <= overflow.width + 1, JSON.stringify(overflow));
-  await page.screenshot({ path: `${output}/search-${locale}-${width}.png` });
-  await key(page, "BrowserHome");
-  await page.locator(".tv-search").waitFor({ state: "detached" });
+  const letter = page.locator('[data-tv-key="q"]'); await letter.focus(); await page.keyboard.press("Enter");
+  const candidate = page.locator("[data-tv-candidate]").first(); await candidate.waitFor();
+  const word = (await candidate.textContent()).trim(); await candidate.focus(); await page.keyboard.press("Enter"); await frame(page);
+  assert.equal(await page.locator(".tv-search-input").inputValue(), word); assert.equal(await letter.evaluate(selected), true);
+  await page.keyboard.press("Enter"); await candidate.waitFor(); await key(page, "BrowserBack");
+  assert.equal(await page.locator("[data-tv-candidate]").count(), 0); assert.equal(await page.locator(".tv-search").count(), 1);
+});
+
+test("search retry and detail return preserve query, result focus and scroll", async t => {
+  let fail = true;
+  const { page } = await library(t, { searchFailure: () => fail });
+  await page.locator(".tv-search-button").click(); await page.locator(".tv-search-input").fill("Test");
+  await page.locator(".tv-search-error").waitFor(); assert.equal(await page.locator(".tv-search-empty").count(), 0);
+  fail = false; await page.locator(".tv-search-error button").click(); await page.locator(".tv-search-result").first().click();
+  await page.locator("[data-tv-detail-primary]").waitFor(); await key(page, "BrowserBack");
+  await page.waitForFunction(() => globalThis.document.activeElement?.classList.contains("tv-search-result"));
+  assert.equal(await page.locator(".tv-search-input").inputValue(), "Test");
+});
+
+test("filters are separate, use full library options and close nested select before dialog", async t => {
+  const { page, reads } = await library(t);
+  await page.locator('[data-tv-nav="movie"]').click(); await page.getByRole("button", { name: "Filters", exact: true }).click();
+  const year = page.getByRole("button", { name: "Year", exact: true }); await year.waitFor();
+  await page.waitForFunction(() => !globalThis.document.querySelector('[aria-label="Year"]').disabled);
+  await year.focus(); await page.keyboard.press("ArrowDown"); await page.keyboard.press("Enter"); assert.match(await year.textContent(), /2024/);
+  const genre = page.getByRole("button", { name: "Genre", exact: true }); await genre.focus(); await page.keyboard.press("ArrowDown"); await key(page, "Unidentified", 461);
+  assert.equal(await page.locator('[role="listbox"]').count(), 0); assert.equal(await page.locator(".tv-filter-dialog").count(), 1);
+  await page.keyboard.press("ArrowDown"); await page.keyboard.press("Enter"); await page.getByRole("button", { name: "Apply", exact: true }).click();
+  await page.waitForTimeout(150);
+  assert.ok(reads.some(url => url.searchParams.get("year") === "2024" && url.searchParams.get("genre") === "Drama" && url.searchParams.get("kind") === "movie"));
+});
+
+test("collection Back restores its collection before returning home", async t => {
+  const { page } = await library(t);
+  await page.locator('[data-tv-nav="collections"]').click(); await page.locator("[data-tv-collection]").first().click();
+  await page.locator(".tv-poster-grid .tv-media-card").first().waitFor(); await key(page, "BrowserBack");
+  await page.waitForFunction(() => globalThis.document.activeElement?.hasAttribute("data-tv-collection"));
+  await key(page, "BrowserBack"); assert.equal(await page.locator('[data-tv-nav="home"]').getAttribute("aria-current"), "page");
+});
+
+test("native Home ignores historical and duplicate requests and sends no stop", async t => {
+  const initial = globalThis.structuredClone(playback); initial.video.tvHomeRequestId = "historical-home";
+  const { page, writes } = await library(t, { playback: initial }); await page.locator('[data-tv-nav="movie"]').click();
+  await snapshot(page, { ...initial, revision: 2 }); assert.equal(await page.locator('[data-tv-nav="movie"]').getAttribute("aria-current"), "page");
+  const next = { ...initial, revision: 3, video: { ...initial.video, tvHomeRequestId: "new-home" } }; await snapshot(page, next);
+  await page.waitForFunction(() => globalThis.document.querySelector('[data-tv-nav="home"]').getAttribute("aria-current") === "page");
+  await page.locator('[data-tv-nav="movie"]').click(); await snapshot(page, { ...next, revision: 4 }); await frame(page);
+  assert.equal(await page.locator('[data-tv-nav="movie"]').getAttribute("aria-current"), "page"); assert.equal(writes.length, 0);
+});
+
+test("all fourteen CyberUI appearances keep controls and theme sync intact", async t => {
+  const { page } = await library(t);
+  const output = fileURLToPath(new URL("../.cyberos/tv-review/redesign/themes/", import.meta.url));
+  await mkdir(output, { recursive: true });
+  await page.getByRole("button", { name: "Appearance", exact: true }).click();
+  for (const scheme of ["neon", "mono", "graphite", "synthwave", "bloodline", "terminal", "amber"]) for (const mode of ["Dark", "Light"]) {
+    await page.locator(`[data-theme-swatch="${scheme}"]`).click(); await page.locator(".appearance-modes").getByRole("button", { name: mode, exact: true }).click();
+    assert.equal(await page.locator("html").getAttribute("data-cyber-scheme"), scheme); assert.equal(await page.locator("html").getAttribute("data-cyber-mode"), mode.toLowerCase());
+    await noOverflow(page, ".tv-theme-dialog");
+    await page.screenshot({ path: `${output}/${scheme}-${mode.toLowerCase()}.png` });
+  }
+  await key(page, "BrowserBack"); await page.locator(".tv-theme-dialog").waitFor({ state: "detached" });
+});
+
+for (const locale of ["en-US", "zh-CN"]) for (const [width, height] of [[1280, 720], [1920, 1080], [3840, 2160]]) test(`${locale}: TV visual acceptance at ${width}x${height}`, async t => {
+  const { page } = await library(t, { locale, viewport: { width, height }, home: fullHome });
+  const output = fileURLToPath(new URL("../.cyberos/tv-review/redesign/", import.meta.url)); await mkdir(output, { recursive: true });
+  await page.locator(".tv-hero").waitFor(); await page.screenshot({ path: `${output}/home-${locale}-${width}.png` });
+  const clippedLabels = await page.locator(".tv-sidebar button span").evaluateAll(elements => elements.filter(element => element.scrollWidth > element.clientWidth + 1).map(element => element.textContent));
+  assert.deepEqual(clippedLabels, []);
+  await noOverflow(page, ".tv-app, .tv-content, .tv-browse-shell"); await openDetail(page);
+  await noOverflow(page, ".tv-detail, .tv-detail-hero, .tv-detail-content"); await page.screenshot({ path: `${output}/detail-${locale}-${width}.png` }); await key(page, "BrowserBack");
+  await page.locator(".tv-search-button").click(); await page.locator('[data-tv-key="q"]').focus(); await page.keyboard.press("Enter"); await page.locator("[data-tv-candidate]").first().waitFor();
+  await noOverflow(page, ".tv-search, .tv-search-entry, .tv-keyboard"); await page.screenshot({ path: `${output}/search-${locale}-${width}.png` });
+  const candidateSize = await page.locator("[data-tv-candidate]").first().evaluate(element => parseFloat(globalThis.getComputedStyle(element).fontSize)); assert.ok(candidateSize >= 26);
+  await key(page, "BrowserHome"); await page.locator(".tv-search").waitFor({ state: "detached" });
+});
+
+for (const locale of ["en-US", "zh-CN"]) for (const width of [1440, 820, 560, 390, 320]) test(`Web ${locale} ${width}px keeps its existing wrapped library layout`, async t => {
+  const longText = "很长的名称VeryLongUnbrokenMediaMetadata".repeat(12);
+  const longTitles = titles.slice(0, 14).map(item => ({ ...item, title: `${longText} ${item.id}` }));
+  const { page } = await library(t, { tv: false, locale, viewport: { width, height: 900 }, panelWidth: width > 820 ? 980 : width,
+    home: { ...fullHome, continueWatching: longTitles, recentlyAdded: longTitles, watchlist: longTitles, upNext: longTitles.map(item => ({ title: item, fileId: "file-2" })) },
+    detail: { ...detail, title: longText, genres: [longText], seasons: Array.from({ length: 12 }, (_, index) => ({ ...detail.seasons[0], id: `season-${index}`, seasonNumber: index + 1, name: index === 11 ? longText : `Season ${index + 1}` })) } });
+  const groups = page.locator(".video-home-row > div"); assert.equal(await groups.count(), 4);
+  for (const group of await groups.all()) assert.ok((await visualRows(group.locator(".video-poster"))).length > 1);
+  await noOverflow(page, ".video-panel, .video-content, .video-navigation, .video-home-row > div");
+  await groups.first().locator("button").first().click(); await page.locator(".video-detail").waitFor();
+  assert.ok((await visualRows(page.locator(".video-seasons nav button"))).length > 1);
+  await noOverflow(page, ".video-panel, .video-content, .video-detail, .video-detail-main, .video-actions, .video-version, .video-seasons nav");
 });

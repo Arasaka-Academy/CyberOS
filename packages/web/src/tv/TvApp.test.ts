@@ -3,6 +3,12 @@ import { describe, expect, it } from "vitest";
 import { readStylesheet } from "../styles/test-utils.js";
 
 describe("TV display policy", () => {
+  it("composes a TV-specific library instead of adapting the desktop panel", async () => {
+    const component = await readFile(new URL("./TvApp.tsx", import.meta.url), "utf8");
+    expect(component).not.toContain("VideoLibraryPanel");
+    expect(component).not.toContain("PlaybackBar");
+    expect(component).toContain("TvLibrary");
+  });
   it("keeps the HDMI shell visible while idle", async () => {
     const [component, styles] = await Promise.all([
       readFile(new URL("./TvApp.tsx", import.meta.url), "utf8"),
@@ -24,10 +30,12 @@ describe("TV display policy", () => {
     expect(entry).toContain('@cyberos/ui/fonts.css');
     expect(entry).toContain('mountAppearance()');
     expect(entry).not.toContain("Newsreader");
-    expect(styles).toContain('@import "@cyberos/shared/hud-tokens.css"');
+    expect(styles).toContain('@import "@cyberos/shared/appearance.css"');
     expect(styles).toContain("outline: 3px solid var(--tv-focus)");
     expect(styles).not.toContain("transform: translateY(-6px)");
     expect(tokens).toContain("--cyberos-color-command: var(--cyberos-hud-yellow)");
     expect(tokens).toContain("--cyberos-color-focus: var(--cyberos-hud-cyan)");
+    expect(styles).not.toContain('layer(legacy)');
+    expect(styles).not.toContain('../styles/video.css');
   });
 });
