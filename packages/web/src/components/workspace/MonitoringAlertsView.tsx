@@ -1,7 +1,7 @@
 import { Button as UiButton, DialogActions, DialogHeader, Field, Input } from "@cyberos/ui";
 import { CustomSelect } from "../common/CustomSelect.js";
 import { ModalPortal } from "../common/ModalPortal.js";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   BellOff,
@@ -127,7 +127,7 @@ function RulesView() {
   }
 
   async function saveRule() {
-    if (!editing) return;
+    if (!editing || busyId !== null) return;
     setBusyId(editing === "new" ? "new" : editing.id);
     try {
       const selector = JSON.parse(selectorText) as unknown;
@@ -186,22 +186,6 @@ function RulesView() {
     setError(errorMessage(error));
   }
 
-  if (editing) {
-    return <RuleEditor
-      draft={draft}
-      selectorText={selectorText}
-      metrics={catalog?.metrics ?? []}
-      policies={policies}
-      busy={busyId !== null}
-      builtin={editing !== "new" && editing.builtin}
-      error={error}
-      onChange={setDraft}
-      onSelectorChange={setSelectorText}
-      onCancel={() => setEditing(null)}
-      onSave={() => void saveRule()}
-    />;
-  }
-
   return (
     <div className="monitoring-alert-page" role="tabpanel">
       <header className="monitoring-alert-page-header">
@@ -215,7 +199,7 @@ function RulesView() {
           </UiButton>
         </div>
       </header>
-      {error ? <div className="monitoring-alert-error" role="alert"><CircleAlert size={16} />{error}</div> : null}
+      {error && !editing ? <div className="monitoring-alert-error" role="alert"><CircleAlert size={16} />{error}</div> : null}
       {loading ? <LoadingState /> : rules.length === 0 ? <EmptyState text={String(t("workspace.monitoring.alerts.rules.empty"))} /> : (
         <div className="monitoring-alert-table-wrap">
           <table className="monitoring-alert-table">
@@ -241,6 +225,19 @@ function RulesView() {
           </table>
         </div>
       )}
+      {editing ? <RuleEditor
+        draft={draft}
+        selectorText={selectorText}
+        metrics={catalog?.metrics ?? []}
+        policies={policies}
+        busy={busyId !== null}
+        builtin={editing !== "new" && editing.builtin}
+        error={error}
+        onChange={setDraft}
+        onSelectorChange={setSelectorText}
+        onCancel={() => { if (busyId === null) { setEditing(null); setError(null); } }}
+        onSave={() => void saveRule()}
+      /> : null}
     </div>
   );
 }
@@ -259,12 +256,17 @@ function RuleEditor({ draft, selectorText, metrics, policies, busy, builtin, err
   onSave: () => void;
 }) {
   const { t } = useTranslation();
+  const titleId = useId();
+  const descriptionId = useId();
+  const dialogRef = useModalDialog(onCancel, busy);
   const metric = metrics.find((item) => item.name === draft.metric);
   return (
-    <div className="monitoring-alert-page" role="tabpanel">
-      <header className="monitoring-alert-page-header"><div><h3>{t("workspace.monitoring.alerts.editor.title")}</h3><p>{t("workspace.monitoring.alerts.editor.description")}</p></div></header>
-      {error ? <div className="monitoring-alert-error" role="alert"><CircleAlert size={16} />{error}</div> : null}
-      <form className="monitoring-alert-form" onSubmit={(event) => { event.preventDefault(); onSave(); }}>
+    <ModalPortal className="management-modal-backdrop monitoring-rule-editor-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onCancel(); }}>
+    <section ref={dialogRef} tabIndex={-1} className="management-modal monitoring-rule-editor-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId}>
+      <DialogHeader title={t("workspace.monitoring.alerts.editor.title")} description={t("workspace.monitoring.alerts.editor.description")} headingId={titleId} descriptionId={descriptionId} icon={<CircleAlert aria-hidden="true" size={18} />} actions={<UiButton variant="ghost" iconOnly type="button" className="management-icon-action" onClick={onCancel} disabled={busy} data-tooltip={t("common.actions.close")} aria-label={t("common.actions.close")}><X aria-hidden="true" size={16} /></UiButton>} />
+      <form className="monitoring-alert-form" aria-busy={busy || undefined} onSubmit={(event) => { event.preventDefault(); if (!busy) onSave(); }}>
+        <div className="monitoring-rule-editor-body">
+        {error ? <div className="monitoring-alert-error" role="alert"><CircleAlert aria-hidden="true" size={16} />{error}</div> : null}
         <fieldset disabled={busy}>
           <Field className="span-2" label={t("workspace.monitoring.alerts.fields.name")}><Input required maxLength={120} value={draft.name} onChange={(event) => onChange({ ...draft, name: event.target.value })} /></Field>
           <Field label={t("workspace.monitoring.alerts.fields.metric")}>
@@ -294,9 +296,11 @@ function RuleEditor({ draft, selectorText, metrics, policies, busy, builtin, err
           <Field className="span-2" label={t("workspace.monitoring.alerts.fields.policy")}><CustomSelect value={draft.escalationPolicyId ?? ""} onChange={(selectedValue) => onChange({ ...draft, escalationPolicyId: selectedValue || null })} ariaLabel={t("workspace.monitoring.alerts.fields.policy")} options={[{ value: "", label: t("workspace.monitoring.alerts.noPolicy") }, ...(policies.map((policy) => ({ value: policy.id, label: policy.name })))]} /></Field>
           <Switch className="monitoring-alert-check span-2" checked={draft.enabled} onCheckedChange={(enabled) => onChange({ ...draft, enabled })} label={`${t("workspace.monitoring.alerts.enabled")}${builtin ? ` · ${t("workspace.monitoring.alerts.builtin")}` : ""}`} />
         </fieldset>
-        <footer><UiButton variant="secondary" className="secondary-button" type="button" onClick={onCancel}><X size={15} />{t("common.actions.cancel")}</UiButton><UiButton variant="primary" className="primary-button" type="submit" disabled={busy} aria-busy={busy || undefined}>{busy ? <LoaderCircle className="is-spinning" size={15} /> : <Check size={15} />}{t("common.actions.save")}</UiButton></footer>
+        </div>
+        <DialogActions><UiButton variant="secondary" className="secondary-button" type="button" onClick={onCancel} disabled={busy}><X aria-hidden="true" size={15} />{t("common.actions.cancel")}</UiButton><UiButton variant="primary" className="primary-button" type="submit" disabled={busy} aria-busy={busy || undefined}>{busy ? <LoaderCircle className="is-spinning" aria-hidden="true" size={15} /> : <Check aria-hidden="true" size={15} />}{t("common.actions.save")}</UiButton></DialogActions>
       </form>
-    </div>
+    </section>
+    </ModalPortal>
   );
 }
 
