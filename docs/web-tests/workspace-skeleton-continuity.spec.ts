@@ -7,7 +7,7 @@ const panels = [
   { id: "photos", module: "PhotoLibraryPanel", api: /^\/api\/photos\//, skeleton: ".photo-skeleton-tile", count: 16 },
   { id: "downloads", module: "HttpDownloaderPanel", api: /^\/api\/downloads(?:\/|$)/, skeleton: ".download-task-row-skeleton", count: 5 },
   { id: "terminal", module: "LocalTerminalPanel", api: /^\/api\/terminal\/tabs(?:\/|$)/, skeleton: ".workspace-terminal-skeleton", count: 1 },
-  { id: "music", module: "MusicLibraryPanel", api: /^\/api\/music\//, skeleton: ".panel-content-skeleton", count: 1 },
+  { id: "music", module: "MusicLibraryPanel", api: /^\/api\/music\//, skeleton: ".music-library-skeleton", count: 1 },
   { id: "video", module: "VideoLibraryPanel", api: /^\/api\/media\//, skeleton: ".panel-content-skeleton", count: 1 },
   { id: "nvr", module: "NvrPanel", api: /^\/api\/nvr(?:\/|$)/, skeleton: ".panel-content-skeleton", count: 1 },
   { id: "docker", module: "WorkspaceManagementPanel", api: /^\/api\/docker\/summary$/, skeleton: dashboardSkeleton, count: 11 },

@@ -27,8 +27,9 @@
 .music-section {
   margin: 0 0 24px;
 }
-.music-section:has(.music-album-grid:empty),
-.music-section:has(.music-track-list:empty) {
+.music-section:has(.music-media-grid:empty),
+.music-section:has(.music-track-list:empty),
+.music-section:has(.music-track-grid:empty) {
   display: none;
 }
 .music-section-heading {
@@ -72,86 +73,6 @@
   width: 34%;
   height: 34%;
   stroke-width: 1;
-}
-.music-album-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
-  gap: 18px 14px;
-}
-.music-album {
-  min-width: 0;
-}
-.music-album-open {
-  display: flex !important;
-  flex-direction: column;
-  align-items: stretch !important;
-  gap: 0 !important;
-  width: 100%;
-  padding: 0;
-  text-align: left;
-}
-.music-album-open .music-cover {
-  width: 100%;
-  margin-bottom: 8px;
-}
-.music-album-open strong,
-.music-album-open small {
-  display: block;
-  overflow: hidden;
-  width: 100%;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.music-album-open strong {
-  font-size: 13px;
-}
-.music-album-open small {
-  margin-top: 3px;
-  color: var(--muted);
-  font-size: 11px;
-}
-.music-album-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 32px;
-}
-.music-album-meta button {
-  min-height: 32px;
-}
-.music-artist-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 0 16px;
-}
-.music-artist {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  border-bottom: 1px solid var(--line-soft);
-}
-.music-artist > button:first-child {
-  flex: 1;
-  justify-content: flex-start;
-  min-width: 0;
-  padding: 8px 0;
-  gap: 10px;
-  text-align: left;
-}
-.music-artist .music-cover {
-  width: 44px;
-}
-.music-artist strong,
-.music-artist small {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.music-artist small {
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 11px;
 }
 .music-track {
   position: relative;
@@ -262,28 +183,6 @@
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 12px;
-}
-.music-playlist-list > button {
-  display: flex;
-  justify-content: flex-start;
-  gap: 12px;
-  width: 100%;
-  padding: 10px;
-  border-bottom-color: var(--line-soft);
-  text-align: left;
-}
-.music-playlist-list > button > span {
-  flex: 1;
-  min-width: 0;
-}
-.music-playlist-list strong,
-.music-playlist-list small {
-  display: block;
-  overflow-wrap: anywhere;
-}
-.music-playlist-list small {
-  color: var(--muted);
-  margin-top: 5px;
 }
 .music-empty h3 {
   color: var(--text);
@@ -523,10 +422,6 @@
 @container (max-width: 360px) {
   .music-content {
     padding: 10px;
-  }
-  .music-album-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px 10px;
   }
   .music-detail-header {
     align-items: flex-start;

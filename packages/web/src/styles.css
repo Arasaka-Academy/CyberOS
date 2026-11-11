@@ -45,3 +45,6 @@
 @import "./styles/shares/protocols.css" layer(app);
 @import "./styles/shares/create.css" layer(app);
 @import "./styles/voice.css" layer(app);
+@import "./styles/music/cards.css" layer(app);
+@import "./styles/music/home.css" layer(app);
+@import "./styles/music/skeleton.css" layer(app);

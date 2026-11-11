@@ -2,6 +2,8 @@ import { Button, Input, InputGroup } from "@cyberos/ui";
 import { Clock3, Database, LoaderCircle, Search, SlidersHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { APP_REGISTRY } from "../../mobile/apps.js";
+import { useMobileNavigation } from "../../mobile/MobileNavigation.js";
+import { MusicLibrarySkeleton, type MusicDetail, type MusicLibraryView } from "../music/MusicLibrarySkeleton.js";
 import type { WorkspacePanelId } from "../../lib/workspace-panel-settings.js";
 import { managementDashboardWidgetDefinitions, type ManagementDashboardId } from "../../lib/management-dashboard-layout.js";
 import { ManagementDashboardGrid, useManagementDashboard } from "./ManagementDashboard.js";
@@ -29,6 +31,9 @@ const PANEL_LOADING_COPY = {
 
 export function WorkspacePanelLoading({ panel }: { panel: WorkspacePanelId }) {
   const { t } = useTranslation();
+  const views = useMobileNavigation()?.views;
+  const musicView = views?.get<MusicLibraryView>("music.view", "home") ?? "home";
+  const musicDetail = views?.get<MusicDetail | null>("music.detail", null) ?? null;
   const definition = APP_REGISTRY.find((item) => item.id === panel)!;
   const Icon = panel === "storage" ? Database : definition.Icon;
   const [titleKey, subtitleKey] = PANEL_LOADING_COPY[panel];
@@ -70,6 +75,11 @@ export function WorkspacePanelLoading({ panel }: { panel: WorkspacePanelId }) {
         </div>
       </section>;
     case "music":
+      return <section className="workspace-panel-loading music-panel" data-panel-loading={panel} aria-busy="true">
+        {header}{loadingStatus}
+        <LibraryLoadingControls panel="music" active={musicDetail ? null : musicView} query={views?.get("music.query", "") ?? ""} />
+        <div className="music-content"><MusicLibrarySkeleton view={musicView} detail={musicDetail} /></div>
+      </section>;
     case "video":
       return <section className={`workspace-panel-loading ${panel}-panel`} data-panel-loading={panel} aria-busy="true">
         {header}
@@ -135,7 +145,7 @@ function DashboardLoading({ panel }: { panel: ManagementDashboardId }) {
   return <ManagementDashboardGrid dashboard={dashboard} items={items} loading />;
 }
 
-function LibraryLoadingControls({ panel }: { panel: "music" | "video" }) {
+function LibraryLoadingControls({ panel, active = "home", query = "" }: { panel: "music" | "video"; active?: string | null; query?: string }) {
   const { t } = useTranslation();
   const tabs = panel === "music"
     ? (["home", "albums", "artists", "tracks", "playlists"] as const).map((tab) => ({ id: tab, label: t(`music.views.${tab}`) }))
@@ -144,12 +154,12 @@ function LibraryLoadingControls({ panel }: { panel: "music" | "video" }) {
   return <>
     <div className="library-search-toolbar">
       <form className="search"><InputGroup leading={<Search size={17} aria-hidden="true" />}>
-        <Input type="search" disabled placeholder={searchLabel} aria-label={searchLabel} />
+        <Input type="search" disabled value={query} placeholder={searchLabel} aria-label={searchLabel} />
       </InputGroup></form>
       <div className="workspace-search-filter"><Button iconOnly variant="ghost" type="button" className="workspace-search-filter-trigger" disabled aria-label={t(panel === "music" ? "music.filters" : "video.filter")}><SlidersHorizontal aria-hidden="true" size={16} /></Button></div>
     </div>
     <nav className={`${panel === "music" ? "music-tabs" : "video-navigation"} view-tabs`} aria-label={t(panel === "music" ? "music.navigation" : "video.library")}>
-      {tabs.map(({ id, label }) => <Button key={id} variant="ghost" type="button" disabled className={`plain-button${panel === "music" && id === "home" ? " is-active" : ""}`} aria-current={id === "home" ? "page" : undefined} aria-pressed={panel === "video" ? id === "home" : undefined}>{label}</Button>)}
+      {tabs.map(({ id, label }) => <Button key={id} variant="ghost" type="button" disabled className={`plain-button${panel === "music" && id === active ? " is-active" : ""}`} aria-current={id === active ? "page" : undefined} aria-pressed={panel === "video" ? id === active : undefined}>{label}</Button>)}
     </nav>
   </>;
 }

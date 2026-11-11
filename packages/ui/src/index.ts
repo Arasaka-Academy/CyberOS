@@ -12,4 +12,5 @@ export { Progress } from "./vendor/progress.js";
 export { Skeleton } from "./vendor/skeleton.js";
 export { Spinner } from "./vendor/spinner.js";
 export { Select } from "./vendor/select.js";
+export { DatePicker, type DatePickerProps } from "./vendor/date-picker.js";
 export { mountAppearance, setAppearance } from "./theme.js";

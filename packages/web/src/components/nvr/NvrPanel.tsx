@@ -1,10 +1,11 @@
-import { Button, EmptyState, Field, Input, Notice, Section, StatusBadge } from "@cyberos/ui";
+import { Button, EmptyState, Field, Notice, Section, StatusBadge } from "@cyberos/ui";
 import { CalendarDays, Download, Play, RefreshCw, Video } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { NvrEvent, NvrOverview, NvrSegment } from "@cyberos/shared";
 import type { StoragePool } from "../../api.js";
 import { CustomSelect } from "../common/CustomSelect.js";
+import { DatePicker } from "../common/DatePicker.js";
 import { PanelHeader, PanelHeaderAction, PanelHeaderActions } from "../workspace/PanelHeader.js";
 import { PanelContentSkeleton } from "../workspace/ManagementSkeleton.js";
 import { NvrDevices } from "./NvrDevices.js";
@@ -103,7 +104,7 @@ export function NvrPanel({ storagePools }: { storagePools: StoragePool[] }) {
         </div> : null}
         {overview && (tab === "playback" || tab === "events") ? <div className="nvr-history">
           <Section className="nvr-card" title={t("nvr.filters")} icon={<CalendarDays size={18} />}>
-            <div className="nvr-filters"><Field label={t("nvr.camera")}><CustomSelect value={selected} disabled={!overview.devices.length} onChange={(id) => { setSelected(id); changeFilter(); }} options={overview.devices.map((device) => ({ value: device.id, label: device.name }))} /></Field><Field label={t("nvr.date")}><Input type="date" required value={date} max={localDate()} onChange={(event) => { if (event.target.value) { setDate(event.target.value); changeFilter(); } }} /></Field></div>
+            <div className="nvr-filters"><Field label={t("nvr.camera")}><CustomSelect value={selected} disabled={!overview.devices.length} onChange={(id) => { setSelected(id); changeFilter(); }} options={overview.devices.map((device) => ({ value: device.id, label: device.name }))} /></Field><Field label={t("nvr.date")}><DatePicker required value={date} max={localDate()} onChange={(value) => { if (value) { setDate(value); changeFilter(); } }} /></Field></div>
           </Section>
           {tab === "playback" ? <>
             <Section className="nvr-card nvr-playback-card" title={t("nvr.timeline")}>

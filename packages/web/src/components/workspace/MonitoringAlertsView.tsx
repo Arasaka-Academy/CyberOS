@@ -1,5 +1,6 @@
 import { Button as UiButton, DialogActions, DialogHeader, Field, Input } from "@cyberos/ui";
 import { CustomSelect } from "../common/CustomSelect.js";
+import { DatePicker } from "../common/DatePicker.js";
 import { ModalPortal } from "../common/ModalPortal.js";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -559,8 +560,8 @@ function IncidentDetailDialog({
             <h3>{t("workspace.monitoring.alerts.incidents.createSilence")}</h3>
             <div className="monitoring-incident-silence-grid">
               <Field label={t("workspace.monitoring.alerts.incidents.silenceScope")}><CustomSelect triggerRef={silenceScopeRef} value={scope} onChange={(selectedValue) => setScope(selectedValue as "series" | "rule")} ariaLabel={t("workspace.monitoring.alerts.incidents.silenceScope")} options={[{ value: "series", label: t("workspace.monitoring.alerts.incidents.scopeSeries") }, { value: "rule", label: t("workspace.monitoring.alerts.incidents.scopeRule") }]} /></Field>
-              <Field label={t("workspace.monitoring.alerts.incidents.silenceStarts")}><Input type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} /></Field>
-              <Field label={t("workspace.monitoring.alerts.incidents.silenceEnds")}><Input type="datetime-local" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} /></Field>
+              <Field label={t("workspace.monitoring.alerts.incidents.silenceStarts")}><DatePicker includeTime value={startsAt} onChange={setStartsAt} /></Field>
+              <Field label={t("workspace.monitoring.alerts.incidents.silenceEnds")}><DatePicker includeTime value={endsAt} onChange={setEndsAt} /></Field>
               <Field className="span-2" label={t("workspace.monitoring.alerts.incidents.silenceReason")}><Input value={reason} maxLength={500} onChange={(event) => setReason(event.target.value)} /></Field>
             </div>
             <div className="monitoring-incident-detail-actions"><UiButton variant="secondary" type="button" className="secondary-button" disabled={busy} onClick={() => onShowSilence(false)}>{t("common.actions.cancel")}</UiButton><UiButton variant="primary" type="submit" className="primary-button" disabled={busy || !validSilence} aria-busy={busy || undefined}>{busy ? <LoaderCircle className="is-spinning" size={15} /> : <BellOff size={15} />}{t("workspace.monitoring.alerts.incidents.silence")}</UiButton></div>

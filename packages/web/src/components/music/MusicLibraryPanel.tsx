@@ -1,4 +1,4 @@
-import { Button as UiButton, Checkbox, EmptyState, Field, Input, InputGroup, Notice, Section } from "@cyberos/ui";
+import { Button as UiButton, Card, Checkbox, EmptyState, Field, Input, InputGroup, Notice, Section } from "@cyberos/ui";
 import {
   useCallback,
   useEffect,
@@ -15,6 +15,7 @@ import {
   ListMusic,
   LoaderCircle,
   Music2,
+  MoreHorizontal,
   Play,
   Plus,
   RefreshCw,
@@ -44,21 +45,17 @@ import {
   PanelHeaderAction,
   PanelHeaderActions,
 } from "../workspace/PanelHeader.js";
-import { PanelContentSkeleton } from "../workspace/ManagementSkeleton.js";
 import { CustomSelect } from "../common/CustomSelect.js";
 import { SearchFilterPopover } from "../common/SearchFilterPopover.js";
-import { MusicCover } from "./MusicPlayer.js";
+import { MusicCover, MusicPlaylistCover } from "./MusicCover.js";
+import { MusicHome as MusicHomeView } from "./MusicHome.js";
+import { MusicMediaCard } from "./MusicMediaCard.js";
+import { MusicLibrarySkeleton, type MusicLibraryView as View, type MusicDetail as Detail } from "./MusicLibrarySkeleton.js";
 import { MusicMetadataFilters } from "./MusicMetadataFilters.js";
 import { MusicDialog, MusicNameDialog } from "./MusicDialogs.js";
 import { useMusicRemote } from "./MusicProvider.js";
 import { focusMusicReorderRow } from "./music-focus.js";
 
-type View = "home" | "albums" | "artists" | "tracks" | "playlists" | "search";
-type Detail = {
-  kind: "album" | "artist" | "playlist";
-  id: string;
-  title: string;
-};
 interface Content {
   albums: MusicAlbum[];
   artists: MusicArtist[];
@@ -127,6 +124,8 @@ export function MusicLibraryPanel({
     useState(false);
   const [targetPlaylistId, setTargetPlaylistId] = useState("");
   const [rowMenu, setRowMenu] = useState<string | null>(null);
+  const [collectionBusy, setCollectionBusy] = useState<string | null>(null);
+  const collectionRequest = useRef<AbortController | null>(null);
   const [reorderFocus, setReorderFocus] = useState<{
     playlistId: string;
     itemId: string;
@@ -139,7 +138,10 @@ export function MusicLibraryPanel({
   const rowActionButtons = useRef(new Map<string, HTMLButtonElement>());
   const trackListRoot = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
-  useMobileBack(() => { if (detail) { setDetail(null); return true; } if (view !== "home") { setView("home"); return true; } return false; }, 10);
+  const backButton = useRef<HTMLButtonElement | null>(null);
+  const detailOpener = useRef<{ kind: string; id: string } | null>(null);
+  const focusRequest = useRef<"detail" | "back" | null>(null);
+  useMobileBack(() => { if (detail) { closeDetail(); return true; } if (view !== "home") { showView("home"); return true; } return false; }, 10);
   useMobileBack(() => { if (!rowMenu) return false; setRowMenu(null); return true; }, 40);
   const playlistChoicesRequestId = useRef(0);
   const playlistChoicesController = useRef<AbortController | null>(null);
@@ -283,6 +285,19 @@ export function MusicLibraryPanel({
   }, [load, refreshVersion, remote.libraryVersion]);
   useAppScroll(contentRef, `music.scroll:${view}:${detail?.id ?? ""}:${search}:${JSON.stringify(filters)}`, { ready: !loading, canLoadMore: Boolean(content.nextCursor) && !error, loadMore: () => content.nextCursor ? load(content.nextCursor) : undefined });
   useEffect(() => {
+    if (loading || !focusRequest.current) return;
+    if (focusRequest.current === "detail" && detail) backButton.current?.focus({ preventScroll: true });
+    else if (focusRequest.current === "back" && !detail) {
+      const opener = detailOpener.current;
+      const target = Array.from(contentRef.current?.querySelectorAll<HTMLElement>("[data-music-entity], [data-music-item-id]") ?? []).find(element => opener?.kind === "track"
+        ? element.dataset.musicItemId === opener.id
+        : element.dataset.musicEntity === opener?.kind && element.dataset.musicId === opener?.id);
+      const button = target?.querySelector<HTMLButtonElement>(opener?.kind === "track" ? ".music-row-menu > button" : ".music-media-open");
+      (button ?? contentRef.current?.parentElement?.querySelector<HTMLButtonElement>('.music-tabs [aria-current="page"]'))?.focus({ preventScroll: true });
+    }
+    focusRequest.current = null;
+  }, [loading, detail]);
+  useEffect(() => {
     if (!reorderFocus || loading || busy) return;
     if (detail?.kind === "playlist" && detail.id === reorderFocus.playlistId) {
       const rows = Array.from(
@@ -351,6 +366,7 @@ export function MusicLibraryPanel({
         menuRoot.current?.contains(event.target as Node)
       )
         return;
+      if (event instanceof KeyboardEvent) rowActionButtons.current.get(rowMenu)?.focus();
       setRowMenu(null);
     };
     document.addEventListener("mousedown", close);
@@ -458,12 +474,65 @@ export function MusicLibraryPanel({
       .map((track) => track.id);
     if (ids.length) void remote.execute({ type, trackIds: ids });
   };
+  useEffect(() => {
+    setCollectionBusy(null);
+    return () => {
+      collectionRequest.current?.abort();
+      collectionRequest.current = null;
+    };
+  }, [view, detail]);
+  const playCollection = async (kind: "album" | "playlist", id: string) => {
+    if (loading || remote.busy || collectionRequest.current) return;
+    const controller = new AbortController();
+    collectionRequest.current = controller;
+    setCollectionBusy(id);
+    setError(null);
+    try {
+      const result = await musicRequest<{ tracks: MusicTrack[] }>(`/${kind === "album" ? "albums" : "playlists"}/${encodeURIComponent(id)}`, "GET", undefined, controller.signal);
+      if (controller.signal.aborted) return;
+      const trackIds = result.tracks.filter(track => !track.missing).map(track => track.id);
+      if (trackIds.length) await remote.execute({ type: "replace", trackIds });
+      else setError(t("music.noPlayableTracks"));
+    } catch (failure) {
+      if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : String(failure));
+    } finally {
+      if (collectionRequest.current === controller) {
+        collectionRequest.current = null;
+        setCollectionBusy(null);
+      }
+    }
+  };
+  const showView = (next: View, favorites = false) => {
+    focusRequest.current = null;
+    setLoading(true);
+    setContent(EMPTY);
+    setDetail(null);
+    setView(next);
+    setSearch("");
+    setQuery("");
+    setRowMenu(null);
+    if (favorites) setFilters(current => ({ ...current, favorite: true }));
+    reload();
+  };
   const openDetail = (kind: Detail["kind"], id: string, title: string) => {
+    const media = document.activeElement?.closest<HTMLElement>("[data-music-entity]");
+    const track = document.activeElement?.closest<HTMLElement>("[data-music-item-id]");
+    detailOpener.current = media?.dataset.musicId
+      ? { kind: media.dataset.musicEntity ?? kind, id: media.dataset.musicId }
+      : track?.dataset.musicItemId ? { kind: "track", id: track.dataset.musicItemId } : null;
+    focusRequest.current = "detail";
     setLoading(true);
     setContent(EMPTY);
     setDetail({ kind, id, title });
     setRowMenu(null);
   };
+  function closeDetail() {
+    focusRequest.current = "back";
+    setLoading(true);
+    setContent(EMPTY);
+    setDetail(null);
+    setRowMenu(null);
+  }
   const loadPlaylistChoices = async (cursor?: string) => {
     playlistChoicesController.current?.abort();
     const controller = new AbortController();
@@ -587,77 +656,15 @@ export function MusicLibraryPanel({
       }),
     );
   };
-  const albumGrid = (albums: MusicAlbum[]) => (
-    <div className="music-album-grid">
-      {albums.map((album) => (
-        <article className="ui-card music-album" key={album.id}>
-          <UiButton variant="ghost"
-            type="button"
-            className="plain-button music-album-open"
-            onClick={() => openDetail("album", album.id, album.title)}
-          >
-            <MusicCover coverKey={album.coverKey} />
-            <strong data-tooltip={album.title}>{album.title}</strong>
-            <small data-tooltip={album.artists.join(" · ")}>
-              {album.artists.join(" · ") || t("music.unknownArtist")}
-            </small>
-          </UiButton>
-          <div className="music-album-meta metadata">
-            <span>{album.year ?? "—"}</span>
-            <UiButton iconOnly variant="plain"
-              type="button"
-              aria-label={t("music.favorite")}
-              data-tooltip={t("music.favorite")}
-              aria-pressed={album.favorite}
-              disabled={busy}
-              onClick={() => favorite("album", album)} className="plain-button"
-            >
-              <Heart
-                size={14}
-                fill={album.favorite ? "currentColor" : "none"}
-              />
-            </UiButton>
-          </div>
-        </article>
-      ))}
-    </div>
-  );
-  const artistGrid = (artists: MusicArtist[]) => (
-    <div className="music-artist-list">
-      {artists.map((artist) => (
-        <div className="music-artist" key={artist.id}>
-          <UiButton variant="ghost"
-            type="button"
-            onClick={() => openDetail("artist", artist.id, artist.name)} className="plain-button"
-          >
-            <MusicCover coverKey={artist.coverKey} />
-            <span>
-              <strong>{artist.name}</strong>
-              <small>
-                {t("music.artistCounts", {
-                  albums: artist.albumCount,
-                  tracks: artist.trackCount,
-                })}
-              </small>
-            </span>
-          </UiButton>
-          <UiButton iconOnly variant="plain"
-            type="button"
-            disabled={busy}
-            onClick={() => favorite("artist", artist)}
-            aria-label={t("music.favorite")}
-            data-tooltip={t("music.favorite")}
-            aria-pressed={artist.favorite} className="plain-button"
-          >
-            <Heart size={16} fill={artist.favorite ? "currentColor" : "none"} />
-          </UiButton>
-        </div>
-      ))}
-    </div>
-  );
+  const albumGrid = (albums: MusicAlbum[]) => <div className="music-media-grid">
+    {albums.map(album => <MusicMediaCard key={album.id} kind="album" id={album.id} title={album.title} subtitle={album.artists.join(" · ") || t("music.unknownArtist")} metadata={`${album.year ?? "—"} · ${t("music.trackCount", { count: album.trackCount })}`} coverKey={album.coverKey} favorite={album.favorite} disabled={busy} onFavorite={() => favorite("album", album)} onOpen={() => openDetail("album", album.id, album.title)} onPlay={() => void playCollection("album", album.id)} playDisabled={loading || remote.busy || collectionBusy !== null || !album.trackCount} playing={collectionBusy === album.id} />)}
+  </div>;
+  const artistGrid = (artists: MusicArtist[]) => <div className="music-media-grid">
+    {artists.map(artist => <MusicMediaCard key={artist.id} kind="artist" id={artist.id} title={artist.name} metadata={t("music.artistCounts", { albums: artist.albumCount, tracks: artist.trackCount })} coverKey={artist.coverKey} favorite={artist.favorite} disabled={busy} onFavorite={() => favorite("artist", artist)} onOpen={() => openDetail("artist", artist.id, artist.name)} />)}
+  </div>;
   const trackList = (tracks: MusicTrack[], scope: string) => (
     <div
-      className="music-track-list"
+      className={detail ? "music-track-list" : "music-track-grid"}
       data-music-list-scope={scope}
       ref={detail?.kind === "playlist" ? trackListRoot : null}
     >
@@ -666,21 +673,22 @@ export function MusicLibraryPanel({
           (track as Partial<MusicPlaylistTrack>).playlistItemId ?? track.id;
         const rowKey = JSON.stringify([scope, itemId]);
         return (
-          <div
+          <MusicTrackSurface card={!detail}
             key={rowKey}
-            className={`music-track${track.missing ? " is-missing" : ""}`}
+            className={`music-track${!detail ? " music-track-card" : ""}${track.missing ? " is-missing" : ""}`}
             data-music-item-id={itemId}
             data-music-track-id={track.id}
           >
             <UiButton iconOnly variant="plain"
               type="button"
               className="plain-button music-track-play"
-              disabled={track.missing || remote.busy || loading}
+              disabled={track.missing || loading}
+              aria-disabled={remote.busy || undefined}
               aria-label={t("music.playTrack", { title: track.title })}
               data-tooltip={t("music.playTrack", { title: track.title })}
-              onClick={() => play(tracks.slice(index))}
+              onClick={() => { if (!remote.busy) play(tracks.slice(index)); }}
             >
-              <Play size={15} />
+              {!detail ? <MusicCover coverKey={track.coverKey} /> : null}<Play size={15} />
             </UiButton>
             <div
               className="music-track-copy"
@@ -693,14 +701,14 @@ export function MusicLibraryPanel({
                 {track.missing ? ` · ${t("music.missing")}` : ""}
               </span>
             </div>
-            <UiButton variant="ghost"
+            {detail ? <UiButton variant="ghost"
               type="button"
               className="plain-button music-track-album"
               data-tooltip={track.album}
               onClick={() => openDetail("album", track.albumId, track.album)}
             >
               {track.album}
-            </UiButton>
+            </UiButton> : null}
             <span className="music-track-duration">
               {musicTime(track.durationSeconds)}
             </span>
@@ -759,10 +767,16 @@ export function MusicLibraryPanel({
                 aria-expanded={rowMenu === rowKey}
                 onClick={() => setRowMenu(rowMenu === rowKey ? null : rowKey)} className="plain-button"
               >
-                <Plus size={17} />
+                <MoreHorizontal size={17} />
               </UiButton>
               {rowMenu === rowKey ? (
                 <div className="music-track-actions">
+                  <UiButton variant="plain" type="button" className="plain-button music-menu-favorite" aria-pressed={track.favorite} disabled={busy} onClick={() => favorite("track", track)}>
+                    <Heart size={14} fill={track.favorite ? "currentColor" : "none"} />{t("music.favorite")}
+                  </UiButton>
+                  <UiButton variant="plain" type="button" className="plain-button music-menu-album" onClick={() => openDetail("album", track.albumId, track.album)}>
+                    <Disc3 size={14} />{t("music.openAlbum")}
+                  </UiButton>
                   <UiButton variant="plain"
                     type="button"
                     disabled={track.missing || remote.busy || loading}
@@ -815,7 +829,7 @@ export function MusicLibraryPanel({
                 </div>
               ) : null}
             </div>
-          </div>
+          </MusicTrackSurface>
         );
       })}
     </div>
@@ -918,15 +932,7 @@ export function MusicLibraryPanel({
               type="button"
               aria-current={view === tab && !detail ? "page" : undefined}
               className={`plain-button ${view === tab && !detail ? "is-active" : ""}`}
-              onClick={() => {
-                setLoading(true);
-                setContent(EMPTY);
-                setDetail(null);
-                setView(tab);
-                setSearch("");
-                setQuery("");
-                reload();
-              }}
+              onClick={() => showView(tab)}
             >
               {t(`music.views.${tab}`)}
             </UiButton>
@@ -957,28 +963,25 @@ export function MusicLibraryPanel({
             {t("music.scanNeedsAttention")}
           </UiButton>
         ) : null}
-        {detail ? (
+        {detail && !(loading && empty) ? (
           <>
             <UiButton variant="plain"
               className="plain-button music-back"
+              ref={backButton}
               type="button"
-              onClick={() => {
-                setLoading(true);
-                setContent(EMPTY);
-                setDetail(null);
-              }}
+              onClick={closeDetail}
             >
               <ArrowLeft size={16} />
               {t("music.back")}
             </UiButton>
             <header className="music-detail-header">
-              <MusicCover
+              {detail.kind === "playlist" ? <MusicPlaylistCover id={detail.id} /> : <MusicCover
                 coverKey={
                   content.albums[0]?.coverKey ??
                   content.artists[0]?.coverKey ??
                   null
                 }
-              />
+              />}
               <div>
                 <small>{t(`music.kind.${detail.kind}`)}</small>
                 <h3>{detail.title}</h3>
@@ -1100,35 +1103,9 @@ export function MusicLibraryPanel({
           </>
         ) : null}
         {!detail && view === "home" && content.home ? (
-          <>
-            <MusicSection title={t("music.recentlyAdded")}>
-              {albumGrid(content.home.recentlyAdded)}
-            </MusicSection>
-            <MusicSection title={t("music.recentlyPlayed")}>
-              {trackList(content.home.recentlyPlayed, "home:recently-played")}
-            </MusicSection>
-            <MusicSection title={t("music.mostPlayed")}>
-              {trackList(content.home.mostPlayed, "home:most-played")}
-            </MusicSection>
-            <MusicSection
-              title={t("music.favorites")}
-              action={
-                <UiButton variant="plain"
-                  type="button"
-                  onClick={() => {
-                    setView("tracks");
-                    setFilters((current) => ({ ...current, favorite: true }));
-                  }} className="plain-button"
-                >
-                  {t("music.showAll")}
-                </UiButton>
-              }
-            >
-              {trackList(content.home.favorites, "home:favorites")}
-            </MusicSection>
-          </>
+          <MusicHomeView home={content.home} renderAlbums={albumGrid} renderTracks={trackList} onView={showView} onFavorites={() => showView("tracks", true)} onSettings={onOpenSettings} onPlayTracks={play} onPlayCollection={(kind, id) => void playCollection(kind, id)} onOpenPlaylist={playlist => openDetail("playlist", playlist.id, playlist.name)} collectionBusy={collectionBusy} />
         ) : null}
-        {!detail && (view === "albums" || view === "search") ? (
+        {!detail && !(loading && empty) && (view === "albums" || view === "search") ? (
           <MusicSection
             title={view === "search" ? t("music.views.albums") : ""}
             action={
@@ -1146,7 +1123,7 @@ export function MusicLibraryPanel({
             {albumGrid(content.albums)}
           </MusicSection>
         ) : null}
-        {!detail && (view === "artists" || view === "search") ? (
+        {!detail && !(loading && empty) && (view === "artists" || view === "search") ? (
           <MusicSection
             title={view === "search" ? t("music.views.artists") : ""}
             action={
@@ -1164,7 +1141,7 @@ export function MusicLibraryPanel({
             {artistGrid(content.artists)}
           </MusicSection>
         ) : null}
-        {!detail && (view === "tracks" || view === "search") ? (
+        {!detail && !(loading && empty) && (view === "tracks" || view === "search") ? (
           <MusicSection
             title={view === "search" ? t("music.views.tracks") : ""}
             action={
@@ -1182,7 +1159,7 @@ export function MusicLibraryPanel({
             {trackList(content.tracks, `view:${view}`)}
           </MusicSection>
         ) : null}
-        {!detail && view === "playlists" ? (
+        {!detail && !(loading && empty) && view === "playlists" ? (
           <>
             <div className="music-section-heading">
               <h3>{t("music.views.playlists")}</h3>
@@ -1191,30 +1168,12 @@ export function MusicLibraryPanel({
                 {t("music.newPlaylist")}
               </UiButton>
             </div>
-            <div className="music-playlist-list">
-              {content.playlists.map((playlist) => (
-                <UiButton variant="ghost"
-                  type="button"
-                  key={playlist.id}
-                  onClick={() =>
-                    openDetail("playlist", playlist.id, playlist.name)
-                  } className="plain-button"
-                >
-                  <ListMusic size={22} />
-                  <span>
-                    <strong>{playlist.name}</strong>
-                    <small>
-                      {t("music.trackCount", { count: playlist.trackCount })} ·{" "}
-                      {musicTime(playlist.durationSeconds)}
-                    </small>
-                  </span>
-                  <Play size={15} />
-                </UiButton>
-              ))}
+            <div className="music-media-grid">
+              {content.playlists.map(playlist => <MusicMediaCard key={playlist.id} kind="playlist" id={playlist.id} title={playlist.name} metadata={`${t("music.trackCount", { count: playlist.trackCount })} · ${musicTime(playlist.durationSeconds)}`} onOpen={() => openDetail("playlist", playlist.id, playlist.name)} onPlay={() => void playCollection("playlist", playlist.id)} playDisabled={loading || remote.busy || collectionBusy !== null || !playlist.trackCount} playing={collectionBusy === playlist.id} />)}
             </div>
           </>
         ) : null}
-        {!loading && sources.length === 0 ? (
+        {!loading && !content.home && sources.length === 0 ? (
           <EmptyState className="music-empty" icon={<Disc3 size={42} aria-hidden="true" />} title={t("music.emptyTitle")} description={t("music.emptyBody")} actions={<><UiButton variant="primary"
               className="primary-button"
               type="button"
@@ -1228,15 +1187,10 @@ export function MusicLibraryPanel({
 
           </EmptyState>
         ) : !loading &&
-          (empty ||
-            (content.home !== null &&
-              !content.home.recentlyAdded.length &&
-              !content.home.recentlyPlayed.length &&
-              !content.home.mostPlayed.length &&
-              !content.home.favorites.length)) ? (
+          empty ? (
           <EmptyState className="music-empty">{t("music.noResults")}</EmptyState>
         ) : null}
-        {loading && empty ? <PanelContentSkeleton /> : null}
+        {loading && empty ? <MusicLibrarySkeleton view={view} detail={detail} /> : null}
         {content.nextCursor && !detail ? (
           <UiButton variant="plain"
             className="plain-button music-load-more"
@@ -1388,6 +1342,15 @@ export function MusicLibraryPanel({
       ) : null}
     </section>
   );
+}
+function MusicTrackSurface({ card, children, ...props }: {
+  card: boolean;
+  children: React.ReactNode;
+  className: string;
+  "data-music-item-id": string;
+  "data-music-track-id": string;
+}) {
+  return card ? <Card padding="none" {...props}>{children}</Card> : <div {...props}>{children}</div>;
 }
 function MusicSection({
   title,

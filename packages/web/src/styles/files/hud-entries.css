@@ -33,10 +33,6 @@
   color: var(--accent-text);
 }
 
-.files-list-summary {
-  color: var(--hud-muted);
-}
-
 .workspace-stage[data-panel="files"] .file-row {
   border-bottom-color: var(--hud-line-soft);
   color: var(--hud-muted);

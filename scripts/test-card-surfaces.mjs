@@ -51,7 +51,7 @@ async function fixture(context, { tv = false, locale = "en" } = {}) {
     example("approval", "ui-card ui-card-frame approval-card", '<div class="approval-card-icon" data-kind="capability">!</div><div class="approval-card-body"><strong>Approve access / 允许访问</strong><p>Requires confirmation / 需要确认</p><dl class="approval-card-details"><div><dt>Scope / 范围</dt><dd>Project documents</dd></div></dl></div><div class="approval-actions"><button disabled>Allow / 允许</button><button>Cancel / 取消</button></div>', "frame"),
     '<div class="settings-metric-grid">'+example("settings-metric", "", "<strong>1,024</strong><span>Files / 文件</span>")+"</div>",
     '<div class="video-panel" style="display:block">'+example("video", "ui-card video-poster", '<span class="video-artwork">影片</span><strong>电影名称 / Long film title</strong><small>2026 · 1080p</small>')+"</div>",
-    example("album", "ui-card music-album", '<button class="music-album-open"><span class="music-cover">♪</span><strong>专辑标题 / Album</strong><small>Artist / 艺术家</small></button><div class="music-album-meta">12 tracks</div>'),
+    example("album", "ui-card music-media-card", '<button class="music-media-open"><span class="music-cover">♪</span><span class="music-media-copy"><strong>专辑标题 / Album</strong><span>Artist / 艺术家</span><small>12 tracks</small></span></button><div class="music-media-actions"></div>'),
     example("photo", "ui-card photo-tile", '<button class="photo-open" aria-label="Open photo">Photo / 照片</button>'),
     example("recording", "ui-card nvr-card nvr-recording", '<header class="nvr-card-header"><h3>Recording / 录像</h3></header><p>12:30 – 12:31</p>'),
     example("event", "ui-card nvr-card nvr-event", '<header class="nvr-card-header"><h3>Motion / 移动侦测</h3></header><p>Camera 01</p>'),

@@ -9,7 +9,6 @@ import {
   ArrowUp,
   Bluetooth,
   Check,
-  Disc3,
   Heart,
   MonitorPlay,
   Pause,
@@ -26,7 +25,7 @@ import {
 import { useTranslation } from "react-i18next";
 import type { MusicLyrics, MusicQueueEntry, MusicTrack } from "@cyberos/shared";
 import { getBluetoothSettings, type BluetoothAudioDevice } from "../../api.js";
-import { musicCoverUrl, musicRequest } from "../../lib/music-api.js";
+import { musicRequest } from "../../lib/music-api.js";
 import {
   activeLyricIndex,
   moveQueueItem,
@@ -36,31 +35,8 @@ import {
 import { useMusicRemote } from "./MusicProvider.js";
 import { MusicDialog, MusicNameDialog } from "./MusicDialogs.js";
 import { focusMusicReorderRow } from "./music-focus.js";
-
-export function MusicCover({
-  coverKey,
-  className = "",
-}: {
-  coverKey: string | null;
-  className?: string;
-}) {
-  const [failed, setFailed] = useState(false);
-  useEffect(() => setFailed(false), [coverKey]);
-  return (
-    <span className={`music-cover ${className}`}>
-      {coverKey && !failed ? (
-        <img
-          src={musicCoverUrl(coverKey)}
-          alt=""
-          loading="lazy"
-          onError={() => setFailed(true)}
-        />
-      ) : (
-        <Disc3 aria-hidden="true" />
-      )}
-    </span>
-  );
-}
+import { MusicCover } from "./MusicCover.js";
+export { MusicCover } from "./MusicCover.js";
 
 export function MusicPlayerDetails({
   onOpenBluetoothSettings,

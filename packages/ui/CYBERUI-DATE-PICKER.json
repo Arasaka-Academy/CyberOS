@@ -1,0 +1,36 @@
+{
+  "repository": "https://github.com/Arasaka-Academy/CyberUI",
+  "version": "0.3.0",
+  "baseCommit": "80c468cf0c6bffecda3d47bd8112c6d583d4fd0e",
+  "sourceDirty": false,
+  "transformations": [
+    "Relative TypeScript imports gain .js for NodeNext.",
+    "Provider token import uses the existing local tokens adapter."
+  ],
+  "files": [
+    {
+      "source": "packages/react/src/date-picker.tsx",
+      "sourceSha256": "a55a2a09176a4e1dc49c5d6422fdec2fb1c8a9c6c15a2e50b27dadd3f978ab15",
+      "vendored": "packages/ui/src/vendor/date-picker.tsx",
+      "vendoredSha256": "2c9d9342377261ecb874167e627f7ce41cd33cb0fb67beea0948c7fae2b0d438"
+    },
+    {
+      "source": "packages/react/src/date-picker.module.css",
+      "sourceSha256": "d4a5622abbb1993d598b87b8f432f7882f71dd1d6077aece04f170ddc4dda7a2",
+      "vendored": "packages/ui/src/vendor/date-picker.module.css",
+      "vendoredSha256": "d4a5622abbb1993d598b87b8f432f7882f71dd1d6077aece04f170ddc4dda7a2"
+    },
+    {
+      "source": "packages/react/src/calendar-date.ts",
+      "sourceSha256": "f5e94636c154ffaa9500a85a7039a70423a4fffe654761387915f427b6d16c9d",
+      "vendored": "packages/ui/src/vendor/calendar-date.ts",
+      "vendoredSha256": "f5e94636c154ffaa9500a85a7039a70423a4fffe654761387915f427b6d16c9d"
+    },
+    {
+      "source": "packages/react/src/provider.tsx",
+      "sourceSha256": "59a202fe498b93a17259459c422f3abe3dc50622dc98773763ca41dc5557590c",
+      "vendored": "packages/ui/src/vendor/provider.tsx",
+      "vendoredSha256": "8433557d73ec61b95bb910838179cf58eef34165646aeccfddde6cfc7e37615b"
+    }
+  ]
+}

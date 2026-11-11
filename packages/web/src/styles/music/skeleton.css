@@ -1,0 +1,37 @@
+.music-library-skeleton { display: grid; gap: 28px; }
+.music-skeleton-bar { display: block; width: 85%; height: 14px; margin: 0; }
+.music-skeleton-bar.is-short { width: 40%; height: 11px; }
+.music-skeleton-cover { display: block; width: 100%; aspect-ratio: 1; }
+.music-skeleton-section > .music-skeleton-bar,
+.music-home-lower > section > .music-skeleton-bar { margin: 15px 0 28px; width: 120px; height: 16px; }
+.music-media-skeleton .music-media-copy { gap: 12px; min-height: 81px; }
+.music-skeleton-card-footer { height: 56px; padding: 14px 12px; }
+.music-skeleton-track { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 68px; padding: 10px; }
+.music-skeleton-thumb { flex: 0 0 44px; height: 44px; }
+.music-skeleton-track > div { display: grid; flex: 1; min-width: 0; gap: 10px; }
+.music-skeleton-control { display: block; width: 26px; height: 26px; flex: 0 0 auto; }
+.music-playlist-skeleton-row { min-height: 64px; padding: 0 10px 0 0; }
+.music-playlist-skeleton-row .music-skeleton-thumb { flex-basis: 64px; height: 64px; }
+.music-home-player-skeleton .music-home-player-copy { gap: 14px; }
+.music-home-player-skeleton .music-home-player-copy > .music-skeleton-bar:nth-child(2) { height: 40px; }
+.music-home-player-skeleton .music-home-progress { margin-top: 2px; }
+.music-home-player-skeleton .music-home-progress .music-skeleton-bar { height: 3px; width: 100%; }
+.music-skeleton-detail-actions { display: flex; width: 100%; gap: 12px; margin-top: 10px; }
+.music-skeleton-detail-actions .music-skeleton-bar { height: 44px; width: 44%; }
+.music-shortcut-skeleton.ui-card { display: flex; align-items: center; gap: 14px; padding: 14px; }
+.music-shortcut-skeleton > div { display: grid; flex: 1; gap: 12px; }
+.music-skeleton-history-tabs { height: 52px; padding-top: 12px; }
+.music-skeleton-back { display: flex; align-items: center; height: 44px; }
+.music-skeleton-back .music-skeleton-bar { width: 70px; }
+.music-detail-skeleton { margin: -18px 0 -8px; }
+.music-detail-skeleton > .music-skeleton-cover { flex: 0 0 120px; }
+.music-detail-skeleton > div { display: grid; gap: 12px; }
+.music-skeleton-tracks .music-skeleton-track { border-bottom: 1px solid var(--line-soft); padding-inline: 0; }
+@container (max-width: 620px) {
+  .music-library-skeleton { gap: 24px; }
+  .music-detail-skeleton > .music-skeleton-cover { flex-basis: 88px; }
+}
+@container (max-width: 360px) {
+  .music-detail-skeleton > .music-skeleton-cover { flex-basis: 64px; }
+  .music-shortcut-skeleton.ui-card { padding: 12px; gap: 10px; }
+}

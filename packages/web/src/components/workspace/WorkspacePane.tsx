@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 import { createFileExport, getFileDownloadUrl, type DockerOperation, type FileBatch, type FileEntry, type FileListing, type FileMeta, type FileOperation, type IndexSearchCategory, type IndexSearchRequest, type IndexSearchResult, type StoragePool, type VodPlayerCommand, type VodPlayerStatus, type TextPreview, type VmOperation } from "../../api.js";
 import { describeFileVisual, isHiddenName } from "../../file-type-utils.js";
-import { formatBytes, formatLocaleNumber } from "../../i18n/format.js";
+import { formatBytes } from "../../i18n/format.js";
 import type { SupportedLocale } from "../../i18n/locale.js";
 import { sortEntries, type FileSortDirection, type FileSortKey, type FileSortState } from "../../lib/file-listing-sort.js";
 import { formatFileModifiedAt } from "../../lib/format.js";
@@ -43,6 +43,7 @@ import { fileDownloadMode, isInvalidFileMoveDestination, reconcileFileSelection,
 import type { WorkspacePanelId } from "../../lib/workspace-panel-settings.js";
 import { ActivityMenu } from "../activity/ActivityMenu.js";
 import { CustomSelect, type CustomSelectOption } from "../common/CustomSelect.js";
+import { DatePicker } from "../common/DatePicker.js";
 import { FileTypeIcon } from "../file/FileTypeIcon.js";
 import { VodPlayerControls } from "../preview/VodPlayerControls.js";
 import {
@@ -184,8 +185,8 @@ function SearchFilterMenu({ options, disabled, onChange, onApply }: {
             />
           </Field>
           <div className="workspace-search-field-grid">
-            <Field className="workspace-search-field" label={t("workspace.search.modifiedFrom")}><Input type="date" value={options.modifiedFrom} onChange={(event) => onChange({ ...options, modifiedFrom: event.target.value })} /></Field>
-            <Field className="workspace-search-field" label={t("workspace.search.modifiedTo")}><Input type="date" value={options.modifiedTo} onChange={(event) => onChange({ ...options, modifiedTo: event.target.value })} /></Field>
+            <Field className="workspace-search-field" label={t("workspace.search.modifiedFrom")}><DatePicker value={options.modifiedFrom} onChange={(modifiedFrom) => onChange({ ...options, modifiedFrom })} /></Field>
+            <Field className="workspace-search-field" label={t("workspace.search.modifiedTo")}><DatePicker value={options.modifiedTo} onChange={(modifiedTo) => onChange({ ...options, modifiedTo })} /></Field>
             <Field className="workspace-search-field" label={t("workspace.search.sizeMin")}><Input type="number" min="0" value={options.sizeMin} onChange={(event) => onChange({ ...options, sizeMin: event.target.value })} /></Field>
             <Field className="workspace-search-field" label={t("workspace.search.sizeMax")}><Input type="number" min="0" value={options.sizeMax} onChange={(event) => onChange({ ...options, sizeMax: event.target.value })} /></Field>
             <Field className="workspace-search-field" label={t("workspace.search.sortField")} htmlFor="workspace-search-sort-field">
@@ -594,7 +595,6 @@ export function WorkspacePane({
         .join("\n")
     : "";
   const gitStatusState = gitStatus && (gitStatus.dirty || gitStatus.ahead > 0 || gitStatus.behind > 0) ? "warning" : "ready";
-  const entryCount = formatLocaleNumber(sortedEntries.length, locale);
   const hasPreview = Boolean(selectedFilePath);
   const selectedFileName = selectedFilePath?.split("/").pop() ?? "";
   const previewTitle = previewMeta?.name ?? selectedFileName;
@@ -1387,9 +1387,6 @@ export function WorkspacePane({
                           </UiButton>
                         ))}
                       </nav>
-                      <p className="files-list-summary">
-                        {t("workspace.filesListDescription", { total: entryCount })}
-                      </p>
                     </div>
                     {gitStatus ? (
                       <StatusBadge className="management-status-pill files-git-status" data-state={gitStatusState} data-tooltip={gitTooltip} aria-label={gitTooltip}>

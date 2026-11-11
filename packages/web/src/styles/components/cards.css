@@ -62,9 +62,6 @@
   .video-panel .video-poster.ui-card { border: 0; background: var(--cyber-soft); box-shadow: none; }
   .video-poster.ui-card > :is(strong, small) { padding-inline: 6px; }
   .video-poster.ui-card > small { padding-bottom: 6px; }
-  .music-album.ui-card { background: var(--cyber-soft); }
-  .music-album.ui-card .music-album-meta,
-  .music-album.ui-card .music-album-open > :is(strong, small) { padding-inline: 6px; }
   .video-artwork, .music-cover { border-color: var(--cyber-line); background-color: var(--cyber-soft); }
   .video-poster.ui-card:hover .video-artwork { border-color: var(--cyber-accent2); }
   .photo-tile.ui-card { border: 1px solid var(--cyber-line); background: var(--cyber-soft); }

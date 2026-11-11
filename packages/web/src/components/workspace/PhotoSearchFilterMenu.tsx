@@ -10,6 +10,7 @@ import type {
 } from "@cyberos/shared";
 import type { PhotoMetadataField } from "../../api.js";
 import { CustomSelect } from "../common/CustomSelect.js";
+import { DatePicker } from "../common/DatePicker.js";
 
 export function PhotoSearchFilterMenu({
   filters,
@@ -129,13 +130,13 @@ export function PhotoSearchFilterMenu({
               selectedLabel={(count) => t("workspace.photos.selectedValues", { count })}
               onChange={(value) => updateFilter("lensModels", value)}
             />
-            <label>
-              <span>{t("workspace.photos.takenAt")}</span>
+            <div className="photo-date-filter" role="group" aria-label={t("workspace.photos.takenAt")}>
+              <span className="photo-date-filter-label">{t("workspace.photos.takenAt")}</span>
               <div className="photo-range-inputs">
-                <Input type="date" value={draft.capturedAt?.from?.slice(0, 10) ?? ""} aria-label={t("workspace.photos.min")} onChange={(event) => updateFilter("capturedAt", dateRange(event.target.value, draft.capturedAt?.to))} />
-                <Input type="date" value={draft.capturedAt?.to?.slice(0, 10) ?? ""} aria-label={t("workspace.photos.max")} onChange={(event) => updateFilter("capturedAt", dateRange(draft.capturedAt?.from, event.target.value))} />
+                <DatePicker value={draft.capturedAt?.from?.slice(0, 10) ?? ""} aria-label={t("workspace.photos.min")} onChange={(value) => updateFilter("capturedAt", dateRange(value, draft.capturedAt?.to))} />
+                <DatePicker value={draft.capturedAt?.to?.slice(0, 10) ?? ""} aria-label={t("workspace.photos.max")} onChange={(value) => updateFilter("capturedAt", dateRange(draft.capturedAt?.from, value))} />
               </div>
-            </label>
+            </div>
             <NumberRangeFilter label="ISO" min={draft.iso?.min} max={draft.iso?.max} onChange={(value) => updateFilter("iso", value)} />
             <NumberRangeFilter label={t("workspace.photos.aperture")} min={draft.aperture?.min} max={draft.aperture?.max} step="0.1" onChange={(value) => updateFilter("aperture", value)} />
             <NumberRangeFilter label={t("workspace.photos.shutter")} min={draft.exposureTimeSeconds?.min} max={draft.exposureTimeSeconds?.max} step="any" onChange={(value) => updateFilter("exposureTimeSeconds", value)} />

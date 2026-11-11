@@ -34,7 +34,8 @@ describe("Music workspace", () => {
       expect(html).toContain(playlists);
       expect(html).toContain('aria-busy="true"');
       expect(html).toMatch(/<button[^>]*aria-busy="true"[^>]*>[\s\S]*?is-spinning/u);
-      expect(html).toContain('class="panel-content-skeleton"');
+      expect(html).toContain('data-music-skeleton="home"');
+      expect(html).not.toContain('class="panel-content-skeleton"');
       expect(html).not.toContain('class="music-loading"');
       expect(html).toContain('class="library-search-toolbar"');
       expect(html).toContain('aria-haspopup="dialog"');
