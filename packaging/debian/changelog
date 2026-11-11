@@ -1,3 +1,9 @@
+cyberos (2.4.4) unstable; urgency=medium
+
+  * Keep panel imports available across web updates, isolate panel failures, and display managed Compose paths as details.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Wed, 11 Nov 2026 03:24:49 +0000
+
 cyberos (2.4.3) unstable; urgency=medium
 
   * Open alert rule creation and editing in a centered modal while preserving the rules list, drafts, and keyboard focus.
