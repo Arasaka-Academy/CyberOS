@@ -571,6 +571,11 @@ export const en = {
   },
   workspace: {
     label: "Workspace",
+    loading: {
+      panelFailed: "Unable to load this panel",
+      panelFailedDescription: "Reload the page to try again, or switch to another panel.",
+      reloadPage: "Reload page"
+    },
     rootLabel: "Root",
     storagePoolLabel: "Storage pool",
     storagePoolPlaceholder: "Select a storage pool",
@@ -4114,6 +4119,11 @@ export const zhCN = {
   },
   workspace: {
     label: "工作区",
+    loading: {
+      panelFailed: "面板加载失败",
+      panelFailedDescription: "请重新加载页面后重试，或切换其他面板。",
+      reloadPage: "重新加载页面"
+    },
     rootLabel: "根目录",
     storagePoolLabel: "存储池",
     storagePoolPlaceholder: "选择存储池",

@@ -57,6 +57,8 @@ npm run deploy:cybermachine -- --components photos --build remote
 
 部署先完成构建和上传，再取得与正式部署相同的锁，备份目标文件、替换组件并恢复此前运行的服务。Web 和文档无需重启 API；API 更新会处理其 worker 等依赖服务。备份、源码 commit/dirty 状态和部署记录保存在 cybermachine 的 `/cyberos/dev-deploy/<deployment-id>`，正式包的 `build-info.json` 保留原值；组件的实际测试来源以部署记录为准。
 
+Web 测试部署在切换 HTML 前合并保留已安装的 `assets/` 文件，避免已打开的旧页面延迟加载面板时遇到 404；同名资源以新构建为准。部署校验和覆盖合并后的完整资源目录，回滚仍完整恢复部署前的备份。
+
 默认保留 cybermachine 已安装的 Linux 原生 Node 依赖。后端部署会核对安装基线：依赖锁、schema/migration 或 packaging 变更需要走完整包升级与状态备份流程。快速替换不安装系统依赖、不运行安装器，也不修改 unit。
 
 脚本检查服务稳定性、`/health`、`/api/system/storage` 和 `/api/system/health`，并保存 journal 供排查；随后还需验证本次功能，并在交付时报告源码 commit/dirty 状态、组件、部署记录和验收结果。健康接口成功不能代替功能验收。连接失败时报告具体原因，保留已完成的本地验证。

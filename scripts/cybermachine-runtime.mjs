@@ -298,11 +298,20 @@ export async function applyDeployment({ stage, runtimeRoot = RUNTIME_ROOT, deplo
   }
   const records = [];
   for (const component of components) {
-    const sha256 = await validatePayload(path.join(stage, "payload"), component);
+    let sha256 = await validatePayload(path.join(stage, "payload"), component);
     await safeAncestors(runtimeRoot, component.path);
     const destination = path.join(runtimeRoot, component.path);
     const existed = await exists(destination);
-    records.push({ ...component, existed, sha256, previousSha256: existed ? await treeHash(destination) : null });
+    const previousSha256 = existed ? await treeHash(destination) : null;
+    if (component.name === "web" && existed && await exists(path.join(destination, "assets"))) {
+      // Open pages still import chunks from their original build. Merge those
+      // assets before hashing the payload; the new build wins name collisions.
+      await cp(path.join(destination, "assets"), path.join(stage, "payload", component.path, "assets"), {
+        recursive: true, preserveTimestamps: true, force: false
+      });
+      sha256 = await validatePayload(path.join(stage, "payload"), component);
+    }
+    records.push({ ...component, existed, sha256, previousSha256 });
   }
   const before = await activeUnits(run);
   rejectActiveJobs(components, before);

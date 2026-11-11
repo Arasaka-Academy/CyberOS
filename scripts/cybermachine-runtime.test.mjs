@@ -113,6 +113,29 @@ describe("cybermachine component runtime deployment", () => {
     expect(machine.calls.filter(([cmd, action]) => cmd === "systemctl" && action === "start")[0]).toEqual(["systemctl", "start", "cyberos-api.service"]);
   });
 
+  it("keeps lazy-loaded web assets available to open pages across updates and restores them on rollback", async () => {
+    await prepare();
+    const installed = path.join(runtimeRoot, "apps/web/dist");
+    const payload = path.join(stage, "payload/apps/web/dist");
+    await mkdir(path.join(installed, "assets"));
+    await mkdir(path.join(payload, "assets"));
+    await writeFile(path.join(installed, "assets/HttpDownloaderPanel-old12345.js"), "old download panel");
+    await writeFile(path.join(installed, "assets/shared.js"), "old shared asset");
+    await writeFile(path.join(payload, "assets/HttpDownloaderPanel-new12345.js"), "new download panel");
+    await writeFile(path.join(payload, "assets/shared.js"), "new shared asset");
+    const machine = host();
+
+    await applyDeployment({ stage, runtimeRoot, deployRoot, run: machine.run });
+
+    expect(await readFile(path.join(installed, "assets/HttpDownloaderPanel-old12345.js"), "utf8")).toBe("old download panel");
+    expect(await readFile(path.join(installed, "assets/HttpDownloaderPanel-new12345.js"), "utf8")).toBe("new download panel");
+    expect(await readFile(path.join(installed, "assets/shared.js"), "utf8")).toBe("new shared asset");
+    await rollbackDeployment({ id: "test-20261030", runtimeRoot, deployRoot, run: machine.run });
+    expect(await readFile(path.join(installed, "assets/HttpDownloaderPanel-old12345.js"), "utf8")).toBe("old download panel");
+    await expect(stat(path.join(installed, "assets/HttpDownloaderPanel-new12345.js"))).rejects.toMatchObject({ code: "ENOENT" });
+    expect(await readFile(path.join(installed, "assets/shared.js"), "utf8")).toBe("old shared asset");
+  });
+
   it("rejects a mismatched installed baseline before touching runtime files", async () => {
     await prepare("web", { baselineCommit: "c".repeat(40) });
     const machine = host();

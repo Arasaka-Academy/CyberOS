@@ -5,6 +5,7 @@ import { ChangeEvent, DragEvent, FormEvent, KeyboardEvent, MouseEvent, PointerEv
 import { WORKSPACE_APPS } from "../../mobile/apps.js";
 import { useAppScroll, useMobileBack } from "../../mobile/MobileNavigation.js";
 import { WorkspacePanelLoading } from "./WorkspacePanelLoading.js";
+import { WorkspacePanelBoundary } from "./WorkspacePanelBoundary.js";
 import { useTranslation } from "react-i18next";
 import {
   ArrowDown,
@@ -1199,6 +1200,7 @@ export function WorkspacePane({
       />
       <div className="workspace-shell">
         <div className="workspace-stage" data-panel={activePanel}>
+          <WorkspacePanelBoundary panel={activePanel}>
           <Suspense fallback={<WorkspacePanelLoading panel={activePanel} />}>
           {!workspaceVisible ? null : activePanel === "files" ? (
             <>
@@ -1735,12 +1737,15 @@ export function WorkspacePane({
             />
           )}
           </Suspense>
+          </WorkspacePanelBoundary>
           {terminalMounted && (!compactLayout || activePanel === "terminal" && workspaceVisible) ? (
+            <WorkspacePanelBoundary panel="terminal" active={activePanel === "terminal" && workspaceVisible}>
             <Suspense fallback={activePanel === "terminal" && workspaceVisible ? <WorkspacePanelLoading panel="terminal" /> : null}>
               <LocalTerminalPanel
                 active={activePanel === "terminal" && workspaceVisible}
               />
             </Suspense>
+            </WorkspacePanelBoundary>
           ) : null}
         </div>
 
