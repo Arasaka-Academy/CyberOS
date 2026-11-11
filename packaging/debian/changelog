@@ -1,3 +1,9 @@
+cyberos (2.4.5) unstable; urgency=medium
+
+  * Add card-based music browsing, reuse CyberUI 0.3.0 date controls, and remove redundant file totals
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Wed, 11 Nov 2026 09:00:45 +0000
+
 cyberos (2.4.4) unstable; urgency=medium
 
   * Keep panel imports available across web updates, isolate panel failures, and display managed Compose paths as details.
