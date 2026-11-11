@@ -1,4 +1,4 @@
-import { Button as UiButton, DialogActions, DialogHeader, Field, Input, Textarea } from "@cyberos/ui";
+import { Button as UiButton, DescriptionList, DialogActions, DialogHeader, Field, Input, Textarea } from "@cyberos/ui";
 import { CustomSelect } from "../common/CustomSelect.js";
 import { ModalPortal } from "../common/ModalPortal.js";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
@@ -78,7 +78,7 @@ export function DockerComposeAppDialog({
   const previousFocus = useRef<HTMLElement | null>(null);
   const formError = useMemo(() => dockerComposeAppFormError(form), [form]);
   const busy = loading || validating || submitAction !== null || deleting;
-  const managedPath = `/cyberos/apps/${form.projectKey || "..."}`;
+  const managedPath = detail?.managedPath ?? `/cyberos/apps/${form.projectKey || "..."}`;
 
   useEffect(() => {
     if (!app) return;
@@ -336,10 +336,9 @@ export function DockerComposeAppDialog({
                       disabled={busy || Boolean(detail)}
                     />
                   </Field>
-                  <Field className="docker-compose-app-path" label={t("workspace.management.docker.apps.managedPath")}>
-
-                    <Input value={managedPath} readOnly />
-                  </Field>
+                  <DescriptionList className="docker-compose-app-path" items={[
+                    { label: t("workspace.management.docker.apps.managedPath"), value: managedPath, mono: true }
+                  ]} />
                 </div>
 
                 <Field className="docker-compose-editor-field" label={t("workspace.management.docker.apps.composeLabel")}>

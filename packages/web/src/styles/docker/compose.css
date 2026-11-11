@@ -112,7 +112,6 @@
   grid-column: 1 / -1;
 }
 
-.docker-compose-app-path input,
 .docker-compose-editor-field textarea {
   font-family: var(--code-font-family);
 }
