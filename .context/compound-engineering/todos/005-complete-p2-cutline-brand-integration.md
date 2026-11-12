@@ -1,5 +1,5 @@
 ---
-status: ready
+status: complete
 priority: p2
 issue_id: "005"
 tags: [branding, web, documentation]
@@ -28,8 +28,8 @@ Replace current assets, use the dedicated small-size symbol at 16–40 CSS pixel
 - [x] Dark and light modes use their respective masters without geometric distortion.
 - [x] Favicons use the small-size master and docs share the same geometry.
 - [x] Focused tests, full gates and browser checks have recorded results.
-- [ ] Device verification or the exact access blocker is recorded separately.
-- [ ] Scoped changes are committed on main without unrelated work or a formal release.
+- [x] Device verification or the exact access blocker is recorded separately.
+- [x] Scoped changes are committed on main without unrelated work or a formal release.
 
 ## Work Log
 
@@ -42,3 +42,7 @@ Replace current assets, use the dedicated small-size symbol at 16–40 CSS pixel
 - 2026-11-13: SHA-256 verification confirms all seven public Web SVGs are byte-identical to the approved kit, including its web/favicon.svg; documentation mirrors the selected small-size masters and favicon.
 - 2026-11-13: Full make ci passes with RUST_TEST_THREADS=1 and VITEST_MAX_WORKERS=1: protocol, typecheck, lint, Rust and Python tests, 274 Vitest files (1842 passed, 5 existing skips), eight documentation metadata tests, and the complete release/workspace/docs build. Version check passes against ac4207b4 at 2.4.7.
 - 2026-11-13: All 21 documentation browser checks pass with one worker. Kept the new logo case separate from the existing palette/Mermaid case and matched the icon rel token correctly because Starlight emits shortcut icon. The focused new case passes as well; no test timeout was increased. Reviewed the real built documentation header in both modes.
+- 2026-11-13: Committed the implementation and synchronized 2.4.7 source metadata directly on the already-checked-out local main at e0d26448ca251522cae7013e0011c331e02a8441, based on ac4207b4. Verified a clean checkout before test deployment; no unnecessary merge commit, push, tag or release.
+- 2026-11-13: Static web,docs deployment applied successfully as dev-20261112164826400-24824. Backup and receipt: /cyberos/dev-deploy/dev-20261112164826400-24824. Receipt source is e0d26448ca251522cae7013e0011c331e02a8441; its dirty metadata is null (unknown), distinct from the independently verified clean source checkout. This is not a 2.4.7 package/backend upgrade: the installed API still reports 2.4.5, aefd0b72cba39055776985454c7a913569be82b7, dirty=true.
+- 2026-11-13: Verified all ten served Web/docs SVG hashes, Web/TV favicon entrypoints and startup wordmark references, and HTTP readiness for health/storage/system-health. API, worker@1 and hostd stay active with unchanged PIDs/restart counts across a four-second sample; no failed units or error-level journal entries since deployment creation. Actual device-served documentation passes dark/light logo decoding and filter checks, and the loaded Agent rail shows the unfiltered small white master. Reviewed captured headers and logo; no physical TV/playback acceptance is claimed.
+- 2026-11-13: Generated acceptance logs, approved-master hashes, screenshots and device-verification.json remain under ignored .cyberos/cutline-logo-acceptance and are not committed. Existing TV style-browser baseline failures remain documented and unchanged.
