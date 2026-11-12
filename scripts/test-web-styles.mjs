@@ -1036,3 +1036,100 @@ test("reduced motion keeps content visible and cancels an in-flight reveal", asy
   await page.waitForFunction(() => [...globalThis.document.querySelectorAll(".message-approval")].every(element => element.getAnimations().length === 0));
   assert.equal(await page.getByText("Approval in-flight", { exact: true }).evaluate(element => globalThis.getComputedStyle(element).opacity), "1");
 });
+
+test("Cutline brand artwork switches masters in every theme without filters or distortion", async context => {
+  const page = await fixture(context, `
+    const { AppearanceProvider, setAppearance } = await import("/@fs/${fileURLToPath(new URL("../packages/ui/src/index.ts", import.meta.url))}");
+    const { BrandLogo } = await import("/src/components/common/BrandLogo.tsx");
+    const { BrandBanner } = await import("/src/components/common/BrandBanner.tsx");
+    globalThis.window.__setBrandAppearance = setAppearance;
+    createRoot(document.getElementById("root")).render(React.createElement(AppearanceProvider, null,
+      React.createElement("section", { style: { display: "grid", gap: 24, padding: 24 } },
+        React.createElement(BrandBanner, { alt: "CyberOS" }),
+        React.createElement(BrandLogo, { className: "agent-brand-logo" }),
+        React.createElement(BrandLogo, { className: "settings-brand-logo", alt: "CyberOS" }),
+        React.createElement("div", { className: "mobile-home-brand" }, React.createElement(BrandLogo))
+      )
+    ));
+  `, { viewport: { width: 390, height: 844 } });
+  const directory = fileURLToPath(new URL("../.cyberos/cutline-logo-acceptance/", import.meta.url));
+  await mkdir(directory, { recursive: true });
+  for (const scheme of ["neon", "mono", "graphite", "synthwave", "bloodline", "terminal", "amber"]) {
+    for (const mode of ["dark", "light"]) {
+      await page.evaluate(preference => globalThis.window.__setBrandAppearance(preference), { scheme, mode });
+      const expected = mode === "dark" ? "/cyberos-icon-small-white.svg" : "/cyberos-icon-small.svg";
+      await page.waitForFunction(source => [...globalThis.document.querySelectorAll("img:not(.brand-banner-wordmark)")]
+        .every(image => image.getAttribute("src") === source && image.complete && image.naturalWidth > 0), expected);
+      const images = await page.locator("img").evaluateAll(elements => elements.map(element => {
+        const bounds = element.getBoundingClientRect();
+        return { source: element.getAttribute("src"), filter: globalThis.getComputedStyle(element).filter,
+          width: bounds.width, height: bounds.height, loaded: element.complete && element.naturalWidth > 0 };
+      }));
+      assert.equal(images.length, 5);
+      for (const image of images) {
+        assert.equal(image.loaded, true);
+        assert.equal(image.filter, "none");
+        if (image.source.includes("wordmark")) {
+          assert.equal(image.source, `/cyberos-wordmark${mode === "dark" ? "-white" : ""}.svg`);
+          assert.ok(Math.abs(image.width / image.height - 1248.101 / 256) < 0.002);
+        } else assert.equal(image.width, image.height);
+      }
+      if (scheme === "neon") await page.screenshot({ path: `${directory}web-${mode}.png` });
+    }
+  }
+});
+
+test("the TV shell switches the small-size logo without legacy inversion", async context => {
+  const page = await fixture(context, `
+    const { AppearanceProvider, setAppearance } = await import("/@fs/${fileURLToPath(new URL("../packages/ui/src/index.ts", import.meta.url))}");
+    const { BrandLogo } = await import("/src/components/common/BrandLogo.tsx");
+    globalThis.window.__setBrandAppearance = setAppearance;
+    createRoot(document.getElementById("root")).render(React.createElement(AppearanceProvider, null,
+      React.createElement("div", { className: "tv-app" }, React.createElement(Button,
+        { variant: "ghost", className: "tv-brand", "aria-label": "CyberOS" }, React.createElement(BrandLogo)))));
+  `, { tv: true });
+  for (const mode of ["dark", "light"]) {
+    await page.evaluate(mode => globalThis.window.__setBrandAppearance({ scheme: "neon", mode }), mode);
+    const expected = `/cyberos-icon-small${mode === "dark" ? "-white" : ""}.svg`;
+    await page.waitForFunction(source => globalThis.document.querySelector(".tv-brand img")?.getAttribute("src") === source, expected);
+    assert.equal(await page.locator(".tv-brand img").evaluate(element => globalThis.getComputedStyle(element).filter), "none");
+    const bounds = await page.locator(".tv-brand img").boundingBox();
+    assert.equal(bounds.width, bounds.height);
+    assert.ok(bounds.width >= 32 && bounds.width <= 64);
+  }
+});
+
+test("startup uses the outlined wordmark before React loads in both modes", async context => {
+  const directory = fileURLToPath(new URL("../.cyberos/cutline-logo-acceptance/", import.meta.url));
+  await mkdir(directory, { recursive: true });
+  for (const mode of ["dark", "light"]) {
+    const page = await browser.newPage({ reducedMotion: "reduce" });
+    context.after(() => page.close());
+    await page.addInitScript(mode => globalThis.localStorage.setItem("cyberos:appearance:v1", JSON.stringify({ scheme: "neon", mode })), mode);
+    await page.route("**/src/main.tsx", route => route.fulfill({ contentType: "application/javascript", body: "" }));
+    await page.route(baseUrl, async route => {
+      const response = await route.fetch();
+      const body = (await response.text())
+        .replace(/href="(?:\.\.\/|\/)shared\/src\/appearance\.css"/u,
+          `href="/@fs/${fileURLToPath(new URL("../packages/shared/src/appearance.css", import.meta.url))}"`)
+        .replace(/href="(?:\.\.\/|\/)ui\/src\/fonts\.css"/u,
+          `href="/@fs/${fileURLToPath(new URL("../packages/ui/src/fonts.css", import.meta.url))}"`);
+      await route.fulfill({ response, body });
+    });
+    for (const width of [1440, 390, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(baseUrl);
+      const logo = page.locator(".cyberos-boot-brand img:visible");
+      assert.equal(await logo.count(), 1);
+      assert.equal(await logo.getAttribute("src"), `/cyberos-wordmark${mode === "dark" ? "-white" : ""}.svg`);
+      await logo.evaluate(image => image.decode());
+      await page.evaluate(() => globalThis.document.fonts.ready);
+      assert.equal(await page.evaluate(() => globalThis.document.documentElement.scrollWidth <= globalThis.innerWidth), true);
+      assert.ok(await page.locator(".cyberos-boot-copy strong").evaluate(element => globalThis.getComputedStyle(element).fontFamily.includes("Oxanium")));
+      const bounds = await logo.boundingBox();
+      assert.equal(bounds.height, 40);
+      assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= width);
+      if (width === 390) await page.screenshot({ path: `${directory}startup-${mode}.png` });
+    }
+  }
+});

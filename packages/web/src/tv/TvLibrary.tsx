@@ -1,4 +1,5 @@
 import { Button, Notice } from "@cyberos/ui";
+import { BrandLogo } from "../components/common/BrandLogo.js";
 import { Bookmark, Clock3, Film, Home, Layers3, Palette, Search, Tv } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -140,7 +141,7 @@ export function TvLibrary() {
   return <div className="tv-app tv-library-shell">
     <div className="tv-browse-shell" hidden={target !== null} inert={target !== null || searchOpen || appearanceOpen}>
       <aside className="tv-sidebar" aria-label={translate("video.library")}>
-        <Button variant="ghost" className="tv-brand" aria-label="CyberOS" onClick={home}><img src="/cyberos-icon.svg" alt="" /></Button>
+        <Button variant="ghost" className="tv-brand" aria-label="CyberOS" onClick={home}><BrandLogo /></Button>
         <nav className="tv-navigation" data-tv-region="sidebar">{NAVIGATION.map(({ id, icon: Icon }) => <Button variant="ghost" key={id} data-tv-nav={id} data-tv-focusable aria-current={view === id ? "page" : undefined} onClick={() => navigate(id)}><Icon /><span>{translate(`video.${id}`)}</span></Button>)}</nav>
         <div className="tv-sidebar-tools" data-tv-region="sidebar-tools"><Button variant="ghost" className="tv-search-button" data-tv-focusable onClick={() => setSearchOpen(true)}><Search /><span>{translate("tv.search")}</span></Button><Button variant="ghost" data-tv-focusable onClick={() => setAppearanceOpen(true)} aria-label={translate("settings.appearance.title")}><Palette /><span>{translate("settings.appearance.title")}</span></Button></div>
       </aside>

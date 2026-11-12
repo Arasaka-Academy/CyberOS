@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { MOBILE_DOCK_APPS, MOBILE_GRID_APPS, type AppDefinition, type MobileAppId } from "./apps.js";
 import { useMobileNavigation } from "./MobileNavigation.js";
+import { BrandLogo } from "../components/common/BrandLogo.js";
 
 export type ConnectionState = "connecting" | "online" | "offline";
 
@@ -82,7 +83,7 @@ export function MobileHome({ connection, unreadCount, approvalCount, onOpenApp, 
     <section className="mobile-home" aria-label={t("mobile.home")}>
       <header className="mobile-home-header">
         <div className="mobile-home-brand">
-          <img src="/cyberos-icon.svg" alt="" aria-hidden="true" />
+          <BrandLogo />
           <div><h1>CyberOS</h1><span className="mobile-connection" data-state={connection} role="status"><i aria-hidden="true" />{t(`mobile.connection.${connection}`)}</span></div>
         </div>
         <div className="mobile-home-voice-actions">{voiceEntry}<UiButton variant="ghost" className="mobile-notifications" type="button" onClick={onOpenNotifications} aria-label={t("notifications.center.openWithCount", { count: unreadCount })}>

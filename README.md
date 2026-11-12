@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="packages/web/public/cyberos-icon.svg" alt="CyberOS logo" width="96" height="96">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="packages/web/public/cyberos-icon-white.svg">
+    <img src="packages/web/public/cyberos-icon.svg" alt="CyberOS Cutline logo" width="96" height="96">
+  </picture>
 </p>
 
 <h1 align="center">CyberOS</h1>

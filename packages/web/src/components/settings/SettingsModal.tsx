@@ -3,6 +3,7 @@ import { Component, Suspense, lazy, useEffect, useRef, useState, type KeyboardEv
 import { useTranslation } from "react-i18next";
 import { Activity, AudioLines, Bot, Bluetooth, BellRing, Database, Download, Folder, Film, HardDrive, Image as ImageIcon, Images, KeyRound, Network, MonitorCog, UserRound, ChartNoAxesCombined, ArchiveRestore, Package, Search, Server, Share2, ShieldCheck, Settings, Wifi, X } from "lucide-react";
 import { ModalPortal } from "../common/ModalPortal.js";
+import { BrandLogo } from "../common/BrandLogo.js";
 import { useContentReveal } from "../common/useContentReveal.js";
 import { MobileAppHeader, useAppHeadingFocus } from "../../mobile/MobileAppHeader.js";
 import { useMobileBack, useMobileNavigation } from "../../mobile/MobileNavigation.js";
@@ -133,7 +134,7 @@ export function SettingsModal(props: SettingsModalProps) {
         /> : null}
         <aside className="settings-rail" aria-label={t("settings.sectionsLabel")}>
           <div className="settings-rail-brand">
-            <img className="settings-brand-logo" src="/cyberos-icon.svg" alt={t("common.appName")} />
+            <BrandLogo className="settings-brand-logo" alt={t("common.appName")} />
           </div>
 
           <InputGroup className="settings-search" leading={<Search aria-hidden="true" size={15} />}>

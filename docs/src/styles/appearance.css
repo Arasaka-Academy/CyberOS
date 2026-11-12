@@ -8,7 +8,7 @@
 .docs-appearance-panel button { padding: 7px 10px; font: inherit; font-size: 12px; color: var(--cyber-ink); background: var(--cyber-bg); border: 1px solid var(--cyber-line); cursor: pointer; }
 .docs-appearance-panel button[aria-pressed='true'] { color: var(--cyber-on-accent); background: var(--cyber-accent); border-color: var(--cyber-accent); }
 html { background: var(--cyber-bg); }
-.site-title img { filter: var(--cyberos-logo-filter); }
+.site-title img { filter: none; }
 :root { --sl-color-text-invert: var(--cyber-on-accent); }
 
 /* Diagram geometry is rendered by Mermaid; semantic paint follows the palette. */

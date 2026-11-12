@@ -94,6 +94,7 @@ sourceOfTruth:
   - packages/web/src/tv/SearchOverlay.tsx
   - docs/src/styles/custom.css
   - packages/web/public/cyberos-icon.svg
+  - packages/web/src/components/common/BrandLogo.tsx
 sidebar:
   order: 2
 ---
@@ -166,8 +167,9 @@ NVR 采用卡片组织四个页签：实时页以全宽总览卡开头，摄像�
 
 ## 3. 品牌与资产
 
-- CyberOS 图标和文字是第一视口的品牌信号。空间受限时只显示图标，设置和启动界面使用“图标 + CyberOS”。
-- 图标保持现有几何和比例，通过共享的 `--cyberos-logo-filter` 适配深浅背景，不建立 Cyberpunk 标志或第三方联名版本。
+- CyberOS 使用已选定的 B「断讯 / Cutline」原创标志：前倾字骨与横向断切构成统一识别。设置、Agent、移动主屏和 TV 保留现有布局与操作，启动界面使用原创路径字标；普通产品名称与正文仍沿用现有字体。
+- React 品牌图形统一使用 `BrandLogo`，根据现有外观状态选择黑色或经过光学收窄的白色 SVG，不通过滤镜机械反色。16–40 CSS px 使用独立的 `symbol-small` 母版，48 px 起可用标准符号；字标 SVG 盒高至少 40 px，等比缩放，不拉伸或重新排字。
+- Web 与 TV 的 favicon 使用暖黑底冰青小尺寸符号；文档站共享相同小尺寸几何，并通过 Starlight 深浅图形切换保留光学校正。README 使用深浅自适应的标准符号。资产均为闭合填充路径，无位图、滤镜、外部字体依赖，不改变 CyberUI 全局配色。
 - 不引入 Behance 图片、游戏截图、Cyberpunk logo、专有字体或从参考项目提取的图形文件。
 - 图形装饰只由 CSS 结构线、状态轨、编号和短切角构成，不创建仿冒品牌素材。
 

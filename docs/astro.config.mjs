@@ -20,7 +20,8 @@ export default defineConfig({
         ThemeSelect: "./src/components/AppearanceSelect.astro"
       },
       logo: {
-        src: "./src/assets/cyberos-icon.svg",
+        light: "./src/assets/cyberos-icon.svg",
+        dark: "./src/assets/cyberos-icon-white.svg",
         alt: ""
       },
       locales: {

@@ -17,12 +17,6 @@
   filter: invert(1);
 }
 
-.brand-banner-wordmark {
-  font-size: 29px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
 .agent-list-head,
 .dock-title,
 .settings-nav h3 {

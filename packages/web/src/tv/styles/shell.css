@@ -1,7 +1,7 @@
 .tv-browse-shell { display: grid; grid-template-columns: var(--tv-rail) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; height: 100%; }
 .tv-sidebar { grid-row: 1 / -1; z-index: 2; display: flex; flex-direction: column; align-items: stretch; gap: var(--tv-space); padding: calc(20px * var(--tv-scale)) calc(10px * var(--tv-scale)); min-height: 0; overflow-y: auto; border-right: 1px solid var(--cyber-line); background: var(--cyber-bg); }
 .tv-brand { align-self: center; width: var(--tv-control); flex: none; }
-.tv-brand img { display: block; width: calc(40px * var(--tv-scale)); height: calc(40px * var(--tv-scale)); filter: var(--cyberos-logo-filter); }
+.tv-brand img { display: block; width: calc(40px * var(--tv-scale)); height: calc(40px * var(--tv-scale)); }
 .tv-navigation, .tv-sidebar-tools { display: grid; gap: calc(14px * var(--tv-scale)); }
 .tv-sidebar-tools { margin-top: auto; padding-top: var(--tv-space); border-top: 1px solid var(--cyber-line); }
 .tv-sidebar .tv-navigation button, .tv-sidebar .tv-sidebar-tools button { flex-direction: column; gap: calc(8px * var(--tv-scale)); width: 100%; min-height: calc(88px * var(--tv-scale)); padding: calc(8px * var(--tv-scale)) 2px; font-size: var(--tv-small); line-height: 1.25; }

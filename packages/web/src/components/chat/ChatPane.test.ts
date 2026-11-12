@@ -396,7 +396,7 @@ describe("ChatPane agent rail", () => {
 
     expect(html).toContain('class="agent-brand-logo"');
     expect(html).toContain('class="chat-header app-titlebar"');
-    expect(html).toContain('src="/cyberos-icon.svg"');
+    expect(html).toContain('src="/cyberos-icon-small-white.svg"');
     expect(html).not.toContain("cyberos-banner");
     expect(html).toMatch(/class="[^"]*\bsession-item is-active\b[^"]*"/u);
     expect(html).toContain('class="session-approval-badge"');

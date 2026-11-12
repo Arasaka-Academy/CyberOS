@@ -1,3 +1,5 @@
+import { BrandLogo } from "./BrandLogo.js";
+
 interface BrandBannerProps {
   alt?: string;
 }
@@ -12,8 +14,8 @@ export function BrandBanner({ alt = "" }: BrandBannerProps) {
       aria-label={decorative ? undefined : alt}
       aria-hidden={decorative || undefined}
     >
-      <img className="brand-banner-mark" src="/cyberos-icon.svg" alt="" />
-      <span className="brand-banner-wordmark" aria-hidden="true">CyberOS</span>
+      <BrandLogo className="brand-banner-mark" />
+      <BrandLogo className="brand-banner-wordmark" variant="wordmark" />
     </span>
   );
 }

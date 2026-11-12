@@ -65,6 +65,28 @@ test("documentation applies every palette to content and diagrams and restores i
   expect(errors).toEqual([]);
 });
 
+test("documentation switches the Cutline masters and loads the shared favicon", async ({ page }) => {
+  await page.goto("/docs/");
+  for (const mode of ["dark", "light"]) {
+    const details = page.locator(".docs-appearance:visible");
+    await details.locator("summary").click();
+    await page.locator(`.docs-appearance:visible [data-mode-choice="${mode}"]`).click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", mode);
+    const logo = page.locator(".site-title img:visible");
+    await expect(logo).toHaveCount(1);
+    await expect(logo).toHaveAttribute("src", mode === "dark" ? /cyberos-icon-white/u : /cyberos-icon\./u);
+    await expect(logo).toHaveCSS("filter", "none");
+    await logo.evaluate(node => (node as HTMLImageElement).decode());
+    expect(await logo.evaluate(node => (node as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+    await page.keyboard.press("Escape");
+  }
+  const favicon = await page.locator('link[rel~="icon"]').getAttribute("href");
+  expect(favicon).toBe("/docs/favicon.svg");
+  const faviconResponse = await page.request.get(favicon!);
+  expect(faviconResponse.ok()).toBe(true);
+  expect(await faviconResponse.text()).toContain("Cutline small-size");
+});
+
 test("documentation links retain AA contrast in every theme", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/docs/operations/cybermachine/");

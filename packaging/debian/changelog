@@ -1,3 +1,9 @@
+cyberos (2.4.7) unstable; urgency=medium
+
+  * Adopt the approved Cutline identity across Web, TV, startup, and documentation.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Thu, 12 Nov 2026 15:59:10 +0000
+
 cyberos (2.4.6) unstable; urgency=medium
 
   * Rebuild the TV experience with CyberUI, title-level browsing, remote-first search, and native playback controls.

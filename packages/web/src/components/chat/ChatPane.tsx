@@ -1,5 +1,6 @@
 import { Button as UiButton, Checkbox, DialogActions, DialogHeader, EmptyState, Input } from "@cyberos/ui";
 import { ModalPortal } from "../common/ModalPortal.js";
+import { BrandLogo } from "../common/BrandLogo.js";
 import { useNewContentReveal } from "../common/useContentReveal.js";
 import { Fragment, FormEvent, KeyboardEvent, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import ReactMarkdown from "react-markdown";
@@ -456,7 +457,7 @@ function ChatPaneContent({
     <section className={`chat-pane ${active ? "is-mobile-active" : ""}`} aria-hidden={compact && !active ? true : undefined} inert={compact && !active ? true : undefined} aria-label={t("chat.agents")}>
       {!compact ? <aside className="agent-list" aria-label={t("chat.agentSessions")}>
         <div className="brand">
-          <img className="agent-brand-logo" src="/cyberos-icon.svg" alt="" aria-hidden="true" />
+          <BrandLogo className="agent-brand-logo" />
           <h1 className="visually-hidden">{t("common.appName")}</h1>
         </div>
 

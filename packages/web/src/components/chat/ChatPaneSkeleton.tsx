@@ -1,6 +1,7 @@
 import { Bot, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { MobileAppHeader, useAppHeadingFocus } from "../../mobile/MobileAppHeader.js";
+import { BrandLogo } from "../common/BrandLogo.js";
 import { useMobileNavigation } from "../../mobile/MobileNavigation.js";
 import { PanelHeaderAction, PanelHeaderActions } from "../workspace/PanelHeader.js";
 
@@ -18,7 +19,7 @@ export function ChatPaneSkeleton({ active }: { active: boolean }) {
     <section className={`chat-pane chat-loading ${active ? "is-mobile-active" : ""}`} aria-label={t("chat.agents")} aria-busy="true" aria-hidden={compact && !active ? true : undefined} inert={compact && !active ? true : undefined}>
       <span className="visually-hidden" role="status">{t("status.loading")}</span>
       {!compact ? <aside className="agent-list" aria-hidden="true">
-        <div className="brand"><img className="agent-brand-logo" src="/cyberos-icon.svg" alt="" /></div>
+        <div className="brand"><BrandLogo className="agent-brand-logo" /></div>
         <div className="agent-list-head"><span className="management-skeleton-block chat-skeleton-control" /></div>
         <div className="session-list">{[0, 1, 2].map((index) => <span key={index} className="management-skeleton-block chat-skeleton-control" />)}</div>
         <div className="agent-footer">
