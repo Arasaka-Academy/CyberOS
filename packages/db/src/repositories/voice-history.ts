@@ -2,15 +2,19 @@ import type { VoiceHistoryPage, VoiceHistoryTurn, VoiceMedia, VoiceTurnRecord } 
 import type { CyberOsDatabase } from "../connection.js";
 import { getVoiceTurn, reserveVoiceTurn } from "./audio.js";
 
-export function reserveBrowserVoiceTurn(db: CyberOsDatabase, input: { recordingId: string; clientId: string; idempotencyKey: string }): VoiceTurnRecord {
+export function reserveClientVoiceTurn(db: CyberOsDatabase, input: { recordingId: string; clientId: string; idempotencyKey: string; wifiDeviceId?: string }): VoiceTurnRecord {
   return db.transaction(() => {
     const existing = findBrowserVoiceTurn(db, input.clientId, input.idempotencyKey);
     if (existing) return existing;
-    reserveVoiceTurn(db, { recordingId: input.recordingId, deviceId: `browser:${input.clientId}` });
-    db.prepare("UPDATE audio_voice_turns SET source = 'browser', client_id = ?, idempotency_key = ? WHERE recording_id = ?")
-      .run(input.clientId, input.idempotencyKey, input.recordingId);
+    reserveVoiceTurn(db, { recordingId: input.recordingId, deviceId: input.wifiDeviceId ? `wifi:${input.wifiDeviceId}` : `browser:${input.clientId}` });
+    db.prepare("UPDATE audio_voice_turns SET source = ?, client_id = ?, idempotency_key = ? WHERE recording_id = ?")
+      .run(input.wifiDeviceId ? "device" : "browser", input.clientId, input.idempotencyKey, input.recordingId);
     return getVoiceTurn(db, input.recordingId)!;
   }).immediate();
+}
+
+export function reserveBrowserVoiceTurn(db: CyberOsDatabase, input: { recordingId: string; clientId: string; idempotencyKey: string }): VoiceTurnRecord {
+  return reserveClientVoiceTurn(db, input);
 }
 
 export function findBrowserVoiceTurn(db: CyberOsDatabase, clientId: string, key: string): VoiceTurnRecord | null {

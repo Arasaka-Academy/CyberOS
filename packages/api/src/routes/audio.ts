@@ -1,9 +1,11 @@
+import { registerAudioDevice } from "./audio-device.js";
 import type { FastifyInstance } from "fastify";
 import type { ApiRouteContext } from "../context.js";
 import { sendFileStream } from "../lib/files.js";
 import { MAX_VOICE_UPLOAD, VoiceInputError } from "../lib/voice-media.js";
 
 export function registerAudioRoutes(server: FastifyInstance, { audio }: Pick<ApiRouteContext, "audio">): void {
+  registerAudioDevice(server, audio);
   const streams = new Set<() => void>();
   server.addHook("onClose", async () => { for (const close of streams) close(); });
   server.get<{ Querystring: { before?: string; limit?: string } }>("/api/audio/history", async (request, reply) => {

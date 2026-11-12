@@ -4,7 +4,7 @@ import {
   defaultAudioSettings, deliverVoiceTurn, ensureVoiceSession, findVoiceSession,
   getAudioSettings, getJob, getVoiceTurn, listVoiceTurns, recoverVoiceTurns,
   reserveVoiceTurn, resetVoiceSession, suppressVoiceSpeech, updateVoiceTurn, voiceJobFinalText,
-  findBrowserVoiceTurn, reserveBrowserVoiceTurn, listVoiceHistory, findVoiceMedia, findVoiceInputMedia, setVoiceAudioError,
+  findBrowserVoiceTurn, reserveClientVoiceTurn, listVoiceHistory, findVoiceMedia, findVoiceInputMedia, setVoiceAudioError,
   type CyberOsDatabase
 } from "@cyberos/db";
 import type { AudioStatus, EffectiveAudioSettings, VoiceHistorySnapshot, VoiceTurnRecord } from "@cyberos/shared";
@@ -12,6 +12,8 @@ import { CyberAudioClient, speechChunks, type AudioServiceStatus } from "./audio
 import type { AudioFocusRuntime } from "./audio-focus.js";
 import { unavailableAudioStatus, validateBleAudioSelection, type AudioRuntime } from "./audio-runtime.js";
 import { normalizeVoiceAudio, VoiceInputError, type VoiceMediaStore } from "./voice-media.js";
+
+import type { WifiVoiceOutput } from "./wifi-voice-output.js";
 
 type AudioClient = Pick<CyberAudioClient, "test" | "transcribe" | "synthesize">;
 
@@ -37,6 +39,22 @@ export class AudioCoordinator {
   private testDeadline = 0;
   private testResult: AudioStatus["test"] = { armed: false, transcript: null, error: null };
   private decoding = 0;
+  private readonly wifiDevices = new Map<string, WifiVoiceOutput>();
+  connectWifiDevice(id: string, output: WifiVoiceOutput): () => void {
+    if (this.wifiDevices.has(id)) throw new Error("Device already connected");
+    this.wifiDevices.set(id, output);
+    return () => {
+      if (this.wifiDevices.get(id) !== output) return;
+      output.stop(); this.wifiDevices.delete(id);
+      for (const turn of listVoiceTurns(this.db, true)) if (turn.deviceId === `wifi:${id}`) {
+        updateVoiceTurn(this.db, turn.recordingId, { speechSuppressed: true });
+      }
+    };
+  }
+  async submitWifi(input: Buffer, id: string, key: string): Promise<VoiceTurnRecord> {
+    if (!this.wifiDevices.has(id)) throw new VoiceInputError("Device disconnected", 409);
+    return this.submitClient(input, `wifi_${id.replaceAll(":", "")}`, key, id, this.wifiDevices.get(id));
+  }
 
   constructor(private readonly db: CyberOsDatabase, readonly runtime: AudioRuntime, private readonly client: AudioClient = new CyberAudioClient(), private readonly focus: AudioFocusRuntime, private readonly media?: VoiceMediaStore) {}
 
@@ -49,6 +67,8 @@ export class AudioCoordinator {
 
   async close(): Promise<void> {
     this.closed = true;
+    for (const output of this.wifiDevices.values()) output.stop();
+    this.wifiDevices.clear();
     if (this.timer) clearInterval(this.timer);
     this.epoch++;
     if (this.client instanceof CyberAudioClient) this.client.abort();
@@ -82,6 +102,9 @@ export class AudioCoordinator {
     if (this.closed || !this.media) throw new VoiceInputError("Voice history unavailable", 503);
   }
   async submitBrowser(input: Buffer, clientId: string, key: string): Promise<VoiceTurnRecord> {
+    return this.submitClient(input, clientId, key);
+  }
+  private async submitClient(input: Buffer, clientId: string, key: string, wifiDeviceId?: string, wifiOutput?: WifiVoiceOutput): Promise<VoiceTurnRecord> {
     const existing = this.browserTurn(clientId, key);
     if (existing && (existing.status !== "failed" || existing.jobId)) return existing;
     this.checkBrowserInput();
@@ -95,6 +118,7 @@ export class AudioCoordinator {
     }
     finally { this.decoding--; }
     this.checkBrowserInput();
+    if (wifiDeviceId && this.wifiDevices.get(wifiDeviceId) !== wifiOutput) throw new VoiceInputError("Device session changed", 409);
     const id = existing?.recordingId ?? randomUUID();
     let turn: VoiceTurnRecord;
     try {
@@ -103,7 +127,7 @@ export class AudioCoordinator {
         if (current.status !== "failed" || current.jobId) return current;
         if (listVoiceTurns(this.db, true).length >= 2) throw new Error("Voice channel busy");
         turn = updateVoiceTurn(this.db, id, { status: "transcribing", error: null });
-      } else turn = reserveBrowserVoiceTurn(this.db, { recordingId: id, clientId, idempotencyKey: key });
+      } else turn = reserveClientVoiceTurn(this.db, { recordingId: id, clientId, idempotencyKey: key, ...(wifiDeviceId ? { wifiDeviceId } : {}) });
     }
     catch { throw new VoiceInputError("Voice channel busy", 409); }
     if (turn.recordingId !== id) return turn;
@@ -147,6 +171,7 @@ export class AudioCoordinator {
   private async stopOutput(): Promise<void> {
     const epoch = this.epoch;
     this.stopping++;
+    for (const output of this.wifiDevices.values()) output.stop();
     try {
       const generation = await this.runtime.stop();
       if (epoch === this.epoch) this.generation = generation;
@@ -318,16 +343,19 @@ export class AudioCoordinator {
 
   private async speak(turn: VoiceTurnRecord | null, text: string, settings: EffectiveAudioSettings): Promise<void> {
     const browser = turn?.source === "browser";
-    if (!browser) validateBleAudioSelection(settings.inputDeviceId, settings.outputDeviceId);
+    const wifiId = turn?.deviceId.startsWith("wifi:") ? turn.deviceId.slice(5) : null;
+    const wifi = wifiId ? this.wifiDevices.get(wifiId) : null;
+    if (wifiId && !wifi) throw new Error("Wi-Fi device disconnected; no fallback");
+    if (!browser && !wifiId) validateBleAudioSelection(settings.inputDeviceId, settings.outputDeviceId);
     const epoch = this.epoch;
     const owner = `speech:${turn?.recordingId ?? "test"}`;
     const started = Date.now();
     let firstPlayback = true;
     const valid = () => !this.closed && epoch === this.epoch && (!turn || !getVoiceTurn(this.db, turn.recordingId)?.speechSuppressed);
     try {
-      const initial = browser ? this.daemon : await this.runtime.status();
+      const initial = browser || wifi ? this.daemon : await this.runtime.status();
       const expectedGeneration = initial.generation;
-      if (!browser && (initial.recordingId || (turn && expectedGeneration !== this.generation))) {
+      if (!browser && !wifi && (initial.recordingId || (turn && expectedGeneration !== this.generation))) {
         this.epoch++;
         suppressVoiceSpeech(this.db);
       }
@@ -343,6 +371,16 @@ export class AudioCoordinator {
           if (firstPlayback && turn) updateVoiceTurn(this.db, turn.recordingId, { timings: { ...turn.timings,
             ttsMs: Date.now() - started, replyMs: Date.now() - Date.parse(turn.createdAt) } });
           firstPlayback = false;
+          continue;
+        }
+        if (wifi) {
+          if (turn) {
+            const current = getVoiceTurn(this.db, turn.recordingId)!;
+            updateVoiceTurn(this.db, turn.recordingId, { status: "speaking", timings: { ...current.timings,
+              ...(firstPlayback ? { ttsMs: Date.now() - started, replyMs: Date.now() - Date.parse(turn.createdAt) } : {}) } });
+          }
+          firstPlayback = false;
+          await wifi.play(wav, settings.volume);
           continue;
         }
         const status = await this.runtime.status();

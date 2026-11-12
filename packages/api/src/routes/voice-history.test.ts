@@ -136,3 +136,25 @@ it("starts every SSE connection with a recent history snapshot", async () => {
     await reader.cancel();
   }
 });
+
+it("routes Wi-Fi turns to their connected speaker and preserves approvals, history and disconnect suppression", async () => {
+  const { db, audio, runtime, client } = await fixture();
+  const device = { play: vi.fn(async () => {}), stop: vi.fn() };
+  const detach = audio.connectWifiDevice("DC:54:75:CD:FB:A0", device);
+  expect(() => audio.connectWifiDevice("DC:54:75:CD:FB:A0", device)).toThrow(/already/);
+  const turn = await audio.submitWifi(wav(), "DC:54:75:CD:FB:A0", "wifi-recording-0001"); await audio.idle();
+  const current = listVoiceTurns(db)[0]!;
+  expect(current.source).toBe("device"); expect(current.deviceId).toBe("wifi:DC:54:75:CD:FB:A0");
+  expect((await audio.submitWifi(wav(), "DC:54:75:CD:FB:A0", "wifi-recording-0001")).recordingId).toBe(turn.recordingId);
+  updateJobStatus(db, current.jobId!, "waiting_approval"); await audio.tick(); await audio.idle();
+  expect(device.play).not.toHaveBeenCalled(); expect(audio.status().awaitingApproval).toBe(true);
+  appendEvent(db, { sessionId: current.sessionId!, jobId: current.jobId!, type: "agent.completed", payload: { summary: "Wi-Fi 回复" } });
+  updateJobStatus(db, current.jobId!, "completed"); await audio.tick(); await audio.idle();
+  expect(device.play).toHaveBeenCalledOnce(); expect(runtime.play).not.toHaveBeenCalled();
+  expect(audio.history().items[0]!.assistantAudio).toHaveLength(1);
+  expect(client.transcribe).toHaveBeenCalledOnce();
+  await audio.submitWifi(wav(), "DC:54:75:CD:FB:A0", "wifi-recording-0002"); await audio.idle();
+  detach();
+  expect(listVoiceTurns(db)[0]!.speechSuppressed).toBe(true);
+  await expect(audio.submitWifi(wav(), "DC:54:75:CD:FB:A0", "wifi-recording-0003")).rejects.toThrow(/disconnect/);
+});

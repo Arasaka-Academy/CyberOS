@@ -1,6 +1,6 @@
 ---
 title: 系统语音通道
-description: 配置浏览器与 StickS3 共用的语音会话、可回放历史及 CyberAudio 服务。
+description: 配置浏览器与 CyberController 共用的语音会话、可回放历史及 CyberAudio 服务。
 type: operation
 status: current
 audience: [operator, developer]
@@ -17,7 +17,7 @@ sidebar:
 
 ## 支持边界
 
-系统语音通道默认关闭。支持小米遥控器和 CyberController StickS3 的
+系统语音通道默认关闭。支持小米遥控器、CyberController StickS3 和 AtomS3 + Voice Pyramid 的
 ATVV 1.0 / 16 kHz IMA ADPCM 输入，通过 BlueZ GATT 接收按住说话的录音，不拦截普通 HID 按键。
 同时只监听一个显式选择的输入，切换后仍共享原来的持久化系统语音会话。
 协议测试和模拟闭环不代表某一遥控器固件已经通过真实收音验收。
@@ -25,7 +25,7 @@ ATVV 1.0 / 16 kHz IMA ADPCM 输入，通过 BlueZ GATT 接收按住说话的录�
 
 模型调用在 API 内协调；非 root 的 `cyberos-audiod` 只负责 GATT、音频解码、
 有界录音、WAV 转换和主机/BLE 输出，不持有 CyberAudio 凭据。浏览器也可独立录音与回放，
-无需 StickS3 在线；两种输入共享同一个语音会话、上下文和审批规则。
+无需 CyberController 在线；两种输入共享同一个语音会话、上下文和审批规则。
 
 ## 配置
 
@@ -34,7 +34,7 @@ ATVV 1.0 / 16 kHz IMA ADPCM 输入，通过 BlueZ GATT 接收按住说话的录�
    清除必须显式操作；读取 API 只返回 `tokenConfigured`。
 3. 测试服务，分别确认地址可达、鉴权成功以及 STT、TTS 就绪，读取服务音色。
    `/ready` 不鉴权，不能代替 Token 测试。
-4. 选择可信输入和明确的主机输出设备或同一 StickS3 内置扬声器，设置录音上限（1–30 秒）、语言、音色、
+4. 选择可信输入和明确的主机输出设备或同一输入设备的内置扬声器，设置录音上限（1–30 秒）、语言、音色、
    朗读指令、播报开关和音量。输出离线不会切到其他扬声器。
 5. 保存后执行录音测试和语音输出测试。录音测试只显示转写，不创建 Agent 消息；
    BLE 输出必须等待设备确认扬声器播完；软件完成也不等于人耳已确认实际出声。
@@ -66,12 +66,17 @@ sudo tailscale serve --bg --https=443 http://127.0.0.1:80
 ## 播放与审批
 
 StickS3 返回播放使用[独立 BLE 播放协议](/docs/reference/ble-playback/)，不修改 ATVV 特征。
-API 仍按句合成非流式 WAV；audiod 的 ffmpeg 将其转为 16 kHz 单声道 PCM，再编码为
-IMA-ADPCM。设备每段收齐并通过 CRC32 后才播。下发最多 120 秒，最长音频 130 秒，
-压缩缓冲最多 2 MiB PSRAM，BLE 客户端总等待最多 270 秒。ALSA/蓝牙音箱路径不变。
-BLE 输出 ID 使用 `ble-playback:`，必须与当前 `bluez:` 输入路径匹配。
-首次烧录、配对及扬声器验收从低音量开始，按住 A 立即停止旧播报；不自动取消 Agent。
-不支持 Wi-Fi、A2DP、流式 TTS、同时多输入或全双工。
+普通 AtomS3 + Voice Pyramid 使用 [Wi-Fi 设备协议](/docs/reference/wifi-voice/)，由设备主动连接 CyberOS。
+手机连接设备热点，配置 Wi-Fi、CyberOS 局域网地址和独立设备令牌；不需要蓝牙配对或 BlueZ 设备选择。
+Wi-Fi 回复直接回到发起设备，不走 audiod，也不改投主机扬声器。现有会话、凭据、历史与审批继续共用。
+
+Wi-Fi 主机将 WAV 转为 16 kHz 单声道 PCM 后按能力切段，各段独立 IMA ADPCM、CRC32 和播放 ID，
+等待设备 COMPLETED 后再发下一段。AtomS3 无 PSRAM，每段最多 131072 样本（8.192 秒），压缩缓冲最多 64 KiB。
+总音频仍不超过 130 秒；整次期限为 265 秒加每个额外分段 5 秒。取消、新录音、断连或任一段失败均终止后续段。
+StickS3 的现有单段 130 秒限制及 ALSA/蓝牙音箱路径保持原行为。
+首次烧录和扬声器验收从低音量开始，按住屏幕按键（StickS3 为 A）立即停止旧播报；不自动取消 Agent。
+AtomS3 的 TP1 连续触摸两秒打开 Wi-Fi 配置热点，松开后才可再次触发；屏幕显示热点密码。
+Voice Pyramid 底部 USB-C 负责供电，AtomS3 USB 用于烧录和诊断。首版不支持自动唤醒、流式 TTS 或全双工。
 
 - 新录音打断旧播报，但不自动取消正在执行的 Agent 任务。旧结果仍留在历史，
   被打断轮次的后续语音不再抢播。最多两个未完成轮次，超出明确报忙。
