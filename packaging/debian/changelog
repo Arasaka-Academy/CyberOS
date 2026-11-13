@@ -1,3 +1,9 @@
+cyberos (2.4.8) unstable; urgency=medium
+
+  * Harden Rust daemon storage safety, credential rollback, lease fencing, monitoring, and control responsiveness.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Fri, 13 Nov 2026 14:19:38 +0000
+
 cyberos (2.4.7) unstable; urgency=medium
 
   * Adopt the approved Cutline identity across Web, TV, startup, and documentation.
