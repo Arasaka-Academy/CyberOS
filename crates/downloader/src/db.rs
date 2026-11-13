@@ -13,6 +13,13 @@ use crate::error::{DownloadError, ErrorCode};
 type DbResult<T> = Result<T, DownloadError>;
 type DbJob = Box<dyn FnOnce(&mut Connection) + Send + 'static>;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TorrentProgressUpdate {
+    Updated,
+    ControlPending,
+    LeaseLost,
+}
+
 const TASK_COLUMNS: &str = "
   d.id, d.url, d.storage_pool_id, d.target_directory,
   d.target_file_name, d.target_path, d.partial_path, d.status,
@@ -661,7 +668,7 @@ impl Db {
         worker_id: &str,
         lease: Duration,
         progress: &TorrentProgress,
-    ) -> DbResult<bool> {
+    ) -> DbResult<TorrentProgressUpdate> {
         let task_id = task.id.clone();
         let worker_id = worker_id.to_owned();
         let progress = progress.clone();
@@ -695,8 +702,17 @@ impl Db {
                         .map_err(DownloadError::database)?;
                 }
             }
+            let outcome = if changed == 1 {
+                TorrentProgressUpdate::Updated
+            } else {
+                let controlled = transaction.query_row(
+                    "SELECT 1 FROM download_tasks WHERE id = ? AND worker_id = ? AND status IN ('running', 'seeding') AND control_requested IS NOT NULL",
+                    params![task_id, worker_id], |_| Ok(()),
+                ).optional().map_err(DownloadError::database)?.is_some();
+                if controlled { TorrentProgressUpdate::ControlPending } else { TorrentProgressUpdate::LeaseLost }
+            };
             transaction.commit().map_err(DownloadError::database)?;
-            Ok(changed == 1)
+            Ok(outcome)
         }).await
     }
 
@@ -2063,7 +2079,7 @@ mod tests {
         assert_eq!(torrent.selected_file_indices, vec![0]);
         db.reserve_space(&torrent, 10, 100, 5).await.unwrap();
 
-        assert!(
+        assert_eq!(
             db.torrent_progress(
                 &torrent,
                 "torrent-worker",
@@ -2080,7 +2096,8 @@ mod tests {
                 },
             )
             .await
-            .unwrap()
+            .unwrap(),
+            TorrentProgressUpdate::Updated
         );
         db.begin_torrent_publish(&torrent, "torrent-worker")
             .await
@@ -2142,7 +2159,7 @@ mod tests {
             .await
             .unwrap();
         db.publish_torrent(&task, "torrent-worker").await.unwrap();
-        assert!(
+        assert_eq!(
             db.torrent_progress(
                 &task,
                 "torrent-worker",
@@ -2159,7 +2176,8 @@ mod tests {
                 },
             )
             .await
-            .unwrap()
+            .unwrap(),
+            TorrentProgressUpdate::Updated
         );
 
         db.finish_control(&task, false).await.unwrap();
@@ -2204,7 +2222,7 @@ mod tests {
         db.publish_torrent(&published, "published-worker")
             .await
             .unwrap();
-        assert!(
+        assert_eq!(
             db.torrent_progress(
                 &published,
                 "published-worker",
@@ -2221,7 +2239,8 @@ mod tests {
                 },
             )
             .await
-            .unwrap()
+            .unwrap(),
+            TorrentProgressUpdate::Updated
         );
         db.test_call(|connection| {
             connection

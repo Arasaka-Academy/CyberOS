@@ -1,4 +1,7 @@
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Condvar, Mutex};
+use std::time::Duration;
 
 use rusqlite::{Connection, OpenFlags, OptionalExtension, params};
 use time::OffsetDateTime;
@@ -8,6 +11,121 @@ use crate::error::{ErrorCode, VodError};
 
 const COMPLETED_RATIO: f64 = 0.9;
 const PROFILE_ID: &str = "local-admin";
+const MAX_PENDING_FILES: usize = 128;
+const FLUSH_TIMEOUT: Duration = Duration::from_secs(2);
+
+struct Checkpoint {
+    position: f64,
+    duration: Option<f64>,
+}
+
+#[derive(Default)]
+struct Mailbox {
+    pending: HashMap<String, Checkpoint>,
+    submitted: u64,
+    closed: bool,
+}
+
+#[derive(Clone, Default)]
+struct Completion {
+    generation: u64,
+    error: Option<String>,
+}
+
+/// Coalesces progress per file without waiting for SQLite in the control actor.
+pub(crate) struct ProgressWriter {
+    mailbox: Arc<(Mutex<Mailbox>, Condvar)>,
+    completed: tokio::sync::watch::Receiver<Completion>,
+}
+
+impl ProgressWriter {
+    pub(crate) fn new(store: ProgressStore) -> Result<Self, VodError> {
+        let mailbox = Arc::new((Mutex::new(Mailbox::default()), Condvar::new()));
+        let (completion, completed) = tokio::sync::watch::channel(Completion::default());
+        let worker = Arc::clone(&mailbox);
+        std::thread::Builder::new()
+            .name("vod-progress".into())
+            .spawn(move || {
+                loop {
+                    let (lock, wake) = &*worker;
+                    let mut state = lock.lock().expect("progress mailbox lock poisoned");
+                    while state.pending.is_empty() && !state.closed {
+                        state = wake.wait(state).expect("progress mailbox lock poisoned");
+                    }
+                    if state.pending.is_empty() && state.closed {
+                        return;
+                    }
+                    let pending = std::mem::take(&mut state.pending);
+                    let generation = state.submitted;
+                    drop(state);
+                    let mut error = None;
+                    for (file_id, checkpoint) in pending {
+                        if let Err(failure) =
+                            store.save(&file_id, checkpoint.position, checkpoint.duration)
+                        {
+                            tracing::warn!(%file_id, %failure, "failed to persist media progress");
+                            error = Some(failure.to_string());
+                        }
+                    }
+                    completion.send_replace(Completion { generation, error });
+                }
+            })
+            .map_err(|error| {
+                VodError::internal(format!("Cannot start progress writer: {error}"))
+            })?;
+        Ok(Self { mailbox, completed })
+    }
+
+    pub(crate) fn save(
+        &self,
+        file_id: &str,
+        position: f64,
+        duration: Option<f64>,
+    ) -> Result<(), VodError> {
+        let (lock, wake) = &*self.mailbox;
+        let mut state = lock.lock().expect("progress mailbox lock poisoned");
+        if state.pending.len() >= MAX_PENDING_FILES && !state.pending.contains_key(file_id) {
+            return Err(VodError::internal("Media progress queue is full"));
+        }
+        state
+            .pending
+            .insert(file_id.to_owned(), Checkpoint { position, duration });
+        state.submitted = state.submitted.saturating_add(1);
+        wake.notify_one();
+        Ok(())
+    }
+
+    pub(crate) async fn flush(&self) -> Result<(), VodError> {
+        let generation = self
+            .mailbox
+            .0
+            .lock()
+            .expect("progress mailbox lock poisoned")
+            .submitted;
+        let mut completed = self.completed.clone();
+        let result = tokio::time::timeout(
+            FLUSH_TIMEOUT,
+            completed.wait_for(|state| state.generation >= generation),
+        )
+        .await
+        .map_err(|_| VodError::internal("Timed out flushing media progress"))?
+        .map_err(|_| VodError::internal("Media progress writer stopped"))?;
+        match &result.error {
+            Some(error) => Err(VodError::internal(format!(
+                "Media progress flush failed: {error}"
+            ))),
+            None => Ok(()),
+        }
+    }
+}
+
+impl Drop for ProgressWriter {
+    fn drop(&mut self) {
+        let (lock, wake) = &*self.mailbox;
+        lock.lock().expect("progress mailbox lock poisoned").closed = true;
+        wake.notify_one();
+    }
+}
 
 #[derive(Clone)]
 pub struct ProgressStore {
@@ -156,6 +274,64 @@ mod tests {
             .save("file-1", 1.0, None)
             .unwrap_err();
         assert_eq!(error.code, ErrorCode::StorageUnavailable);
+        assert!(!path.exists());
+    }
+
+    #[tokio::test]
+    async fn writer_coalesces_latest_checkpoints_and_flushes_after_contention() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("cyberos.sqlite");
+        database(&path);
+        let connection = Connection::open(&path).unwrap();
+        connection
+            .execute(
+                "INSERT INTO media_files VALUES ('file-2','pool','movies/b.mkv')",
+                [],
+            )
+            .unwrap();
+        connection.execute_batch("BEGIN IMMEDIATE").unwrap();
+        let writer = ProgressWriter::new(ProgressStore::new(path.clone())).unwrap();
+        for position in 0..1000 {
+            writer
+                .save("file-1", f64::from(position), Some(1000.0))
+                .unwrap();
+        }
+        writer.save("file-2", 5.0, Some(20.0)).unwrap();
+        connection.execute_batch("COMMIT").unwrap();
+        writer.flush().await.unwrap();
+        let (position, completed): (f64, bool) = connection
+            .query_row(
+                "SELECT position_seconds, completed FROM media_progress WHERE file_id='file-1'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(position, 999.0);
+        assert!(completed);
+        let second: f64 = connection
+            .query_row(
+                "SELECT position_seconds FROM media_progress WHERE file_id='file-2'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(second, 5.0);
+    }
+
+    #[tokio::test]
+    async fn writer_reports_persistence_failure_on_flush() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("missing.sqlite");
+        let writer = ProgressWriter::new(ProgressStore::new(path.clone())).unwrap();
+        writer.save("file-1", 1.0, None).unwrap();
+        assert!(
+            writer
+                .flush()
+                .await
+                .unwrap_err()
+                .message
+                .contains("flush failed")
+        );
         assert!(!path.exists());
     }
 }

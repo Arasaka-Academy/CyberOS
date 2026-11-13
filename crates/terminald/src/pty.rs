@@ -39,6 +39,10 @@ pub fn spawn(mut command: Command, cols: u16, rows: u16) -> Result<PtyProcess, T
         .stdin(Stdio::from(slave.try_clone()?))
         .stdout(Stdio::from(slave.try_clone()?))
         .stderr(Stdio::from(slave));
+    // SAFETY: The post-fork callback uses only async-signal-safe libc calls and
+    // stack operations. Stdio owns the PTY slave at fd 0, setsid establishes
+    // this child's session, and the signal set is initialized before use.
+    // Nothing allocates, locks or accesses shared Rust state before exec.
     unsafe {
         command.pre_exec(|| {
             for signal in [
@@ -100,6 +104,8 @@ pub fn resize(master: &AsyncFd<OwnedFd>, cols: u16, rows: u16) -> io::Result<()>
         ws_xpixel: 0,
         ws_ypixel: 0,
     };
+    // SAFETY: master owns a live PTY fd and window stays initialized and valid
+    // throughout ioctl, which copies the Winsize without retaining its pointer.
     let result =
         unsafe { libc::ioctl(master.get_ref().as_raw_fd(), libc::TIOCSWINSZ as _, &window) };
     if result == -1 {

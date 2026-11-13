@@ -9,3 +9,11 @@ publish = false
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
+
+[lints.rust]
+missing_docs = "warn"
+
+[lints.clippy]
+missing_errors_doc = "warn"
+missing_panics_doc = "warn"
+must_use_candidate = "warn"

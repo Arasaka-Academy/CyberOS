@@ -48,6 +48,101 @@ fn storage_is_pinned_to_a_real_pool_and_never_follows_symlinks() {
 }
 
 #[test]
+fn rejects_fifo_without_waiting_for_a_writer() {
+    use std::os::unix::fs::OpenOptionsExt;
+    use std::{sync::mpsc, time::Duration};
+
+    let root = tempfile::tempdir().expect("temporary storage root");
+    std::fs::create_dir(root.path().join("pool-1")).expect("storage pool directory");
+    let storage = Storage::open(root.path(), "pool-1", "NVR", false).expect("NVR storage");
+    let path = storage.path().join("fifo.ts");
+    nix::unistd::mkfifo(&path, nix::sys::stat::Mode::S_IRWXU).expect("test FIFO");
+    let (tx, rx) = mpsc::channel();
+    let reader = std::thread::spawn(move || {
+        tx.send(storage.open_file("fifo.ts").is_err())
+            .expect("send open result");
+    });
+    let result = rx.recv_timeout(Duration::from_secs(1));
+    // Unblock the old implementation so a failing regression leaves no blocked thread.
+    let _writer = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .custom_flags(nix::libc::O_NONBLOCK)
+        .open(path)
+        .expect("FIFO cleanup");
+    reader.join().expect("FIFO reader thread");
+    assert!(result.expect("opening a FIFO must not block"));
+}
+
+#[tokio::test]
+async fn missing_oldest_recording_does_not_block_retention() {
+    use crate::{db::Segment, protocol::NvrSegment};
+    use std::{io::Write, os::unix::fs::MetadataExt};
+
+    let root = tempfile::tempdir().expect("temporary root");
+    std::fs::create_dir_all(root.path().join("data/pool-1")).expect("pool");
+    let state = state(root.path());
+    state
+        .db
+        .save_policy(&RecordingPolicy {
+            storage_pool_id: Some("pool-1".into()),
+            ..Default::default()
+        })
+        .expect("recording policy");
+    let device = uuid::Uuid::new_v4().to_string();
+    let (storage, location) = state.selected_storage(&device).expect("storage");
+    for (index, name) in ["missing", "remaining"].into_iter().enumerate() {
+        let mut file = storage.create(&format!("{name}.ts")).expect("recording");
+        file.write_all(b"test").expect("recording content");
+        let metadata = file.metadata().expect("recording identity");
+        state
+            .db
+            .save_segment(&Segment {
+                public: NvrSegment {
+                    id: name.into(),
+                    device_id: device.clone(),
+                    profile: "raw".into(),
+                    started_at: format!("2020-01-0{}T00:00:00Z", index + 1),
+                    ended_at: format!("2020-01-0{}T00:01:00Z", index + 1),
+                    duration_seconds: 60.0,
+                    size_bytes: 4,
+                    status: "ready".into(),
+                },
+                location: location.clone(),
+                filename: format!("{name}.ts"),
+                file_identity: Some((metadata.dev(), metadata.ino())),
+            })
+            .expect("registered recording");
+    }
+    std::fs::remove_file(storage.path().join("missing.ts")).expect("simulate lost file");
+    for _ in 0..3 {
+        crate::recording::cleanup(&state)
+            .await
+            .expect("retention recovers missing file");
+    }
+    assert!(!storage.path().join("remaining.ts").exists());
+    assert_eq!(state.db.used_bytes().expect("used bytes"), 0);
+    assert_eq!(
+        state
+            .db
+            .segment("missing")
+            .expect("missing record")
+            .public
+            .status,
+        "missing"
+    );
+    assert_eq!(
+        state
+            .db
+            .segment("remaining")
+            .expect("deleted record")
+            .public
+            .status,
+        "deleted"
+    );
+}
+
+#[test]
 fn xml_uses_local_names_and_rejects_entities_and_oversized_payloads() {
     let xml = r#"<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"><s:Body><x:GetDeviceInformationResponse xmlns:x="urn:test"><x:Manufacturer>CyberVisual</x:Manufacturer><x:SerialNumber>device&amp;one</x:SerialNumber></x:GetDeviceInformationResponse></s:Body></s:Envelope>"#;
     let document = Node::parse(xml.as_bytes()).unwrap();

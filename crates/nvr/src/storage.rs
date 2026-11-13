@@ -174,24 +174,35 @@ impl Storage {
             self.path.clone()
         }
     }
-    fn file(&self, name: &str, flags: OFlag) -> Result<File> {
+    fn file_if_present(&self, name: &str, flags: OFlag) -> Result<Option<File>> {
         self.verify()?;
         validate_relative(name)?;
         if Path::new(name).components().count() != 1 {
             return Err(Error::invalid("Invalid segment filename"));
         }
-        let fd = openat(
+        let fd = match openat(
             &self.directory,
             name,
-            flags | OFlag::O_NOFOLLOW | OFlag::O_CLOEXEC,
+            flags | OFlag::O_NOFOLLOW | OFlag::O_CLOEXEC | OFlag::O_NONBLOCK,
             Mode::from_bits_truncate(0o600),
-        )
-        .map_err(|_| Error::unavailable("NVR segment unavailable"))?;
+        ) {
+            Ok(fd) => fd,
+            Err(nix::errno::Errno::ENOENT) => {
+                // Only a missing leaf is recoverable; a removed mount/directory is not.
+                self.verify()?;
+                return Ok(None);
+            }
+            Err(_) => return Err(Error::unavailable("NVR segment unavailable")),
+        };
         let file = File::from(fd);
         if !file.metadata()?.is_file() {
             return Err(Error::unavailable("NVR segment is not a regular file"));
         }
-        Ok(file)
+        Ok(Some(file))
+    }
+    fn file(&self, name: &str, flags: OFlag) -> Result<File> {
+        self.file_if_present(name, flags)?
+            .ok_or_else(|| Error::unavailable("NVR segment unavailable"))
     }
     pub fn create(&self, name: &str) -> Result<File> {
         self.file(name, OFlag::O_WRONLY | OFlag::O_CREAT | OFlag::O_EXCL)
@@ -208,6 +219,34 @@ impl Storage {
         )
         .map_err(|_| Error::unavailable("Cannot remove NVR segment"))?;
         Ok(())
+    }
+    pub fn remove_if_present(&self, name: &str) -> Result<bool> {
+        let Some(_file) = self.file_if_present(name, OFlag::O_RDONLY)? else {
+            return Ok(false);
+        };
+        match nix::unistd::unlinkat(
+            &self.directory,
+            name,
+            nix::unistd::UnlinkatFlags::NoRemoveDir,
+        ) {
+            Ok(()) => Ok(true),
+            Err(nix::errno::Errno::ENOENT) => {
+                self.verify()?;
+                Ok(false)
+            }
+            Err(_) => Err(Error::unavailable("Cannot remove NVR segment")),
+        }
+    }
+    pub fn segment_if_present(&self, segment: &crate::db::Segment) -> Result<Option<File>> {
+        let Some(file) = self.file_if_present(&segment.filename, OFlag::O_RDONLY)? else {
+            return Ok(None);
+        };
+        if Some(identity(&file)?) != segment.file_identity
+            || file.metadata()?.len() != segment.public.size_bytes
+        {
+            return Err(Error::unavailable("Recording changed outside NVR"));
+        }
+        Ok(Some(file))
     }
     pub fn segment(&self, segment: &crate::db::Segment) -> Result<File> {
         let file = self.open_file(&segment.filename)?;

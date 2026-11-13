@@ -1,4 +1,4 @@
-use std::os::unix::fs::PermissionsExt;
+use std::os::unix::fs::{MetadataExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 
 use tokio::fs::{self, OpenOptions};
@@ -68,10 +68,12 @@ async fn replace_file(path: &Path, content: &[u8], mode: u32) -> Result<(), Host
     result
 }
 
+#[derive(serde::Serialize)]
 pub(super) struct FileSnapshot {
     path: PathBuf,
     content: Option<Vec<u8>>,
     mode: u32,
+    owner: Option<(u32, u32)>,
 }
 
 pub(super) async fn snapshot_files<'a>(
@@ -84,40 +86,67 @@ pub(super) async fn snapshot_files<'a>(
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
             Err(error) => return Err(error.into()),
         };
-        let mode = if content.is_some() {
-            fs::metadata(path).await?.permissions().mode() & 0o777
+        let metadata = if content.is_some() {
+            Some(fs::metadata(path).await?)
         } else {
-            0o640
+            None
         };
         snapshot.push(FileSnapshot {
             path: path.to_owned(),
             content,
-            mode,
+            mode: metadata
+                .as_ref()
+                .map_or(0o640, |metadata| metadata.mode() & 0o777),
+            owner: metadata.map(|metadata| (metadata.uid(), metadata.gid())),
         });
     }
     Ok(snapshot)
 }
 
-pub(super) async fn restore_files(snapshot: &[FileSnapshot]) {
+pub(super) async fn restore_files(snapshot: &[FileSnapshot]) -> Result<(), HostdError> {
+    let mut failures = Vec::new();
     for FileSnapshot {
         path,
         content,
         mode,
+        owner,
     } in snapshot
     {
-        match content {
-            Some(content) => {
-                if let Some(parent) = path.parent() {
-                    let _ = fs::create_dir_all(parent).await;
+        let result = async {
+            match content {
+                Some(content) => {
+                    if let Some(parent) = path.parent() {
+                        fs::create_dir_all(parent).await?;
+                    }
+                    replace_file(path, content, *mode).await?;
+                    if nix::unistd::Uid::effective().is_root()
+                        && let Some((uid, gid)) = owner
+                    {
+                        nix::unistd::chown(
+                            path,
+                            Some(nix::unistd::Uid::from_raw(*uid)),
+                            Some(nix::unistd::Gid::from_raw(*gid)),
+                        )
+                        .map_err(|error| HostdError::operation_failed(error.to_string()))?;
+                    }
                 }
-                let _ = replace_file(path, content, *mode).await;
+                None => match fs::remove_file(path).await {
+                    Ok(()) => sync_parent(path).await?,
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                    Err(error) => return Err(error.into()),
+                },
             }
-            None => {
-                if fs::remove_file(path).await.is_ok() {
-                    let _ = sync_parent(path).await;
-                }
-            }
+            Ok::<(), HostdError>(())
         }
+        .await;
+        if let Err(error) = result {
+            failures.push(format!("{}: {}", path.display(), error.message));
+        }
+    }
+    if failures.is_empty() {
+        Ok(())
+    } else {
+        Err(HostdError::operation_failed(failures.join("; ")))
     }
 }
 

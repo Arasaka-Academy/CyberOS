@@ -42,6 +42,8 @@ impl CacheLock {
             .custom_flags(nix::libc::O_NOFOLLOW | nix::libc::O_CLOEXEC)
             .open(cache_root.join(".cache.lock"))
             .map_err(PhotosError::storage)?;
+        // SAFETY: file owns a live fd throughout this call; operation is
+        // LOCK_SH or LOCK_EX from the two acquisition entry points.
         if unsafe { nix::libc::flock(file.as_raw_fd(), operation) } != 0 {
             return Err(PhotosError::storage(std::io::Error::last_os_error()));
         }
@@ -65,6 +67,8 @@ impl CacheLock {
 
 impl Drop for CacheLock {
     fn drop(&mut self) {
+        // SAFETY: self.file still owns the locked fd. LOCK_UN releases this
+        // handle's lock without waiting; File closes it after this drop.
         let _ = unsafe { nix::libc::flock(self.file.as_raw_fd(), nix::libc::LOCK_UN) };
     }
 }

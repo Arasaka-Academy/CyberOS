@@ -15,7 +15,7 @@ use time::format_description::well_known::Rfc3339;
 use crate::command::{CommandRunner, DEFAULT_COMMAND_TIMEOUT, DEFAULT_OUTPUT_LIMIT, run_checked};
 use crate::error::HostdError;
 
-use credentials::apply_credentials;
+use credentials::{CredentialTransaction, apply_credentials};
 use files::{restore_files, snapshot_files, write_managed_file};
 use model::ALL_SERVICES;
 pub(crate) use model::ShareApplyResult;
@@ -113,6 +113,8 @@ async fn apply_with_options(
         })
         .collect::<Vec<_>>();
     let snapshot = snapshot_files(files.iter().map(|(path, _)| path.as_path())).await?;
+    let mut credentials =
+        CredentialTransaction::prepare(&request.settings, &options.paths, runner).await?;
     let mut attempted_services = Vec::new();
     let mut acl_transaction = None;
 
@@ -122,6 +124,7 @@ async fn apply_with_options(
             &options.paths,
             runner,
             &options.credential_group,
+            credentials.as_mut(),
         )
         .await?;
         acl_transaction = Some(acl::prepare(runner, options, &request.settings, &resolved).await?);
@@ -157,14 +160,24 @@ async fn apply_with_options(
     }
     .await;
     if let Err(error) = operation {
-        restore_files(&snapshot).await;
-        let rollback_error = if let Some(transaction) = &acl_transaction {
-            acl::command(runner, options, "rollback", None, Some(transaction))
-                .await
-                .err()
-        } else {
-            None
-        };
+        let mut rollback_errors = Vec::new();
+        if let Err(error) = restore_files(&snapshot).await {
+            rollback_errors.push(format!("configuration rollback failed: {}", error.message));
+        }
+        if let Some(transaction) = &credentials
+            && let Err(error) = transaction.rollback(runner).await
+        {
+            rollback_errors.push(error.message);
+        }
+        if let Some(transaction) = &acl_transaction
+            && let Err(error) =
+                acl::command(runner, options, "rollback", None, Some(transaction)).await
+        {
+            rollback_errors.push(format!(
+                "ACL rollback failed: {} (backup: {})",
+                error.message, transaction
+            ));
+        }
         for (service, was_active) in attempted_services.iter().rev() {
             let action = if *was_active {
                 if service == "vsftpd.service" {
@@ -175,17 +188,27 @@ async fn apply_with_options(
             } else {
                 "stop"
             };
-            let _ = run_checked(runner, "systemctl", &[action, service.as_str()], None).await;
+            if let Err(error) =
+                run_checked(runner, "systemctl", &[action, service.as_str()], None).await
+            {
+                rollback_errors.push(format!(
+                    "service rollback failed ({service}): {}",
+                    error.message
+                ));
+            }
         }
-        if let Some(rollback_error) = rollback_error {
+        if !rollback_errors.is_empty() {
             return Err(HostdError::operation_failed(format!(
-                "{}; ACL rollback failed: {} (backup: {})",
+                "{}; {}",
                 error.message,
-                rollback_error.message,
-                acl_transaction.unwrap_or_default()
+                rollback_errors.join("; ")
             )));
         }
         return Err(error);
+    }
+
+    if let Some(transaction) = credentials {
+        transaction.commit().await;
     }
 
     Ok(ShareApplyResult {
@@ -914,6 +937,251 @@ mod tests {
         }));
     }
 
+    struct CredentialRunner {
+        base: FakeRunner,
+        samba: Mutex<Vec<u8>>,
+        fail_at: &'static str,
+        fail_restore: bool,
+        backup: Mutex<Option<std::path::PathBuf>>,
+    }
+
+    #[async_trait]
+    impl CommandRunner for CredentialRunner {
+        async fn run(
+            &self,
+            command: &str,
+            args: &[String],
+            input: Option<&[u8]>,
+            timeout: Duration,
+            output_limit: usize,
+        ) -> Result<crate::command::CommandOutput, HostdError> {
+            if command == "python3" {
+                let request: Value = serde_json::from_slice(input.unwrap()).unwrap();
+                let backup = std::path::PathBuf::from(request["backup"].as_str().unwrap());
+                *self.backup.lock().unwrap() = Some(backup.clone());
+                if request["action"] == "snapshot" {
+                    let state = self.samba.lock().unwrap().clone();
+                    fs::write(backup, state).await.unwrap();
+                } else if self.fail_restore {
+                    return Err(HostdError::operation_failed("injected SAM restore failure"));
+                } else {
+                    let state = fs::read(backup).await.unwrap();
+                    *self.samba.lock().unwrap() = state;
+                }
+            }
+            if command == "htpasswd" {
+                fs::write(&args[1], "new-webdav-hash\n").await.unwrap();
+            }
+            if command == "smbpasswd" {
+                *self.samba.lock().unwrap() = b"new-samba-state".to_vec();
+            }
+            let fail = command == self.fail_at || (self.fail_at == "acl" && command == "node");
+            if fail {
+                return Err(HostdError::operation_failed("injected apply failure"));
+            }
+            self.base
+                .run(command, args, input, timeout, output_limit)
+                .await
+        }
+    }
+
+    #[tokio::test]
+    async fn restores_both_credentials_after_partial_or_later_apply_failures() {
+        for fail_at in ["smbpasswd", "acl", "systemctl"] {
+            for previous in [None, Some("old-webdav-hash\n")] {
+                let temp = TempDir::new().unwrap();
+                fs::create_dir_all(temp.path().join("data/pool-1/media"))
+                    .await
+                    .unwrap();
+                let options = test_options(&temp);
+                fs::create_dir_all(options.paths.htpasswd.parent().unwrap())
+                    .await
+                    .unwrap();
+                if let Some(previous) = previous {
+                    fs::write(&options.paths.htpasswd, previous).await.unwrap();
+                    fs::set_permissions(
+                        &options.paths.htpasswd,
+                        std::fs::Permissions::from_mode(0o600),
+                    )
+                    .await
+                    .unwrap();
+                }
+                let mut request = fixture(&temp.path().join("data"));
+                request.settings.account.password = Some("fixture-secret".into());
+                let runner = CredentialRunner {
+                    base: FakeRunner::default(),
+                    samba: Mutex::new(b"old-samba-state".to_vec()),
+                    fail_at,
+                    fail_restore: false,
+                    backup: Mutex::new(None),
+                };
+                assert!(
+                    apply_with_options(&request, &runner, &options, &request.data_root)
+                        .await
+                        .is_err()
+                );
+                assert_eq!(*runner.samba.lock().unwrap(), b"old-samba-state");
+                assert_eq!(
+                    fs::read_to_string(&options.paths.htpasswd)
+                        .await
+                        .ok()
+                        .as_deref(),
+                    previous
+                );
+                if previous.is_some() {
+                    assert_eq!(
+                        fs::metadata(&options.paths.htpasswd)
+                            .await
+                            .unwrap()
+                            .permissions()
+                            .mode()
+                            & 0o777,
+                        0o600
+                    );
+                }
+                let backup = runner
+                    .backup
+                    .lock()
+                    .unwrap()
+                    .clone()
+                    .expect("credentials were snapshotted");
+                assert!(
+                    !backup.parent().unwrap().exists(),
+                    "successful credential recovery must remove the private backup"
+                );
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn retains_private_recovery_records_when_credential_rollback_fails() {
+        let temp = TempDir::new().unwrap();
+        fs::create_dir_all(temp.path().join("data/pool-1/media"))
+            .await
+            .unwrap();
+        let options = test_options(&temp);
+        let mut request = fixture(&temp.path().join("data"));
+        request.settings.account.password = Some("fixture-secret".into());
+        let runner = CredentialRunner {
+            base: FakeRunner::default(),
+            samba: Mutex::new(b"old-samba-state".to_vec()),
+            fail_at: "acl",
+            fail_restore: true,
+            backup: Mutex::new(None),
+        };
+        let error = apply_with_options(&request, &runner, &options, &request.data_root)
+            .await
+            .unwrap_err();
+        assert!(error.message.contains("injected apply failure"));
+        assert!(error.message.contains("credential rollback failed"));
+        let backup = runner.backup.lock().unwrap().clone().unwrap();
+        assert!(backup.exists());
+        assert!(
+            error
+                .message
+                .contains(&backup.parent().unwrap().display().to_string())
+        );
+        assert_eq!(
+            fs::metadata(backup.parent().unwrap())
+                .await
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            0o700
+        );
+        assert!(!error.message.contains("fixture-secret"));
+        assert!(
+            !options.paths.htpasswd.exists(),
+            "WebDAV recovery must still run after SAM recovery fails"
+        );
+    }
+
+    #[tokio::test]
+    async fn credential_preflight_failure_never_changes_passwords() {
+        let temp = TempDir::new().unwrap();
+        fs::create_dir_all(temp.path().join("data/pool-1/media"))
+            .await
+            .unwrap();
+        let options = test_options(&temp);
+        fs::create_dir_all(options.paths.htpasswd.parent().unwrap())
+            .await
+            .unwrap();
+        fs::write(&options.paths.htpasswd, "old-webdav-hash\n")
+            .await
+            .unwrap();
+        let mut request = fixture(&temp.path().join("data"));
+        request.settings.account.password = Some("fixture-secret".into());
+        let runner = CredentialRunner {
+            base: FakeRunner::default(),
+            samba: Mutex::new(b"old-samba-state".to_vec()),
+            fail_at: "python3",
+            fail_restore: false,
+            backup: Mutex::new(None),
+        };
+        assert!(
+            apply_with_options(&request, &runner, &options, &request.data_root)
+                .await
+                .is_err()
+        );
+        assert_eq!(
+            fs::read_to_string(&options.paths.htpasswd).await.unwrap(),
+            "old-webdav-hash\n"
+        );
+        assert_eq!(*runner.samba.lock().unwrap(), b"old-samba-state");
+        assert!(
+            !runner
+                .base
+                .calls
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|(command, _, _)| matches!(
+                    command.as_str(),
+                    "htpasswd" | "smbpasswd" | "useradd"
+                ))
+        );
+    }
+
+    #[tokio::test]
+    async fn rollback_removes_only_a_successfully_created_os_account() {
+        for fail_at in ["useradd", "acl"] {
+            let temp = TempDir::new().unwrap();
+            fs::create_dir_all(temp.path().join("data/pool-1/media"))
+                .await
+                .unwrap();
+            let options = test_options(&temp);
+            let mut request = fixture(&temp.path().join("data"));
+            request.settings.account.password = Some("fixture-secret".into());
+            let runner = CredentialRunner {
+                base: FakeRunner {
+                    missing_user: true,
+                    ..FakeRunner::default()
+                },
+                samba: Mutex::new(Vec::new()),
+                fail_at,
+                fail_restore: false,
+                backup: Mutex::new(None),
+            };
+            assert!(
+                apply_with_options(&request, &runner, &options, &request.data_root)
+                    .await
+                    .is_err()
+            );
+            let calls = runner.base.calls.lock().unwrap();
+            let deletes = calls
+                .iter()
+                .filter(|(command, _, _)| command == "userdel")
+                .collect::<Vec<_>>();
+            assert_eq!(deletes.len(), usize::from(fail_at == "acl"));
+            assert!(
+                deletes
+                    .iter()
+                    .all(|(_, args, _)| args == &["cyberos_share"])
+            );
+        }
+    }
+
     #[tokio::test]
     async fn creates_a_share_login_with_an_existing_private_home_path() {
         let temp = TempDir::new().unwrap();
@@ -923,11 +1191,16 @@ mod tests {
             missing_user: true,
             ..FakeRunner::default()
         };
+        let paths = test_options(&temp).paths;
+        let mut transaction = CredentialTransaction::prepare(&request.settings, &paths, &runner)
+            .await
+            .unwrap();
         credentials::apply_credentials(
             &request.settings,
-            &test_options(&temp).paths,
+            &paths,
             &runner,
             "cyberos",
+            transaction.as_mut(),
         )
         .await
         .unwrap();

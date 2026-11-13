@@ -7,7 +7,7 @@ use zbus::{Connection, ObjectPath, OwnedObjectPath, OwnedVariant, Proxy, Variant
 use crate::db::{Db, ReceiveRecord, SendTask};
 use crate::error::TransferError;
 use crate::safety::{
-    ensure_available_space, open_send_file, storage_pool_path, validate_receive_name,
+    PrivateDirectory, StagedSend, ensure_available_space, storage_pool_path, validate_receive_name,
 };
 
 const OBEX: &str = "org.bluez.obex";
@@ -18,6 +18,7 @@ pub struct ObexRuntime {
     system: Connection,
     data_root: PathBuf,
     require_mount: bool,
+    outbox: PrivateDirectory,
 }
 
 impl ObexRuntime {
@@ -27,6 +28,13 @@ impl ObexRuntime {
         incoming_path: PathBuf,
         require_mount: bool,
     ) -> Result<Self, TransferError> {
+        // A new 0700 directory is private to this process and its same-identity OBEX daemon.
+        let outbox = PrivateDirectory::new(
+            incoming_path
+                .parent()
+                .ok_or_else(|| TransferError("Bluetooth state directory is missing".into()))?,
+            "outbox",
+        )?;
         let session = Connection::session().await?;
         let system = Connection::system().await?;
         session
@@ -58,13 +66,20 @@ impl ObexRuntime {
             system,
             data_root,
             require_mount,
+            outbox,
         })
     }
 
     pub async fn send(&self, db: &Db, task: &SendTask) -> Result<(), TransferError> {
         let pool_path =
             storage_pool_path(&self.data_root, &task.storage_pool_id, self.require_mount)?;
-        let (_file, path) = open_send_file(&pool_path, &task.relative_path)?;
+        let relative = task.relative_path.clone();
+        let outbox = self.outbox.path().to_path_buf();
+        let staged = tokio::task::spawn_blocking(move || {
+            StagedSend::prepare(&pool_path, &relative, &outbox)
+        })
+        .await
+        .map_err(|error| TransferError(format!("Bluetooth staging failed: {error}")))??;
         let client = Proxy::new(
             &self.session,
             OBEX,
@@ -81,17 +96,20 @@ impl ObexRuntime {
         let session: OwnedObjectPath = client
             .call("CreateSession", &(task.device_address.as_str(), args))
             .await?;
-        let push = Proxy::new(
-            &self.session,
-            OBEX,
-            session.as_str(),
-            "org.bluez.obex.ObjectPush1",
-        )
-        .await?;
-        let (transfer, _properties): (OwnedObjectPath, HashMap<String, OwnedVariant>) = push
-            .call("SendFile", &(path.to_string_lossy().to_string(),))
+        let result = async {
+            let push = Proxy::new(
+                &self.session,
+                OBEX,
+                session.as_str(),
+                "org.bluez.obex.ObjectPush1",
+            )
             .await?;
-        let result = self.monitor_transfer(db, &task.id, &transfer).await;
+            let (transfer, _properties): (OwnedObjectPath, HashMap<String, OwnedVariant>) = push
+                .call("SendFile", &(staged.path().to_string_lossy().to_string(),))
+                .await?;
+            self.monitor_transfer(db, &task.id, &transfer).await
+        }
+        .await;
         let _ = client.call::<_, _, ()>("RemoveSession", &(session,)).await;
         result
     }

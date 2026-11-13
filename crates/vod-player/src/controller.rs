@@ -17,7 +17,7 @@ use crate::mpv::{
     probe_active_outputs,
 };
 use crate::music::{self, Checkpoint as MusicCheckpoint};
-use crate::progress::ProgressStore;
+use crate::progress::{ProgressStore, ProgressWriter};
 use crate::protocol::{
     Capabilities, Command, HardwareDecode, PlaybackOwner, PlayerState, Status, Track,
 };
@@ -70,6 +70,7 @@ struct Controller {
     last_checkpoint: Instant,
     last_capability_probe: Instant,
     progress: ProgressStore,
+    progress_writer: ProgressWriter,
     music_checkpoint: MusicCheckpoint,
     music_history_flush: Option<tokio::task::JoinHandle<Vec<String>>>,
     music_last_tick: Instant,
@@ -163,6 +164,7 @@ impl ControllerHandle {
         let (shutdown_sender, shutdown_receiver) = watch::channel(false);
         let (done_sender, done_receiver) = watch::channel(false);
         let progress = ProgressStore::new(config.database_path.clone());
+        let progress_writer = ProgressWriter::new(progress.clone())?;
         let mut controller = Controller {
             audio_focus: None,
             config,
@@ -181,6 +183,7 @@ impl ControllerHandle {
             last_checkpoint: Instant::now(),
             last_capability_probe: Instant::now(),
             progress,
+            progress_writer,
             music_checkpoint,
             music_history_flush: None,
             music_last_tick: Instant::now(),
@@ -1301,7 +1304,7 @@ impl Controller {
         let Some(file_id) = desired.media_file_id.as_deref() else {
             return;
         };
-        if let Err(error) = self.progress.save(
+        if let Err(error) = self.progress_writer.save(
             file_id,
             desired.position_seconds,
             self.status.duration_seconds,
@@ -1379,6 +1382,9 @@ impl Controller {
         self.record_music_listening();
         self.stop_mpv().await;
         let _ = self.persist_current();
+        if let Err(error) = self.progress_writer.flush().await {
+            tracing::warn!(%error, "media progress shutdown flush failed");
+        }
     }
 }
 
@@ -1573,6 +1579,10 @@ mod tests {
                 last_checkpoint: Instant::now(),
                 last_capability_probe: Instant::now(),
                 progress: ProgressStore::new(directory.join("cyberos.sqlite")),
+                progress_writer: ProgressWriter::new(ProgressStore::new(
+                    directory.join("cyberos.sqlite"),
+                ))
+                .expect("test progress writer"),
                 music_checkpoint: MusicCheckpoint::default(),
                 music_history_flush: None,
                 music_last_tick: Instant::now(),
@@ -2140,6 +2150,49 @@ done
         assert!(*done.borrow());
         drop(controller);
         assert!(response_receiver.await.is_err());
+    }
+
+    #[tokio::test]
+    async fn sqlite_writer_contention_does_not_delay_stop() {
+        use rusqlite::Connection;
+        let directory = tempfile::tempdir().expect("temporary state");
+        let (mut controller, _sender, _done) = test_controller(directory.path());
+        let path = controller.config.database_path.clone();
+        let connection = Connection::open(&path).expect("database");
+        connection.execute_batch("CREATE TABLE media_files(id TEXT PRIMARY KEY); CREATE TABLE media_progress(file_id TEXT,profile_id TEXT,position_seconds REAL,duration_seconds REAL,completed INTEGER,updated_at TEXT,PRIMARY KEY(file_id,profile_id)); INSERT INTO media_files VALUES('file-1'); BEGIN IMMEDIATE;").expect("locked database");
+        controller.desired = Some(DesiredSession {
+            session_id: "session".into(),
+            storage_pool_id: "pool".into(),
+            relative_path: "movie.mkv".into(),
+            position_seconds: 17.0,
+            volume: 100.0,
+            paused: true,
+            audio_device_id: None,
+            media_file_id: Some("file-1".into()),
+            identity: None,
+        });
+        controller.status.session_id = Some("session".into());
+        controller.status.owner = Some(PlaybackOwner::Video);
+        let release = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_secs(2));
+            connection
+                .execute_batch("COMMIT")
+                .expect("release database lock");
+        });
+        let started = std::time::Instant::now();
+        let result = controller
+            .handle_command(Command::Stop {
+                session_id: "session".into(),
+            })
+            .await;
+        let elapsed = started.elapsed();
+        release.join().expect("lock holder");
+        result.expect("stop command");
+        assert!(
+            elapsed < Duration::from_secs(1),
+            "stop waited for SQLite: {elapsed:?}"
+        );
+        assert_eq!(controller.status.state, PlayerState::Stopped);
     }
 
     #[tokio::test]

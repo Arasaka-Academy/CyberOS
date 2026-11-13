@@ -46,6 +46,8 @@ pub async fn ffmpeg(
         .stderr(Stdio::null())
         .kill_on_drop(true);
     // FFmpeg creates segments itself; apply the same private-file policy as DB/credentials.
+    // SAFETY: This post-fork callback only calls async-signal-safe umask. It
+    // does not allocate, lock or access shared Rust state before exec.
     unsafe {
         command.pre_exec(|| {
             nix::libc::umask(0o077);
@@ -347,11 +349,11 @@ pub async fn cleanup(state: &State) -> Result<()> {
             continue;
         }
         let storage = state.storage(&segment.location)?;
-        let _file = storage.segment(&segment)?;
-        storage.remove(&segment.filename)?;
+        let file = storage.segment_if_present(&segment)?;
+        let removed = file.is_some() && storage.remove_if_present(&segment.filename)?;
         used = used.saturating_sub(segment.public.size_bytes);
         segment.public.size_bytes = 0;
-        segment.public.status = "deleted".into();
+        segment.public.status = if removed { "deleted" } else { "missing" }.into();
         state.db.save_segment(&segment)?;
     }
     Ok(())

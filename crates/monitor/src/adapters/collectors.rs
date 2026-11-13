@@ -121,23 +121,25 @@ impl FilesystemCollector {
     }
 }
 
-fn discover_storage_pools(data_root: &Path) -> Vec<(String, PathBuf)> {
-    let Ok(entries) = std::fs::read_dir(data_root) else {
-        return Vec::new();
-    };
-    let mut pools = entries
-        .filter_map(Result::ok)
-        .filter_map(|entry| {
-            let metadata = std::fs::symlink_metadata(entry.path()).ok()?;
-            if metadata.file_type().is_symlink() || !metadata.is_dir() {
-                return None;
-            }
-            let id = entry.file_name().into_string().ok()?;
-            Some((format!("storage_pool:{id}"), entry.path()))
-        })
-        .collect::<Vec<_>>();
+fn discover_storage_pools(data_root: &Path) -> std::io::Result<Vec<(String, PathBuf)>> {
+    let entries = std::fs::read_dir(data_root)?;
+    let mut pools = Vec::new();
+    for entry in entries {
+        let entry = entry?;
+        let metadata = std::fs::symlink_metadata(entry.path())?;
+        if metadata.file_type().is_symlink() || !metadata.is_dir() {
+            continue;
+        }
+        let id = entry.file_name().into_string().map_err(|_| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "storage pool name is not UTF-8",
+            )
+        })?;
+        pools.push((format!("storage_pool:{id}"), entry.path()));
+    }
     pools.sort_by(|left, right| left.0.cmp(&right.0));
-    pools
+    Ok(pools)
 }
 
 #[async_trait]
@@ -151,13 +153,27 @@ impl Collector for FilesystemCollector {
     }
 
     async fn collect(&mut self, timestamp_ms: i64) -> Result<Collection, MonitorError> {
-        let mut targets = vec![("state".to_owned(), self.state_dir.clone())];
-        targets.extend(discover_storage_pools(&self.data_root));
-        let samples = tokio::task::spawn_blocking(move || {
+        let state_dir = self.state_dir.clone();
+        let data_root = self.data_root.clone();
+        let (samples, unavailable) = tokio::task::spawn_blocking(move || {
+            let mut targets = vec![("state".to_owned(), state_dir)];
+            let pools = discover_storage_pools(&data_root);
+            let mut unavailable = pools.is_err();
+            targets.extend(pools.unwrap_or_default());
             let mut samples = Vec::new();
             for (label, path) in &targets {
-                let Ok(stats) = statvfs(path) else {
-                    continue;
+                let stats = if label == "state" {
+                    statvfs(path).map_err(std::io::Error::from)
+                } else {
+                    super::filesystem::pool_capacity(path)
+                };
+                let stats = match stats {
+                    Ok(stats) => stats,
+                    Err(error) => {
+                        tracing::warn!(filesystem = %label, %error, "filesystem capacity unavailable");
+                        unavailable = true;
+                        continue;
+                    }
                 };
                 let block_size = stats.fragment_size() as f64;
                 let size = stats.blocks() as f64 * block_size;
@@ -185,7 +201,7 @@ impl Collector for FilesystemCollector {
                     );
                 }
             }
-            samples
+            (samples, unavailable)
         })
         .await
         .map_err(|error| MonitorError::Collector(error.to_string()))?;
@@ -194,7 +210,14 @@ impl Collector for FilesystemCollector {
                 "No configured filesystem could be sampled".to_owned(),
             ));
         }
-        Ok(Collection::ready(samples))
+        Ok(Collection {
+            samples,
+            state: if unavailable {
+                CollectorState::Error
+            } else {
+                CollectorState::Ready
+            },
+        })
     }
 }
 
@@ -692,6 +715,29 @@ fn parse_iso_ms(value: &str) -> Option<i64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn unmounted_pool_never_reports_parent_capacity() {
+        let root = tempfile::tempdir().expect("temporary root");
+        let state = root.path().join("state");
+        let data = root.path().join("data");
+        std::fs::create_dir_all(&state).expect("state directory");
+        std::fs::create_dir_all(data.join("pool-1")).expect("unmounted pool");
+        let mut collector = FilesystemCollector::new(Duration::from_secs(5), state, data);
+        let collection = collector.collect(1).await.expect("partial collection");
+        assert_eq!(collection.state, CollectorState::Error);
+        assert!(
+            collection.samples.iter().all(|sample| sample
+                .labels
+                .get("filesystem")
+                .map(String::as_str)
+                == Some("state"))
+        );
+        assert!(
+            !collection.samples.is_empty(),
+            "state samples must remain available"
+        );
+    }
 
     #[test]
     fn parses_proc_data_and_filters_transient_devices() {

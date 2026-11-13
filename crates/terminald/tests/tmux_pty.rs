@@ -7,6 +7,7 @@ use nix::unistd::{Gid, Uid, User};
 use tokio::time::{MissedTickBehavior, interval, timeout};
 
 #[tokio::test]
+#[ignore = "requires tmux and bash; CI runs this integration suite explicitly"]
 async fn attaches_to_a_real_tmux_session_through_a_pty() {
     let directory = tempfile::tempdir().unwrap();
     let _cleanup = TmuxCleanup(directory.path().join("tmux.sock"));
@@ -18,10 +19,10 @@ async fn attaches_to_a_real_tmux_session_through_a_pty() {
         shell: PathBuf::from("/bin/sh"),
     };
     let manager = TmuxManager::new(directory.path().join("tmux.sock"), account, 4);
-    if manager.ensure_available().await.is_err() {
-        eprintln!("tmux is unavailable; skipping tmux PTY integration test");
-        return;
-    }
+    manager
+        .ensure_available()
+        .await
+        .expect("tmux and bash are required for integration tests");
 
     let session = "cyberos-integration";
     manager.ensure_session(session, true).await.unwrap();
@@ -93,6 +94,7 @@ async fn attaches_to_a_real_tmux_session_through_a_pty() {
 }
 
 #[tokio::test]
+#[ignore = "requires tmux and bash; CI runs this integration suite explicitly"]
 async fn starts_in_account_home_and_preserves_shell_and_directory_on_reattach() {
     let directory = tempfile::tempdir().unwrap();
     let home = directory.path().canonicalize().unwrap();
@@ -108,10 +110,10 @@ async fn starts_in_account_home_and_preserves_shell_and_directory_on_reattach() 
     let socket = home.join(".cyberos/tmux.sock");
     let _cleanup = TmuxCleanup(socket.clone());
     let manager = TmuxManager::new(socket.clone(), account.clone(), 4);
-    if manager.ensure_available().await.is_err() {
-        eprintln!("tmux is unavailable; skipping terminal home integration test");
-        return;
-    }
+    manager
+        .ensure_available()
+        .await
+        .expect("tmux and bash are required for integration tests");
 
     let session = "cyberos-home-integration";
     manager.ensure_session(session, true).await.unwrap();
@@ -212,6 +214,7 @@ async fn read_probe(
 struct TmuxCleanup(PathBuf);
 
 #[tokio::test]
+#[ignore = "requires tmux and bash; CI runs this integration suite explicitly"]
 async fn hides_only_managed_session_status_without_changing_other_tmux_sessions() {
     let directory = tempfile::tempdir().unwrap();
     let socket = directory.path().join("tmux.sock");
@@ -224,10 +227,10 @@ async fn hides_only_managed_session_status_without_changing_other_tmux_sessions(
         shell: PathBuf::from("/bin/sh"),
     };
     let manager = TmuxManager::new(socket.clone(), account, 4);
-    if manager.ensure_available().await.is_err() {
-        eprintln!("tmux is unavailable; skipping managed status integration test");
-        return;
-    }
+    manager
+        .ensure_available()
+        .await
+        .expect("tmux and bash are required for integration tests");
     manager
         .ensure_session("cyberos-managed", true)
         .await

@@ -78,7 +78,7 @@ async fn expired_media_scan_cannot_replace_the_catalog() {
 }
 
 #[tokio::test]
-async fn slow_media_requests_keep_the_scan_lease_alive() {
+async fn stalled_media_requests_time_out_without_replacing_the_catalog() {
     let directory = tempfile::tempdir().unwrap();
     let root = directory.path().join("root");
     std::fs::create_dir_all(root.join("Movies")).unwrap();
@@ -90,13 +90,18 @@ async fn slow_media_requests_keep_the_scan_lease_alive() {
     .unwrap();
     let database = directory.path().join("cyberos.sqlite");
     common::create_schema(&database, &root);
-    queue_scan(&database, "Movies", "slow", "generation-1");
+    queue_scan(&database, "Movies", "original", "generation-1");
+    let db = Db::open(&database).unwrap();
+    claim_and_run(&db, "original-worker", &root).await.unwrap();
+    let connection = Connection::open(&database).unwrap();
+    let original: String = connection
+        .query_row("SELECT id FROM media_files", [], |row| row.get(0))
+        .unwrap();
+    queue_scan(&database, "Movies", "slow", "generation-2");
     let proxy = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let port = proxy.local_addr().unwrap().port();
-    let connection = Connection::open(&database).unwrap();
     connection.execute("INSERT INTO system_settings(key,value_json,updated_at) VALUES ('media_library_settings',?,'now')", [r#"{"tmdbReadAccessToken":"test-token","tmdbUseProxy":true}"#]).unwrap();
     connection.execute("INSERT INTO system_settings(key,value_json,updated_at) VALUES ('system_proxy_settings',?,'now')", [format!(r#"{{"protocol":"http","host":"127.0.0.1","port":{port}}}"#)]).unwrap();
-    let db = Db::open(&database).unwrap();
     let pools = [common::storage_pool(&root)];
     let task = db
         .claim_media_scan("worker", &pools)
@@ -114,25 +119,117 @@ async fn slow_media_requests_keep_the_scan_lease_alive() {
             .await
             .unwrap()
             .unwrap();
-    let deadline = (time::OffsetDateTime::now_utc() + time::Duration::seconds(6))
-        .format(&time::format_description::well_known::Rfc3339)
-        .unwrap();
-    connection
-        .execute(
-            "UPDATE media_scan_runs SET lease_expires_at=? WHERE id='slow'",
-            [deadline],
-        )
-        .unwrap();
-    tokio::time::sleep(std::time::Duration::from_secs(7)).await;
-    let competing = db.claim_media_scan("competitor", &pools).await.unwrap();
-    shutdown.cancel();
-    let result = tokio::time::timeout(std::time::Duration::from_secs(1), &mut scan).await;
+    // This stalls CONNECT/TLS, which has a five-second connect timeout. It
+    // cannot reliably represent a request lasting longer than the lease tick.
+    let result = tokio::time::timeout(std::time::Duration::from_secs(8), &mut scan).await;
     if result.is_err() {
         scan.abort();
         let _ = scan.await;
     }
-    assert!(result.is_ok(), "cancelled scan did not stop promptly");
-    assert!(competing.is_none(), "a slow active scan lost its lease");
+    let error = result
+        .expect("stalled TMDB connection must time out")
+        .unwrap()
+        .unwrap_err();
+    assert!(error.message.contains("TMDB"));
+    let remaining: String = connection
+        .query_row("SELECT id FROM media_files", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(
+        remaining, original,
+        "a timed-out scan must preserve the published catalog"
+    );
+}
+
+#[test]
+fn queued_directory_discovery_keeps_renewing_and_cancels_promptly() {
+    use std::time::Duration;
+
+    // Occupy the sole blocking worker to delay the real directory discovery
+    // deterministically without depending on a slow NAS or filesystem timing.
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .max_blocking_threads(1)
+        .build()
+        .unwrap();
+    runtime.block_on(async {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path().join("root");
+        std::fs::create_dir_all(root.join("Movies")).unwrap();
+        let database = directory.path().join("cyberos.sqlite");
+        common::create_schema(&database, &root);
+        queue_scan(&database, "Movies", "queued-discovery", "generation-1");
+        let db = Db::open(&database).unwrap();
+        let pools = [common::storage_pool(&root)];
+        let task = db
+            .claim_media_scan("worker", &pools)
+            .await
+            .unwrap()
+            .unwrap();
+        let (release, wait) = std::sync::mpsc::channel();
+        struct Release(Option<std::sync::mpsc::Sender<()>>);
+        impl Drop for Release {
+            fn drop(&mut self) {
+                if let Some(sender) = self.0.take() {
+                    let _ = sender.send(());
+                }
+            }
+        }
+        let release = Release(Some(release));
+        let (started, ready) = std::sync::mpsc::channel();
+        let blocker = tokio::task::spawn_blocking(move || {
+            started.send(()).unwrap();
+            let _ = wait.recv();
+        });
+        ready.recv_timeout(Duration::from_secs(2)).unwrap();
+        let shutdown = CancellationToken::new();
+        let scan = {
+            let db = db.clone();
+            let shutdown = shutdown.clone();
+            tokio::spawn(async move { run_media_scan(&db, &task, "worker", &shutdown).await })
+        };
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        assert!(
+            !scan.is_finished(),
+            "discovery should be queued on the blocking worker"
+        );
+        let connection = Connection::open(&database).unwrap();
+        let deadline = (time::OffsetDateTime::now_utc() + time::Duration::seconds(6))
+            .format(&time::format_description::well_known::Rfc3339)
+            .unwrap();
+        connection
+            .execute(
+                "UPDATE media_scan_runs SET lease_expires_at=? WHERE id='queued-discovery'",
+                [deadline],
+            )
+            .unwrap();
+        tokio::time::sleep(Duration::from_secs(7)).await;
+        assert!(
+            db.claim_media_scan("competitor", &pools)
+                .await
+                .unwrap()
+                .is_none()
+        );
+        shutdown.cancel();
+        let error = tokio::time::timeout(Duration::from_secs(1), scan)
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap_err();
+        assert!(error.message.contains("stopping"));
+        drop(release);
+        blocker.await.unwrap();
+        let status: String = connection
+            .query_row(
+                "SELECT status FROM media_scan_runs WHERE id='queued-discovery'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            status, "running",
+            "a cancelled discovery must not publish a completed catalog"
+        );
+    });
 }
 
 #[tokio::test]

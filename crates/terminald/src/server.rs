@@ -645,6 +645,7 @@ mod tests {
     use tempfile::tempdir;
 
     #[tokio::test]
+    #[ignore = "requires tmux and bash; CI runs the reaper integration test explicitly"]
     async fn stalled_reaper_does_not_block_new_requests() {
         let directory = tempdir().unwrap();
         let config = TerminalConfig {
@@ -665,10 +666,12 @@ mod tests {
         let tmux_listener = UnixListener::bind(&config.tmux_socket_path).unwrap();
         let socket = config.socket_path.clone();
         let terminal = TerminalServer::new(config);
-        if terminal.state.tmux.ensure_available().await.is_err() {
-            eprintln!("tmux is unavailable; skipping reaper integration test");
-            return;
-        }
+        terminal
+            .state
+            .tmux
+            .ensure_available()
+            .await
+            .expect("tmux and bash are required for the reaper integration test");
         let server = tokio::spawn(terminal.run_with_reaper_interval(Duration::from_millis(20)));
         let result = async {
             let (_stalled_client, _) = timeout(Duration::from_secs(2), tmux_listener.accept())

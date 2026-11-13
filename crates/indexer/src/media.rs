@@ -330,7 +330,10 @@ pub async fn run_media_scan(
     worker_id: &str,
     shutdown: &CancellationToken,
 ) -> Result<(), IndexerError> {
-    let scan = scan_media(db, task, worker_id, shutdown);
+    let scan_stop = shutdown.child_token();
+    // Cancels discovery even when lease loss or dropping this future ends the scan.
+    let _scan_guard = scan_stop.clone().drop_guard();
+    let scan = scan_media(db, task, worker_id, &scan_stop);
     tokio::pin!(scan);
     let mut interval = tokio::time::interval(Duration::from_secs(5));
     let entries = loop {
@@ -359,18 +362,25 @@ async fn scan_media(
         None => MediaSettings::default(),
     };
     let tmdb = TmdbClient::new(&settings, task.proxy_settings_json.as_deref())?;
-    let storage = StoragePoolStorage::open(Path::new(&task.storage_pool_path))?;
+    let storage_path = PathBuf::from(&task.storage_pool_path);
     let source_path = PathBuf::from(&task.source_path);
     let initial_mount = probe_mount_identity(
-        storage.path(),
+        &storage_path,
         &task.mount_policy,
         task.expected_source.as_deref(),
         task.expected_uuid.as_deref(),
         task.expected_fstype.as_deref(),
     )
     .await?;
-    storage.open_directory(&source_path)?;
-    let files = discover_video_files(&storage, &source_path, shutdown)?;
+    let walk_stop = shutdown.clone();
+    let (storage, files) = tokio::task::spawn_blocking(move || {
+        let storage = StoragePoolStorage::open(&storage_path)?;
+        storage.open_directory(&source_path)?;
+        let files = discover_video_files(&storage, &source_path, &walk_stop)?;
+        Ok::<_, IndexerError>((storage, files))
+    })
+    .await
+    .map_err(|error| IndexerError::internal(format!("Media discovery task failed: {error}")))??;
     let mut entries = Vec::with_capacity(files.len());
     let mut title_cache = HashMap::<String, MediaTitleInput>::new();
     let overrides = db.media_match_overrides(&task.source_id).await?;
@@ -488,6 +498,9 @@ fn discover_video_files(
             ));
         }
         for entry in storage.list_directory(&directory)? {
+            if shutdown.is_cancelled() {
+                return Err(IndexerError::internal("Indexer is stopping"));
+            }
             let path = directory.join(&entry.name);
             match entry.kind {
                 EntryKind::Directory => pending.push_back(path),

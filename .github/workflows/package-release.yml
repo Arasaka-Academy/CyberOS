@@ -41,7 +41,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y acl ffmpeg
+          sudo apt-get install -y acl ffmpeg tmux samba python3-samba python3-tdb
           npm ci --registry=https://registry.npmjs.org
 
       - name: Install documentation dependencies
@@ -64,6 +64,14 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Test tmux integration
+        run: |
+          cargo test --locked -p cyberos-terminald --test tmux_pty -- --ignored
+          cargo test --locked -p cyberos-terminald server::tests::stalled_reaper_does_not_block_new_requests -- --ignored
+
+      - name: Test Samba credential recovery
+        run: sudo python3 crates/hostd/tests/samba_snapshot.py
 
       - name: Build
         run: npm run build

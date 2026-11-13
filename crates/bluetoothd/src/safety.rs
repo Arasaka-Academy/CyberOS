@@ -1,19 +1,132 @@
 use std::fs::{File, OpenOptions};
+use std::io::{Read, Write};
+use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
 use std::path::{Component, Path, PathBuf};
 
+use nix::fcntl::{OFlag, openat};
+use nix::sys::stat::Mode;
 use nix::sys::statvfs::statvfs;
 
 use crate::error::TransferError;
 
 pub fn open_send_file(root: &Path, relative: &str) -> Result<(File, PathBuf), TransferError> {
-    let path = safe_existing(root, relative)?;
-    let file = OpenOptions::new().read(true).open(&path)?;
+    validate_relative(relative)?;
+    let mut directory = OpenOptions::new()
+        .read(true)
+        .custom_flags(nix::libc::O_DIRECTORY | nix::libc::O_NOFOLLOW | nix::libc::O_CLOEXEC)
+        .open(root)?;
+    let mut components = Path::new(relative).components().peekable();
+    while let Some(component) = components.next() {
+        let flags = if components.peek().is_some() {
+            OFlag::O_DIRECTORY
+        } else {
+            OFlag::empty()
+        };
+        directory = File::from(
+            openat(
+                &directory,
+                component.as_os_str(),
+                OFlag::O_RDONLY | OFlag::O_NOFOLLOW | OFlag::O_CLOEXEC | OFlag::O_NONBLOCK | flags,
+                Mode::empty(),
+            )
+            .map_err(|error| TransferError(error.to_string()))?,
+        );
+    }
+    let file = directory;
     if !file.metadata()?.is_file() {
         return Err(TransferError(
             "Bluetooth transfer source is not a file".to_owned(),
         ));
     }
-    Ok((file, path))
+    Ok((file, root.join(relative)))
+}
+
+/// An immutable send snapshot kept alive until OBEX has finished reading its pathname.
+pub(crate) struct StagedSend {
+    directory: PrivateDirectory,
+    path: PathBuf,
+}
+
+impl StagedSend {
+    pub(crate) fn prepare(
+        root: &Path,
+        relative: &str,
+        outbox: &Path,
+    ) -> Result<Self, TransferError> {
+        let (source, _) = open_send_file(root, relative)?;
+        let before = source.metadata()?;
+        let name = Path::new(relative)
+            .file_name()
+            .ok_or_else(|| TransferError("Invalid Bluetooth source name".into()))?;
+        let directory = PrivateDirectory::new(outbox, "send")?;
+        let path = directory.path().join(name);
+        ensure_available_space(directory.path(), before.len())?;
+        let mut target = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .open(&path)?;
+        // Cap the copy at the initial size so a growing source cannot fill the state disk.
+        let mut bounded = source.take(before.len());
+        let copied = std::io::copy(&mut bounded, &mut target)?;
+        let after = bounded.get_ref().metadata()?;
+        if copied != before.len()
+            || (
+                before.dev(),
+                before.ino(),
+                before.len(),
+                before.mtime(),
+                before.mtime_nsec(),
+                before.ctime(),
+                before.ctime_nsec(),
+            ) != (
+                after.dev(),
+                after.ino(),
+                after.len(),
+                after.mtime(),
+                after.mtime_nsec(),
+                after.ctime(),
+                after.ctime_nsec(),
+            )
+        {
+            return Err(TransferError(
+                "Bluetooth source changed while staging".into(),
+            ));
+        }
+        target.flush()?;
+        Ok(Self { directory, path })
+    }
+
+    pub(crate) fn path(&self) -> &Path {
+        debug_assert!(self.path.starts_with(self.directory.path()));
+        &self.path
+    }
+}
+
+/// Owns a newly created 0700 directory; only this service identity can traverse it.
+pub(crate) struct PrivateDirectory(PathBuf);
+
+impl PrivateDirectory {
+    pub(crate) fn new(parent: &Path, prefix: &str) -> std::io::Result<Self> {
+        use std::os::unix::fs::DirBuilderExt;
+        let path = parent.join(format!("{prefix}-{}", uuid::Uuid::new_v4()));
+        std::fs::DirBuilder::new().mode(0o700).create(&path)?;
+        Ok(Self(path))
+    }
+
+    pub(crate) fn path(&self) -> &Path {
+        &self.0
+    }
+}
+
+impl Drop for PrivateDirectory {
+    fn drop(&mut self) {
+        if let Err(error) = std::fs::remove_dir_all(&self.0)
+            && error.kind() != std::io::ErrorKind::NotFound
+        {
+            tracing::warn!(%error, "failed to remove Bluetooth staging directory");
+        }
+    }
 }
 
 pub fn storage_pool_path(
@@ -171,6 +284,62 @@ fn reject_symlinks(root: &Path, target: &Path) -> Result<(), TransferError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn staged_send_survives_source_path_replacement_and_cleans_up() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = tempfile::tempdir().expect("temporary root");
+        let pool = root.path().join("pool");
+        let outbox = root.path().join("outbox");
+        std::fs::create_dir(&pool).expect("pool");
+        std::fs::create_dir(&outbox).expect("outbox");
+        std::fs::write(pool.join("send.txt"), b"allowed").expect("source");
+        let outside = root.path().join("outside.txt");
+        std::fs::write(&outside, b"outside pool").expect("outside file");
+        let staged = StagedSend::prepare(&pool, "send.txt", &outbox).expect("staged send");
+        let path = staged.path().to_path_buf();
+        std::fs::remove_file(pool.join("send.txt")).expect("remove source");
+        std::os::unix::fs::symlink(&outside, pool.join("send.txt")).expect("replace source");
+        assert_eq!(std::fs::read(&path).expect("OBEX payload"), b"allowed");
+        assert_eq!(
+            std::fs::metadata(path.parent().expect("staging directory"))
+                .expect("permissions")
+                .permissions()
+                .mode()
+                & 0o777,
+            0o700
+        );
+        assert!(StagedSend::prepare(&pool, "send.txt", &outbox).is_err());
+        drop(staged);
+        assert!(!path.exists(), "staging must not outlive the transfer");
+        std::os::unix::fs::symlink(root.path(), pool.join("nested")).expect("directory symlink");
+        assert!(open_send_file(&pool, "nested/outside.txt").is_err());
+    }
+
+    #[test]
+    fn rejects_fifo_without_waiting_for_a_writer() {
+        use std::os::unix::fs::OpenOptionsExt;
+        use std::{sync::mpsc, time::Duration};
+
+        let root = tempfile::tempdir().expect("temporary pool");
+        let path = root.path().join("fifo");
+        nix::unistd::mkfifo(&path, nix::sys::stat::Mode::S_IRWXU).expect("test FIFO");
+        let base = root.path().to_path_buf();
+        let (tx, rx) = mpsc::channel();
+        let reader = std::thread::spawn(move || {
+            tx.send(open_send_file(&base, "fifo").is_err())
+                .expect("send open result");
+        });
+        let result = rx.recv_timeout(Duration::from_secs(1));
+        let _writer = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .custom_flags(nix::libc::O_NONBLOCK)
+            .open(path)
+            .expect("FIFO cleanup");
+        reader.join().expect("FIFO reader thread");
+        assert!(result.expect("opening a FIFO must not block"));
+    }
 
     #[test]
     fn allows_the_pool_root_as_an_inbox_but_not_as_a_send_file() {

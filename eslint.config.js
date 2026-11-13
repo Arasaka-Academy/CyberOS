@@ -16,7 +16,7 @@ const nativeTooltipRestriction = {
 
 export default tseslint.config(
   {
-    ignores: ["**/dist/**", "node_modules/**", "coverage/**", ".*os/**", "**/.astro/**"]
+    ignores: ["**/dist/**", "node_modules/**", "target/**", "coverage/**", ".*os/**", "**/.astro/**"]
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

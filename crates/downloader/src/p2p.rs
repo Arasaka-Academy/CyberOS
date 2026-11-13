@@ -5,7 +5,10 @@ use std::sync::Arc;
 
 use futures_util::StreamExt;
 
-use crate::db::{Db, ResolvedTorrentPreview, Task, TorrentFile, TorrentPreview, TorrentProgress};
+use crate::db::{
+    Db, ResolvedTorrentPreview, Task, TorrentFile, TorrentPreview, TorrentProgress,
+    TorrentProgressUpdate,
+};
 use crate::error::{DownloadError, ErrorCode};
 use crate::storage::TorrentStorageTarget;
 
@@ -257,6 +260,12 @@ pub async fn run_torrent_task(
             let current = db.get_task(&task.id).await?.ok_or_else(|| {
                 DownloadError::new(ErrorCode::Database, "torrent task disappeared", false)
             })?;
+            if current.worker_id.as_deref() != Some(worker_id)
+                || !matches!(current.status.as_str(), "running" | "seeding")
+            {
+                engine.remove(&handle).await?;
+                return Ok(TorrentTaskOutcome::Interrupted);
+            }
             if let Some(control) = current.control_requested.as_deref() {
                 let _ = engine.remove(&handle).await;
                 match control {
@@ -298,7 +307,7 @@ pub async fn run_torrent_task(
                 });
             let seeding = published && stats.finished;
             let file_progress = stats.file_progress.iter().copied().enumerate().collect();
-            if !db
+            match db
                 .torrent_progress(
                     task,
                     worker_id,
@@ -316,7 +325,12 @@ pub async fn run_torrent_task(
                 )
                 .await?
             {
-                continue;
+                TorrentProgressUpdate::Updated => {}
+                TorrentProgressUpdate::ControlPending => continue,
+                TorrentProgressUpdate::LeaseLost => {
+                    engine.remove(&handle).await?;
+                    return Ok(TorrentTaskOutcome::Interrupted);
+                }
             }
 
             if stats.finished && !published {
@@ -716,6 +730,99 @@ pub fn seeding_limit_reached(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn lost_lease_stops_the_engine_without_modifying_the_new_owner() {
+        use std::time::Duration;
+        let root = tempfile::tempdir().expect("temporary root");
+        let data = root.path().join("data");
+        std::fs::create_dir_all(data.join("pool-1")).expect("pool");
+        let database = root.path().join("db.sqlite");
+        rusqlite::Connection::open(&database)
+            .expect("database")
+            .execute_batch(crate::db::TEST_SCHEMA)
+            .expect("schema");
+        let db = Db::open(&database).expect("database actor");
+        let mut metainfo =
+            b"d4:infod6:lengthi5e4:name9:hello.txt12:piece lengthi16384e6:pieces20:".to_vec();
+        metainfo.extend([
+            0xaa, 0xf4, 0xc6, 0x1d, 0xdc, 0xc5, 0xe8, 0xa2, 0xda, 0xbe, 0xde, 0x0f, 0x3b, 0x48,
+            0x2c, 0xd9, 0xae, 0xa9, 0x43, 0x4d,
+        ]);
+        metainfo.extend(b"ee");
+        db.test_call(move |connection| {
+            connection.execute("INSERT INTO download_tasks(id,url,storage_pool_id,target_directory,target_file_name,target_path,partial_path,status,created_at,updated_at,source_kind,torrent_metainfo,total_bytes,selected_file_count) VALUES('lease-test','','pool-1','.','hello','hello','.hello.part','queued','2026-11-13T00:00:00Z','2026-11-13T00:00:00Z','torrent',?,5,1)", [metainfo]).map_err(DownloadError::database)?;
+            connection.execute("INSERT INTO download_task_files VALUES('lease-test',0,'hello.txt',5,1,0)", []).map_err(DownloadError::database)?;
+            Ok(())
+        }).await.expect("torrent task");
+        let task = db
+            .claim_torrent("old-worker", TORRENT_LEASE)
+            .await
+            .expect("claim")
+            .expect("task");
+        let engine = TorrentEngine::new_isolated(root.path(), None)
+            .await
+            .expect("isolated engine");
+        let inspect_engine = engine.clone();
+        let shutdown = tokio_util::sync::CancellationToken::new();
+        let db_run = db.clone();
+        let stop = shutdown.clone();
+        let mut run = tokio::spawn(async move {
+            run_torrent_task(
+                &engine,
+                &db_run,
+                &task,
+                "old-worker",
+                &TorrentRunContext {
+                    data_root: &data,
+                    require_mount: false,
+                    minimum_free_bytes: 0,
+                    shutdown: &stop,
+                },
+            )
+            .await
+        });
+        tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                if db.test_call(|connection| connection.query_row("SELECT last_progress_at IS NOT NULL FROM download_tasks WHERE id='lease-test'", [], |row| row.get::<_, bool>(0)).map_err(DownloadError::database)).await.expect("progress query") { break; }
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        }).await.expect("initial engine progress");
+        db.test_call(|connection| {
+            connection.execute("UPDATE download_tasks SET lease_expires_at='1970-01-01T00:00:00Z' WHERE id='lease-test'", []).map_err(DownloadError::database)?;
+            Ok(())
+        }).await.expect("expire lease");
+        assert_eq!(db.recover_expired().await.expect("recover"), 1);
+        db.claim_torrent("new-worker", TORRENT_LEASE)
+            .await
+            .expect("new claim")
+            .expect("new owner");
+        let result = tokio::time::timeout(Duration::from_secs(3), &mut run).await;
+        if result.is_err() {
+            shutdown.cancel();
+            let _ = run.await;
+        }
+        assert_eq!(
+            result
+                .expect("old runner must stop after losing ownership")
+                .expect("runner task")
+                .expect("runner result"),
+            TorrentTaskOutcome::Interrupted
+        );
+        assert_eq!(
+            db.get_task("lease-test")
+                .await
+                .expect("task query")
+                .expect("new task")
+                .worker_id
+                .as_deref(),
+            Some("new-worker")
+        );
+        let count = inspect_engine
+            .session
+            .with_torrents(|torrents| torrents.count());
+        assert_eq!(count, 0, "the old engine must release its torrent handle");
+    }
 
     #[test]
     fn parses_public_multifile_torrents_for_selection() {
