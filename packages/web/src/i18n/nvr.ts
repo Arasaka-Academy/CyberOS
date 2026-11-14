@@ -1,4 +1,6 @@
 export const nvrEn = {
+  online: "Online", offline: "Offline", deviceStatus: "Device status", diagnostics: "Diagnostics", lastError: "Last error", ptzUnavailable: "Pan / tilt unavailable", ptzOfflineHint: "Controls return when the camera reconnects. Stop remains available for safety.",
+  media: { loading: "Connecting to video", loadingHint: "Waiting for the first frame.", offline: "Camera offline", offlineHint: "Check the camera power and network connection.", unavailable: "Video unavailable", unavailableHint: "The camera is connected, but no video is available.", paused: "Preview paused", pausedHint: "Preview resumes when you return." },
   overview: "Camera overview", filters: "Camera and date", previewStream: "Preview stream", openCamera: "Open {{name}}", seconds: "s", retentionSummary: "{{count}} days retention",
   metrics: { total: "Cameras", online: "Online", video: "Video available", recording: "Recording", analytics: "AI available", ptz: "Pan / tilt ready" },
   title: "NVR", subtitle: "Live cameras, recordings and events", live: "Live", playback: "Playback", events: "Events", devices: "Devices",
@@ -9,6 +11,8 @@ export const nvrEn = {
   home: "Return to center", stop: "Stop", left: "Pan left", right: "Pan right", up: "Tilt up", down: "Tilt down", absolute: "Move to position", relative: "Move by offset", pan: "Pan (−1…1)", tilt: "Tilt (−1…1)", holdHint: "Hold to move · Release to stop", simulated: "Simulated driver", calibrate: "Set current center", calibrateHint: "Confirm both axes are stationary at a safe mechanical center. Movement is enabled after calibration.", confirmCenter: "Confirm center and enable", calibrationRequired: "Center calibration required on the device", presets: "Presets", presetName: "Preset name", setPreset: "Save position", gotoPreset: "Go to preset", removePreset: "Remove preset", position: "Feedback position", fault: "Driver fault", videoUnavailable: "Video unavailable. Check the camera connection.", sessionExpired: "Viewing session expired. Reopen playback.", hlsUnsupported: "HLS playback is not supported in this browser.", liveVideo: "Original live video", playbackVideo: "Recorded video", retry: "Retry", timeline: "Recording timeline", deviceCount: "{{count}} / 4 cameras", movement: "Motion", moving: "Moving", stationary: "Stationary"
 };
 export const nvrZh: { [K in keyof typeof nvrEn]: typeof nvrEn[K] extends string ? string : { [P in keyof typeof nvrEn[K]]: string } } = {
+  online: "在线", offline: "离线", deviceStatus: "设备状态", diagnostics: "诊断信息", lastError: "最近错误", ptzUnavailable: "云台暂不可用", ptzOfflineHint: "设备恢复连接后显示控制。停止操作始终保留。",
+  media: { loading: "正在连接画面", loadingHint: "等待首帧画面。", offline: "设备离线", offlineHint: "请检查摄像机电源与网络连接。", unavailable: "视频不可用", unavailableHint: "设备已连接，暂时无法获取画面。", paused: "预览已暂停", pausedHint: "返回后自动恢复预览。" },
   overview: "摄像头概览", filters: "摄像机与日期", previewStream: "预览画面", openCamera: "打开 {{name}}", seconds: "秒", retentionSummary: "保留 {{count}} 天",
   metrics: { total: "摄像机", online: "在线", video: "视频可用", recording: "正在录像", analytics: "AI 可用", ptz: "云台就绪" },
   title: "NVR", subtitle: "实时监看、录像与事件", live: "实时", playback: "回放", events: "事件", devices: "设备",

@@ -129,6 +129,6 @@ export function NvrPanel({ storagePools }: { storagePools: StoragePool[] }) {
         </div> : null}
       </div>
     </div>
-    {activeDevice ? <NvrCameraDialog key={activeDevice.id} device={activeDevice} onClose={() => setOpened("")} onFault={setPtzFault} /> : null}
+    {activeDevice ? <NvrCameraDialog key={activeDevice.id} device={activeDevice} onClose={() => setOpened("")} onFault={setPtzFault} onRefresh={refresh} /> : null}
   </section>;
 }

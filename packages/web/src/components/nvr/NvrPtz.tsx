@@ -1,11 +1,11 @@
-import { Button, Field, Input, Notice, Section } from "@cyberos/ui";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Home, Square } from "lucide-react";
+import { Button, EmptyState, Field, Input, Notice, Section } from "@cyberos/ui";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Home, Move, Square } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { NvrPtzCommand, NvrPtzStatus } from "@cyberos/shared";
 import { nvrRequest, PtzLease } from "./api.js";
 
-export function NvrPtz({ deviceId, onFault }: { deviceId: string; onFault: (message: string) => void }) {
+export function NvrPtz({ deviceId, connected = true, onFault }: { deviceId: string; connected?: boolean; onFault: (message: string) => void }) {
   const { t } = useTranslation(); const [status, setStatus] = useState<NvrPtzStatus | null>(null); const [error, setError] = useState("");
   const [statusError, setStatusError] = useState("");
   const faultRef = useRef(onFault); faultRef.current = onFault;
@@ -32,11 +32,14 @@ export function NvrPtz({ deviceId, onFault }: { deviceId: string; onFault: (mess
     const refresh = () => { if (pending || document.hidden) return; pending = true;
       void nvrRequest<NvrPtzStatus>(`/devices/${deviceId}/ptz`, "GET", undefined, controller.signal).then((value) => { if (!disposed) { setStatus(value); setStatusError(""); if (!value.enabled || value.state !== "running" || value.calibrationRequired) void stopMotion(); } }).catch((cause: unknown) => { if (!disposed) { setStatus(null); setStatusError(cause instanceof Error ? cause.message : t("nvr.fault")); void stopMotion(); } }).finally(() => { pending = false; });
     };
-    const stop = () => { void stopMotion(); }; refresh(); const timer = setInterval(refresh, 2500);
+    const stop = () => { void stopMotion(); };
+    let timer: ReturnType<typeof setInterval> | undefined;
+    if (connected) { refresh(); timer = setInterval(refresh, 2500); }
+    else { setStatus(null); setStatusError(""); stop(); }
     for (const event of ["blur", "pagehide", "offline"]) window.addEventListener(event, stop);
     document.addEventListener("visibilitychange", stop);
     return () => { disposed = true; generation.current += 1; controller.abort(); clearInterval(timer); stop(); for (const event of ["blur", "pagehide", "offline"]) window.removeEventListener(event, stop); document.removeEventListener("visibilitychange", stop); };
-  }, [deviceId, stopMotion, t]);
+  }, [deviceId, connected, stopMotion, t]);
   const command = async (value: NvrPtzCommand) => {
     const currentGeneration = generation.current;
     const stopped = stopMotion(); setBusy(true);
@@ -52,8 +55,13 @@ export function NvrPtz({ deviceId, onFault }: { deviceId: string; onFault: (mess
       if (generation.current === currentGeneration) setStatus(await nvrRequest<NvrPtzStatus>(`/devices/${deviceId}/ptz`));
     } catch (cause) { const message = cause instanceof Error ? cause.message : t("nvr.fault"); setError(message); if (value.action === "stop") { faulted.current = true; faultRef.current(message); } } finally { setBusy(false); }
   };
-  const enabled = Boolean(status?.enabled && status.state === "running" && !status.calibrationRequired && !busy && !error && !statusError);
-  return <Section className="nvr-ptz" title={t("nvr.ptz")} description={t("nvr.holdHint")}>
+  const enabled = Boolean(connected && status?.enabled && status.state === "running" && !status.calibrationRequired && !busy && !error && !statusError && !faulted.current);
+  if (!connected) return <Section className="nvr-ptz nvr-ptz-offline" title={t("nvr.ptz")} icon={<Move size={18} aria-hidden="true" />}
+    actions={<Button variant="danger" onClick={() => { void command({ action: "stop" }); }}><Square size={14} aria-hidden="true" />{t("nvr.stop")}</Button>}>
+    {error ? <Notice tone="danger">{error}</Notice> : null}
+    <EmptyState title={t("nvr.ptzUnavailable")} description={t("nvr.ptzOfflineHint")} />
+  </Section>;
+  return <Section className="nvr-ptz" title={t("nvr.ptz")} description={t("nvr.holdHint")} icon={<Move size={18} aria-hidden="true" />}>
     {error ? <Notice tone="danger">{error}</Notice> : null}
     {statusError ? <Notice tone="danger">{statusError}</Notice> : null}
     {status?.lastError ? <Notice tone="warning">{status.lastError}</Notice> : null}

@@ -1,3 +1,9 @@
+cyberos (2.4.9) unstable; urgency=medium
+
+  * Redesign NVR camera cards and details with offline-aware media and safe PTZ controls.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Sat, 14 Nov 2026 13:08:28 +0000
+
 cyberos (2.4.8) unstable; urgency=medium
 
   * Harden Rust daemon storage safety, credential rollback, lease fencing, monitoring, and control responsiveness.

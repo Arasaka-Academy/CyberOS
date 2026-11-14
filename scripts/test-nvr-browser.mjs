@@ -44,12 +44,12 @@ before(async () => {
 });
 after(async () => { await browser?.close(); await server?.close(); });
 
-async function open(t, width = 1440, zh = false, count = 4) {
+async function open(t, width = 1440, zh = false, count = 4, configure = () => {}) {
   const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: "reduce" });
   const page = await context.newPage(); page.setDefaultTimeout(10_000);
   const errors = []; page.on("pageerror", error => errors.push(error.message));
   const commands = [], changes = [], sessions = [], removedSessions = [];
-  const previews = { opened: 0, closed: 0 };
+  const previews = { opened: 0, closed: 0, sockets: new Set() };
   const previewTimers = new Set();
   const jpeg = Buffer.from("/9j/4AAQSkZJRgABAgAAAQABAAD//gAPTGF2YzYzLjEuMTAyAP/bAEMACAQEBAQEBQUFBQUFBgYGBgYGBgYGBgYGBgYGBgcHBwgICAcHBwYGBwcICAgICQkJCAgICAkJCgoKDAwLCw4ODhERFP/EAEwAAQEAAAAAAAAAAAAAAAAAAAAHAQEBAAAAAAAAAAAAAAAAAAAAAxABAAAAAAAAAAAAAAAAAAAAABEBAAAAAAAAAAAAAAAAAAAAAP/AABEIABIAIAMBIgACEQADEQD/2gAMAwEAAhEDEQA/AI6AuiAAAAAA/9k=", "base64");
   const stamp = new Date().toISOString();
@@ -59,14 +59,17 @@ async function open(t, width = 1440, zh = false, count = 4) {
       recordingProfile: "raw", removedAt: null, connection: "connected", video: "available", recording: "disabled", ptz: "running", analytics: true, person: false, vehicle: false, lastError: null, updatedAt: stamp })),
     policy: { storagePoolId: "pool-1", directory: "NVR", retentionDays: 7, quotaBytes: 100 * 2 ** 30 },
     ptz: { enabled: true, driver: "simulated", state: "running", simulated: true, position: { pan: .2, tilt: -.1, moving: false }, presets: [], calibrationRequired: false, absoluteMove: true, relativeMove: true, continuousMove: true, lastError: null },
-    stopFails: false, previewFails: false, historyEmpty: false, moveGate: null
+    stopFails: false, previewFails: false, previewWaiting: false, previewInvalid: false, sessionFails: false, historyEmpty: false, moveGate: null
   };
+  configure(fixture);
   await page.routeWebSocket("**/api/nvr/devices/*/preview-socket", (socket) => {
     previews.opened += 1;
     if (fixture.previewFails) { socket.close(); previews.closed += 1; return; }
-    socket.send(jpeg);
-    const timer = setInterval(() => socket.send(jpeg), 500); previewTimers.add(timer);
-    socket.onClose(() => { clearInterval(timer); previewTimers.delete(timer); previews.closed += 1; });
+    previews.sockets.add(socket);
+    const frame = fixture.previewInvalid ? Buffer.from("not a JPEG") : jpeg;
+    if (!fixture.previewWaiting) socket.send(frame);
+    const timer = setInterval(() => { if (!fixture.previewWaiting) socket.send(frame); }, 500); previewTimers.add(timer);
+    socket.onClose(() => { clearInterval(timer); previewTimers.delete(timer); previews.sockets.delete(socket); previews.closed += 1; });
   });
   t.after(async () => { for (const timer of previewTimers) clearInterval(timer); await context.close(); assert.deepEqual(errors, []); });
   await page.route("**/api/**", async route => {
@@ -85,6 +88,7 @@ async function open(t, width = 1440, zh = false, count = 4) {
     if (path.endsWith("/events")) return route.fulfill({ json: fixture.historyEmpty ? [] : [{ id: "event-1", deviceId, category: "person", state: true, occurredAt: stamp, receivedAt: stamp, gap: false }, { id: "gap-1", deviceId, category: "subscription_gap", state: null, occurredAt: stamp, receivedAt: stamp, gap: true }] });
     if (path.endsWith("/sessions")) {
       const value = request.postDataJSON(); sessions.push(value); const id = `session-${sessions.length}`;
+      if (fixture.sessionFails) return route.fulfill({ status: 503, json: { error: "Live session unavailable" } });
       return route.fulfill({ json: { id, deviceId: value.deviceId, kind: value.kind, url: `/api/nvr/sessions/${id}/assets/index.m3u8`, expiresAt: stamp } });
     }
     if (path.includes("/sessions/")) {
@@ -99,7 +103,9 @@ async function open(t, width = 1440, zh = false, count = 4) {
   });
   await page.goto(`${baseUrl}__nvr-test?${zh ? "zh" : "en"}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
   await expect(page.locator(".nvr-camera")).toHaveCount(count);
-  if (count) await expect.poll(() => page.locator(".nvr-preview img").evaluateAll((images) => images.length > 0 && images.every((image) => image.naturalWidth > 0))).toBe(true);
+  if (count && fixture.devices.some(device => device.connection !== "disconnected") && !fixture.previewFails && !fixture.previewWaiting && !fixture.previewInvalid) {
+    await expect.poll(() => page.locator(".nvr-preview img").evaluateAll((images) => images.length > 0 && images.every((image) => image.naturalWidth > 0))).toBe(true);
+  }
   return { page, commands, changes, sessions, removedSessions, previews, fixture };
 }
 
@@ -118,6 +124,13 @@ async function assertNoOverflow(page) {
   assert.deepEqual(await page.locator('.nvr-scroll button, .nvr-scroll input, [role="dialog"] button, [role="dialog"] input').evaluateAll(nodes => nodes.filter(node => {
     const b = node.getBoundingClientRect(); return b.width > 0 && (b.left < -1 || b.right > globalThis.innerWidth + 1);
   }).map(node => node.textContent || node.getAttribute("aria-label"))), []);
+  assert.deepEqual(await page.locator(".nvr-media-state").evaluateAll(nodes => nodes.flatMap(node => {
+    const frame = node.parentElement.getBoundingClientRect();
+    return [...node.children].filter(child => {
+      const box = child.getBoundingClientRect();
+      return box.width > 0 && (box.top < frame.top - 1 || box.bottom > frame.bottom + 1 || box.left < frame.left - 1 || box.right > frame.right + 1);
+    }).map(child => child.textContent || child.className);
+  })), []);
 }
 
 test("four preview sockets close on tab exit and reconnect on return", async t => {
@@ -131,7 +144,7 @@ test("four preview sockets close on tab exit and reconnect on return", async t =
 
 for (const zh of [false, true]) for (const width of [1440, 820, 560, 390, 320]) {
   test(`NVR cards and camera dialog fit ${width}px in ${zh ? "Chinese" : "English"}`, async t => {
-    const { page } = await open(t, width, zh);
+    const { page, fixture } = await open(t, width, zh);
     const geometry = await page.locator(".nvr-live-grid").evaluate(grid => ({ width: grid.getBoundingClientRect().width, overview: grid.querySelector(".nvr-overview").getBoundingClientRect().width, columns: globalThis.getComputedStyle(grid).gridTemplateColumns.split(" ").length }));
     assert.ok(Math.abs(geometry.width - geometry.overview) < 1, "overview occupies the full row");
     assert.equal(geometry.columns, geometry.width >= 620 ? 2 : 1);
@@ -155,6 +168,17 @@ for (const zh of [false, true]) for (const width of [1440, 820, 560, 390, 320]) 
     assert.ok(Math.abs(box.y + box.height / 2 - 450) < 1);
     await assertNoOverflow(page);
     await page.screenshot({ path: `.cyberos/nvr-browser/${zh ? "zh" : "en"}-${width}-dialog.png` });
+    await closeCamera(page);
+    for (const device of fixture.devices) Object.assign(device, { connection: "disconnected", video: "unavailable", ptz: "unavailable", analytics: null, lastError: "Camera connection unavailable" });
+    await page.getByRole("button", { name: zh ? "刷新" : "Refresh", exact: true }).click();
+    await expect(page.locator(".nvr-camera .nvr-preview[data-state='offline']")).toHaveCount(4);
+    await assertNoOverflow(page);
+    await page.screenshot({ path: `.cyberos/nvr-browser/${zh ? "zh" : "en"}-${width}-offline-live.png` });
+    const offlineDialog = await openCamera(page);
+    await expect(offlineDialog.locator(".nvr-direction-pad, input")).toHaveCount(0);
+    await expect(offlineDialog.getByRole("button", { name: zh ? "停止" : "Stop", exact: true })).toBeEnabled();
+    await assertNoOverflow(page);
+    await page.screenshot({ path: `.cyberos/nvr-browser/${zh ? "zh" : "en"}-${width}-offline-dialog.png` });
     await closeCamera(page);
   });
 }
@@ -290,12 +314,132 @@ test("empty and single-camera states retain usable cards, filters and fault cont
   await page.getByRole("button", { name: "刷新", exact: true }).click();
   await page.locator("#nvr-tab-live").click();
   await expect(page.locator(".nvr-camera")).toHaveCount(1);
-  await expect(page.locator(".nvr-camera .nvr-preview")).toContainText("视频不可用");
+  await expect(page.locator(".nvr-camera .nvr-preview")).toContainText("设备离线");
   const dialog = await openCamera(page);
-  await expect(dialog.getByRole("button", { name: "向右", exact: true })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "向右", exact: true })).toHaveCount(0);
   await expect(dialog.getByRole("button", { name: "停止", exact: true })).toBeEnabled();
-  await expect(dialog).toContainText("请先在设备上完成中心标定");
+  await expect(dialog).toContainText("云台暂不可用");
   await assertNoOverflow(page);
+});
+
+test("offline cards have no image transport and details recover after a status retry", async t => {
+  const { page, fixture, previews, sessions } = await open(t, 1440, false, 1, value => {
+    Object.assign(value.devices[0], { connection: "disconnected", video: "unavailable", ptz: "unavailable", lastError: "Camera connection unavailable" });
+  });
+  const card = page.locator(".nvr-camera");
+  await expect(card.locator(".nvr-preview")).toHaveAttribute("data-state", "offline");
+  await expect(card.locator("img")).toHaveCount(0);
+  assert.equal(previews.opened, 0);
+  const box = await card.locator(".nvr-preview").boundingBox();
+  assert.ok(Math.abs(box.width / box.height - 16 / 9) < .02);
+  const dialog = await openCamera(page);
+  await expect(dialog.getByRole("button", { name: "Pan right", exact: true })).toHaveCount(0);
+  await expect(dialog.locator("input")).toHaveCount(0);
+  await expect(dialog.getByRole("button", { name: "Stop", exact: true })).toBeEnabled();
+  await dialog.getByRole("button", { name: "Original · HLS", exact: true }).click();
+  assert.equal(sessions.length, 0);
+  await expect(dialog.getByText("Camera connection unavailable", { exact: true })).not.toBeVisible();
+  await dialog.locator("summary").click();
+  await expect(dialog.getByText("Camera connection unavailable", { exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "Retry", exact: true }).click();
+  assert.equal(sessions.length, 0);
+  await dialog.getByRole("button", { name: "AI overlay · MJPEG", exact: true }).click();
+  Object.assign(fixture.devices[0], { connection: "connected", video: "available", ptz: "running", lastError: null });
+  await dialog.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(dialog.locator(".nvr-preview")).toHaveAttribute("data-state", "available");
+  await expect(dialog.locator('.nvr-stream-switch [aria-pressed="true"]')).toBeFocused();
+  await expect(dialog.getByRole("button", { name: "Pan right", exact: true })).toBeEnabled();
+  await expect.poll(() => previews.opened - previews.closed).toBe(1);
+  await assertNoOverflow(page);
+});
+
+test("loading, invalid frames and a closed socket never expose broken or stale images", async t => {
+  const { page, fixture, previews } = await open(t, 390, false, 1, value => { value.previewWaiting = true; });
+  const media = page.locator(".nvr-camera .nvr-preview");
+  await expect(media).toHaveAttribute("data-state", "loading");
+  await expect(media.locator("img")).toBeHidden();
+  fixture.previewWaiting = false;
+  await expect(media).toHaveAttribute("data-state", "available");
+  for (const socket of previews.sockets) socket.close();
+  await expect(media).toHaveAttribute("data-state", "unavailable");
+  await expect(media.locator("img")).toBeHidden();
+  await expect(page.locator(".nvr-camera-header-status")).toHaveAttribute("data-state", "ready");
+  fixture.previewInvalid = true;
+  const dialog = await openCamera(page);
+  await expect(dialog.locator(".nvr-preview")).toHaveAttribute("data-state", "unavailable");
+  await expect(dialog.locator("img")).toBeHidden();
+  await expect(dialog.getByRole("button", { name: "Pan right", exact: true })).toBeEnabled();
+  fixture.previewInvalid = false;
+  await dialog.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(dialog.locator(".nvr-preview")).toHaveAttribute("data-state", "available");
+  await expect(dialog.locator("img")).toBeVisible();
+});
+
+test("diagnostics remain reachable in the dialog keyboard loop", async t => {
+  const { page } = await open(t, 390, false, 1, value => {
+    value.devices[0].connection = "disconnected";
+  });
+  const dialog = await openCamera(page);
+  await dialog.getByRole("button", { name: "Stop", exact: true }).focus();
+  await page.keyboard.press("Tab");
+  await expect(dialog.locator("summary")).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(dialog.locator("details")).toHaveAttribute("open", "");
+  await page.keyboard.press("Tab");
+  await expect(dialog.getByRole("button", { name: "Close", exact: true })).toBeFocused();
+});
+
+test("an unavailable raw live session updates video status without disabling PTZ", async t => {
+  const { page, sessions } = await open(t, 820, false, 1, value => { value.sessionFails = true; });
+  const dialog = await openCamera(page);
+  await dialog.getByRole("button", { name: "Original · HLS", exact: true }).click();
+  await expect(dialog.locator(".nvr-video")).toHaveAttribute("data-state", "unavailable");
+  await dialog.locator("video").dispatchEvent("loadeddata");
+  await expect(dialog.locator(".nvr-video")).toHaveAttribute("data-state", "unavailable");
+  await expect(dialog.locator(".nvr-device-state .ui-description-row").filter({ has: page.locator("dt", { hasText: /^Video$/ }) })).toContainText("Unavailable");
+  await expect(dialog.getByRole("button", { name: "Pan right", exact: true })).toBeEnabled();
+  await dialog.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect.poll(() => sessions.length).toBe(2);
+});
+
+test("going offline collapses PTZ safely and retains stop failure until acknowledged", async t => {
+  const { page, fixture, commands } = await open(t, 1440, false, 1);
+  const dialog = await openCamera(page);
+  const right = dialog.getByRole("button", { name: "Pan right", exact: true });
+  await expect(right).toBeEnabled();
+  await right.dispatchEvent("keydown", { key: "Enter" });
+  await expect.poll(() => commands.at(-1)?.action).toBe("continuous_move");
+  fixture.stopFails = true;
+  fixture.devices[0].connection = "disconnected";
+  await page.getByRole("button", { name: "Refresh", exact: true, includeHidden: true }).evaluate(node => node.click());
+  await expect(right).toHaveCount(0);
+  await expect.poll(() => commands.at(-1)?.action).toBe("stop");
+  await expect(dialog.getByRole("alert")).toContainText("Stop could not be confirmed");
+  fixture.devices[0].connection = "connected";
+  await dialog.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(right).toBeDisabled();
+  fixture.stopFails = false;
+  await dialog.getByRole("button", { name: "Stop", exact: true }).click();
+  await expect(right).toBeEnabled();
+  await closeCamera(page);
+  await expect(page.getByRole("alert")).toContainText("Stop could not be confirmed");
+});
+
+test("going offline during a pending finite move stops only after its acknowledgement", async t => {
+  const { page, fixture, commands } = await open(t, 1440, false, 1);
+  let acknowledge;
+  fixture.moveGate = new Promise(resolve => { acknowledge = resolve; });
+  const dialog = await openCamera(page);
+  await expect(dialog.getByRole("button", { name: "Move to position", exact: true })).toBeEnabled();
+  await dialog.getByRole("button", { name: "Move to position", exact: true }).click();
+  await expect.poll(() => commands.at(-1)?.action).toBe("absolute_move");
+  fixture.devices[0].connection = "disconnected";
+  await page.getByRole("button", { name: "Refresh", exact: true, includeHidden: true }).evaluate(node => node.click());
+  await expect(dialog.locator("input")).toHaveCount(0);
+  assert.equal(commands.some(command => command.action === "stop"), false);
+  acknowledge();
+  await expect.poll(() => commands.at(-1)?.action).toBe("stop");
+  await closeCamera(page);
 });
 
 test("stop failure survives dialog close and overview refresh", async t => {
@@ -367,4 +511,34 @@ test("all theme modes retain card surfaces and square controls in the dialog", a
     assert.equal(styles.rounded, 0);
     await assertNoOverflow(page);
   }
+});
+
+test("offline cards and details retain clear states in all theme modes", async t => {
+  const { page, previews, sessions } = await open(t, 390, true, 1, value => {
+    Object.assign(value.devices[0], { connection: "disconnected", video: "unavailable", ptz: "unavailable", analytics: null });
+  });
+  await mkdir(".cyberos/nvr-browser", { recursive: true });
+  for (const scheme of ["neon", "mono", "graphite", "synthwave", "bloodline", "terminal", "amber"]) for (const mode of ["dark", "light"]) {
+    await page.evaluate(preference => {
+      globalThis.localStorage.setItem("cyberos:appearance:v1", JSON.stringify(preference));
+      globalThis.window.dispatchEvent(new globalThis.StorageEvent("storage", { key: "cyberos:appearance:v1" }));
+    }, { scheme, mode });
+    await expect(page.locator("html")).toHaveAttribute("data-cyber-scheme", scheme);
+    await expect(page.locator("html")).toHaveAttribute("data-cyber-mode", mode);
+    await expect(page.locator(".nvr-camera .nvr-camera-header-status")).toHaveAttribute("data-state", "offline");
+    await assertNoOverflow(page);
+    await page.screenshot({ path: `.cyberos/nvr-browser/zh-390-${scheme}-${mode}-offline-live.png` });
+    const dialog = await openCamera(page);
+    const controls = dialog.locator("button");
+    assert.deepEqual(await controls.evaluateAll(buttons => buttons.filter(button => {
+      const box = button.getBoundingClientRect();
+      return globalThis.getComputedStyle(button).borderRadius !== "0px" || box.width < 44 || box.height < 44;
+    }).map(button => button.textContent || button.getAttribute("aria-label"))), []);
+    await expect(dialog.locator("img, video, input")).toHaveCount(0);
+    await assertNoOverflow(page);
+    await page.screenshot({ path: `.cyberos/nvr-browser/zh-390-${scheme}-${mode}-offline-dialog.png` });
+    await closeCamera(page);
+  }
+  assert.equal(previews.opened, 0);
+  assert.equal(sessions.length, 0);
 });

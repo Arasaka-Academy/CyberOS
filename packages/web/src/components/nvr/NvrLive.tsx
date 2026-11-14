@@ -1,10 +1,11 @@
-import { Card, CardHeader, StatusBadge } from "@cyberos/ui";
+import { Card, CardHeader, DescriptionList, StatusBadge } from "@cyberos/ui";
 import type { NvrDevice, NvrOverview } from "@cyberos/shared";
-import { ArrowUpRight, Camera, HardDrive } from "lucide-react";
-import { useId, useState } from "react";
+import { ArrowUpRight, Camera, HardDrive, Move, ScanEye } from "lucide-react";
+import { useId } from "react";
 import { useTranslation } from "react-i18next";
-import { NvrPreview } from "./NvrPreview.js";
-import { statusText } from "./labels.js";
+import { NvrCameraMedia } from "./NvrCameraMedia.js";
+import type { NvrMediaState } from "./NvrMedia.js";
+import { statusState, statusText } from "./labels.js";
 
 export function cameraStats(devices: NvrDevice[]) {
   const active = devices.filter((device) => !device.removedAt);
@@ -30,25 +31,32 @@ export function NvrOverviewCard({ overview }: { overview: NvrOverview }) {
   </section>;
 }
 
-export function NvrDeviceState({ device, videoError = false }: { device: NvrDevice; videoError?: boolean }) {
+export function NvrConnectionBadge({ connection }: { connection: string }) {
   const { t } = useTranslation();
-  return <dl className="nvr-device-state">{([
-    ["connection", device.connection], ["video", videoError ? "unavailable" : device.video],
+  return <StatusBadge className="nvr-camera-header-status" state={statusState(connection)}>
+    {connection === "connected" ? t("nvr.online") : connection === "disconnected" ? t("nvr.offline") : statusText(t, connection)}
+  </StatusBadge>;
+}
+
+export function NvrDeviceState({ device, mediaState }: { device: NvrDevice; mediaState?: NvrMediaState }) {
+  const { t } = useTranslation();
+  const video = device.connection === "disconnected" || mediaState === "offline" ? "unavailable" : mediaState ?? device.video;
+  return <DescriptionList className="nvr-device-state" items={([
+    ["connection", device.connection], ["video", video],
     ["recording", device.recording], ["analytics", device.analytics === null ? "unknown" : device.analytics ? "available" : "unavailable"], ["ptz", device.ptz]
-  ] as const).map(([key, value]) => <div key={key}><dt>{t(`nvr.${key}`)}</dt><dd><StatusBadge state={value}>{statusText(t, value)}</StatusBadge></dd></div>)}</dl>;
+  ] as const).map(([key, value]) => ({ id: key, label: t(`nvr.${key}`), value: <StatusBadge state={statusState(value)}>{value === "loading" ? t("nvr.loading") : statusText(t, value)}</StatusBadge> }))} />;
 }
 
 export function NvrCameraCard({ device, paused, onOpen }: { device: NvrDevice; paused: boolean; onOpen: () => void }) {
   const { t } = useTranslation();
-  const [videoError, setVideoError] = useState(false);
   return <Card className="nvr-card nvr-camera" padding="none">
-    <CardHeader className="nvr-card-header" title={device.name} icon={<Camera size={18} aria-hidden="true" />} actions={<ArrowUpRight size={17} aria-hidden="true" />} />
-    <div className="nvr-preview">
-      {!paused ? <NvrPreview deviceId={device.id} name={device.name} attempt={0} onErrorChange={setVideoError} /> : null}
-      {videoError ? <span>{t("nvr.videoUnavailable")}</span> : null}
-    </div>
-    <NvrDeviceState device={device} videoError={videoError} />
-    {device.lastError ? <p className="nvr-device-error">{device.lastError}</p> : null}
+    <CardHeader className="nvr-card-header" title={device.name} icon={<Camera size={18} aria-hidden="true" />} actions={<><NvrConnectionBadge connection={device.connection} /><ArrowUpRight size={16} aria-hidden="true" /></>} />
+    <NvrCameraMedia key={`${device.id}:${device.connection}:${paused}`} device={device} paused={paused} />
+    <dl className="nvr-camera-summary">{([
+      ["recording", device.recording, HardDrive],
+      ["analytics", device.analytics === null ? "unknown" : device.analytics ? "available" : "unavailable", ScanEye],
+      ["ptz", device.ptz, Move]
+    ] as const).map(([key, value, Icon]) => <div key={key}><dt><Icon size={13} aria-hidden="true" />{t(`nvr.${key}`)}</dt><dd data-state={statusState(value)}>{statusText(t, value)}</dd></div>)}</dl>
     <button type="button" className="nvr-camera-open" aria-label={t("nvr.openCamera", { name: device.name })} aria-haspopup="dialog" onClick={onOpen} />
   </Card>;
 }

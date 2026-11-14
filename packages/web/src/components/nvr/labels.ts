@@ -1,5 +1,12 @@
 import type { TFunction } from "i18next";
 import { nvrEn } from "../../i18n/nvr.js";
+export function statusState(value: string): "ready" | "warning" | "offline" | "error" | "neutral" {
+  if (["connected", "available", "recording", "ready", "recovered", "running"].includes(value)) return "ready";
+  if (value === "disconnected") return "offline";
+  if (["unavailable", "paused", "uncalibrated", "calibration_required", "missing"].includes(value)) return "warning";
+  if (["invalid", "error", "fault"].includes(value)) return "error";
+  return "neutral";
+}
 export function statusText(t: TFunction, value: string): string {
   return Object.hasOwn(nvrEn.status, value) ? t(`nvr.status.${value as keyof typeof nvrEn.status}`) : value;
 }
