@@ -540,7 +540,7 @@ jobs:
           const shaPattern = /^[0-9a-f]{40}$/u;
           const checksumPattern = /^[0-9a-f]{64}$/u;
 
-          if (manifest?.repository !== "zhubby/CyberOS" ||
+          if (manifest?.repository !== "Arasaka-Academy/CyberOS" ||
               typeof manifest.version !== "string" || !versionPattern.test(manifest.version) ||
               manifest.tag !== `v${manifest.version}` ||
               typeof manifest.commitSha !== "string" || !shaPattern.test(manifest.commitSha) ||

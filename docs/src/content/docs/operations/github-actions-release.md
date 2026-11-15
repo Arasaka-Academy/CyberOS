@@ -98,11 +98,11 @@ sudo stat -c '%U:%G %a %n' \
 在 Tailscale admin console 创建 GitHub Actions trust credential：
 
 - issuer：`https://token.actions.githubusercontent.com`；
-- subject：`repo:zhubby@9190779/CyberOS@1341473177:environment:production`；
+- subject：`repo:<owner>@<owner-id>/CyberOS@<repository-id>:environment:production`，以 workflow 预检输出的当前仓库标识为准；
 - scope：允许创建 auth key；
 - tag：仅 `tag:github-actions`。
 
-subject 使用 GitHub 返回的稳定 owner/repository ID，而不是可改名的显示名称。`.github/workflows/deploy-cybermachine.yml` 会在连接前校验相同 subject、issuer 和 audience；仓库转移、重建或修改 environment 名称时，必须同时更新 trust credential 与 workflow 中的 `EXPECTED_SUBJECT`。
+subject 使用 GitHub 返回的稳定 owner/repository ID。`.github/workflows/deploy-cybermachine.yml` 根据当前仓库生成并校验 subject、issuer 和 audience；仓库转移、重建或修改 environment 名称时，必须同步更新 Tailscale trust credential。
 
 ### 4. 配置 GitHub production environment
 
@@ -160,7 +160,7 @@ git push origin "v${VERSION}"
 
 ```json
 {
-  "repository": "zhubby/CyberOS",
+  "repository": "Arasaka-Academy/CyberOS",
   "tag": "vX.Y.Z",
   "version": "X.Y.Z",
   "commitSha": "<40-character commit SHA>",
@@ -171,6 +171,8 @@ git push origin "v${VERSION}"
 ```
 
 所有第三方 Actions 都固定到完整 commit SHA。Release job 还要求 tag 位于 `main` 历史中，并再次检查 tag、Debian 版本、资产名称和 checksum。
+
+部署 helper 只接受 `Arasaka-Academy/CyberOS` 的 manifest。仍安装旧仓库校验规则的设备，需要管理员先备份 helper，并将其固定仓库标识更新为当前名称，再执行首次部署；保留原有 checksum、版本、架构和升级备份校验，以及受限部署账号的权限。
 
 ## Deploy cybermachine 做了什么
 
