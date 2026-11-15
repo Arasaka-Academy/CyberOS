@@ -90,12 +90,14 @@ test("documentation switches the Cutline masters and loads the shared favicon", 
 test("documentation links retain AA contrast in every theme", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/docs/operations/cybermachine/");
+  const contentLink = page.locator(".sl-markdown-content a[href]:not(.sl-anchor-link)").first();
+  await expect(contentLink).toBeVisible();
   for (const scheme of schemes) for (const mode of ["dark", "light"]) {
     await page.evaluate(({ scheme, mode }) => Object.assign(document.documentElement.dataset, { cyberScheme: scheme, cyberMode: mode, theme: mode }), { scheme, mode });
     await page.mouse.move(0, 0);
     await page.waitForTimeout(250);
     for (const hover of [false, true]) {
-      if (hover) { await page.locator(".sl-markdown-content a[href]").first().hover(); await page.waitForTimeout(250); }
+      if (hover) { await contentLink.hover(); await page.waitForTimeout(250); }
       const links = await linkContrast(page);
       expect(links.length).toBeGreaterThan(1);
       for (const link of links) expect(link.ratio, `${scheme}/${mode}, hover=${hover}: ${link.text}`).toBeGreaterThanOrEqual(4.5);
