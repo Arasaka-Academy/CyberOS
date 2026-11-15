@@ -1,3 +1,9 @@
+cyberos (2.4.11) unstable; urgency=medium
+
+  * Complete MCP system capability coverage, diagnostics, task tracking, and current-repository deployment.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Sun, 15 Nov 2026 12:19:24 +0000
+
 cyberos (2.4.10) unstable; urgency=medium
 
   * Expand MCP system coverage with approved domain management, owned task tracking, service diagnostics, and verified staging backup restores.
