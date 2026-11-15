@@ -754,11 +754,34 @@ impl Db {
     }
 
     pub async fn start_run(&self, storage_pool_id: &str, kind: &str) -> DbResult<String> {
+        self.start_run_with_id(storage_pool_id, kind, Uuid::new_v4().to_string())
+            .await
+    }
+
+    pub async fn start_task_run(&self, task: &QueueTask) -> DbResult<String> {
+        // Retain the queue generation in each attempt's opaque identifier so
+        // clients can follow completion after the queue entry is removed.
+        let id = format!(
+            "queue:{}:{}:{:010}:{}",
+            task.id,
+            task.generation,
+            task.retry_count,
+            Uuid::new_v4()
+        );
+        self.start_run_with_id(&task.storage_pool_id, &task.kind, id)
+            .await
+    }
+
+    async fn start_run_with_id(
+        &self,
+        storage_pool_id: &str,
+        kind: &str,
+        id: String,
+    ) -> DbResult<String> {
         let values = (storage_pool_id.to_owned(), kind.to_owned());
         self.call(move |connection| {
             let transaction = connection.transaction().map_err(IndexerError::database)?;
             archive_previous_runs(&transaction, &values.0)?;
-            let id = Uuid::new_v4().to_string();
             transaction.execute(
                 "INSERT INTO index_runs (id, storage_pool_id, status, started_at, kind, phase, last_progress_at) \
                  VALUES (?, ?, 'running', ?, ?, 'scanning', ?)",

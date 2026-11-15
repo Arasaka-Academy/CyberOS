@@ -13,6 +13,20 @@ sidebar:
 
 备份包括 storage pools、SQLite 在线快照、trash 状态和 v2 manifest。恢复首先写入新的 0700 staging 目录，校验 data root 身份与 SHA-256；非 v2 manifest 会被拒绝，恢复不会覆盖活动 storage pool、数据库目录或备份仓库。
 
+## 通过内置 Pi 恢复到 staging
+
+先读取 `cyberos.backup.status` 和 `cyberos.backup.coverage`，确认 repository、password file 和保护范围，再用 `cyberos.backup.snapshots` 分页选择快照。仓库仍可用时，关闭定时备份不会禁止快照浏览或 staging 恢复。源存储池离线也不妨碍读取独立的备份仓库。
+
+快照返回完整 `id`、时间、标签、匹配的 `runId`、`kind` 和 `restoreSnapshotIds`，不公开宿主机路径或仓库密码。仅在一次已完成的 backup run 恰好对应两个无歧义快照时配对 data/state；优先选择这种快照，使用完整 ID 避免前缀冲突。
+
+```json
+{"request":{"operation":"restore","snapshotId":"从 snapshots 取得的完整快照 ID"},"idempotencyKey":"restore-drill-001"}
+```
+
+`cyberos.backup.restore-propose` 只允许内置 Pi 提案，必须经第一方明确确认。恢复与备份／检查使用同一执行锁，先恢复并校验 state manifest，再将配对的数据快照恢复到 staging 内的 `data-snapshot`。失败时清理本次 staging，成功返回 `stagingPath`、`snapshotIds`、`verified` 和 `liveDataChanged: false`。恢复执行期间使用 `runs.get/wait` 观察能力状态；此操作不提供中途取消。
+
+`verified: true` 表示仓库检查、state v2 manifest／SHA-256 和 Restic 恢复检查通过，不证明源应用的一致性，也不代表已切换活动数据。未配对的旧快照只有通过 v2 manifest 校验后才能作为 state 恢复；普通 data-only 快照会被拒绝。恢复后的人工检查、应用恢复演练和活动数据切换是独立步骤。
+
 ## iSCSI 磁盘
 
 存储池中的 `.cyberos/iscsi` 是受保护的 LUN 镜像目录，普通文件备份明确排除整个目录，避免读取运行中的磁盘镜像并误报为一致备份。日常 restic 备份也不保存 `/cyberos/state/hostd/iscsi` 的 Target 配置及 CHAP 凭据。需要保护 iSCSI 数据时，在连接端使用文件系统或应用支持的一致性备份；重装前单独保管受限的 Target 配置，并核实原镜像与存储池身份。普通文件恢复不会自动恢复 iSCSI 服务。

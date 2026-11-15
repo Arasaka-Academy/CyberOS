@@ -18,6 +18,7 @@
 | --- | --- |
 | [src/server.ts](src/server.ts) | Fastify 注册、HTTP guard、SDK server/tool/resource 装配和资源传输端点 |
 | [src/runtime.ts](src/runtime.ts) | 客户端上下文、目录过滤、领域读取、提案与 run 查询/控制 |
+| [src/tasks.ts](src/tasks.ts) | 按拥有者关联固定领域任务、聚合进度与取消支持 |
 | [src/index.ts](src/index.ts) | 公共导出 |
 
 ## HTTP 与认证边界
@@ -64,6 +65,18 @@ Pi 的读取策略可以要求批准；文件 resource-link 只有自动读取�
 | [mcp-cli](../mcp-cli/README.md) | 管理员配对、token 生命周期和 TLS 配置 |
 
 本包不向外部 MCP 客户端开放批准入口。`cyberos.runs.cancel` 只能控制其拥有且允许取消的 run，不表示拥有所有运行的管理权限。
+
+## 系统领域与任务完成
+
+API 通过 `system-read-capabilities` 和 `system-mutation-capabilities` 接入健康／服务日志、文件历史／恢复／解压／batch、照片高级查询、BT、Docker 详情、告警投递、NVR、Tailscale、蓝牙、iSCSI、Audio、代理及快照恢复。新增领域采用对应 `cyberos:<domain>:read/propose` scopes，外部身份需要显式重新授权；写工具只安装到内置 Pi，秘密由第一方独立输入。
+
+资源的 scope 从关联 descriptor 推导。NVR 快照和 MPEG-TS 录像通过认证、客户端绑定、一次性 60 秒 token 返回，并在下载时复查身份。大型查询使用分页与截断说明，不嵌入媒体正文或未脱敏配置。
+
+`runs.*` 观察审批／提交，`tasks.get/list/wait` 观察关联领域任务。`completion: submission` 或 `submissionCompleted: true` 仅表示提交成功，实际完成以 `task.terminal/state` 为准；被清理的任务返回 `unavailable`。`tasks.wait` 最多 20 秒，支持字符串 `afterRevision`；`runs.wait` 使用数字 revision。取消下载、文件 batch 和蓝牙任务使用审批工具 `tasks.cancel-propose`，其他任务不声称支持取消。
+
+快照恢复复用受锁保护的备份服务，匹配同一 backup run 的 data/state 快照，校验 v2 state manifest 和 SHA-256，始终恢复至新 staging。保护范围明确排除 Docker named volumes、iSCSI 镜像及其 Target/CHAP 状态；普通文件备份不保证应用一致性。
+
+完整参数和操作边界见 [MCP 与 Agent 参考](../../docs/src/content/docs/reference/mcp-agent-capabilities.md)。新增产品动作需要通过双向覆盖清单并增加行为测试。
 
 ## 开发与验证
 

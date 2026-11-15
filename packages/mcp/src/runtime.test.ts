@@ -87,18 +87,25 @@ describe("Pi MCP capability discovery", () => {
   });
 
   it("applies the Agent capability policy to newly implemented tools", () => {
+    const fileMutations = ["cyberos.files.mutate", "cyberos.files.rollback-propose", "cyberos.files.restore-propose", "cyberos.files.extract-propose", "cyberos.files.batch-propose", "cyberos.files.batch-cancel-propose"];
+    const enabled = createRuntime(true);
+    for (const capabilityId of fileMutations) expect(enabled.registry.get(capabilityId), capabilityId).not.toBeNull();
     const defaults = defaultAgentCapabilityPolicySettings();
     saveAgentCapabilityPolicySettings(db, {
       policies: {
         ...defaults.policies,
         "cyberos.files.grep": "disabled",
         "cyberos.files.edit": "disabled",
+        "cyberos.files.mutate": "disabled",
         "cyberos.shell.run": "disabled"
       }
     });
     const runtime = createRuntime(true);
     expect(runtime.registry.get("cyberos.files.grep")).toBeNull();
     expect(runtime.registry.get("cyberos.files.edit")).toBeNull();
+    for (const capabilityId of fileMutations) {
+      expect(runtime.registry.get(capabilityId), capabilityId).toBeNull();
+    }
     expect(runtime.registry.get("cyberos.shell.run")).toBeNull();
   });
 

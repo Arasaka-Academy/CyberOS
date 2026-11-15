@@ -233,17 +233,19 @@ export function getOwnedCapabilityRun(db: CyberOsDatabase, clientId: string, run
 
 export function listOwnedCapabilityRuns(db: CyberOsDatabase, input: {
   clientId: string;
+  domainOnly?: boolean;
   limit?: number;
   before?: { createdAt: string; id: string };
 }): CapabilityRunRecord[] {
-  const limit = Math.max(1, Math.min(input.limit ?? 50, 200));
+  const limit = Math.max(1, Math.min(input.limit ?? 50, 201));
+  const domainFilter = input.domainOnly ? "AND ((domain_operation_id IS NOT NULL AND domain_operation_type NOT IN ('operation', 'file_operation')) OR json_type(progress_json, '$.domainTask') = 'object')" : "";
   const rows = input.before
     ? db.prepare(`
         SELECT * FROM capability_runs
-        WHERE client_id = ? AND (created_at < ? OR (created_at = ? AND id < ?))
+        WHERE client_id = ? ${domainFilter} AND (created_at < ? OR (created_at = ? AND id < ?))
         ORDER BY created_at DESC, id DESC LIMIT ?
       `).all(input.clientId, input.before.createdAt, input.before.createdAt, input.before.id, limit)
-    : db.prepare(`SELECT * FROM capability_runs WHERE client_id = ? ORDER BY created_at DESC, id DESC LIMIT ?`).all(input.clientId, limit);
+    : db.prepare(`SELECT * FROM capability_runs WHERE client_id = ? ${domainFilter} ORDER BY created_at DESC, id DESC LIMIT ?`).all(input.clientId, limit);
   return (rows as CapabilityRunRow[]).map(mapRun);
 }
 

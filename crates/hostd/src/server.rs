@@ -371,6 +371,11 @@ async fn write_response(
 
 async fn dispatch(request: RequestEnvelope, state: &HostdState) -> Result<HostdResult, HostdError> {
     match request.into_contract()? {
+        HostdRequest::SystemDiagnostics(request) => {
+            crate::diagnostics::handle(request, state.runner.as_ref())
+                .await
+                .map(HostdResult::SystemDiagnostics)
+        }
         HostdRequest::SharesApply(request) => {
             let _guard = state.shares_lock.lock().await;
             crate::shares::apply(request, state.runner.as_ref(), &state.data_root)

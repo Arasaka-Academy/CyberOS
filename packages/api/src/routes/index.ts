@@ -34,6 +34,7 @@ import { registerTvRoutes } from "./tv.js";
 import { registerAgentResourceRoutes } from "./agent-resources.js";
 import { registerAudioRoutes } from "./audio.js";
 import { registerNvrRoutes } from "./nvr.js";
+import { registerServiceDiagnosticsRoutes } from "./service-diagnostics.js";
 
 export function registerApiRoutes(server: FastifyInstance, context: ApiRouteContext): void {
   registerHealthRoutes(server, context);
@@ -45,6 +46,7 @@ export function registerApiRoutes(server: FastifyInstance, context: ApiRouteCont
   registerNvrRoutes(server, context);
   registerAgentResourceRoutes(server, context);
   registerSystemRoutes(server, context);
+  registerServiceDiagnosticsRoutes(server, context);
   registerTailscaleRoutes(server, context);
   registerBluetoothTransferRoutes(server, context);
   registerSystemOperationsRoutes(server, context);

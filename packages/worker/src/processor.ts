@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
+import { agentSystemContext } from "./agent-context.js";
 import {
   PiActiveTurnUnavailableError,
   runPiAgentCommand,
@@ -332,6 +333,7 @@ export async function processNextJob({
           root: workspace,
           message: turnMessage,
           workingPath: job.workingPath,
+          systemContext: await agentSystemContext(db, config, session.id, job.workingPath),
           dataDir: config.paths.stateDir,
           modelSettings: getModelProviderSettings(db) ?? defaultModelProviderSettings(),
           toolPolicy: agentCapabilityPolicyToPiToolPolicy(

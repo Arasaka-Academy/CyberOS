@@ -5,7 +5,7 @@ import { hostHeaderValidation, originValidation } from "@modelcontextprotocol/fa
 import { toNodeHandler } from "@modelcontextprotocol/node";
 import { createMcpHandler, McpServer, ResourceTemplate } from "@modelcontextprotocol/server";
 import { z } from "zod";
-import { CapabilityError, capabilityErrorShape, capabilityResult, type JsonValue } from "@cyberos/capabilities";
+import { CapabilityError, capabilityErrorShape, capabilityResult, hasRequiredScopes, type JsonValue } from "@cyberos/capabilities";
 import { requireStoragePool } from "@cyberos/capability-runtime";
 import {
   authenticateMcpClient,
@@ -217,7 +217,7 @@ export function registerMcp(server: FastifyInstance, dependencies: McpRuntimeDep
 
 function createMcpServer(runtime: ClientRuntime): McpServer {
   const server = new McpServer({ name: "cyberos", version: "2.0.0" }, {
-    maxToolInputElements: 2_000,
+    maxToolInputElements: 20_000,
     instructions: "Use storagePoolId and storage-pool-relative paths. Mutations require approval in the first-party CyberOS UI. Secrets must be entered in CyberOS, never in tool arguments."
   });
 
@@ -251,32 +251,36 @@ function createMcpServer(runtime: ClientRuntime): McpServer {
 }
 
 function registerResources(server: McpServer, runtime: ClientRuntime): void {
+  const hasResourceScope = (id: string) => {
+    const descriptor = runtime.registry.get(id);
+    return descriptor !== null && hasRequiredScopes(runtime.context.subject.scopes, descriptor.requiredScopes);
+  };
   server.registerResource("CyberOS capability catalog", "cyberos://catalog", {
     title: "CyberOS capability catalog",
     description: "Scoped capabilities and runtime availability",
     mimeType: "application/json"
   }, async (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(await catalogForClient(runtime)) }] }));
 
-  if (runtime.context.subject.scopes.has("cyberos:system:read")) {
+  if (hasResourceScope("cyberos.system.status")) {
     server.registerResource("CyberOS system status", "cyberos://system/status", {
       title: "CyberOS system status",
       mimeType: "application/json"
     }, async (uri) => resourceFromCapability(uri, runtime, "cyberos.system.status", {}));
   }
-  if (runtime.context.subject.scopes.has("cyberos:storage-pools:read")) {
+  if (hasResourceScope("cyberos.storage-pools.list")) {
     server.registerResource("CyberOS storage pool", new ResourceTemplate("cyberos://storage-pools/{id}", { list: undefined }), {
       title: "CyberOS storage pool",
       mimeType: "application/json"
     }, async (uri, variables) => resourceFromCapability(uri, runtime, "cyberos.storage-pools.list", { storagePoolId: String(variables.id) }));
   }
-  if (runtime.context.subject.scopes.has("cyberos:runs:read")) {
+  if (hasResourceScope("cyberos.runs.get")) {
     server.registerResource("CyberOS capability run", new ResourceTemplate("cyberos://runs/{id}", { list: undefined }), {
       title: "CyberOS capability run",
       mimeType: "application/json"
     }, async (uri, variables) => resourceFromCapability(uri, runtime, "cyberos.runs.get", { runId: String(variables.id) }));
   }
   if (
-    runtime.context.subject.scopes.has("cyberos:files:read")
+    hasResourceScope("cyberos.files.read")
     && runtime.registry.get("cyberos.files.read")?.approval === "none"
   ) {
     server.registerResource("CyberOS bounded text file", new ResourceTemplate("cyberos://files/{storagePoolId}/{+path}", { list: undefined }), {
@@ -289,7 +293,7 @@ function registerResources(server: McpServer, runtime: ClientRuntime): void {
       maxBytes: 128 * 1024
     }));
   }
-  if (runtime.context.subject.scopes.has("cyberos:photos:read")) {
+  if (hasResourceScope("cyberos.photos.query")) {
     server.registerResource("CyberOS photo record", new ResourceTemplate("cyberos://photos/{id}", { list: undefined }), {
       title: "CyberOS photo record",
       description: "A non-sensitive photo catalog record; media bytes are not embedded",

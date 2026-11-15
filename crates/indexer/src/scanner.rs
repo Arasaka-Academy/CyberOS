@@ -59,7 +59,7 @@ pub async fn run_task(
         )
         .await?;
     }
-    let run_id = db.start_run(&task.storage_pool_id, &task.kind).await?;
+    let run_id = db.start_task_run(task).await?;
     let mut stats = RunStats::default();
     let result = scan(
         ScanContext {

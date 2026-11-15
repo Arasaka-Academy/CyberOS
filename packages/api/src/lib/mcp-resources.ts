@@ -26,6 +26,7 @@ import {
 } from "@cyberos/shared";
 import type { ApiRouteContext } from "../context.js";
 import { sendFileStream } from "./files.js";
+import { serveNvrMcpResource } from "./nvr-capabilities.js";
 import type { SystemManagementDependencies } from "./system-management.js";
 import {
   resolveScopedExistingPath,
@@ -218,6 +219,7 @@ export function createMcpResourceResponder(
   return async (resource: McpResourceRecord, request: FastifyRequest, reply: FastifyReply): Promise<unknown> => {
     switch (resource.kind) {
       case "file":
+        if (resource.descriptor && typeof resource.descriptor === "object" && !Array.isArray(resource.descriptor) && resource.descriptor.source === "nvr") return serveNvrMcpResource(context.config, resource, request, reply);
         return serveFileResource(context, resource, request, reply);
       case "file_export":
         return serveFileExportResource(context, resource, reply);

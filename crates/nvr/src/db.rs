@@ -166,13 +166,33 @@ impl Db {
         Ok(())
     }
     pub fn segments(&self, device: Option<&str>, from: &str, to: &str) -> Result<Vec<Segment>> {
+        self.segments_page(device, from, to, 10_000, None)
+    }
+    pub fn segments_page(
+        &self,
+        device: Option<&str>,
+        from: &str,
+        to: &str,
+        limit: u32,
+        cursor: Option<(&str, &str)>,
+    ) -> Result<Vec<Segment>> {
         let from = canonical_time(from).unwrap_or_else(|_| from.into());
         let to = canonical_time(to).unwrap_or_else(|_| to.into());
         let conn = self.lock()?;
-        let mut q = conn.prepare("SELECT document FROM nvr_segments WHERE (?1 IS NULL OR device_id=?1) AND ended_at>=?2 AND started_at<=?3 ORDER BY started_at LIMIT 10000")?;
-        q.query_map(params![device, from, to], |r| r.get::<_, String>(0))?
-            .map(|v| decode(v?))
-            .collect()
+        let mut q = conn.prepare("SELECT document FROM nvr_segments WHERE (?1 IS NULL OR device_id=?1) AND ended_at>=?2 AND started_at<=?3 AND (?4 IS NULL OR started_at>?4 OR (started_at=?4 AND id>?5)) ORDER BY started_at,id LIMIT ?6")?;
+        q.query_map(
+            params![
+                device,
+                from,
+                to,
+                cursor.map(|c| c.0),
+                cursor.map(|c| c.1),
+                limit.min(10_000)
+            ],
+            |r| r.get::<_, String>(0),
+        )?
+        .map(|v| decode(v?))
+        .collect()
     }
     pub fn segment(&self, id: &str) -> Result<Segment> {
         decode(
@@ -214,12 +234,32 @@ impl Db {
         )? == 1)
     }
     pub fn events(&self, device: Option<&str>, from: &str, to: &str) -> Result<Vec<NvrEvent>> {
+        self.events_page(device, from, to, 1_000, None)
+    }
+    pub fn events_page(
+        &self,
+        device: Option<&str>,
+        from: &str,
+        to: &str,
+        limit: u32,
+        cursor: Option<(&str, &str)>,
+    ) -> Result<Vec<NvrEvent>> {
         let from = canonical_time(from).unwrap_or_else(|_| from.into());
         let to = canonical_time(to).unwrap_or_else(|_| to.into());
         let conn = self.lock()?;
-        let mut q = conn.prepare("SELECT document FROM nvr_events WHERE (?1 IS NULL OR device_id=?1) AND occurred_at>=?2 AND occurred_at<=?3 ORDER BY occurred_at DESC LIMIT 1000")?;
-        q.query_map(params![device, from, to], |r| r.get::<_, String>(0))?
-            .map(|v| decode(v?))
-            .collect()
+        let mut q = conn.prepare("SELECT document FROM nvr_events WHERE (?1 IS NULL OR device_id=?1) AND occurred_at>=?2 AND occurred_at<=?3 AND (?4 IS NULL OR occurred_at<?4 OR (occurred_at=?4 AND id<?5)) ORDER BY occurred_at DESC,id DESC LIMIT ?6")?;
+        q.query_map(
+            params![
+                device,
+                from,
+                to,
+                cursor.map(|c| c.0),
+                cursor.map(|c| c.1),
+                limit.min(1_000)
+            ],
+            |r| r.get::<_, String>(0),
+        )?
+        .map(|v| decode(v?))
+        .collect()
     }
 }

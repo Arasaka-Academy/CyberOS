@@ -27,12 +27,13 @@ pub fn router(state: Arc<State>) -> Router {
         .route("/nvr/devices", post(add))
         .route(
             "/nvr/devices/{id}",
-            axum::routing::patch(update).delete(remove),
+            get(device).patch(update).delete(remove),
         )
         .route("/nvr/devices/{id}/ptz", get(ptz_status).post(ptz))
         .route("/nvr/devices/{id}/preview", get(preview))
         .route("/nvr/devices/{id}/snapshot", get(snapshot))
         .route("/nvr/segments", get(segments))
+        .route("/nvr/segments/{id}", get(segment))
         .route("/nvr/events", get(events))
         .route("/nvr/segments/{id}/download", get(download))
         .route("/nvr/sessions", post(session))
@@ -56,10 +57,56 @@ async fn overview(Extract(s): Extract<Arc<State>>) -> Result<Json<NvrOverview>> 
 async fn discover() -> Result<Json<Vec<NvrDiscovery>>> {
     Ok(Json(onvif::discover().await?))
 }
+async fn device(
+    Extract(s): Extract<Arc<State>>,
+    Path(id): Path<String>,
+) -> Result<Json<NvrDevice>> {
+    let device = s.db.device(&id)?;
+    if device.removed_at.is_some() {
+        return Err(Error::not_found());
+    }
+    Ok(Json(device))
+}
+async fn segment(
+    Extract(s): Extract<Arc<State>>,
+    Path(id): Path<String>,
+) -> Result<Json<NvrSegment>> {
+    Ok(Json(s.db.segment(&id)?.public))
+}
+#[derive(Default, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ConfigurationGuard {
+    expected_configuration: Option<String>,
+}
+impl ConfigurationGuard {
+    fn verify(&self, current: serde_json::Value) -> Result<()> {
+        if let Some(expected) = &self.expected_configuration {
+            let value: serde_json::Value = serde_json::from_str(expected)
+                .map_err(|_| Error::invalid("Invalid configuration guard"))?;
+            if value != current {
+                return Err(Error::conflict("NVR configuration changed after approval"));
+            }
+        }
+        Ok(())
+    }
+    fn device(&self, device: &NvrDevice) -> Result<()> {
+        self.verify(serde_json::json!({
+            "id": device.id, "name": device.name, "onvifUrl": device.onvif_url,
+            "recordingEnabled": device.recording_enabled, "recordingProfile": device.recording_profile,
+            "removedAt": device.removed_at
+        }))
+    }
+}
 async fn policy(
     Extract(s): Extract<Arc<State>>,
+    Query(guard): Query<ConfigurationGuard>,
     Json(p): Json<RecordingPolicy>,
 ) -> Result<Json<RecordingPolicy>> {
+    let _configuration = s.configuration_lock.lock().await;
+    guard.verify(
+        serde_json::to_value(s.db.policy()?)
+            .map_err(|_| Error::unavailable("Invalid recording policy"))?,
+    )?;
     p.validate()?;
     if let Some(pool) = &p.storage_pool_id {
         crate::storage::Storage::open(
@@ -113,6 +160,7 @@ async fn add(
         updated_at: now(),
     };
     // Serialize device registration and credential replacement, including duplicates.
+    let _configuration = s.configuration_lock.lock().await;
     let mut cameras = s.cameras.write().await;
     if s.db
         .devices()?
@@ -136,8 +184,11 @@ struct Update {
 async fn update(
     Extract(s): Extract<Arc<State>>,
     Path(id): Path<String>,
+    Query(guard): Query<ConfigurationGuard>,
     Json(input): Json<Update>,
 ) -> Result<Json<NvrDevice>> {
+    let _configuration = s.configuration_lock.lock().await;
+    guard.device(&s.db.device(&id)?)?;
     if let Some(name) = &input.name {
         validate_text(name, 64)?;
     }
@@ -165,7 +216,13 @@ async fn update(
     })?;
     Ok(Json(s.db.device(&id)?))
 }
-async fn remove(Extract(s): Extract<Arc<State>>, Path(id): Path<String>) -> Result<StatusCode> {
+async fn remove(
+    Extract(s): Extract<Arc<State>>,
+    Path(id): Path<String>,
+    Query(guard): Query<ConfigurationGuard>,
+) -> Result<StatusCode> {
+    let _configuration = s.configuration_lock.lock().await;
+    guard.device(&s.db.device(&id)?)?;
     if let Ok(camera) = s.camera(&id).await {
         let _ = camera.ptz_command(&NvrPtzCommand::Stop).await;
     }
@@ -191,6 +248,7 @@ async fn ptz_status(
 async fn ptz(
     Extract(s): Extract<Arc<State>>,
     Path(id): Path<String>,
+    Query(guard): Query<ConfigurationGuard>,
     Json(command): Json<NvrPtzCommand>,
 ) -> Result<StatusCode> {
     command.validate()?;
@@ -211,6 +269,8 @@ async fn ptz(
         .or_insert_with(|| Arc::new(tokio::sync::Mutex::new(())))
         .clone();
     let _guard = lock.lock().await;
+    let _configuration = s.configuration_lock.lock().await;
+    guard.device(&s.db.device(&id)?)?;
     if !matches!(command, NvrPtzCommand::Stop)
         && s.ptz_generation.read().await.get(&id) != Some(&generation)
     {
@@ -270,6 +330,26 @@ struct Timeline {
     device_id: Option<String>,
     from: String,
     to: String,
+    limit: Option<u32>,
+    cursor_time: Option<String>,
+    cursor_id: Option<String>,
+}
+impl Timeline {
+    fn page(&self, default_limit: u32) -> Result<(u32, Option<(&str, &str)>)> {
+        let limit = self.limit.unwrap_or(default_limit);
+        if limit == 0 || limit > default_limit {
+            return Err(Error::invalid("Invalid timeline page size"));
+        }
+        let cursor = match (&self.cursor_time, &self.cursor_id) {
+            (Some(time), Some(id)) if !id.is_empty() && id.len() <= 256 => {
+                parse_time(time)?;
+                Some((time.as_str(), id.as_str()))
+            }
+            (None, None) => None,
+            _ => return Err(Error::invalid("Invalid timeline cursor")),
+        };
+        Ok((limit, cursor))
+    }
 }
 fn interval(from: &str, to: &str) -> Result<()> {
     let start = parse_time(from)?;
@@ -284,8 +364,9 @@ async fn segments(
     Query(q): Query<Timeline>,
 ) -> Result<Json<Vec<NvrSegment>>> {
     interval(&q.from, &q.to)?;
+    let (limit, cursor) = q.page(10_000)?;
     Ok(Json(
-        s.db.segments(q.device_id.as_deref(), &q.from, &q.to)?
+        s.db.segments_page(q.device_id.as_deref(), &q.from, &q.to, limit, cursor)?
             .into_iter()
             .map(|s| s.public)
             .collect(),
@@ -296,7 +377,13 @@ async fn events(
     Query(q): Query<Timeline>,
 ) -> Result<Json<Vec<NvrEvent>>> {
     interval(&q.from, &q.to)?;
-    Ok(Json(s.db.events(q.device_id.as_deref(), &q.from, &q.to)?))
+    let (limit, cursor) = q.page(1_000)?;
+    let events = if q.limit.is_none() && cursor.is_none() {
+        s.db.events(q.device_id.as_deref(), &q.from, &q.to)?
+    } else {
+        s.db.events_page(q.device_id.as_deref(), &q.from, &q.to, limit, cursor)?
+    };
+    Ok(Json(events))
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -641,6 +728,71 @@ mod stream_tests {
     use crate::db::Segment;
     use std::io::Write;
     use std::os::unix::fs::MetadataExt;
+    #[tokio::test]
+    async fn configuration_guard_ignores_heartbeats_and_rejects_stale_camera_writes() {
+        let root = tempfile::tempdir().unwrap();
+        let s = crate::tests::state(root.path());
+        let camera = crate::tests::device("camera");
+        s.db.add(&camera).unwrap();
+        let expected = serde_json::json!({
+            "id": camera.id, "name": camera.name, "onvifUrl": camera.onvif_url,
+            "recordingEnabled": false, "recordingProfile": "raw", "removedAt": null
+        })
+        .to_string();
+        s.db.update("camera", |d| {
+            d.connection = "connected".into();
+        })
+        .unwrap();
+        let guard = || {
+            Query(ConfigurationGuard {
+                expected_configuration: Some(expected.clone()),
+            })
+        };
+        let changed = update(
+            Extract(s.clone()),
+            Path("camera".into()),
+            guard(),
+            Json(Update {
+                name: Some("Renamed".into()),
+                recording_enabled: None,
+                recording_profile: None,
+            }),
+        )
+        .await
+        .unwrap();
+        assert_eq!(changed.name, "Renamed");
+        let error = remove(Extract(s.clone()), Path("camera".into()), guard())
+            .await
+            .unwrap_err();
+        assert_eq!(error.status, StatusCode::CONFLICT);
+        assert!(s.db.device("camera").unwrap().removed_at.is_none());
+    }
+    #[tokio::test]
+    async fn configuration_guard_rejects_stale_policy_without_mutating_it() {
+        let root = tempfile::tempdir().unwrap();
+        let s = crate::tests::state(root.path());
+        let initial = s.db.policy().unwrap();
+        let expected = serde_json::to_string(&initial).unwrap();
+        let changed = RecordingPolicy {
+            retention_days: initial.retention_days + 1,
+            ..initial.clone()
+        };
+        s.db.save_policy(&changed).unwrap();
+        let error = policy(
+            Extract(s.clone()),
+            Query(ConfigurationGuard {
+                expected_configuration: Some(expected),
+            }),
+            Json(initial),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(error.status, StatusCode::CONFLICT);
+        assert_eq!(
+            s.db.policy().unwrap().retention_days,
+            changed.retention_days
+        );
+    }
     #[tokio::test]
     async fn download_pin_lasts_until_response_drop_and_replaced_files_are_rejected() {
         let root = tempfile::tempdir().unwrap();

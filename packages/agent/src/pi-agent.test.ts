@@ -88,12 +88,15 @@ describe("Pi agent response handling", () => {
   it("persists replies, resets cached voice context and reopens only the new provider history", async () => {
     let requestCount = 0;
     const userMessages: string[][] = [];
+    const contextMessages: string[][] = [];
     const server = createServer(async (request, response) => {
       const chunks: Buffer[] = [];
       for await (const chunk of request) chunks.push(Buffer.from(chunk));
       const body = JSON.parse(Buffer.concat(chunks).toString()) as { messages: { role: string; content: string | { type: string; text?: string }[] }[] };
-      userMessages.push(body.messages.filter((message) => message.role === "user").map((message) => typeof message.content === "string"
-        ? message.content : message.content.filter((part) => part.type === "text").map((part) => part.text ?? "").join("")));
+      const contents = body.messages.filter((message) => message.role === "user").map((message) => typeof message.content === "string"
+        ? message.content : message.content.filter((part) => part.type === "text").map((part) => part.text ?? "").join(""));
+      userMessages.push(contents.filter((text) => text.startsWith("Question ")));
+      contextMessages.push(contents.filter((text) => text.includes("Current CyberOS state")));
       requestCount += 1;
       response.writeHead(200, { "Content-Type": "text/event-stream" });
       for (const choice of [
@@ -121,6 +124,7 @@ describe("Pi agent response handling", () => {
           session: { id: "test-session", kind: "voice", contextGeneration: turn >= 3 ? 1 : 0, currentPath: ".", createdAt: timestamp, updatedAt: timestamp },
           root: { path: tempDir }, workingPath: ".", dataDir: tempDir,
           message: `Question ${turn}`,
+          systemContext: JSON.stringify({ turn }),
           modelSettings: modelProviderSettings({
             baseUrl: `http://127.0.0.1:${address.port}/v1`, model: "test-model"
           }),
@@ -149,12 +153,16 @@ describe("Pi agent response handling", () => {
           payload: expect.objectContaining({ content: `Answer ${turn}` })
         })]);
         expect(events.indexOf(replies[0]!)).toBeLessThan(events.findIndex((event) => event.type === "agent.completed"));
+        expect(JSON.stringify(events)).not.toContain("Current CyberOS state");
         if (turn === 3) {
           await host.dispose();
           host = new PiAgentSessionHost(tempDir);
         }
       }
       expect(requestCount).toBe(4);
+      for (let turn = 1; turn <= 4; turn++) {
+        expect(contextMessages[turn - 1]?.at(-1)).toContain(JSON.stringify({ turn }));
+      }
       expect(userMessages).toEqual([
         ["Question 1"], ["Question 1", "Question 2"],
         ["Question 3"], ["Question 3", "Question 4"]

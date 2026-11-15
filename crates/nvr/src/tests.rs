@@ -154,7 +154,7 @@ fn xml_uses_local_names_and_rejects_entities_and_oversized_payloads() {
     assert!(Node::parse(&vec![b'x'; 262145]).is_err());
 }
 
-fn device(id: &str) -> crate::protocol::NvrDevice {
+pub(crate) fn device(id: &str) -> crate::protocol::NvrDevice {
     crate::protocol::NvrDevice {
         id: id.into(),
         name: "Camera".into(),
@@ -236,6 +236,7 @@ pub(crate) fn state(root: &Path) -> std::sync::Arc<crate::runtime::State> {
         ptz_locks: Default::default(),
         ptz_generation: Default::default(),
         active_streams: Default::default(),
+        configuration_lock: Default::default(),
     })
 }
 
@@ -256,6 +257,54 @@ fn precise_events_preserve_distinct_edges_and_source_ids_within_one_second() {
             .unwrap()
             .len(),
         2
+    );
+}
+
+#[test]
+fn event_pages_preserve_tied_timestamps_and_device_filters() {
+    let db = crate::db::Db::memory();
+    let stamp = "2026-11-15T00:00:00.000000000Z";
+    for id in ["a", "b", "c"] {
+        let event = crate::protocol::NvrEvent {
+            id: id.into(),
+            device_id: "camera".into(),
+            category: "person".into(),
+            state: Some(true),
+            occurred_at: stamp.into(),
+            received_at: stamp.into(),
+            gap: false,
+        };
+        db.event(&event, id).unwrap();
+    }
+    let first = db.events_page(Some("camera"), "", "9999", 2, None).unwrap();
+    assert_eq!(
+        first
+            .iter()
+            .map(|event| event.id.as_str())
+            .collect::<Vec<_>>(),
+        ["c", "b"]
+    );
+    let last = first.last().unwrap();
+    let second = db
+        .events_page(
+            Some("camera"),
+            "",
+            "9999",
+            2,
+            Some((&last.occurred_at, &last.id)),
+        )
+        .unwrap();
+    assert_eq!(
+        second
+            .iter()
+            .map(|event| event.id.as_str())
+            .collect::<Vec<_>>(),
+        ["a"]
+    );
+    assert!(
+        db.events_page(Some("another-camera"), "", "9999", 2, None)
+            .unwrap()
+            .is_empty()
     );
 }
 #[tokio::test]

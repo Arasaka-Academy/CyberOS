@@ -324,7 +324,9 @@ export function createMediaCapabilityAdapters(server: FastifyInstance, system?: 
       execute: async (prepared, context) => {
         await revalidate(prepared, context);
         const request = parsed(record(prepared.privatePayload).request ?? null, context);
-        return { data: boundMediaResult(await inject(server, mutationRequest(capabilityId, request))) };
+        const result = await inject(server, mutationRequest(capabilityId, request));
+        const scan = record(result).scan;
+        return { data: boundMediaResult(result), ...(scan && typeof record(scan).id === "string" ? { domainTask: { kind: capabilityId.startsWith("cyberos.music.") ? "music_scan" : "media_scan", id: String(record(scan).id) } } : {}) };
       }
     };
     return [capabilityId, adapter];

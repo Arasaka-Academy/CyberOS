@@ -47,6 +47,7 @@ import { resolveVodPlayerRuntime } from "./lib/vod-player.js";
 import { MonitoringEventBroker } from "./lib/monitoring-events.js";
 import { createCapabilityAdapters } from "./lib/capability-adapters.js";
 import { createMediaReadAdapters } from "./lib/media-capabilities.js";
+import { createSystemReadAdapters } from "./lib/system-read-capabilities.js";
 import {
   createMcpResourceResponder,
   createPhotoMediaMcpResource,
@@ -162,6 +163,7 @@ export async function buildServer({ buildInfo, config, db, monitoring: monitorin
   const mcpEthernetManager = system?.ethernetManager ?? new SystemEthernetManagerRuntime(config.hostd.socketPath);
   const readAdapters = {
     ...createMediaReadAdapters(server, system, config.hostd.socketPath),
+    ...createSystemReadAdapters(server),
     "cyberos.monitoring.overview": () => asJsonValue({
       ...monitoring.overview(),
       catalog: monitoring.catalog(),

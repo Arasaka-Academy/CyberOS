@@ -1,5 +1,7 @@
 import type { JsonSchema, JsonValue } from "./contracts.js";
 import { EMPTY_OBJECT_SCHEMA, strictObject } from "./schemas.js";
+import { ADDITIONAL_PROPOSAL_OPERATIONS, SYSTEM_CAPABILITY_SCHEMAS } from "./system-contracts.js";
+import type { SystemCapabilityMutationRequest, SystemCapabilityRequestMap, TorrentCreateRequest } from "./system-request-types.js";
 import { MEDIA_CAPABILITY_SCHEMAS, type MediaCapabilityRequestMap, type MediaManageCapabilityRequest, type MusicManageCapabilityRequest, type MusicControlCapabilityRequest, type PlaybackControlCapabilityRequest } from "./media-contracts.js";
 
 const id = (maxLength = 256): JsonSchema => ({ type: "string", minLength: 1, maxLength });
@@ -264,6 +266,7 @@ type PhotoManageRequest =
   | Operation<"trash", { assetIds: string[] }>;
 
 type DownloadManageRequest =
+  | TorrentCreateRequest
   | Operation<"create", {
     url: string;
     storagePoolId: string;
@@ -448,6 +451,7 @@ type VodControlRequest =
   | Operation<"set-volume", { sessionId: string; volume: number }>;
 
 export type CapabilityMutationRequest =
+  | SystemCapabilityMutationRequest
   | PowerRequest
   | OperationsRunRequest
   | FileExportRequest
@@ -476,7 +480,7 @@ export type CapabilityMutationRequest =
   | PlaybackControlCapabilityRequest
   | MediaCapabilityRequestMap["cyberos.media.play-propose"]["request"];
 
-export interface PlannedCapabilityRequestMap extends MediaCapabilityRequestMap {
+export interface PlannedCapabilityRequestMap extends MediaCapabilityRequestMap, SystemCapabilityRequestMap {
   "cyberos.files.grep": FileGrepRequest;
   "cyberos.files.find": FileFindRequest;
   "cyberos.files.git": { storagePoolId: string; path?: string };
@@ -619,7 +623,7 @@ const schemas: Record<string, JsonSchema> = {
     operation("trash", { assetIds: arrayOf(id(), 1, 500) }, ["assetIds"])
   )),
   "cyberos.downloads.list": strictObject({
-    statuses: arrayOf(stringEnum(["queued", "running", "paused", "completed", "failed", "cancelled"]), 0, 6),
+    statuses: arrayOf(stringEnum(["queued", "running", "paused", "seeding", "completed", "failed", "cancelled"]), 0, 7),
     limit: limit()
   }),
   "cyberos.downloads.manage-propose": proposal(operationUnion(
@@ -832,16 +836,18 @@ const schemas: Record<string, JsonSchema> = {
   )),
   "cyberos.runs.get": strictObject({ runId: { type: "string", format: "uuid" } }, ["runId"]),
   "cyberos.runs.list": strictObject({ ...pagination }),
-  "cyberos.runs.wait": strictObject({ runId: { type: "string", format: "uuid" }, timeoutMs: integer(0, 20_000) }, ["runId"]),
+  "cyberos.runs.wait": strictObject({ runId: { type: "string", format: "uuid" }, timeoutMs: integer(0, 20_000), afterRevision: integer(0, Number.MAX_SAFE_INTEGER) }, ["runId"]),
   "cyberos.runs.cancel": strictObject({ runId: { type: "string", format: "uuid" } }, ["runId"])
 };
 
 export function capabilityInputSchema(capabilityId: string): JsonSchema {
-  const schema = schemas[capabilityId];
+  const schema = SYSTEM_CAPABILITY_SCHEMAS[capabilityId] ?? schemas[capabilityId];
   if (!schema) throw new Error(`Missing strict input schema for ${capabilityId}`);
+  const variants = ADDITIONAL_PROPOSAL_OPERATIONS[capabilityId];
+  if (variants) return { ...schema, properties: { ...schema.properties, request: { oneOf: [...(schema.properties?.request?.oneOf ?? []), ...variants] } } };
   return schema;
 }
 
 export function hasStrictCapabilityInputSchema(capabilityId: string): boolean {
-  return schemas[capabilityId]?.additionalProperties === false;
+  return (SYSTEM_CAPABILITY_SCHEMAS[capabilityId] ?? schemas[capabilityId])?.additionalProperties === false;
 }

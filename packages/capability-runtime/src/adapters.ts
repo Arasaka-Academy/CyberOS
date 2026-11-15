@@ -33,6 +33,8 @@ export interface PreparedCapabilityAction {
 
 export interface CapabilityAdapterExecution {
   data: JsonValue;
+  /** Several approved actions may observe/control the same background task. */
+  domainTask?: { kind: string; id: string };
   domainOperationType?: string;
   domainOperationId?: string;
 }

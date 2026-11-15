@@ -89,9 +89,11 @@ describe("capability contracts", () => {
     expect(all.map((item) => item.id)).toEqual(all.map((item) => item.id).toSorted());
     expect(registry.listForScopes(new Set(["cyberos:files:read"])).map((item) => item.id)).toEqual([
       "cyberos.files.archive-inspect",
+      "cyberos.files.batches",
       "cyberos.files.find",
       "cyberos.files.git",
       "cyberos.files.grep",
+      "cyberos.files.history",
       "cyberos.files.list",
       "cyberos.files.read",
       "cyberos.files.resource-link",

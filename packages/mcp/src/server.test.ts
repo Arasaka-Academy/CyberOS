@@ -36,7 +36,7 @@ beforeEach(async () => {
     kind: "local",
     scopes: [
       "cyberos:catalog:read", "cyberos:downloads:read", "cyberos:files:read", "cyberos:files:propose", "cyberos:index:read", "cyberos:photos:read",
-      "cyberos:storage-pools:read", "cyberos:settings:read", "cyberos:system:read", "cyberos:runs:read"
+      "cyberos:storage:read", "cyberos:settings:read", "cyberos:system:read", "cyberos:runs:read"
     ]
   });
   token = client.token;
@@ -52,6 +52,36 @@ afterEach(async () => {
 });
 
 describe("MCP Streamable HTTP", () => {
+  it("derives storage resource scopes from the capability descriptor", async () => {
+    const listing = await postMcp({ jsonrpc: "2.0", id: 87, method: "resources/templates/list", params: {} }, "2025-11-25");
+    const templates = parseMcpResponse(listing.body).result.resourceTemplates as Array<{ uriTemplate: string }>;
+    expect(templates.map((entry) => entry.uriTemplate)).toContain("cyberos://storage-pools/{id}");
+    const read = await postMcp({ jsonrpc: "2.0", id: 88, method: "resources/read", params: { uri: "cyberos://storage-pools/pool-1" } }, "2025-11-25");
+    expect(parseMcpResponse(read.body).error).toBeUndefined();
+  });
+  it("accepts the contracted 10000 torrent file selections through the protocol", async () => {
+    const pi = createMcpClient(db, { name: "Torrent Pi", kind: "pi", scopes: ["cyberos:downloads:propose"] });
+    token = pi.token;
+    await app.close();
+    app = Fastify();
+    let selectedCount = 0;
+    registerMcp(app, { db, config: testConfig(tempDir), adapters: {
+      "cyberos.downloads.manage-propose": {
+        availability: () => ({ available: true }),
+        prepare: (request) => {
+          selectedCount = (request as { selectedFileIndices: number[] }).selectedFileIndices.length;
+          return { summary: `Download ${selectedCount} files`, privatePayload: request };
+        },
+        revalidate: () => {},
+        execute: () => { throw new Error("Approval is required"); }
+      }
+    } }, { enabled: true });
+    const response = await postMcp({ jsonrpc: "2.0", id: 89, method: "tools/call", params: {
+      name: "cyberos.downloads.manage-propose", arguments: { request: { operation: "create_torrent", torrentPreviewId: "preview", selectedFileIndices: Array.from({ length: 10000 }, (_, index) => index), storagePoolId: "pool-1", targetDirectory: ".", fileName: "release" } }
+    } }, "2025-11-25");
+    expect(parseMcpResponse(response.body).result.structuredContent).toMatchObject({ data: { state: "waiting_approval" } });
+    expect(selectedCount).toBe(10000);
+  });
   it("requires a paired bearer token", async () => {
     const response = await app.inject({
       method: "POST",

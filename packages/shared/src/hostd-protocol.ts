@@ -46,6 +46,7 @@ type HostdStorageOperationResult = HostdOperationResult<"storage.operation">;
 type HostdPowerResult = HostdOperationResult<"system.power">;
 type HostdOpsResult = HostdOperationResult<"system.ops">;
 type HostdTvResult = HostdOperationResult<"system.tv">;
+type HostdDiagnosticsResult = HostdOperationResult<"system.diagnostics">;
 
 type HostdNetworkProfileInspection = Omit<GeneratedNetworkProfileInspection, "security" | "mode" | "band"> & {
   security: SystemWifiSecurity;
@@ -78,7 +79,8 @@ type HostdStorageResult<Request> = Request extends { action: infer Action }
   : never;
 
 export type HostdResult<Operation extends HostdOperation, Request extends HostdRequest<Operation>> =
-  Operation extends "shares.apply" ? HostdShareApplyResult
+  Operation extends "system.diagnostics" ? HostdDiagnosticsResult
+    : Operation extends "shares.apply" ? HostdShareApplyResult
     : Operation extends "storage.command" ? HostdStorageCommandResult
       : Operation extends "storage.operation" ? HostdStorageResult<Request>
         : Operation extends "iscsi.manager" ? IscsiSummary
@@ -97,6 +99,9 @@ export function parseHostdResult<
 >(operation: Operation, request: Request, value: unknown): HostdResult<Operation, Request> | null {
   let parsed: unknown = null;
   switch (operation) {
+    case "system.diagnostics":
+      parsed = parseDiagnosticsResult(value);
+      break;
     case "shares.apply":
       parsed = parseShareResult(value);
       break;
@@ -132,6 +137,16 @@ export function parseHostdResult<
       break;
   }
   return parsed as HostdResult<Operation, Request> | null;
+}
+
+function parseDiagnosticsResult(value: unknown): HostdDiagnosticsResult | null {
+  if (!value || typeof value !== "object") return null;
+  const result = value as Record<string, unknown>;
+  if (!Array.isArray(result.services) || result.services.length > 64 || !Array.isArray(result.logs) || result.logs.length > 200 || typeof result.truncated !== "boolean") return null;
+  const strings = (item: unknown, keys: string[]) => item && typeof item === "object" && keys.every((key) => typeof (item as Record<string, unknown>)[key] === "string");
+  if (!result.services.every((item: unknown) => strings(item, ["unit", "loadState", "activeState", "subState", "result", "exitStatus"]))
+    || !result.logs.every((item: unknown) => strings(item, ["timestampMicros", "message"]))) return null;
+  return value as HostdDiagnosticsResult;
 }
 
 export function parseBluetoothStatus(value: unknown): BluetoothStatus | null {

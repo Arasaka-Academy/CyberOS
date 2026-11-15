@@ -104,6 +104,33 @@ describe("capability mutation runtime", () => {
     expect(getCapabilityRunPayload(db, proposed.runId!)).toBeNull();
   });
 
+  it.each(["cyberos.files.restore-propose", "cyberos.files.extract-propose", "cyberos.files.batch-propose", "cyberos.files.batch-cancel-propose", "cyberos.files.rollback-propose"])("rechecks the file mutation policy before executing %s", async (capabilityId) => {
+    const client = createMcpClient(db, { name: "Pi", kind: "pi", scopes: ["cyberos:files:propose"] });
+    const adapter = recordingAdapter();
+    const runtime = domainDependencies(capabilityId, adapter);
+    const proposed = await proposeDomainCapability({
+      dependencies: runtime,
+      subject: domainSubject(client.id, "cyberos:files:propose"),
+      capabilityId,
+      request: { operation: "test" }
+    });
+    linkProposalToAgentJob(proposed.runId!);
+    const approval = getCapabilityApprovalByRun(db, proposed.runId!)!;
+    expect(decideCapabilityApproval(db, {
+      approvalId: approval.id,
+      expectedRevision: approval.revision,
+      decision: "approved",
+      decidedBy: "local-admin"
+    })).not.toBeNull();
+    saveAgentCapabilityPolicySettings(db, {
+      policies: { ...defaultAgentCapabilityPolicySettings().policies, "cyberos.files.mutate": "disabled" }
+    });
+
+    expect(await executeApprovedCapabilityRun(runtime, proposed.runId!)).toMatchObject({ state: "failed", errorCode: "FORBIDDEN" });
+    expect(adapter.executions).toEqual([]);
+    expect(getCapabilityRunPayload(db, proposed.runId!)).toBeNull();
+  });
+
   it("rejects an approved proposal when the source revision changed", async () => {
     const client = createMcpClient(db, { name: "Pi", kind: "pi", scopes: ["cyberos:files:propose"] });
     const proposed = await proposeFileMutation({
@@ -220,6 +247,20 @@ describe("capability mutation runtime", () => {
       request: { operation: "agent_policy", value: "different" },
       idempotencyKey: "settings-change-0001"
     })).rejects.toMatchObject({ code: "CONFLICT" });
+  });
+
+  it("allows distinct approved actions to track the same background task", async () => {
+    const client = createMcpClient(db, { name: "Pi", kind: "pi", scopes: ["cyberos:downloads:propose"] });
+    const adapter: CapabilityDomainAdapter = { ...recordingAdapter(), execute: () => ({ data: { submitted: true }, domainTask: { kind: "download_task", id: "shared-task" } }) };
+    const runtime = domainDependencies("cyberos.downloads.manage-propose", adapter);
+    for (const operation of ["pause", "resume", "stop_seeding"]) {
+      const proposed = await proposeDomainCapability({ dependencies: runtime, subject: domainSubject(client.id, "cyberos:downloads:propose"),
+        capabilityId: "cyberos.downloads.manage-propose", request: { operation, taskId: "shared-task" } });
+      linkProposalToAgentJob(proposed.runId!);
+      const approval = getCapabilityApprovalByRun(db, proposed.runId!)!;
+      expect(decideCapabilityApproval(db, { approvalId: approval.id, expectedRevision: approval.revision, decision: "approved", decidedBy: "local-admin" })).not.toBeNull();
+      expect(await executeApprovedCapabilityRun(runtime, proposed.runId!)).toMatchObject({ state: "succeeded", progress: { domainTask: { kind: "download_task", id: "shared-task" } } });
+    }
   });
 
   it("resumes an approved queued domain run after restart", async () => {

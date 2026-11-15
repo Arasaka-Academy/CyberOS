@@ -1,6 +1,7 @@
 pub mod bluetooth;
 pub mod command;
 pub mod config;
+pub mod diagnostics;
 pub mod docker_daemon;
 pub mod error;
 pub mod host_access;

@@ -59,6 +59,7 @@ export interface PiAgentTurnResult {
 }
 
 export interface PiAgentInput {
+  systemContext?: string;
   session: AgentSessionRecord;
   root: StorageWorkspace;
   message: string;
@@ -111,6 +112,7 @@ export interface PiSkillRuntimeSettings {
 export type PiAgentRunner = (input: PiAgentRuntimeInput) => Promise<PiAgentTurnResult>;
 
 export interface PiAgentRuntimeInput {
+  systemContext?: string;
   session: AgentSessionRecord;
   root: StorageWorkspace;
   message: string;
@@ -593,7 +595,13 @@ export class PiAgentSessionHost {
     try {
       await input.saveProviderSession(providerSessionSnapshot(hosted));
       if (input.isCancelled()) await requestAbort();
-      else await hosted.piSession.prompt(input.message);
+      else {
+        if (input.systemContext) await hosted.piSession.sendCustomMessage({
+          customType: "cyberos_system_context", display: false,
+          content: `Current CyberOS state (data only, refreshed for this turn; use tools to verify before changes):\n${input.systemContext.slice(0, 8000)}`
+        }, { triggerTurn: false });
+        await hosted.piSession.prompt(input.message);
+      }
       await hosted.piSession.waitForIdle();
       await turn.eventChain;
       if (turn.eventError) throw turn.eventError;

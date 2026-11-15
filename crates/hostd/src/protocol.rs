@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::diagnostics::{DiagnosticsRequest, DiagnosticsResult};
 use crate::error::{ErrorCode, HostdError};
 use crate::ops::{OpsRequest, OpsResult};
 use crate::power::{PowerRequest, PowerResult};
@@ -25,6 +26,8 @@ pub struct RequestEnvelope {
 #[cfg_attr(test, derive(ts_rs::TS))]
 #[cfg_attr(test, ts(export_to = "hostd.ts"))]
 pub(crate) enum HostdOperation {
+    #[serde(rename = "system.diagnostics")]
+    SystemDiagnostics,
     #[serde(rename = "shares.apply")]
     SharesApply,
     #[serde(rename = "iscsi.manager")]
@@ -54,6 +57,8 @@ pub(crate) enum HostdOperation {
 #[cfg_attr(test, ts(export_to = "hostd.ts", rename = "HostdRequestContract"))]
 #[serde(tag = "operation", content = "payload")]
 pub(crate) enum HostdRequest {
+    #[serde(rename = "system.diagnostics")]
+    SystemDiagnostics(DiagnosticsRequest),
     #[serde(rename = "shares.apply")]
     SharesApply(ShareApplyRequest),
     #[serde(rename = "iscsi.manager")]
@@ -81,6 +86,7 @@ pub(crate) enum HostdRequest {
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub(crate) enum HostdResult {
+    SystemDiagnostics(DiagnosticsResult),
     SharesApply(ShareApplyResult),
     IscsiManager(iscsi::IscsiSummary),
     StorageCommand(StorageCommandResult),
@@ -165,6 +171,7 @@ impl HostdOperation {
 
     fn invalid_payload_message(self) -> &'static str {
         match self {
+            Self::SystemDiagnostics => "Invalid system diagnostics request",
             Self::SharesApply => "Invalid shares.apply payload",
             Self::IscsiManager => "Invalid iSCSI manager request",
             Self::StorageCommand => "Invalid storage command request",
@@ -229,6 +236,8 @@ mod tests {
     #[ts(export_to = "hostd.ts")]
     #[serde(tag = "operation", content = "result")]
     enum HostdResultContract {
+        #[serde(rename = "system.diagnostics")]
+        SystemDiagnostics(DiagnosticsResult),
         #[serde(rename = "shares.apply")]
         SharesApply(ShareApplyResult),
         #[serde(rename = "iscsi.manager")]

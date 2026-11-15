@@ -65,6 +65,7 @@ pub struct State {
     pub ptz_locks: RwLock<HashMap<String, Arc<tokio::sync::Mutex<()>>>>,
     pub ptz_generation: RwLock<HashMap<String, u64>>,
     pub active_streams: std::sync::Mutex<HashMap<String, usize>>,
+    pub configuration_lock: tokio::sync::Mutex<()>,
 }
 impl State {
     pub fn new(config: Config) -> Result<Arc<Self>> {
@@ -79,6 +80,7 @@ impl State {
             ptz_locks: RwLock::new(HashMap::new()),
             ptz_generation: RwLock::new(HashMap::new()),
             active_streams: Default::default(),
+            configuration_lock: Default::default(),
         }))
     }
     pub async fn camera(&self, id: &str) -> Result<Camera> {

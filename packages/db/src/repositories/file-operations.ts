@@ -200,16 +200,21 @@ export function markTrashEntryRestored(db: CyberOsDatabase, trashEntryId: string
 
 export function listFileOperations(
   db: CyberOsDatabase,
-  input: { limit?: number } = {}
+  input: { limit?: number; storagePoolId?: string; before?: { createdAt: string; id: string } } = {}
 ): FileOperationRecord[] {
-  const limit = input.limit ?? 100;
+  const limit = Math.max(1, Math.min(input.limit ?? 100, 201));
+  const clauses: string[] = [];
+  const values: Array<string | number> = [];
+  if (input.storagePoolId) { clauses.push("json_extract(metadata_json, '$.storagePoolId') = ?"); values.push(input.storagePoolId); }
+  if (input.before) { clauses.push("(created_at < ? OR (created_at = ? AND id < ?))"); values.push(input.before.createdAt, input.before.createdAt, input.before.id); }
   const rows = db
     .prepare(`
       SELECT id, operation, source_path, target_path, status, metadata_json, created_at, updated_at
       FROM file_operations
-      ORDER BY created_at DESC
+      ${clauses.length ? `WHERE ${clauses.join(" AND ")}` : ""}
+      ORDER BY created_at DESC, id DESC
       LIMIT ?
     `)
-    .all(limit) as DbOperationRow[];
+    .all(...values, limit) as DbOperationRow[];
   return rows.map(mapOperation);
 }

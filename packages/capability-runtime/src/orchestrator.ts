@@ -497,7 +497,7 @@ export async function executeStartedSecretCapabilityRun(
       expectedRevision: current.revision,
       from: ["running"],
       to: "succeeded",
-      progress: { phase: "complete" },
+      progress: { phase: "complete", ...(executed.domainTask ? { domainTask: executed.domainTask } : {}) },
       result: executed.data,
       ...(executed.domainOperationType ? { domainOperationType: executed.domainOperationType } : {}),
       ...(executed.domainOperationId ? { domainOperationId: executed.domainOperationId } : {}),
@@ -581,7 +581,7 @@ async function executeApprovedDomainAdapterRun(
       expectedRevision: running.revision,
       from: ["running"],
       to: "succeeded",
-      progress: { phase: "complete" },
+      progress: { phase: "complete", ...(executed.domainTask ? { domainTask: executed.domainTask } : {}) },
       result: executed.data,
       ...(executed.domainOperationType ? { domainOperationType: executed.domainOperationType } : {}),
       ...(executed.domainOperationId ? { domainOperationId: executed.domainOperationId } : {}),
@@ -974,7 +974,12 @@ function agentPolicyCapabilityId(capabilityId: string): AgentCapabilityId | null
     case "cyberos.files.search": return "cyberos.files.search";
     case "cyberos.files.grep": return "cyberos.files.grep";
     case "cyberos.files.find": return "cyberos.files.find";
-    case FILE_MUTATION_CAPABILITY: return FILE_MUTATION_CAPABILITY;
+    case FILE_MUTATION_CAPABILITY:
+    case "cyberos.files.rollback-propose":
+    case "cyberos.files.restore-propose":
+    case "cyberos.files.extract-propose":
+    case "cyberos.files.batch-propose":
+    case "cyberos.files.batch-cancel-propose": return FILE_MUTATION_CAPABILITY;
     case "cyberos.files.edit": return "cyberos.files.edit";
     case "cyberos.files.write": return "cyberos.files.write";
     case "cyberos.shell.run": return "cyberos.shell.run";

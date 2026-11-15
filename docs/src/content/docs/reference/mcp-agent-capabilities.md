@@ -12,6 +12,11 @@ sourceOfTruth:
   - packages/api/src/lib/agent-skills.ts
   - packages/shared/src/mcp-network.ts
   - packages/capabilities/src/parity-manifest.ts
+  - packages/capabilities/src/system-contracts.ts
+  - packages/capabilities/src/product-actions.ts
+  - packages/api/src/lib/system-read-capabilities.ts
+  - packages/api/src/lib/system-mutation-capabilities.ts
+  - packages/mcp/src/tasks.ts
   - packages/mcp/src/server.ts
   - packages/web/src/components/settings/SettingsMcpPage.tsx
   - packages/web/src/components/settings/SettingsSkillsPage.tsx
@@ -22,7 +27,7 @@ CyberOS 把 AI 设置拆成模型 Provider、Pi Agent、Audio、MCP 和 Skills �
 
 ## Audio
 
-**设置 > AI > Audio** 目前只配置 CyberAudio 服务地址。填写 NAS 可访问的 HTTP/HTTPS 基础地址，例如 `https://audio.example.com:8443`，保存后重新打开页面仍会保留；留空保存可清除。`localhost` 指 NAS 本机。当前只保存地址，尚未接入 STT/TTS 调用、认证或连接检测。
+**设置 > AI > Audio** 管理 CyberAudio 地址、独立 token、输入／输出设备、STT/TTS 语言、音色、音量及播报设置，提供服务、录音和语音测试。填写 NAS 可访问的 HTTP/HTTPS 基础地址；`localhost` 指 NAS 本机。`cyberos.audio.status` 读取服务、设备、脱敏设置或有界历史，`cyberos.audio.control-propose` 申请配置、测试、停止或重置。录音和播报测试会使用设备，必须经第一方明确确认。token 只通过审批的独立 secret input 输入。
 
 ## Pi Agent
 
@@ -117,6 +122,55 @@ Bearer Token 或自定义 Secret Headers 原子写入 `/cyberos/state/secrets/mc
 `cyberos.settings.public` 返回脱敏后的内置 MCP 状态、第三方 Server 摘要、全局 Skills 摘要和共享 generation。`cyberos.settings.update-propose` 提供 MCP/Skills 的 CRUD、测试、启停、安装与更新操作。凭据由审批 UI 的 secret input 通道注入，永远不成为模型工具参数。
 
 外部 MCP 客户端可以用 `cyberos.runs.get`、`cyberos.runs.list` 和 `cyberos.runs.wait` 观察自己拥有的持久 run；`cyberos.runs.cancel` 只能取消同一客户端拥有且可中断的 run。MCP 不提供 approve 工具，审批只能由第一方 UI 完成。
+
+### 系统与日常领域能力
+
+能力目录、工具 Schema 和实际 adapter 一起决定可调用范围。先调用 `cyberos.catalog.get`，检查 scope、策略和运行状态；目录中的能力不表示对应硬件已连接或服务已就绪。资源权限直接采用对应 capability 的 scope，例如 `cyberos://storage-pools/{id}` 使用 `cyberos:storage:read`。
+
+| 工具 | 用途与边界 |
+| --- | --- |
+| `cyberos.system.health`、`system.info` | 实际健康、存储就绪度，以及硬件和操作系统信息；`system.status` 仍提供构建摘要 |
+| `cyberos.system.services`、`system.logs` | 固定 CyberOS unit 的状态、退出原因及脱敏日志；日志最多 200 条，可指定 RFC3339 `since`，不接受任意 unit 或命令 |
+| `cyberos.files.history`、`files.batches` | 文件历史的稳定游标分页、批量任务进度 |
+| `cyberos.files.restore-propose`、`files.extract-propose` | 按历史中的 `trashEntryId` 恢复，或在同一存储池的新目标中解压；既有 rollback 工具继续可用 |
+| `cyberos.files.batch-propose`、`files.batch-cancel-propose` | 批量 move/trash 和取消；最多 500 个源路径，保持路径、symlink 和挂载检查 |
+| `cyberos.photos.query`、`photos.metadata` | 时间、相机／镜头、标签、位置、评分及高级元数据条件；支持排序、游标、facets，元数据始终排除敏感字段 |
+| `cyberos.photos.semantic-status`、`photos.semantic-propose` | 语义查询配置、测试、重建和重试；API key 经独立 secret input 输入 |
+| `cyberos.downloads.preview-propose`、`downloads.preview`、`downloads.files` | Magnet 或存储池内最多 16 MiB 的 `.torrent` 预览、文件分页和选择 |
+| `cyberos.downloads.manage-propose` | 新增 `create_torrent`、`stop_seeding`；创建必须提供 `fileName`，做种上限固定 ratio 1.0／7200 秒；状态筛选包含 `seeding` |
+| `cyberos.docker.get` | 按 container/app/network/volume ID 读取详情，或读取 daemon 配置和容器日志；environment、Compose 正文和凭据脱敏 |
+| `cyberos.alerts.get` | `entity: incident/delivery/smtp`，读取事件、投递详情或脱敏 SMTP 配置 |
+| `cyberos.nvr.status`、`nvr.query`、`nvr.resource-link` | 摄像头、策略、PTZ 状态和有界时间线；快照和录像使用 60 秒、认证、客户端绑定的一次性资源链接 |
+| `cyberos.nvr.manage-propose` | 发现、添加／更新／移除摄像头、录像策略和 PTZ；配置改变使审批失效，正常心跳不影响已准备的操作 |
+| `cyberos.tailscale.status`、`tailscale.manage-propose` | Tailscale／Headscale 状态、连接、路由、出口节点及确认／回滚；保留现有事务超时恢复机制 |
+| `cyberos.bluetooth.status`、`bluetooth.transfers`、`bluetooth.manage-propose` | 适配器、配对、信任、连接、接收配置和文件传输；配对 challenge 仍由用户在第一方界面响应 |
+| `cyberos.iscsi.status`、`iscsi.manage-propose` | Target、LUN、会话和容量；操作携带 `expectedRevision`，销毁沿用现有名称确认，CHAP 密码经独立 secret input 输入 |
+| `cyberos.settings.proxy`、`settings.proxy-propose` | 系统代理读取与配置审批 |
+| `cyberos.backup.status`、`backup.coverage`、`backup.snapshots`、`backup.restore-propose` | 仓库和凭据可用性、保护范围、快照分页及经过验证的 staging 恢复 |
+
+读取使用 `cyberos:<domain>:read`，申请变更使用 `cyberos:<domain>:propose`。新增的 `nvr`、`tailscale`、`bluetooth`、`iscsi`、`audio`、`tasks` scopes 必须由外部客户端管理员明确授权；已有凭据不会自动扩权。外部客户端继续只读，即使授予 propose scope 也不会安装写工具。内置 Pi 通过既有目录同步获得能力，变更仍经过策略、有效期、第一方审批、目标 revision 和执行时检查。
+
+照片查询每页最多 100；文件历史、下载文件、快照及任务列表最多 200。Docker 日志 `tail` 最多 500，结果仍受总字节预算限制；其他大数组、长字符串也会返回 `truncated/truncation`。分页使用响应中的 `nextCursor`（任务列表位于统一结果的 `page`），保持筛选条件一致。游标失效、资源过期或目标改变后重新读取，不要把截断结果当作完整清单。
+
+NVR `segments/events` 必须提供 `from/to`，使用时间及 ID 的稳定游标。更新、删除和 PTZ 先读取设备，将 `updatedAt` 作为 `expectedUpdatedAt`；审批执行时还会在 NVR 服务中检查稳定配置，防止覆盖另一个管理操作。录像原始资源为 MPEG-TS；媒体字节不进入工具 JSON。登录 key、摄像头凭据、CHAP、CyberAudio 和语义搜索 token 都不属于模型参数或工具返回值，不能写进 URL。
+
+### 后台任务与 Agent 上下文
+
+`cyberos.runs.*` 跟踪审批和能力执行；`cyberos.tasks.get/list/wait` 使用 `runId` 跟踪该客户端提交的领域任务。下载、torrent 预览、文件 batch、文件索引、照片 job、音乐／影视扫描、Docker／VM operation、备份 run 和蓝牙传输会关联固定的任务引用。文件索引保留队列代际与持久扫描记录的关联，队列清理后仍查询保留的终态；同一队列被新请求替代时返回 `superseded`。多个蓝牙文件保留各自的子任务，不能只观察第一个文件。
+
+能力 run 成功提交后台任务时，`completion` 为 `submission`，`domainTask` 给出引用；`submissionCompleted: true` 不等于领域任务已完成。以 `task.state/terminal/progress` 判断实际进度。记录被删除时返回 `unavailable`，不伪造成功。`tasks.wait` 最多等待 20 秒，`afterRevision` 使用上次任务返回的字符串 revision；`runs.wait` 的 `afterRevision` 使用能力 run 的数字 revision。
+
+```json
+{"runId":"自己提交的能力 run ID","timeoutMs":5000,"afterRevision":"上次 tasks.get 返回的 revision"}
+```
+
+`cyberos.tasks.cancel-propose` 仍创建审批，仅支持下载、文件 batch 和蓝牙传输已有的取消机制；其他任务明确不可取消。停止做种等操作先提交控制请求，再观察领域终态。`runs.cancel` 取消能力执行本身，不能代替后台任务取消。
+
+worker 每轮向 Pi 注入有界、隐藏的当前工作路径、可见存储目录、当前会话关联 run 和未过期审批 ID 摘要。该摘要不包含提案正文或 secret，目录存在不代表挂载就绪，存储操作前仍应查询 `system.health`。缓存会话下一轮会刷新该上下文。
+
+### 覆盖维护
+
+`packages/capabilities/src/product-actions.ts` 保存产品动作的补充映射与明确排除原因；`parity-routes.test.ts` 双向检查 REST／NVR 路由、capability 映射及排除项。新增产品动作必须补 capability 或说明排除原因，同时添加实际行为测试，单独登记路由不代表已经实现。审批决定、配对 challenge、人机流媒体传输和第一方管理界面等边界保持明确排除。
 
 ## 运维检查
 

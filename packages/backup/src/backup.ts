@@ -339,6 +339,91 @@ export async function restoreBackup(input: DisasterRestoreDependencies): Promise
 
 export function listBackups(db: CyberOsDatabase): BackupRunSummary[] { return listBackupRuns(db, 30); }
 
+export interface BackupSnapshotSummary {
+  id: string;
+  time: string;
+  tags: string[];
+  runId: string | null;
+  kind: "data" | "state" | "unknown";
+  restoreSnapshotIds: string[];
+}
+
+export async function listBackupSnapshots(input: BackupDependencies): Promise<BackupSnapshotSummary[]> {
+  const configured = loadBackupRuntime(input.db, input.config);
+  // Listing and staging recovery remain possible when scheduled backups are off.
+  const runtime = { ...configured, backup: { ...configured.backup, enabled: true } };
+  const config = runtime.backup;
+  if (!config.repositoryPath || !config.passwordFile) throw new Error("Backup repository credentials are not configured");
+  await assertBackupMountsReady({ ...input, config: runtime }, false);
+  const result = await runResticWithRetry(input.restic ?? new SystemResticRunner(), ["snapshots", "--json", "--repo", config.repositoryPath], config);
+  if (result.code !== 0) throw new Error("Backup snapshots are unavailable");
+  const snapshots: unknown = JSON.parse(result.stdout);
+  if (!Array.isArray(snapshots)) throw new Error("Invalid backup snapshot response");
+  const runs = input.db.prepare("SELECT id,snapshot_ids_json FROM backup_runs WHERE status='completed' ORDER BY started_at DESC LIMIT 10000").all() as Array<{ id: string; snapshot_ids_json: string }>;
+  const rows = snapshots.map((value: unknown) => {
+    if (!value || typeof value !== "object") throw new Error("Invalid backup snapshot");
+    const row = value as Record<string, unknown>;
+    if (typeof row.id !== "string" || !/^[a-f0-9]{64}$/u.test(row.id) || typeof row.time !== "string" || !Number.isFinite(Date.parse(row.time))) throw new Error("Invalid backup snapshot identity");
+    const id = row.id;
+    return { id, time: row.time, tags: Array.isArray(row.tags) ? row.tags.filter((tag): tag is string => typeof tag === "string").slice(0, 20).map((tag) => tag.slice(0, 128)) : [],
+      runId: null, kind: "unknown", restoreSnapshotIds: [id] } as BackupSnapshotSummary;
+  });
+  for (const run of runs) {
+    let prefixes: unknown;
+    try { prefixes = JSON.parse(run.snapshot_ids_json); } catch { continue; }
+    if (!Array.isArray(prefixes) || prefixes.length !== 2 || prefixes.some((id) => typeof id !== "string" || !/^[a-f0-9]{8,64}$/u.test(id))) continue;
+    const pair = (prefixes as string[]).map((prefix) => rows.filter((row) => row.id.startsWith(prefix)));
+    if (pair.some((matches) => matches.length !== 1) || pair[0]![0]!.id === pair[1]![0]!.id) continue;
+    const ids = pair.map((matches) => matches[0]!.id);
+    pair.forEach((matches, position) => {
+      const row = matches[0]!;
+      if (!row.runId) { row.runId = run.id; row.kind = position === 0 ? "data" : "state"; row.restoreSnapshotIds = ids; }
+    });
+  }
+  return rows.sort((left, right) => right.time.localeCompare(left.time) || right.id.localeCompare(left.id));
+}
+
+/** Restore the paired data/state snapshots under fresh staging while holding the shared backup lease. */
+export async function restoreConfiguredBackup(input: BackupDependencies & { snapshotId: string }): Promise<{ stagingPath: string; verified: boolean; snapshotIds: string[]; liveDataChanged: false }> {
+  if (!/^[a-f0-9]{8,64}$/u.test(input.snapshotId)) throw new Error("Invalid backup snapshot ID");
+  const config = loadBackupRuntime(input.db, input.config);
+  const owner = randomUUID();
+  if (!acquireExecutionLock(input.db, { name: BACKUP_LOCK_NAME, owner })) throw new Error("backup already running");
+  const heartbeat = setInterval(() => heartbeatExecutionLock(input.db, { name: BACKUP_LOCK_NAME, owner }), 10_000);
+  let stagingPath = "";
+  const ensureLease = () => {
+    if (!isExecutionLockOwner(input.db, { name: BACKUP_LOCK_NAME, owner })) throw new Error("Backup restore lease was lost");
+  };
+  try {
+    const matches = (await listBackupSnapshots(input)).filter((snapshot) => snapshot.id.startsWith(input.snapshotId));
+    if (matches.length !== 1) throw new Error("Snapshot does not exist or its ID is ambiguous");
+    const selected = matches[0]!;
+    const snapshotIds = selected.restoreSnapshotIds;
+    ensureLease();
+    const restored = await restoreBackup({ config, repositoryPath: config.backup.repositoryPath!, passwordFile: config.backup.passwordFile!,
+      snapshot: snapshotIds.at(-1)!, ...(input.restic ? { restic: input.restic } : {}) });
+    stagingPath = restored.stagingPath;
+    for (const snapshot of snapshotIds.slice(0, -1)) {
+      ensureLease();
+      const target = path.join(stagingPath, "data-snapshot");
+      const runner = input.restic ?? new SystemResticRunner();
+      const args = ["restore", snapshot, "--repo", config.backup.repositoryPath!, "--target", target];
+      const preview = await runResticWithRetry(runner, [...args, "--dry-run"], config.backup);
+      if (preview.code !== 0) throw new Error("Data restore dry-run failed");
+      const result = await runResticWithRetry(runner, args, config.backup);
+      if (result.code !== 0) throw new Error("Data snapshot restore failed");
+    }
+    ensureLease();
+    return { ...restored, snapshotIds, liveDataChanged: false };
+  } catch (error) {
+    if (stagingPath) await rm(stagingPath, { recursive: true, force: true });
+    throw error;
+  } finally {
+    clearInterval(heartbeat);
+    releaseExecutionLock(input.db, { name: BACKUP_LOCK_NAME, owner });
+  }
+}
+
 function requireBackupConfig(config: CyberOsRuntime): BackupConfig {
   if (!config.backup.enabled) throw new Error("Backup is disabled");
   return config.backup;

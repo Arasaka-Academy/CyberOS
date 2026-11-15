@@ -79,6 +79,7 @@ import {
   type CyberOsDatabase
 } from "@cyberos/db";
 import { inferMimeType, statPath } from "@cyberos/storage-tools";
+import { domainTaskReference, ownedDomainTask } from "./tasks.js";
 import type { AgentCapabilityId, AgentCapabilityPolicyMode, DownloadTaskStatus, PublicBuildInfo, CyberOsRuntime } from "@cyberos/shared";
 
 export interface McpRuntimeDependencies {
@@ -145,7 +146,8 @@ const IMPLEMENTED = new Set([
   "cyberos.runs.get",
   "cyberos.runs.list",
   "cyberos.runs.wait",
-  "cyberos.runs.cancel"
+  "cyberos.runs.cancel",
+  "cyberos.tasks.get", "cyberos.tasks.list", "cyberos.tasks.wait"
 ]);
 
 export function createClientRuntime(dependencies: McpRuntimeDependencies, client: McpClientRecord): ClientRuntime {
@@ -337,6 +339,27 @@ async function executeImplemented(
       return waitForRun(dependencies, context.subject.clientId, object, context.signal);
     case "cyberos.runs.cancel":
       return cancelRun(dependencies, context.subject.clientId, object);
+    case "cyberos.tasks.get":
+      return { data: jsonValue(ownedDomainTask(dependencies.db, context.subject.clientId, requiredString(object.runId, "runId"))) };
+    case "cyberos.tasks.wait":
+      return waitForDomainTask(dependencies, context.subject.clientId, object, context.signal);
+    case "cyberos.tasks.list": {
+      const limit = boundedInteger(object.limit, 40, 1, 200);
+      const before = decodeRunCursor(optionalString(object.cursor));
+      const runs = listOwnedCapabilityRuns(dependencies.db, { clientId: context.subject.clientId, limit: limit + 1, domainOnly: true, ...(before ? { before } : {}) });
+      const tasks: ReturnType<typeof ownedDomainTask>[] = [];
+      let bytes = 0;
+      for (const run of runs.slice(0, limit)) {
+        const task = ownedDomainTask(dependencies.db, context.subject.clientId, run.id);
+        const size = Buffer.byteLength(JSON.stringify(task));
+        if (tasks.length && bytes + size > 128 * 1024) break;
+        tasks.push(task);
+        bytes += size;
+      }
+      const last = runs[tasks.length - 1];
+      return { data: { tasks: jsonValue(tasks) },
+        page: { limit, nextCursor: runs.length > tasks.length && last ? encodeRunCursor(last.createdAt, last.id) : null } };
+    }
     default:
       throw new CapabilityError("NOT_READY", "Domain adapter is not installed", { retryable: true });
   }
@@ -682,7 +705,7 @@ async function waitForRun(
   const deadline = Date.now() + timeoutMs;
   let run = getOwnedCapabilityRun(dependencies.db, clientId, runId);
   if (!run) throw new CapabilityError("INVALID_ARGUMENT", "Capability run not found");
-  while (!isTerminal(run.state) && Date.now() < deadline && !signal?.aborted) {
+  while (!isTerminal(run.state) && (typeof input.afterRevision !== "number" || run.revision <= input.afterRevision) && Date.now() < deadline && !signal?.aborted) {
     await new Promise((resolve) => setTimeout(resolve, Math.min(250, Math.max(0, deadline - Date.now()))));
     run = getOwnedCapabilityRun(dependencies.db, clientId, runId);
     if (!run) throw new CapabilityError("INVALID_ARGUMENT", "Capability run not found");
@@ -697,6 +720,20 @@ function cancelRun(dependencies: McpRuntimeDependencies, clientId: string, input
   return { data: publicRun(run), runId: run.id };
 }
 
+async function waitForDomainTask(dependencies: McpRuntimeDependencies, clientId: string, input: Record<string, JsonValue>, signal?: AbortSignal): Promise<CapabilityExecution> {
+  const runId = requiredString(input.runId, "runId");
+  const deadline = Date.now() + boundedInteger(input.timeoutMs, 5_000, 0, 20_000);
+  let current = ownedDomainTask(dependencies.db, clientId, runId);
+  const revision = optionalString(input.afterRevision) ?? current.revision;
+  const pending = () => current.task ? !current.task.terminal && current.task.state !== "unavailable" : !isTerminal(current.capabilityState);
+  while (pending()) {
+    if (current.revision !== revision || Date.now() >= deadline || signal?.aborted) break;
+    await new Promise((resolve) => setTimeout(resolve, Math.min(250, Math.max(0, deadline - Date.now()))));
+    current = ownedDomainTask(dependencies.db, clientId, runId);
+  }
+  return { data: jsonValue(current) };
+}
+
 function publicRun(run: ReturnType<typeof getOwnedCapabilityRun> extends infer T ? Exclude<T, null> : never): JsonValue {
   return {
     id: run.id,
@@ -707,6 +744,8 @@ function publicRun(run: ReturnType<typeof getOwnedCapabilityRun> extends infer T
     result: run.result,
     error: run.errorCode ? { code: run.errorCode, message: run.errorMessage } : null,
     revision: run.revision,
+    domainTask: domainTaskReference(run),
+    completion: domainTaskReference(run) ? "submission" : "operation",
     cancellable: run.cancellable,
     createdAt: run.createdAt,
     startedAt: run.startedAt,
@@ -742,7 +781,12 @@ function agentPolicyCapabilityId(capabilityId: string): AgentCapabilityId | null
     case "cyberos.files.search": return "cyberos.files.search";
     case "cyberos.files.grep": return "cyberos.files.grep";
     case "cyberos.files.find": return "cyberos.files.find";
-    case FILE_MUTATION_CAPABILITY: return FILE_MUTATION_CAPABILITY;
+    case FILE_MUTATION_CAPABILITY:
+    case "cyberos.files.rollback-propose":
+    case "cyberos.files.restore-propose":
+    case "cyberos.files.extract-propose":
+    case "cyberos.files.batch-propose":
+    case "cyberos.files.batch-cancel-propose": return FILE_MUTATION_CAPABILITY;
     case "cyberos.files.edit": return "cyberos.files.edit";
     case "cyberos.files.write": return "cyberos.files.write";
     case "cyberos.shell.run": return "cyberos.shell.run";

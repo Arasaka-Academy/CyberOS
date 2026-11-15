@@ -17,6 +17,9 @@ import {
   getPhotosLibrarySettings,
   getDockerSettings,
   getBackupSettings,
+  getDownloadSettings,
+  getDownloadTask,
+  getTorrentPreview,
   getTvSettings,
   getVmSettings,
   recordAppliedOperation,
@@ -33,6 +36,8 @@ import {
 } from "./mcp-resources.js";
 import type { SystemManagementDependencies } from "./system-management.js";
 import { createMediaCapabilityAdapters } from "./media-capabilities.js";
+import { createSystemMutationAdapters, systemDomainLink } from "./system-mutation-capabilities.js";
+import { createTaskCancelAdapter } from "./task-capabilities.js";
 import {
   resolveStoragePoolScope,
   StorageScopeError
@@ -74,11 +79,13 @@ export function createCapabilityAdapters(
 ): Readonly<Record<string, CapabilityDomainAdapter>> {
   const adapters: Record<string, CapabilityDomainAdapter> = {
     ...createMediaCapabilityAdapters(server, options.system),
+    "cyberos.tasks.cancel-propose": createTaskCancelAdapter(server),
     "cyberos.shell.run": createRestrictedShellAdapter()
   };
   for (const capabilityId of MUTATION_CAPABILITIES) {
     adapters[capabilityId] = httpDomainAdapter(server, capabilityId, options);
   }
+  Object.assign(adapters, createSystemMutationAdapters(server, options.system));
   return adapters;
 }
 
@@ -124,7 +131,8 @@ function httpDomainAdapter(
         context.subject.clientId,
         options.resourceBaseUrl
       );
-      const link = domainLink(direct);
+      const task = systemDomainLink(capabilityId, direct);
+      const link = task.domainTask ? task : domainLink(direct);
       return { data: direct, ...link };
     }
   };
@@ -255,6 +263,7 @@ function photoRequest(operation: string, body: Record<string, JsonValue>): Inter
 }
 
 function downloadRequest(operation: string, request: Record<string, JsonValue>): InternalRequest {
+  if (operation === "create_torrent") return { method: "POST", url: "/api/downloads", payload: without(request, "operation") };
   if (operation === "create") {
     return { method: "POST", url: "/api/downloads", payload: {
       url: request.url,
@@ -265,10 +274,10 @@ function downloadRequest(operation: string, request: Record<string, JsonValue>):
     } };
   }
   if (operation === "settings") return { method: "PATCH", url: "/api/settings/downloads", payload: without(request, "operation") };
-  if (!["pause", "resume", "cancel", "retry", "delete"].includes(operation)) throw invalidOperation("download", operation);
+  if (!["pause", "resume", "cancel", "retry", "delete", "stop_seeding"].includes(operation)) throw invalidOperation("download", operation);
   return {
     method: operation === "delete" ? "DELETE" : "POST",
-    url: `/api/downloads/${encoded(request.taskId)}${operation === "delete" ? "" : `/${operation}`}`
+    url: `/api/downloads/${encoded(request.taskId)}${operation === "delete" ? "" : `/${operation.replaceAll("_", "-")}`}`
   };
 }
 
@@ -740,7 +749,7 @@ async function capabilityRevision(
       filesystem: scope.pool.filesystem
     };
   }));
-  const tables = revisionTables(capabilityId);
+  const tables = capabilityId === "cyberos.downloads.manage-propose" ? [] : revisionTables(capabilityId);
   const tableStates = tables.map((table) => {
     try {
       return toJson(db.prepare(`SELECT COUNT(*) AS count, COALESCE(MAX(updated_at), '') AS updatedAt FROM ${table}`).get());
@@ -779,6 +788,27 @@ async function capabilityResourceState(
   capabilityId: string,
   request: Record<string, JsonValue>
 ): Promise<JsonValue> {
+  if (capabilityId === "cyberos.downloads.manage-propose") {
+    const states: unknown[] = [getDownloadSettings(db)];
+    if (typeof request.taskId === "string") {
+      const task = getDownloadTask(db, request.taskId);
+      if (!task) throw new CapabilityError("CONFLICT", "Download task no longer exists");
+      states.push({ id: task.id, status: task.status, targetPath: task.targetPath, storagePoolId: task.storagePoolId });
+    }
+    if (typeof request.torrentPreviewId === "string") {
+      const preview = getTorrentPreview(db, request.torrentPreviewId);
+      if (!preview || preview.status !== "ready" || Date.parse(preview.expiresAt) <= Date.now()) throw new CapabilityError("CONFLICT", "Torrent preview is unavailable or expired");
+      states.push(preview);
+    }
+    if (typeof request.storagePoolId === "string" && typeof request.targetDirectory === "string") {
+      const scope = await resolveCapabilityStoragePool(config, system, request.storagePoolId);
+      const directory = await resolveSafeExistingPath(scope.workspace.path, request.targetDirectory);
+      const metadata = await stat(directory.realPath);
+      if (!metadata.isDirectory()) throw new CapabilityError("INVALID_ARGUMENT", "Download destination must be a directory");
+      states.push({ path: directory.relativePath, dev: metadata.dev, ino: metadata.ino });
+    }
+    return toJson(states);
+  }
   if (capabilityId === "cyberos.files.edit" || capabilityId === "cyberos.files.write") {
     const scope = await resolveCapabilityStoragePool(
       config,
