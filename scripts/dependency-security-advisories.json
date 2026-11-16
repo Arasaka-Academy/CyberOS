@@ -347,5 +347,13 @@
     "manifest": "package-lock.json",
     "summary": "Unhandled socket ECONNRESET during an asynchronous WebSocket upgrade crashes the process",
     "minimumVersion": "2.1.6"
+  },
+  {
+    "alert": "CVE-2026-119375-node-sqlite",
+    "ghsa": "CVE-2026-119375-node-sqlite",
+    "package": "better-sqlite3",
+    "manifest": "package-lock.json",
+    "summary": "Bundled SQLite before 3.54.0 can expose uninitialized memory from a crafted database and WAL pair",
+    "minimumVersion": "13.1.1"
   }
 ]

@@ -12,6 +12,6 @@
   },
   "dependencies": {
     "@cyberos/shared": "2.4.11",
-    "better-sqlite3": "^12.2.0"
+    "better-sqlite3": "^13.1.1"
   }
 }
