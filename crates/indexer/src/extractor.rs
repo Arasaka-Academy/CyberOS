@@ -402,6 +402,9 @@ fn extract_ooxml(
             false,
         ));
     }
+    archive
+        .validate_header_consistency()
+        .map_err(|error| IndexerError::new(ErrorCode::CorruptDocument, error.to_string(), false))?;
     let expanded_limit = source_limit.saturating_mul(4).min(2 * 1024 * 1024 * 1024);
     let selected_entry_limit = (output_limit as u64)
         .saturating_mul(8)
@@ -420,7 +423,12 @@ fn extract_ooxml(
                 false,
             ));
         }
-        let name = entry.name().to_owned();
+        let name = entry
+            .name()
+            .map_err(|error| {
+                IndexerError::new(ErrorCode::CorruptDocument, error.to_string(), false)
+            })?
+            .into_owned();
         let include = match extension {
             "docx" => {
                 name == "word/document.xml"
