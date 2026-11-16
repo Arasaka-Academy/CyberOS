@@ -1,4 +1,5 @@
 import { createRequire } from "node:module";
+import { URL } from "node:url";
 import { expect, it } from "vitest";
 
 const databaseRequire = createRequire(new URL("../packages/db/package.json", import.meta.url));
