@@ -34,5 +34,14 @@
     "severity": "medium",
     "summary": "Hono: `validator('form')` skips validation for `multipart/form-data` requests with extra parameters",
     "minimumVersion": "4.13.16"
+  },
+  {
+    "alert": 136,
+    "ghsa": "GHSA-4m76-xfj5-7975",
+    "package": "hono",
+    "manifest": "package-lock.json",
+    "severity": "medium",
+    "summary": "Hono: `mount()` and `app.mount()` can forward a path that bypasses middleware scoped inside the mount prefix",
+    "minimumVersion": "4.13.16"
   }
 ]
