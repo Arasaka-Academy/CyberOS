@@ -211,5 +211,15 @@
     "summary": "fast-uri vulnerable to host confusion via unchecked WHATWG host canonicalization",
     "minimumVersion": "3.1.9",
     "major": 3
+  },
+  {
+    "alert": 83,
+    "ghsa": "GHSA-333x-w4r6-6crp",
+    "package": "fast-uri",
+    "manifest": "package-lock.json",
+    "severity": "low",
+    "summary": "fast-uri vulnerable to scheme injection via an unescaped first-segment colon in suffix references",
+    "minimumVersion": "4.2.3",
+    "major": 4
   }
 ]
