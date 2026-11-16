@@ -1,3 +1,9 @@
+cyberos (2.4.12) unstable; urgency=medium
+
+  * Remediate remaining npm and Rust dependency vulnerabilities, update bundled SQLite, and align secure build prerequisites.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Mon, 16 Nov 2026 04:24:19 +0000
+
 cyberos (2.4.11) unstable; urgency=medium
 
   * Complete MCP system capability coverage, diagnostics, task tracking, and current-repository deployment.
