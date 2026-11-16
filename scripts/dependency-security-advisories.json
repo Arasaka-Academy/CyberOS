@@ -7,5 +7,14 @@
     "severity": "low",
     "summary": "Astro: XSS via attribute injection in dynamic tag names",
     "minimumVersion": "7.4.5"
+  },
+  {
+    "alert": 140,
+    "ghsa": "GHSA-r3h5-4585-7x3w",
+    "package": "astro",
+    "manifest": "docs/package-lock.json",
+    "severity": "medium",
+    "summary": "Astro: Image endpoint in @astrojs/node can read files from a case-variant sibling of the output directory on case-sensitive filesystems",
+    "minimumVersion": "7.4.7"
   }
 ]
