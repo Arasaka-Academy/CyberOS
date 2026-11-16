@@ -43,5 +43,14 @@
     "severity": "medium",
     "summary": "Hono: `mount()` and `app.mount()` can forward a path that bypasses middleware scoped inside the mount prefix",
     "minimumVersion": "4.13.16"
+  },
+  {
+    "alert": 135,
+    "ghsa": "GHSA-h7mg-cq63-vhpq",
+    "package": "hono",
+    "manifest": "package-lock.json",
+    "severity": "medium",
+    "summary": "Hono: RegExpRouter skips wildcard middleware for some route sets and for paths with an encoded line terminator",
+    "minimumVersion": "4.13.16"
   }
 ]
