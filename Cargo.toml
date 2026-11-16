@@ -47,3 +47,4 @@ strip = true
 
 [patch.crates-io]
 librqbit-tracker-comms = { path = "crates/rqbit-tracker-comms" }
+librqbit-utp = { git = "https://github.com/ikatson/librqbit-utp", rev = "f119a999657d66fe2c2322613428241ce8a69f23" }
