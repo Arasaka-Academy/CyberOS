@@ -624,7 +624,7 @@ dependencies = [
  "lofty",
  "nix 0.30.1",
  "notify",
- "quick-xml 0.38.4",
+ "quick-xml",
  "reqwest",
  "rusqlite",
  "rustls",
@@ -682,7 +682,7 @@ dependencies = [
  "futures-util",
  "md-5",
  "nix 0.30.1",
- "quick-xml 0.38.4",
+ "quick-xml",
  "reqwest",
  "rusqlite",
  "rustls",
@@ -2132,7 +2132,7 @@ dependencies = [
  "httparse",
  "librqbit-dualstack-sockets",
  "network-interface",
- "quick-xml 0.41.0",
+ "quick-xml",
  "reqwest",
  "serde",
  "serde_derive",
@@ -2651,15 +2651,6 @@ dependencies = [
  "wasi",
  "web-sys",
  "winapi",
-]
-
-[[package]]
-name = "quick-xml"
-version = "0.38.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b66c2058c55a409d601666cffe35f04333cf1013010882cec174a7467cd4e21c"
-dependencies = [
- "memchr",
 ]
 
 [[package]]
