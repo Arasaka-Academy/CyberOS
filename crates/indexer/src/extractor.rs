@@ -420,7 +420,12 @@ fn extract_ooxml(
                 false,
             ));
         }
-        let name = entry.name().to_owned();
+        let name = entry
+            .name()
+            .map_err(|error| {
+                IndexerError::new(ErrorCode::CorruptDocument, error.to_string(), false)
+            })?
+            .into_owned();
         let include = match extension {
             "docx" => {
                 name == "word/document.xml"
