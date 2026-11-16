@@ -251,5 +251,15 @@
     "summary": "fast-uri vulnerable to improper path equivalence in relative reference normalization",
     "minimumVersion": "3.1.9",
     "major": 3
+  },
+  {
+    "alert": 76,
+    "ghsa": "GHSA-wjr9-j795-jxcr",
+    "package": "fast-uri",
+    "manifest": "docs/package-lock.json",
+    "severity": "medium",
+    "summary": "fast-uri vulnerable to host confusion via unchecked WHATWG host canonicalization",
+    "minimumVersion": "3.1.9",
+    "major": 3
   }
 ]
