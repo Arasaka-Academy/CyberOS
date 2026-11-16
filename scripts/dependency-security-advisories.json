@@ -288,5 +288,13 @@
     "manifest": "Cargo.lock",
     "summary": "`libsqlite3-sys` via C SQLite CVE-2026-119375",
     "minimumVersion": "0.39.0"
+  },
+  {
+    "alert": "RUSTSEC-2026-0195",
+    "ghsa": "RUSTSEC-2026-0195",
+    "package": "quick-xml",
+    "manifest": "Cargo.lock",
+    "summary": "Unbounded namespace-declaration allocation in `NsReader` enables memory-exhaustion denial of service",
+    "minimumVersion": "0.41.0"
   }
 ]
