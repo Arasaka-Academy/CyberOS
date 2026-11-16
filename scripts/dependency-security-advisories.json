@@ -52,5 +52,14 @@
     "severity": "medium",
     "summary": "Hono: RegExpRouter skips wildcard middleware for some route sets and for paths with an encoded line terminator",
     "minimumVersion": "4.13.16"
+  },
+  {
+    "alert": 134,
+    "ghsa": "GHSA-3gg2-335m-rxc6",
+    "package": "hono",
+    "manifest": "package-lock.json",
+    "severity": "low",
+    "summary": "Hono: `css` helper does not escape a closing tag split between the template and an interpolated value, allowing HTML injection",
+    "minimumVersion": "4.13.16"
   }
 ]
