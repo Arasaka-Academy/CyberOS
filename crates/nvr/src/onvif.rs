@@ -1,7 +1,7 @@
 use crate::error::{Error, Result};
 use crate::protocol::{NvrDiscovery, NvrProfile};
 use base64::{Engine, engine::general_purpose::STANDARD};
-use quick_xml::{Reader, events::Event};
+use quick_xml::{Reader, XmlVersion, events::Event};
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
@@ -63,7 +63,7 @@ impl Node {
                     for attr in tag.attributes() {
                         let attr = attr.map_err(|_| Error::unavailable("Invalid XML attribute"))?;
                         let value = attr
-                            .decode_and_unescape_value(reader.decoder())
+                            .decoded_and_normalized_value(XmlVersion::Implicit1_0, reader.decoder())
                             .map_err(|_| Error::unavailable("Invalid XML attribute"))?
                             .into_owned();
                         node.attributes.push((
