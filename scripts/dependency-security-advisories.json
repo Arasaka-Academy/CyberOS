@@ -201,5 +201,15 @@
     "summary": "fast-uri vulnerable to host confusion via unchecked WHATWG host canonicalization",
     "minimumVersion": "4.2.3",
     "major": 4
+  },
+  {
+    "alert": 84,
+    "ghsa": "GHSA-wjr9-j795-jxcr",
+    "package": "fast-uri",
+    "manifest": "package-lock.json",
+    "severity": "medium",
+    "summary": "fast-uri vulnerable to host confusion via unchecked WHATWG host canonicalization",
+    "minimumVersion": "3.1.9",
+    "major": 3
   }
 ]
