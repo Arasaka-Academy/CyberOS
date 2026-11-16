@@ -9,7 +9,7 @@ CYBEROS_APT_MIRROR=${CYBEROS_APT_MIRROR:-https://mirrors.aliyun.com/debian}
 CYBEROS_APT_SECURITY_MIRROR=${CYBEROS_APT_SECURITY_MIRROR:-https://mirrors.aliyun.com/debian-security}
 CYBEROS_RPI_MIRROR=${CYBEROS_RPI_MIRROR:-https://mirrors.aliyun.com/raspberrypi}
 CYBEROS_NODE_MIRROR=${CYBEROS_NODE_MIRROR:-https://mirrors.aliyun.com/nodejs-release}
-CYBEROS_NODE_VERSION=${CYBEROS_NODE_VERSION:-22.23.2}
+CYBEROS_NODE_VERSION=${CYBEROS_NODE_VERSION:-22.23.4}
 CYBEROS_NPM_REGISTRY=${CYBEROS_NPM_REGISTRY:-https://registry.npmmirror.com}
 CYBEROS_CARGO_REGISTRY=${CYBEROS_CARGO_REGISTRY:-sparse+https://rsproxy.cn/index/}
 CYBEROS_RUSTUP_INIT_URL=${CYBEROS_RUSTUP_INIT_URL:-https://sh.rustup.rs}
@@ -211,7 +211,7 @@ apply_tv_mode_setting() {
 node_22_supported() {
   command -v node >/dev/null 2>&1 || return 1
   node --version | grep -Eq '^v22\.' || return 1
-  node "$ROOT_DIR/scripts/check-node-version.mjs" >/dev/null 2>&1
+  node "$ROOT_DIR/scripts/check-node-version.mjs" --build >/dev/null 2>&1
 }
 
 nodejs_from_nodesource() {
@@ -255,7 +255,7 @@ if ! node_22_supported || nodejs_from_nodesource || [ ! -x /usr/local/bin/node ]
   install_node_22
 fi
 
-node_22_supported || die "Node.js 22.19.0 or newer within 22.x is required; found $(node --version 2>/dev/null || printf 'none')"
+node_22_supported || die "Node.js 22.23.4 or newer within 22.x is required for source builds; found $(node --version 2>/dev/null || printf 'none')"
 install_build_dependencies
 install_rust_toolchain
 tailscale_preexisting=0

@@ -15,7 +15,7 @@ sidebar:
 
 ## 准备依赖
 
-需要 Node.js 22.19.0 或更高版本、npm 和 Git。Agent turn 还需要在设置中配置 OpenAI 或 Anthropic provider、model 和 API key。
+源码开发和完整构建需要 Node.js 22.23.4 或更高版本、npm 和 Git；已安装应用的运行时最低版本仍为 Node.js 22.19.0。Agent turn 还需要在设置中配置 OpenAI 或 Anthropic provider、model 和 API key。
 
 ```bash
 node --version
