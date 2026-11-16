@@ -4,18 +4,18 @@ description: 接入 CyberVisual 摄像机，配置独立录像服务、循环存
 type: operation
 status: current
 audience: [operator]
-sourceOfTruth: [crates/nvr, packages/api/src/routes/nvr.ts, packages/web/src/components/nvr, packages/db/src/migrations/nvr.json, packaging/systemd/cyberos-nvr.service]
+sourceOfTruth: [crates/nvr, packages/api/src/routes/nvr.ts, packages/web/src/components/nvr, packages/web/src/components/settings/SettingsNvrPage.tsx, packages/db/src/migrations/nvr.json, packaging/systemd/cyberos-nvr.service]
 ---
 
 NVR 面板通过 `#/app/nvr` 打开，包含实时、回放、事件和设备四个页签，最多接入四台 CyberVisual 摄像机。录像由独立的非 root `cyberos-nvr.service` 执行；关闭面板、浏览器或重启 API 不会停止录像。
 
 ## 接入设备
 
-在 CyberVisual 启用网络摄像头输出，并在设备后台配置 ONVIF 用户名和密码。CyberOS 的设备页支持局域网 WS-Discovery 和手动输入 `http://camera:8000/onvif/device_service`。设备 UUID 来自摄像机持久身份；同一个 UUID 不能重复添加。
+在 CyberVisual 启用网络摄像头输出，并在设备后台配置 ONVIF 用户名和密码。CyberOS 的设备页使用表格管理摄像机，点击「添加摄像机」打开表单弹窗，支持局域网 WS-Discovery 和手动输入 `http://camera:8000/onvif/device_service`；发现结果只填入地址，仍需明确提交。设备 UUID 来自摄像机持久身份；同一个 UUID 不能重复添加。
 
 密码保存在 `state/secrets/nvr` 下的受限文件中，不进入公开设备对象、SQLite 文档或 FFmpeg 命令参数。修改密码需删除设备后用相同 UUID 重新添加；已有录像保留。此适配器使用 CyberVisual 的 `raw` / `annotated` profiles 和管理状态接口，尚不承诺任意厂商 ONVIF 摄像机兼容性。
 
-添加后默认不录像。先选择已挂载存储池和目录并保存，再逐台点击“开始录像”。默认使用原始 H.264，允许改为 AI 标注流；FFmpeg 通过 RTSP/TCP 拉流并直接封装为约 60 秒的 MPEG-TS 分段，不重新编码。分段边界受源关键帧间隔影响。
+添加后默认不录像。先进入「系统设置 → 媒体与下载 → 监控（NVR）」选择已挂载存储池和目录，设置保留天数及配额并保存。四项配置均为单列逐行排列，设备页不再显示存储摘要与设置入口行。不可用的原存储池不会自动替换，保存策略也不会自动启用录像或搬迁已有文件。返回设备表格后逐台点击「开始录像」。默认使用原始 H.264，允许行内改为 AI 标注流；FFmpeg 通过 RTSP/TCP 拉流并直接封装为约 60 秒的 MPEG-TS 分段，不重新编码。分段边界受源关键帧间隔影响。
 
 实时默认显示 AI 标注 MJPEG，原始画面通过 HLS 监看。连接、视频、录像、AI 与云台状态分别显示。HLS 包含缓冲延迟；操作云台使用 MJPEG 预览。
 
@@ -25,7 +25,7 @@ NVR 面板通过 `#/app/nvr` 打开，包含实时、回放、事件和设备四
 
 默认保留 7 天，NVR 总配额 100 GiB，先达到的限制触发清理。清理仅处理数据库登记的分段，正在写入、回放或下载的文件受保护。存储池离线、挂载或目录身份变化、可用空间不足 256 MiB、受保护片段导致配额无法释放时暂停录像，恢复条件满足后重连。配额检查以秒为单位，当前分段可能带来短暂超额。
 
-回放按设备和本地日期查询，时间轴及事件可定位录像。HLS 回放与片段下载支持 Range 请求。删除设备默认保留录像，仍可在回放和事件列表按设备查询。进程重启会检查已登记的录像任务，恢复有效 H.264 片段，将缺失或异常片段标记出来；不会扫描并收录目录里的无关文件。
+回放按设备和本地日期查询，使用页内播放器、实际覆盖时间轴和录像表格；只有选择录像或正常事件后才创建回放会话。事件按时间倒序排列，覆盖缺口不提供回放操作。录像和事件每页展示 50 条，计数只代表已加载记录；分别达到单次 10000 条和 1000 条接口上限时提示历史不完整。HLS 回放与片段下载支持 Range 请求。离线及已删除设备仍可查询保留的录像和事件。进程重启会检查已登记的录像任务，恢复有效 H.264 片段，将缺失或异常片段标记出来；不会扫描并收录目录里的无关文件。
 
 PullPoint 的初始化消息仅刷新指示状态，不再次产生 AI 告警。事件保留精确时间与来源 ID，队列溢出、订阅故障和重启后的重新覆盖以缺口标记显示。事件与录像通过摄像机 UUID 和 UTC 时间关联；请同步摄像机和 NAS 的时钟。
 
@@ -56,4 +56,4 @@ cargo test -p cyberos-nvr recovers_interrupted -- --ignored
 node --test scripts/test-nvr-browser.mjs
 ```
 
-浏览器测试覆盖中英文在 1440/820/560/390/320px 的四个页签、四路 JPEG 解码与预览连接清理，以及云台按住、松开、失焦、切页停止、录像启停和事件跳转。四路软件摄像头的 RTSP、HLS、录像与回放互通是单独的媒体验证。四路 24 小时、NAS 包升级、真实电机方向/角度/限位/标定/拔插/退出边界必须分别验收，不能由单元测试代替。
+浏览器测试覆盖中英文在 1440/820/560/390/320px 的四个页签、四路 JPEG 解码与预览连接清理、云台安全停止、录像启停、事件跳转、历史分页及过期响应、设备表单与录像设置；包含七套配色的明暗模式和减少动态效果检查。独立设置浏览器测试使用 `npm run test:settings-browser`。四路软件摄像头的 RTSP、HLS、录像与回放互通是单独的媒体验证。四路 24 小时、NAS 包升级、真实电机方向/角度/限位/标定/拔插/退出边界必须分别验收，不能由单元测试代替。

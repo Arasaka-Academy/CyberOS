@@ -1,7 +1,7 @@
 import { Button as UiButton, DialogHeader, Input, InputGroup, Notice } from "@cyberos/ui";
 import { Component, Suspense, lazy, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Activity, AudioLines, Bot, Bluetooth, BellRing, Database, Download, Folder, Film, HardDrive, Image as ImageIcon, Images, KeyRound, Network, MonitorCog, UserRound, ChartNoAxesCombined, ArchiveRestore, Package, Search, Server, Share2, ShieldCheck, Settings, Wifi, X } from "lucide-react";
+import { Activity, AudioLines, Bot, Bluetooth, BellRing, Database, Download, Folder, Film, HardDrive, Image as ImageIcon, Images, KeyRound, Network, MonitorCog, UserRound, ChartNoAxesCombined, ArchiveRestore, Package, Search, Server, Share2, ShieldCheck, Settings, Video, Wifi, X } from "lucide-react";
 import { ModalPortal } from "../common/ModalPortal.js";
 import { BrandLogo } from "../common/BrandLogo.js";
 import { useContentReveal } from "../common/useContentReveal.js";
@@ -274,6 +274,8 @@ function settingsSectionIcon(section: SettingsSectionId) {
       return <Images aria-hidden="true" size={16} />;
     case "media":
       return <Film aria-hidden="true" size={16} />;
+    case "nvr":
+      return <Video aria-hidden="true" size={16} />;
     case "downloads":
       return <Download aria-hidden="true" size={16} />;
     case "appearance":

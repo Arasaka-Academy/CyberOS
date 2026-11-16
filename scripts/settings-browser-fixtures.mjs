@@ -2,6 +2,8 @@ const timestamp = "2026-11-08T00:00:00.000Z";
 const longName = "长期存储与自动化管理 / Long-running management ".repeat(3);
 const longPath = `media/${"long-storage-directory/".repeat(8)}archive`;
 
+export const nvrSettingsFixture = { devices: [], policy: { storagePoolId: "pool-1", directory: "NVR", retentionDays: 7, quotaBytes: 100 * 2 ** 30 }, usedBytes: 2 ** 30, maxRecordings: 4, heartbeatAt: timestamp };
+
 export async function populatedSettings(api) {
   const overrides = new Map();
   const read = async url => {
@@ -10,6 +12,7 @@ export async function populatedSettings(api) {
     return response.json();
   };
   const set = (url, json) => overrides.set(url, { json });
+  set("/api/nvr", { ...nvrSettingsFixture, policy: { ...nvrSettingsFixture.policy, directory: longPath } });
   const storage = await read("/api/system/storage");
   storage.storage.pools = [{ id: "pool-1", name: longName, raidPath: "/dev/md0", raidLevel: "raid1", status: "ready", mountpoint: "/cyberos/data/pool-1", filesystem: "ext4", totalBytes: 1024000000, usedBytes: 512000000, availableBytes: 512000000, usedPercent: 50, memberDevices: [] }];
   set("/api/system/storage", storage);

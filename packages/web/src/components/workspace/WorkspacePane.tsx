@@ -1717,7 +1717,7 @@ export function WorkspacePane({
           ) : activePanel === "monitoring" ? (
             <MonitoringPanel locale={locale} visible={workspaceVisible} />
           ) : activePanel === "nvr" ? (
-            <NvrPanel storagePools={storagePools} />
+            <NvrPanel />
           ) : activePanel === "terminal" || !workspaceVisible ? null : (
             <WorkspaceManagementPanel
               panel={activePanel}

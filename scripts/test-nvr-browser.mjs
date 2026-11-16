@@ -11,13 +11,14 @@ import { createServer } from "vite";
 const { chromium, expect } = createRequire(new URL("../docs/package.json", import.meta.url))("@playwright/test");
 let server, browser, baseUrl;
 const harness = `
-import React from 'react';
+import React, { useState } from 'react';
 import { AppearanceProvider } from '@cyberos/ui';
 import { mountAppearance } from '@cyberos/ui/theme';
 import '@cyberos/ui/fonts.css';
 import '@cyberos/ui/styles.css';
 import { createRoot } from 'react-dom/client';
 import { NvrPanel } from '/src/components/nvr/NvrPanel.tsx';
+import { SettingsNvrPage } from '/src/components/settings/SettingsNvrPage.tsx';
 import { initI18n, i18n } from '/src/i18n/index.ts';
 import '/src/styles.css';
 mountAppearance();
@@ -25,9 +26,14 @@ await initI18n();
 await i18n.changeLanguage(location.search.includes('zh') ? 'zh-CN' : 'en');
 const root = createRoot(document.getElementById('root'));
 window.addEventListener('nvr-test-unmount', () => root.unmount());
-root.render(<AppearanceProvider locale={i18n.language === 'en' ? 'en' : 'zh-CN'}><div className="app-shell" style={{display:'block',height:'100dvh',overflow:'hidden'}}><NvrPanel storagePools={[{id:'pool-1',name:'Pool 1',path:'.',filesystem:'ext4',status:'ready'}]} /></div></AppearanceProvider>);
+function Harness() {
+  const [settings, setSettings] = useState(new URLSearchParams(location.search).has('settings'));
+  return <><div hidden={settings} style={{height:'100%'}}><NvrPanel /></div>{settings ? <section className="settings-content" style={{height:'100%'}}><button onClick={() => setSettings(false)}>Back to devices</button><div className="settings-detail"><SettingsNvrPage storagePools={[{id:'pool-1',name:'Pool 1',path:'.',filesystem:'ext4',status:'ready'}]} /></div></section> : null}</>;
+}
+root.render(<AppearanceProvider locale={i18n.language === 'en' ? 'en' : 'zh-CN'}><div className="app-shell" style={{display:'block',height:'100dvh',overflow:'hidden'}}><Harness /></div></AppearanceProvider>);
 `;
 before(async () => {
+  await mkdir(".cyberos/nvr-browser", { recursive: true });
   server = await createServer({ configFile: fileURLToPath(new URL("../packages/web/vite.config.ts", import.meta.url)),
     root: fileURLToPath(new URL("../packages/web", import.meta.url)), server: { host: "127.0.0.1", port: 0 },
     plugins: [{ name: "nvr-browser-harness",
@@ -48,7 +54,7 @@ async function open(t, width = 1440, zh = false, count = 4, configure = () => {}
   const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: "reduce" });
   const page = await context.newPage(); page.setDefaultTimeout(10_000);
   const errors = []; page.on("pageerror", error => errors.push(error.message));
-  const commands = [], changes = [], sessions = [], removedSessions = [];
+  const commands = [], changes = [], sessions = [], removedSessions = [], historyReads = [], policyWrites = [], deviceWrites = [], deletions = [];
   const previews = { opened: 0, closed: 0, sockets: new Set() };
   const previewTimers = new Set();
   const jpeg = Buffer.from("/9j/4AAQSkZJRgABAgAAAQABAAD//gAPTGF2YzYzLjEuMTAyAP/bAEMACAQEBAQEBQUFBQUFBgYGBgYGBgYGBgYGBgYGBgcHBwgICAcHBwYGBwcICAgICQkJCAgICAkJCgoKDAwLCw4ODhERFP/EAEwAAQEAAAAAAAAAAAAAAAAAAAAHAQEBAAAAAAAAAAAAAAAAAAAAAxABAAAAAAAAAAAAAAAAAAAAABEBAAAAAAAAAAAAAAAAAAAAAP/AABEIABIAIAMBIgACEQADEQD/2gAMAwEAAhEDEQA/AI6AuiAAAAAA/9k=", "base64");
@@ -59,7 +65,9 @@ async function open(t, width = 1440, zh = false, count = 4, configure = () => {}
       recordingProfile: "raw", removedAt: null, connection: "connected", video: "available", recording: "disabled", ptz: "running", analytics: true, person: false, vehicle: false, lastError: null, updatedAt: stamp })),
     policy: { storagePoolId: "pool-1", directory: "NVR", retentionDays: 7, quotaBytes: 100 * 2 ** 30 },
     ptz: { enabled: true, driver: "simulated", state: "running", simulated: true, position: { pan: .2, tilt: -.1, moving: false }, presets: [], calibrationRequired: false, absoluteMove: true, relativeMove: true, continuousMove: true, lastError: null },
-    stopFails: false, previewFails: false, previewWaiting: false, previewInvalid: false, sessionFails: false, historyEmpty: false, moveGate: null
+    stopFails: false, previewFails: false, previewWaiting: false, previewInvalid: false, sessionFails: false, historyEmpty: false, moveGate: null,
+    segments: null, events: null, historyResponse: null, historyErrors: {}, overviewFails: false, overviewGate: null,
+    policyFails: false, policyGate: null, deviceFails: false, deviceGate: null, removeFails: false, discoverFails: false
   };
   configure(fixture);
   await page.routeWebSocket("**/api/nvr/devices/*/preview-socket", (socket) => {
@@ -84,8 +92,35 @@ async function open(t, width = 1440, zh = false, count = 4, configure = () => {}
       return route.fulfill({ json: fixture.ptz });
     }
     const deviceId = url.searchParams.get("deviceId");
-    if (path.endsWith("/segments")) return route.fulfill({ json: fixture.historyEmpty ? [] : [{ id: "segment-1", deviceId, profile: "raw", startedAt: stamp, endedAt: new Date(Date.parse(stamp) + 60_000).toISOString(), durationSeconds: 60, sizeBytes: 188, status: "ready" }] });
-    if (path.endsWith("/events")) return route.fulfill({ json: fixture.historyEmpty ? [] : [{ id: "event-1", deviceId, category: "person", state: true, occurredAt: stamp, receivedAt: stamp, gap: false }, { id: "gap-1", deviceId, category: "subscription_gap", state: null, occurredAt: stamp, receivedAt: stamp, gap: true }] });
+    if (path.endsWith("/segments") || path.endsWith("/events")) {
+      const kind = path.split("/").at(-1);
+      historyReads.push({ kind, deviceId, from: url.searchParams.get("from"), to: url.searchParams.get("to") });
+      if (fixture.historyResponse) return route.fulfill(await fixture.historyResponse(kind, url.searchParams));
+      if (fixture.historyErrors[kind]) return route.fulfill({ status: 503, json: { error: fixture.historyErrors[kind] } });
+      return route.fulfill({ json: fixture.historyEmpty ? [] : fixture[kind] ?? (kind === "segments" ? [{ id: "segment-1", deviceId, profile: "raw", startedAt: stamp, endedAt: new Date(Date.parse(stamp) + 60_000).toISOString(), durationSeconds: 60, sizeBytes: 188, status: "ready" }] : [{ id: "event-1", deviceId, category: "person", state: true, occurredAt: stamp, receivedAt: stamp, gap: false }, { id: "gap-1", deviceId, category: "subscription_gap", state: null, occurredAt: stamp, receivedAt: stamp, gap: true }]) });
+    }
+    if (path.endsWith("/policy")) {
+      const value = request.postDataJSON(); policyWrites.push(value);
+      if (fixture.policyGate) await fixture.policyGate;
+      if (fixture.policyFails) return route.fulfill({ status: 503, json: { error: "Policy save failed" } });
+      fixture.policy = value;
+      return route.fulfill({ json: value });
+    }
+    if (path.endsWith("/discover")) return route.fulfill(fixture.discoverFails ? { status: 503, json: { error: "Discovery failed" } } : { json: [{ id: "found", onvifUrl: "http://discovered-camera/onvif/device_service" }] });
+    if (path.endsWith("/devices") && request.method() === "POST") {
+      const value = request.postDataJSON(); deviceWrites.push(value);
+      if (fixture.deviceGate) await fixture.deviceGate;
+      if (fixture.deviceFails) return route.fulfill({ status: 503, json: { error: "Camera could not be added" } });
+      const device = { ...fixture.devices[0], ...value, id: `added-${deviceWrites.length}`, removedAt: null, connection: "connected", profiles: [{ token: "raw", name: "Raw" }], recordingEnabled: false, recordingProfile: "raw" };
+      fixture.devices.push(device);
+      return route.fulfill({ json: device });
+    }
+    if (path.includes("/devices/") && request.method() === "DELETE") {
+      deletions.push(path.split("/").at(-1));
+      if (fixture.removeFails) return route.fulfill({ status: 503, json: { error: "Camera could not be removed" } });
+      fixture.devices.find(device => path.endsWith(device.id)).removedAt = new Date().toISOString();
+      return route.fulfill({ status: 204 });
+    }
     if (path.endsWith("/sessions")) {
       const value = request.postDataJSON(); sessions.push(value); const id = `session-${sessions.length}`;
       if (fixture.sessionFails) return route.fulfill({ status: 503, json: { error: "Live session unavailable" } });
@@ -99,14 +134,15 @@ async function open(t, width = 1440, zh = false, count = 4, configure = () => {}
       const value = request.postDataJSON(); changes.push(value); const device = fixture.devices.find(d => path.endsWith(d.id)); Object.assign(device, value);
       return route.fulfill({ json: device });
     }
-    return route.fulfill({ json: { devices: fixture.devices, policy: fixture.policy, usedBytes: 1024, maxRecordings: 4, heartbeatAt: new Date().toISOString() } });
+    if (fixture.overviewGate) await fixture.overviewGate;
+    return route.fulfill(fixture.overviewFails ? { status: 503, json: { error: "Overview unavailable" } } : { json: { devices: fixture.devices, policy: fixture.policy, usedBytes: 1024, maxRecordings: 4, heartbeatAt: new Date().toISOString() } });
   });
   await page.goto(`${baseUrl}__nvr-test?${zh ? "zh" : "en"}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
   await expect(page.locator(".nvr-camera")).toHaveCount(count);
   if (count && fixture.devices.some(device => device.connection !== "disconnected") && !fixture.previewFails && !fixture.previewWaiting && !fixture.previewInvalid) {
     await expect.poll(() => page.locator(".nvr-preview img").evaluateAll((images) => images.length > 0 && images.every((image) => image.naturalWidth > 0))).toBe(true);
   }
-  return { page, commands, changes, sessions, removedSessions, previews, fixture };
+  return { page, commands, changes, sessions, removedSessions, previews, fixture, historyReads, policyWrites, deviceWrites, deletions };
 }
 
 async function openCamera(page, index = 0) {
@@ -122,7 +158,7 @@ async function closeCamera(page) {
 async function assertNoOverflow(page) {
   assert.equal(await page.evaluate(() => globalThis.document.documentElement.scrollWidth > globalThis.innerWidth), false);
   assert.deepEqual(await page.locator('.nvr-scroll button, .nvr-scroll input, [role="dialog"] button, [role="dialog"] input').evaluateAll(nodes => nodes.filter(node => {
-    const b = node.getBoundingClientRect(); return b.width > 0 && (b.left < -1 || b.right > globalThis.innerWidth + 1);
+    const b = node.getBoundingClientRect(); return !node.closest(".nvr-table-wrap") && b.width > 0 && (b.left < -1 || b.right > globalThis.innerWidth + 1);
   }).map(node => node.textContent || node.getAttribute("aria-label"))), []);
   assert.deepEqual(await page.locator(".nvr-media-state").evaluateAll(nodes => nodes.flatMap(node => {
     const frame = node.parentElement.getBoundingClientRect();
@@ -132,6 +168,311 @@ async function assertNoOverflow(page) {
     }).map(child => child.textContent || child.className);
   })), []);
 }
+
+function recordings(count, status = "ready") {
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  return Array.from({ length: count }, (_, index) => ({ id: `recording-${index}`, deviceId: "camera-0", profile: "raw", startedAt: new Date(start.getTime() + index * 8000).toISOString(), endedAt: new Date(start.getTime() + index * 8000 + 4000).toISOString(), durationSeconds: 4, sizeBytes: 188, status }));
+}
+
+async function chooseCamera(page, name) {
+  await page.getByRole("button", { name: "Camera", exact: true }).click();
+  await page.getByRole("option", { name, exact: true }).click();
+}
+
+test("history loads independently, never opens a session implicitly, and retries failures without false empty states", async t => {
+  const { page, fixture, sessions, historyReads } = await open(t);
+  fixture.historyErrors.events = "Event history unavailable";
+  await page.locator("#nvr-tab-events").click();
+  await expect(page.getByRole("alert")).toContainText("Event history unavailable");
+  await expect(page.getByText("No events in this time range", { exact: true })).toHaveCount(0);
+  assert.deepEqual(historyReads.map(value => value.kind), ["events"]);
+  fixture.historyErrors = {};
+  await page.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(page.locator(".nvr-events tbody tr")).toHaveCount(2);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await page.locator("#nvr-tab-playback").click();
+  await expect(page.locator(".nvr-recordings tbody tr")).toHaveCount(1);
+  assert.equal(sessions.length, 0);
+  fixture.overviewFails = true;
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
+  await expect(page.getByText("Overview unavailable", { exact: true })).toBeVisible();
+  await expect(page.locator(".nvr-recordings tbody tr")).toHaveCount(1);
+});
+
+test("first history load shows loading and stale camera or date responses cannot replace the current query", async t => {
+  const { page, fixture, historyReads } = await open(t);
+  let release, staleReturned = false;
+  const waiting = new Promise(resolve => { release = resolve; });
+  t.after(() => release());
+  fixture.historyResponse = async (_kind, query) => {
+    const old = query.get("deviceId") === "camera-0";
+    if (old) { await waiting; staleReturned = true; }
+    return { json: [{ ...recordings(1)[0], id: old ? "stale" : "fresh", deviceId: query.get("deviceId"), sizeBytes: old ? 9 * 2 ** 20 : 3 * 2 ** 20 }] };
+  };
+  await page.locator("#nvr-tab-playback").click();
+  await expect(page.locator(".panel-content-skeleton")).toBeVisible();
+  await expect(page.getByText("No recordings in this time range", { exact: true })).toHaveCount(0);
+  await chooseCamera(page, "Camera 2");
+  await expect(page.locator(".nvr-recordings tbody")).toContainText("3 MiB");
+  release();
+  await expect.poll(() => staleReturned).toBe(true);
+  await expect(page.locator(".nvr-recordings tbody")).not.toContainText("9 MiB");
+  const priorDate = await page.locator(".nvr-history-toolbar input").inputValue();
+  const previous = new Date(`${priorDate}T12:00:00`); previous.setDate(previous.getDate() - 1);
+  const date = `${previous.getFullYear()}-${String(previous.getMonth() + 1).padStart(2, "0")}-${String(previous.getDate()).padStart(2, "0")}`;
+  await page.locator(".nvr-history-toolbar input").fill(date);
+  await expect.poll(() => historyReads.at(-1)?.from).toBe(new Date(`${date}T00:00:00`).toISOString());
+});
+
+test("successful empty history stays visible while a background refresh is pending", async t => {
+  const { page, fixture, historyReads } = await open(t);
+  fixture.historyEmpty = true;
+  await page.locator("#nvr-tab-events").click();
+  await expect(page.getByText("No events in this time range", { exact: true })).toBeVisible();
+  let release;
+  const waiting = new Promise(resolve => { release = resolve; }); t.after(() => release());
+  fixture.historyResponse = async () => { await waiting; return { json: [] }; };
+  const reads = historyReads.length;
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
+  await expect.poll(() => historyReads.length).toBeGreaterThan(reads);
+  await expect(page.getByText("No events in this time range", { exact: true })).toBeVisible();
+  await expect(page.locator(".panel-content-skeleton")).toHaveCount(0);
+  release();
+});
+
+test("recordings paginate fifty rows and keep the same player through pagination, polling, resize and theme changes", async t => {
+  const { page, fixture, sessions, removedSessions, historyReads } = await open(t);
+  fixture.segments = recordings(101);
+  fixture.segments[0].endedAt = fixture.segments[1].startedAt;
+  await page.locator("#nvr-tab-playback").click();
+  await expect(page.locator(".nvr-recordings tbody tr")).toHaveCount(50);
+  await expect(page.locator(".nvr-table-footer")).toContainText("101 loaded");
+  await page.locator(".nvr-recordings tbody button").nth(1).click();
+  await expect.poll(() => sessions.length).toBe(1);
+  await expect(page.locator('.nvr-recordings tbody tr[data-selected="true"]')).toHaveCount(1);
+  await page.locator(".nvr-video video").evaluate(node => { node.dataset.continuity = "same-player"; });
+  await page.getByRole("button", { name: "Next page", exact: true }).click();
+  await expect(page.locator(".nvr-recordings tbody tr")).toHaveCount(50);
+  await expect(page.locator(".nvr-pagination")).toContainText("2 / 3");
+  await page.getByRole("button", { name: "Next page", exact: true }).click();
+  await expect(page.locator(".nvr-recordings tbody tr")).toHaveCount(1);
+  const reads = historyReads.length;
+  await expect.poll(() => historyReads.length, { timeout: 7000 }).toBeGreaterThan(reads);
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.evaluate(() => {
+    globalThis.localStorage.setItem("cyberos:appearance:v1", JSON.stringify({ scheme: "amber", mode: "light" }));
+    globalThis.dispatchEvent(new globalThis.StorageEvent("storage", { key: "cyberos:appearance:v1" }));
+  });
+  await expect(page.locator(".nvr-video video")).toHaveAttribute("data-continuity", "same-player");
+  assert.equal(sessions.length, 1); assert.deepEqual(removedSessions, []);
+  await page.locator("#nvr-tab-events").click();
+  await expect.poll(() => removedSessions.length).toBe(1);
+});
+
+test("history caps describe loaded results and event pages remain newest first", async t => {
+  const { page, fixture } = await open(t);
+  fixture.segments = recordings(10000, "missing");
+  await page.locator("#nvr-tab-playback").click();
+  await expect(page.locator(".nvr-recordings tbody tr")).toHaveCount(50);
+  await expect(page.getByText(/response limit of 10000/u)).toBeVisible();
+  fixture.events = recordings(1000).map((segment, index) => ({ id: `event-${index}`, deviceId: "camera-0", category: "person", state: true, occurredAt: segment.startedAt, receivedAt: segment.startedAt, gap: false }));
+  await page.locator("#nvr-tab-events").click();
+  await expect(page.locator(".nvr-events tbody tr")).toHaveCount(50);
+  await expect(page.getByText(/response limit of 1000 records/u)).toBeVisible();
+  await expect(page.locator(".nvr-events tbody time").first()).toHaveAttribute("datetime", fixture.events.at(-1).occurredAt);
+  await page.getByRole("button", { name: "Next page", exact: true }).click();
+  await expect(page.locator(".nvr-pagination")).toContainText("2 / 20");
+});
+
+test("offline and removed cameras retain history and event playback stays within its local day", async t => {
+  const { page, fixture, sessions } = await open(t);
+  Object.assign(fixture.devices[1], { connection: "disconnected", video: "unavailable", removedAt: new Date().toISOString() });
+  const occurred = new Date(); occurred.setHours(0, 0, 5, 0);
+  fixture.events = [{ id: "old-camera-event", deviceId: "camera-1", category: "person", state: true, occurredAt: occurred.toISOString(), receivedAt: occurred.toISOString(), gap: false }];
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
+  await expect(page.locator(".nvr-camera")).toHaveCount(3);
+  await page.locator("#nvr-tab-events").click();
+  await chooseCamera(page, "Camera 2 (removed)");
+  await page.locator(".nvr-events tbody button").click();
+  await expect.poll(() => sessions.length).toBe(1);
+  const midnight = new Date(occurred); midnight.setHours(0, 0, 0, 0);
+  assert.equal(sessions[0].deviceId, "camera-1"); assert.equal(sessions[0].from, midnight.toISOString());
+  assert.equal(sessions[0].kind, "playback");
+});
+
+test("a cross-midnight recording keeps both timeline and row playback inside the selected day", async t => {
+  const { page, fixture, sessions, historyReads } = await open(t);
+  const midnight = Date.parse(recordings(1)[0].startedAt);
+  fixture.segments = [{ ...recordings(1)[0], startedAt: new Date(midnight - 60000).toISOString(), endedAt: new Date(midnight + 60000).toISOString() }];
+  await page.locator("#nvr-tab-playback").click();
+  await expect(page.locator(".nvr-recordings tbody tr")).toHaveCount(1);
+  const date = await page.locator(".nvr-history-toolbar input").inputValue();
+  await page.locator(".nvr-timeline-segment").click();
+  await expect.poll(() => sessions.length).toBe(1);
+  assert.equal(sessions[0].from, historyReads[0].from);
+  await expect(page.locator(".nvr-history-toolbar input")).toHaveValue(date);
+  await page.locator(".nvr-recordings tbody button").click();
+  await expect(page.locator(".nvr-history-toolbar input")).toHaveValue(date);
+  assert.equal(sessions.length, 1);
+});
+
+test("add camera modal retains failed drafts, fills only discovery address and clears credentials after close or success", async t => {
+  const { page, fixture, deviceWrites, changes } = await open(t, 390, false, 1);
+  await page.locator("#nvr-tab-devices").click();
+  await expect(page.locator(".nvr-devices form")).toHaveCount(0);
+  const add = page.getByRole("button", { name: "Add camera", exact: true });
+  await add.click();
+  let dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Name", { exact: true }).fill("New camera");
+  await dialog.getByLabel("Username", { exact: true }).fill("test-user");
+  await dialog.getByLabel("Password", { exact: true }).fill("transient-test-value");
+  await dialog.getByRole("button", { name: "Discover on LAN", exact: true }).click();
+  await dialog.getByRole("button", { name: "http://discovered-camera/onvif/device_service", exact: true }).click();
+  await expect(dialog.getByLabel("Name", { exact: true })).toHaveValue("New camera");
+  await expect(dialog.getByLabel("Password", { exact: true })).toHaveValue("transient-test-value");
+  assert.deepEqual(deviceWrites, []);
+  fixture.deviceFails = true;
+  await dialog.getByRole("button", { name: "Connect", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toContainText("Camera could not be added");
+  await expect(dialog.getByLabel("Password", { exact: true })).toHaveValue("transient-test-value");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0); await expect(add).toBeFocused();
+  await add.click(); dialog = page.getByRole("dialog");
+  await expect(dialog.getByLabel("Password", { exact: true })).toHaveValue("");
+  await expect(dialog.getByLabel("Name", { exact: true })).toHaveValue("");
+  await dialog.getByLabel("Name", { exact: true }).fill("Final camera");
+  await dialog.getByLabel("ONVIF address", { exact: true }).fill("http://camera/onvif/device_service");
+  await dialog.getByLabel("Username", { exact: true }).fill("test-user");
+  await dialog.getByLabel("Password", { exact: true }).fill("transient-test-value");
+  fixture.deviceFails = false;
+  let release; fixture.deviceGate = new Promise(resolve => { release = resolve; }); t.after(() => release());
+  await dialog.getByRole("button", { name: "Connect", exact: true }).click();
+  await expect(dialog.getByRole("button", { name: "Close", exact: true })).toBeDisabled();
+  await page.keyboard.press("Escape"); await expect(dialog).toBeVisible();
+  await dialog.locator("form").evaluate(form => { form.dispatchEvent(new globalThis.Event("submit", { bubbles: true, cancelable: true })); });
+  assert.equal(deviceWrites.length, 2);
+  release();
+  await expect(dialog).toHaveCount(0); await expect(page.locator(".nvr-device-table tbody tr")).toHaveCount(2);
+  assert.deepEqual(changes, []);
+  await add.click(); await expect(page.getByRole("dialog").getByLabel("Password", { exact: true })).toHaveValue("");
+});
+
+test("device table enforces the four-camera limit, keeps inline recording controls and confirms removal without deleting recordings", async t => {
+  const { page, fixture, changes, deletions } = await open(t);
+  await page.locator("#nvr-tab-devices").click();
+  await expect(page.locator(".nvr-management-storage")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Recording settings", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add camera", exact: true })).toBeDisabled();
+  const row = page.locator('.nvr-device-table tr[data-device-id="camera-0"]');
+  await row.getByRole("button", { name: "Camera 1 · Recording stream", exact: true }).click();
+  await page.getByRole("option", { name: "AI overlay · MJPEG", exact: true }).click();
+  await expect.poll(() => changes.length).toBe(1);
+  await row.getByRole("button", { name: "Start recording", exact: true }).click();
+  await expect(row.getByRole("button", { name: "Stop recording", exact: true })).toBeVisible();
+  await row.getByRole("button", { name: "Remove camera · Camera 1", exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText("Recordings will be retained.");
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  assert.deepEqual(deletions, []);
+  await row.getByRole("button", { name: "Remove camera · Camera 1", exact: true }).click();
+  fixture.removeFails = true;
+  await page.getByRole("button", { name: "Confirm removal", exact: true }).click();
+  await expect(page.getByRole("dialog").getByRole("alert")).toContainText("Camera could not be removed");
+  fixture.removeFails = false;
+  await page.getByRole("button", { name: "Confirm removal", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.locator(".nvr-device-table tbody tr")).toHaveCount(3);
+  await expect(page.getByRole("button", { name: "Add camera", exact: true })).toBeEnabled();
+  assert.deepEqual(changes, [{ recordingProfile: "annotated" }, { recordingEnabled: true }]);
+});
+
+test("recording settings load on demand, preserve failed drafts and language changes, and save only explicit policy edits", async t => {
+  const { page, fixture, policyWrites, changes } = await open(t, 390, false, 1);
+  await page.locator("#nvr-tab-devices").click();
+  await page.goto(`${baseUrl}__nvr-test?en&settings`);
+  await expect(page.locator(".settings-form")).toBeVisible();
+  await page.getByLabel("Directory", { exact: true }).fill("Recorded/Draft");
+  await page.locator('.settings-form input[type="number"]').first().fill("30");
+  fixture.policyFails = true;
+  await page.getByRole("button", { name: "Save Changes", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("Policy save failed");
+  await expect(page.getByLabel("Directory", { exact: true })).toHaveValue("Recorded/Draft");
+  await page.evaluate(async () => { await (await import("/src/i18n/index.ts")).i18n.changeLanguage("zh-CN"); });
+  await expect(page.getByLabel("目录", { exact: true })).toHaveValue("Recorded/Draft");
+  fixture.policyFails = false;
+  let release; fixture.policyGate = new Promise(resolve => { release = resolve; }); t.after(() => release());
+  await page.locator('.settings-actions button[type="submit"]').click();
+  await expect(page.getByLabel("目录", { exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "存储池", exact: true })).toBeDisabled();
+  await page.locator(".settings-form").evaluate(form => { form.dispatchEvent(new globalThis.Event("submit", { bubbles: true, cancelable: true })); });
+  assert.equal(policyWrites.length, 2);
+  release();
+  await expect(page.getByRole("status")).toContainText("录像设置已保存");
+  assert.deepEqual(policyWrites.at(-1), { ...fixture.policy, directory: "Recorded/Draft", retentionDays: 30 });
+  assert.deepEqual(changes, []);
+});
+
+test("unavailable recording pools remain selected until explicitly changed and settings load errors can retry", async t => {
+  const { page, fixture, policyWrites } = await open(t, 320, false, 1);
+  fixture.policy.storagePoolId = "missing-pool";
+  fixture.overviewFails = true;
+  await page.locator("#nvr-tab-devices").click();
+  await page.goto(`${baseUrl}__nvr-test?en&settings`);
+  await expect(page.getByRole("alert")).toContainText("Overview unavailable");
+  await expect(page.locator('.settings-actions button[type="submit"]')).toHaveCount(0);
+  fixture.overviewFails = false;
+  await page.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(page.locator(".settings-form")).toContainText("missing-pool");
+  await expect(page.locator('.settings-actions button[type="submit"]')).toBeDisabled();
+  assert.deepEqual(policyWrites, []);
+  await page.getByRole("button", { name: "Storage pool", exact: true }).click();
+  await page.getByRole("option", { name: "Pool 1", exact: true }).click();
+  await expect(page.locator('.settings-actions button[type="submit"]')).toBeEnabled();
+});
+
+for (const zh of [false, true]) for (const width of [1440, 820, 560, 390, 320]) {
+  test(`add camera form fits ${width}px in ${zh ? "Chinese" : "English"}`, async t => {
+    const { page } = await open(t, width, zh, 1);
+    await page.locator("#nvr-tab-devices").click();
+    await page.getByRole("button", { name: zh ? "添加摄像机" : "Add camera", exact: true }).click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await assertNoOverflow(page);
+    const geometry = await page.getByRole("dialog").evaluate(dialog => {
+      const fields = [...dialog.querySelectorAll("fieldset > .ui-field")].map(field => field.getBoundingClientRect());
+      return { width: dialog.getBoundingClientRect().width, columns: Math.abs(fields[0].top - fields[1].top) < 1 ? 2 : 1 };
+    });
+    assert.equal(geometry.columns, geometry.width <= 560 ? 1 : 2);
+    for (let step = 0; step < 12; step += 1) {
+      await page.keyboard.press("Tab");
+      assert.equal(await page.evaluate(() => globalThis.document.activeElement.closest('[role="dialog"]') !== null), true);
+    }
+    await page.screenshot({ path: `.cyberos/nvr-browser/${zh ? "zh" : "en"}-${width}-add.png` });
+  });
+}
+
+test("management tables and add form retain semantic surfaces, square controls and touch targets in all themes", async t => {
+  const { page, fixture } = await open(t, 390, true, 1);
+  fixture.devices[0].name = "超长摄像机名称 / Long surveillance camera name ".repeat(8);
+  await page.getByRole("button", { name: "刷新", exact: true }).click();
+  for (const scheme of ["neon", "mono", "graphite", "synthwave", "bloodline", "terminal", "amber"]) for (const mode of ["dark", "light"]) {
+    await page.evaluate(preference => {
+      globalThis.localStorage.setItem("cyberos:appearance:v1", JSON.stringify(preference));
+      globalThis.dispatchEvent(new globalThis.StorageEvent("storage", { key: "cyberos:appearance:v1" }));
+    }, { scheme, mode });
+    await expect(page.locator("html")).toHaveAttribute("data-cyber-scheme", scheme);
+    await expect(page.locator("html")).toHaveAttribute("data-cyber-mode", mode);
+    for (const tab of ["playback", "events", "devices"]) {
+      await page.locator(`#nvr-tab-${tab}`).click();
+      await expect(page.locator(".nvr-table tbody tr").first()).toBeVisible();
+      await assertNoOverflow(page);
+      assert.deepEqual(await page.locator(".nvr-table button").evaluateAll(buttons => buttons.filter(button => button.getBoundingClientRect().height < 44 || globalThis.getComputedStyle(button).borderRadius !== "0px").map(button => button.className)), []);
+      await page.screenshot({ path: `.cyberos/nvr-browser/${scheme}-${mode}-${tab}.png` });
+    }
+    await page.getByRole("button", { name: "添加摄像机", exact: true }).click();
+    await assertNoOverflow(page);
+    await page.screenshot({ path: `.cyberos/nvr-browser/${scheme}-${mode}-add.png` });
+    await page.keyboard.press("Escape");
+  }
+});
 
 test("four preview sockets close on tab exit and reconnect on return", async t => {
   const { page, previews } = await open(t);
@@ -152,9 +493,9 @@ for (const zh of [false, true]) for (const width of [1440, 820, 560, 390, 320]) 
     for (const tab of ["live", "playback", "events", "devices"]) {
       await page.locator(`#nvr-tab-${tab}`).click();
       await expect(page.locator(`#nvr-${tab}`)).toBeVisible();
-      if (tab === "devices") await expect(page.locator(".nvr-device-row.nvr-card")).toHaveCount(4);
-      if (tab === "events") await expect(page.locator(".nvr-events > .nvr-card")).toHaveCount(2);
-      if (tab === "playback") await expect(page.locator(".nvr-recordings > .nvr-card")).toHaveCount(1);
+      if (tab === "devices") await expect(page.locator(".nvr-device-table tbody tr")).toHaveCount(4);
+      if (tab === "events") await expect(page.locator(".nvr-events tbody tr")).toHaveCount(2);
+      if (tab === "playback") await expect(page.locator(".nvr-recordings tbody tr")).toHaveCount(1);
       await assertNoOverflow(page);
       await page.screenshot({ path: `.cyberos/nvr-browser/${zh ? "zh" : "en"}-${width}-${tab}.png` });
     }
@@ -297,7 +638,7 @@ test("unknown and removed devices do not inflate overview availability", async t
   await expect(page.locator(".nvr-camera").first()).toContainText("Unknown");
   await page.locator("#nvr-tab-events").click();
   await page.getByRole("button", { name: "Camera", exact: true }).click();
-  await page.getByRole("option", { name: "Camera 3", exact: true }).click();
+  await page.getByRole("option", { name: "Camera 3 (removed)", exact: true }).click();
   await expect(page.locator(".nvr-events")).toContainText("Camera 3");
 });
 
@@ -456,12 +797,12 @@ test("stop failure survives dialog close and overview refresh", async t => {
   await expect(page.getByRole("alert")).toContainText("Stop could not be confirmed");
 });
 
-test("event cards open playback for their camera and a coverage gap has no playback action", async t => {
+test("event rows open inline playback for their camera and a coverage gap has no playback action", async t => {
   const { page, sessions } = await open(t, 390, true);
   await page.locator("#nvr-tab-events").click();
-  await expect(page.locator(".nvr-events > li")).toHaveCount(2);
-  await expect(page.locator('.nvr-events > li[data-gap="true"] button')).toHaveCount(0);
-  await page.locator('.nvr-events > li[data-gap="false"] button').click();
+  await expect(page.locator(".nvr-events tbody tr")).toHaveCount(2);
+  await expect(page.locator('.nvr-events tr[data-gap="true"] button')).toHaveCount(0);
+  await page.locator('.nvr-events tr[data-gap="false"] button').click();
   await expect(page.locator("#nvr-playback")).toBeVisible();
   await expect.poll(() => sessions.length).toBe(1);
   assert.equal(sessions[0].deviceId, "camera-0"); assert.equal(sessions[0].kind, "playback");

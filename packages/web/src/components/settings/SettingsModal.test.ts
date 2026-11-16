@@ -30,7 +30,7 @@ describe("SettingsModal", () => {
       { title: "General", count: 4 },
       { title: "Network & Connections", count: 4 },
       { title: "Files & Data", count: 4 },
-      { title: "Media & Downloads", count: 3 },
+      { title: "Media & Downloads", count: 4 },
       { title: "AI & Voice", count: 5 },
       { title: "System & Maintenance", count: 5 }
     ]);

@@ -26,6 +26,7 @@ import { SettingsAudioPage } from "./SettingsAudioPage.js";
 import { SettingsDockerPage } from "./SettingsDockerPage.js";
 import { SettingsBluetoothPage } from "./SettingsBluetoothPage.js";
 import { SettingsMediaPage } from "./SettingsMediaPage.js";
+import { SettingsNvrPage } from "./SettingsNvrPage.js";
 import { SettingsSystemProfilePage } from "./SettingsSystemProfilePage.js";
 import { SettingsMonitoringPage } from "./SettingsMonitoringPage.js";
 import { SettingsBackupPage } from "./SettingsBackupPage.js";
@@ -362,6 +363,8 @@ export function SettingsContent({
               onOpenProxy={() => onSectionChange("proxy")}
             />
           ) : null}
+
+          {activeSection === "nvr" ? <SettingsNvrPage storagePools={storagePools} /> : null}
 
   </>;
 }

@@ -36,6 +36,7 @@ export type SettingsSectionId =
   | "alerts"
   | "photos"
   | "media"
+  | "nvr"
   | "downloads"
   | "appearance";
 
@@ -129,6 +130,10 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     group: "media"
   },
   {
+    id: "nvr",
+    group: "media"
+  },
+  {
     id: "downloads",
     group: "media"
   },
@@ -198,6 +203,7 @@ const SECTION_TITLE_KEYS = {
   alerts: "settings.sections.alerts.title",
   photos: "settings.sections.photos.title",
   media: "settings.sections.media.title",
+  nvr: "settings.sections.nvr.title",
   downloads: "settings.sections.downloads.title",
   appearance: "settings.sections.appearance.title"
 } as const satisfies Record<SettingsSectionId, string>;
@@ -226,6 +232,7 @@ const SECTION_DESCRIPTION_KEYS = {
   alerts: "settings.sections.alerts.description",
   photos: "settings.sections.photos.description",
   media: "settings.sections.media.description",
+  nvr: "settings.sections.nvr.description",
   downloads: "settings.sections.downloads.description",
   appearance: "settings.sections.appearance.description"
 } as const satisfies Record<SettingsSectionId, string>;

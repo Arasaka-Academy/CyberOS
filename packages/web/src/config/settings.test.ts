@@ -15,18 +15,18 @@ beforeAll(async () => {
 });
 
 describe("settings helpers", () => {
-  it("keeps all 25 sections once in the agreed task-oriented order", () => {
+  it("keeps all 26 sections once in the agreed task-oriented order", () => {
     const groups = [...new Set(SETTINGS_SECTIONS.map((section) => section.group))];
     expect(groups.map((group) => ({ group, sections: SETTINGS_SECTIONS.filter((section) => section.group === group).map((section) => section.id) }))).toEqual([
       { group: "general", sections: ["overview", "appearance", "system-profile", "version"] },
       { group: "network", sections: ["wireless", "bluetooth", "proxy", "tailscale"] },
       { group: "storage", sections: ["files", "indexer", "shares", "backup"] },
-      { group: "media", sections: ["photos", "media", "downloads"] },
+      { group: "media", sections: ["photos", "media", "nvr", "downloads"] },
       { group: "ai", sections: ["model-providers", "pi-agent", "mcp", "skills", "audio"] },
       { group: "system", sections: ["docker", "virtual-machines", "monitoring", "alerts", "operations"] }
     ]);
-    expect(SETTINGS_SECTIONS).toHaveLength(25);
-    expect(new Set(SETTINGS_SECTIONS.map((section) => section.id)).size).toBe(25);
+    expect(SETTINGS_SECTIONS).toHaveLength(26);
+    expect(new Set(SETTINGS_SECTIONS.map((section) => section.id)).size).toBe(26);
   });
 
   it.each([

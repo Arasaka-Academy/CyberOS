@@ -2611,6 +2611,10 @@ export const en = {
         title: "Media",
         description: "Music, movie and series sources, scanning, matching, and TV settings."
       },
+      nvr: {
+        title: "NVR",
+        description: "Recording storage location, retention, and quota."
+      },
       appearance: {
         title: "Appearance",
         description: "Color scheme, display mode, and language for this browser."
@@ -6174,6 +6178,10 @@ export const zhCN = {
       media: {
         title: "媒体库",
         description: "管理音乐、电影与剧集目录、扫描、匹配和电视设置。"
+      },
+      nvr: {
+        title: "监控（NVR）",
+        description: "管理录像存储位置、保留天数和配额。"
       },
       appearance: {
         title: "外观",

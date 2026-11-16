@@ -10,7 +10,7 @@ import { openCyberOsDb } from "@cyberos/db";
 import { loadCyberOsRuntime } from "@cyberos/shared";
 import { buildServer } from "../packages/api/src/server.ts";
 import { SETTINGS_SECTIONS } from "../packages/web/src/config/settings.ts";
-import { populatedSettings } from "./settings-browser-fixtures.mjs";
+import { nvrSettingsFixture, populatedSettings } from "./settings-browser-fixtures.mjs";
 import { settingsTestWorkbook } from "./settings-test-workbook.mjs";
 
 const { chromium, expect } = createRequire(new URL("../docs/package.json", import.meta.url))("@playwright/test");
@@ -26,6 +26,7 @@ before(async () => {
   await mkdir(config.paths.stateDir, { recursive: true });
   database = openCyberOsDb(config.paths.databasePath);
   api = await buildServer({ config, db: database });
+  responses.set("/api/nvr", { json: nvrSettingsFixture });
   await api.inject({ method: "POST", url: "/api/sessions", payload: { cwd: "." } });
   vite = await createServer({
     configFile: fileURLToPath(new URL("../packages/web/vite.config.ts", import.meta.url)),
@@ -104,6 +105,75 @@ async function selectSection(view, id) {
   await page.waitForTimeout(100);
 }
 
+test("NVR settings live in Media, load only on entry and keep failed policy drafts without changing recording", async context => {
+  for (const width of [1440, 390]) await context.test(`${width}px`, async child => {
+    const overrides = await populatedSettings(api);
+    let reads = 0, fail = true;
+    const writes = [];
+    let policy = { ...nvrSettingsFixture.policy };
+    overrides.set("/api/nvr", () => { reads += 1; return { json: { ...nvrSettingsFixture, policy } }; });
+    overrides.set("PUT /api/nvr/policy", request => {
+      writes.push(request.postDataJSON());
+      if (fail) return { status: 503, json: { error: "Recording policy save failed" } };
+      policy = request.postDataJSON();
+      return { json: policy };
+    });
+    const view = await openSettings(child, { width, height: 900 }, "en", overrides);
+    assert.equal(reads, 0);
+    assert.deepEqual(view.sections.filter(section => ["photos", "media", "nvr", "downloads"].includes(section.id)).map(section => section.id), ["photos", "media", "nvr", "downloads"]);
+    await selectSection(view, "nvr");
+    assert.ok(reads >= 1 && reads <= 2);
+    const loadedReads = reads;
+    await view.page.getByLabel("Directory", { exact: true }).fill("Policy draft");
+    await view.page.locator('.settings-actions button[type="submit"]').click();
+    await expect(view.page.getByRole("alert")).toContainText("Recording policy save failed");
+    await expect(view.page.getByLabel("Directory", { exact: true })).toHaveValue("Policy draft");
+    assert.equal(reads, loadedReads);
+    await assertContained(view.page);
+    fail = false;
+    await view.page.locator('.settings-actions button[type="submit"]').click();
+    await expect(view.page.locator('.settings-actions [role="status"]')).toContainText("Recording settings saved");
+    assert.equal(writes.length, 2);
+    assert.equal(policy.directory, "Policy draft");
+    assert.deepEqual(view.mutations, [{ method: "PUT", path: "/api/nvr/policy" }, { method: "PUT", path: "/api/nvr/policy" }]);
+    await view.page.screenshot({ path: path.join(directory, `nvr-policy-${width}.png`) });
+    await view.page.goto(`${baseUrl}?nvr-settings-entry=1#/app/nvr`);
+    await view.page.locator("#nvr-tab-devices").click();
+    await expect(view.page.locator(".nvr-management-storage")).toHaveCount(0);
+    await expect(view.page.getByRole("button", { name: "Recording settings", exact: true })).toHaveCount(0);
+    if (width <= 1040) await view.page.goto(`${baseUrl}?nvr-settings-entry=1#/app/settings`);
+    else await view.page.getByRole("button", { name: "System settings", exact: true }).click();
+    await selectSection(view, "nvr");
+    await expect(view.page.locator('.settings-nav [aria-current="page"]')).toContainText("NVR");
+    await expect(view.page.getByLabel("Directory", { exact: true })).toHaveValue("Policy draft");
+    assert.equal(writes.length, 2);
+  });
+});
+
+for (const width of [1440, 820, 560, 390, 320]) for (const language of ["en", "zh-CN"]) {
+  test(`NVR settings keep each recording policy field in a full-width row at ${width}px in ${language}`, async context => {
+    const view = await openSettings(context, { width, height: 900 }, language, await populatedSettings(api));
+    await selectSection(view, "nvr");
+    await assertContained(view.page);
+    const fields = await view.page.locator(".settings-field-grid > .ui-field").evaluateAll(elements => elements.map(element => {
+      const field = element.getBoundingClientRect();
+      const control = element.querySelector("input, .custom-select-trigger").getBoundingClientRect();
+      return { left: field.left, width: field.width, top: field.top, bottom: field.bottom, controlLeft: control.left, controlWidth: control.width };
+    }));
+    assert.equal(fields.length, 4);
+    for (const [index, field] of fields.entries()) {
+      assert.ok(Math.abs(field.left - fields[0].left) <= 1, "fields share a left edge");
+      assert.ok(Math.abs(field.width - fields[0].width) <= 1, "fields share a width");
+      assert.ok(Math.abs(field.controlLeft - field.left) <= 1, "controls align with their labels");
+      assert.ok(Math.abs(field.controlWidth - field.width) <= 1, "controls fill their row");
+      if (index) assert.ok(field.top >= fields[index - 1].bottom + 15, "each field occupies a separate row");
+    }
+    assert.deepEqual(view.mutations, []);
+    assert.deepEqual(view.errors, []);
+    await view.page.screenshot({ path: path.join(directory, `nvr-${width}-${language}.png`) });
+  });
+}
+
 async function assertContained(page, selector = ".settings-content") {
   const escaped = await page.locator(selector).evaluate(root => {
     const bounds = root.getBoundingClientRect();
@@ -165,7 +235,7 @@ test("settings navigation groups keep their order, search and selection on deskt
           : ["常规", "网络与连接", "文件与数据", "媒体与下载", "AI 与语音", "系统与维护"];
         await expect(navigation.locator("h3")).toHaveText(labels);
         await expect(navigation.locator("button strong")).toHaveText(view.sections.map(section => section.title));
-        assert.deepEqual(await navigation.locator("section").evaluateAll(groups => groups.map(group => group.querySelectorAll("button").length)), [4, 4, 4, 3, 5, 5]);
+        assert.deepEqual(await navigation.locator("section").evaluateAll(groups => groups.map(group => group.querySelectorAll("button").length)), [4, 4, 4, 4, 5, 5]);
         const clippedLabels = await navigation.locator("h3, button strong").evaluateAll(elements => elements.filter(element => element.scrollWidth > element.clientWidth + 1).map(element => element.textContent));
         assert.deepEqual(clippedLabels, []);
         await expect(navigation).toHaveCSS("scroll-padding-bottom", "6px");
