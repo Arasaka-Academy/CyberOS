@@ -36,7 +36,7 @@ See the [installation guide](docs/src/content/docs/operations/deployment.md) for
 
 ## Develop
 
-Requires Node.js 22.19+ and the pinned Rust 1.95 toolchain.
+Development and full builds require Node.js 22.23.4+ for the patched Astro documentation toolchain and the pinned Rust 1.95 toolchain. The installed application runtime still supports Node.js 22.19+.
 
 ```sh
 npm ci

@@ -17,3 +17,16 @@ describe("Node.js runtime minimum", () => {
     expect(result.stderr).toContain("Node.js 22.19.0 or newer is required");
   });
 });
+
+describe("Node.js documentation build minimum", () => {
+  it.each(["22.23.4", "v22.23.4", "22.24.0", "24.0.0"])("accepts build runtime %s", (version) => {
+    const result = spawnSync(process.execPath, [script, "--build", version], { encoding: "utf8" });
+    expect(result.status, result.stderr).toBe(0);
+  });
+
+  it.each(["22.19.0", "22.22.0", "22.23.3", "22.23.4-rc.1"])("rejects unsupported build runtime %s", (version) => {
+    const result = spawnSync(process.execPath, [script, "--build", version], { encoding: "utf8" });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Node.js 22.23.4 or newer is required");
+  });
+});

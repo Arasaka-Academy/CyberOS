@@ -84,7 +84,7 @@ CYBEROS_NPM_REGISTRY=https://registry.npmmirror.com \
   ./packaging/scripts/build-deb.sh
 ```
 
-若系统 Node.js 版本不满足要求，可让安装脚本下载并校验 Node.js 22.23.2：
+若源码构建使用的 Node.js 版本不满足 22.23.4+ 要求，可让安装脚本下载并校验 Node.js 22.23.4：
 
 ```bash
 sudo CYBEROS_ENABLE_NGINX=1 \
