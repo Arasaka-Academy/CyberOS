@@ -97,5 +97,14 @@
       5,
       6
     ]
+  },
+  {
+    "alert": 121,
+    "ghsa": "GHSA-3g3m-2fjr-6pw4",
+    "package": "glob",
+    "manifest": "package-lock.json",
+    "severity": "medium",
+    "summary": "Glob: AbortSignal cancellation bypass allows post-timeout filesystem traversal",
+    "minimumVersion": "14.0.2"
   }
 ]
