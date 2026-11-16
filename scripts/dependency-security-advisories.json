@@ -69,7 +69,7 @@
     "manifest": "package-lock.json",
     "severity": "medium",
     "summary": "@hono/node-server: Backslash in the request path is parsed as a path separator, bypassing path-based access control at a reverse proxy",
-    "minimumVersion": "1.19.18"
+    "minimumVersion": "2.1.6"
   },
   {
     "alert": 132,
@@ -339,5 +339,13 @@
     "unaffectedMajors": [
       0
     ]
+  },
+  {
+    "alert": "GHSA-qv5m-9pm6-hqp3",
+    "ghsa": "GHSA-qv5m-9pm6-hqp3",
+    "package": "@hono/node-server",
+    "manifest": "package-lock.json",
+    "summary": "Unhandled socket ECONNRESET during an asynchronous WebSocket upgrade crashes the process",
+    "minimumVersion": "2.1.6"
   }
 ]
