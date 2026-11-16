@@ -1,0 +1,25 @@
+.text-type {
+  position: relative;
+  min-width: 0;
+}
+
+.text-type-cursor {
+  position: absolute;
+  width: 2px;
+  background: currentColor;
+  pointer-events: none;
+  user-select: none;
+}
+
+.text-type-cursor[data-waiting="true"] {
+  animation: chat-cursor-wait 1.2s ease-in-out infinite;
+}
+
+@keyframes chat-cursor-wait {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .text-type-cursor { display: none; animation: none; }
+}

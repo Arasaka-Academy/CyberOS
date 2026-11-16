@@ -290,26 +290,33 @@ export function registerSessionRoutes(server: FastifyInstance, { db, config }: A
     raw.write(": connected\n\n");
 
     let lastId = getInitialEventId(request.headers["last-event-id"], request.query.after);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let closed = false;
     const flush = () => {
-      const events = listEvents(db, {
-        sessionId: session.id,
-        afterId: lastId,
-        limit: 100
-      });
-
-      for (const event of events) {
-        lastId = event.id;
-        raw.write(`id: ${event.id}\n`);
-        raw.write(`event: ${event.type}\n`);
-        raw.write(`data: ${JSON.stringify(event)}\n\n`);
+      if (closed) return;
+      try {
+        const events = listEvents(db, { sessionId: session.id, afterId: lastId, limit: 100 });
+        for (const event of events) {
+          lastId = event.id;
+          // A complete SSE frame is accepted even when write() signals backpressure.
+          if (!raw.write(`id: ${event.id}\nevent: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`)) {
+            raw.once("drain", flush);
+            return;
+          }
+        }
+        // Yield between full batches without imposing another polling delay.
+        timer = setTimeout(flush, events.length === 100 ? 0 : 50);
+      } catch (error) {
+        request.log.error({ err: error }, "Session event stream failed");
+        raw.destroy();
       }
     };
-
-    flush();
-    const timer = setInterval(flush, 500);
-    request.raw.on("close", () => {
-      clearInterval(timer);
+    raw.on("close", () => {
+      closed = true;
+      clearTimeout(timer);
+      raw.removeListener("drain", flush);
     });
+    flush();
   });
 }
 

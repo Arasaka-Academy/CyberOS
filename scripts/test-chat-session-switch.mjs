@@ -19,6 +19,7 @@ let browser;
 let baseUrl;
 
 before(async () => {
+  await mkdir(new URL("../.cyberos/chat-typewriter/video", import.meta.url), { recursive: true });
   server = await createServer({
     configFile: fileURLToPath(new URL("../packages/web/vite.config.ts", import.meta.url)),
     root: fileURLToPath(new URL("../packages/web", import.meta.url)),
@@ -41,6 +42,9 @@ before(async () => {
   });
   await server.listen();
   baseUrl = server.resolvedUrls.local[0];
+  // Compile the initial module graph before measuring browser interactions.
+  await server.transformRequest("/src/main.tsx");
+  await server.waitForRequestsIdle();
   browser = await chromium.launch();
 });
 
@@ -61,8 +65,11 @@ function snapshot(id) {
   };
 }
 
-async function openChat(t, { width = 1440, language = "en-US", reducedMotion = "no-preference", holdInitial = false, failure = null, initialApprovals = [] } = {}) {
-  const context = await browser.newContext({ viewport: { width, height: 900 }, locale: language, reducedMotion });
+async function openChat(t, { width = 1440, language = "en-US", reducedMotion = "no-preference", holdInitial = false, failure = null, initialApprovals = [], snapshotOverrides = {}, recordVideo = false } = {}) {
+  const context = await browser.newContext({
+    viewport: { width, height: 900 }, locale: language, reducedMotion,
+    ...(recordVideo ? { recordVideo: { dir: fileURLToPath(new URL("../.cyberos/chat-typewriter/video", import.meta.url)), size: { width, height: 900 } } } : {})
+  });
   const page = await context.newPage();
   page.setDefaultTimeout(10_000);
   const errors = [];
@@ -117,7 +124,7 @@ async function openChat(t, { width = 1440, language = "en-US", reducedMotion = "
       const gate = blocks.get(id);
       if (gate) await gate.promise;
       status = failed.has(id) || failure === "transcript" ? 503 : 200;
-      body = status === 200 ? snapshot(id) : { error: "Transcript request failed" };
+      body = status === 200 ? { ...snapshot(id), ...snapshotOverrides[id] } : { error: "Transcript request failed" };
     }
     if (path === "/api/settings/model-provider" && failure === "model") {
       status = 503;
@@ -133,6 +140,244 @@ async function ready(page) {
   await expect(page.locator(".composer textarea")).toBeVisible();
   await expect(page.locator(".transcript")).toHaveAttribute("aria-busy", "false");
 }
+
+function emitChatEvent(id, type, content, runId = "typing-run") {
+  const event = {
+    schemaVersion: 1, id, sessionId: "a", jobId: "job-a", type, audience: "chat",
+    transcriptSequence: type === "agent.message" ? id : null, transcriptTurnSequence: 31,
+    source: "pi", sourceId: `${runId}:${id}`, runId, sequence: id,
+    payload: { role: "assistant", content, jobId: "job-a" }, createdAt: timestamp
+  };
+  for (const response of streams.get("/api/sessions/a/events") ?? []) {
+    response.write(`id: ${id}\nevent: ${type}\ndata: ${JSON.stringify(event)}\n\n`);
+  }
+}
+
+test("live text types progressively and keeps its DOM identity when persisted", async (t) => {
+  const { page, errors } = await openChat(t);
+  await ready(page);
+  await expect.poll(() => streams.get("/api/sessions/a/events")?.size ?? 0).toBeGreaterThan(0);
+  await page.evaluate(() => {
+    globalThis.typingFrames = [];
+    const transcript = globalThis.document.querySelector(".transcript-content");
+    new globalThis.MutationObserver(() => {
+      const message = transcript.querySelector(".message:last-child .message-markdown");
+      if (message) globalThis.typingFrames.push(message.textContent);
+    }).observe(transcript, { subtree: true, childList: true, characterData: true });
+  });
+  const content = "逐字显示中文、English 和 👩🏽‍💻。".repeat(16);
+  emitChatEvent(41, "message_update", content);
+  await expect(page.locator(".transcript .message").last().locator(".message-markdown")).toHaveText(content);
+  assert.equal(await page.evaluate((full) => globalThis.typingFrames.some((text) => text.length > 0 && text.length < full.length), content), true);
+  await expect(page.locator(".text-type-cursor")).toBeVisible();
+  await page.locator(".transcript .message").last().evaluate((element) => { globalThis.typingMessage = element; });
+  emitChatEvent(42, "message_end", content);
+  emitChatEvent(43, "agent.message", content, "pi-entry:typing-reply");
+  await expect(page.locator(".text-type-cursor")).toHaveCount(0);
+  assert.equal(await page.locator(".transcript .message").last().evaluate((element) => element === globalThis.typingMessage), true);
+  assert.deepEqual(errors, []);
+});
+
+test("a completed burst catches up within 250ms without replaying or breaking Markdown", async (t) => {
+  const { page, errors } = await openChat(t);
+  await ready(page);
+  await expect.poll(() => streams.get("/api/sessions/a/events")?.size ?? 0).toBeGreaterThan(0);
+  const content = `## 流式回复\n\n${"中文与 English 👩🏽‍💻 é 🇨🇳。".repeat(100)}\n\n- 第一项\n- [链接](https://example.com/)\n\n\`\`\`ts\nconst answer = 42;\n\`\`\``;
+  emitChatEvent(41, "message_update", content);
+  await expect(page.locator(".text-type-cursor")).toBeVisible();
+  await page.evaluate(() => {
+    globalThis.typingCompletion = { start: null, end: null };
+    const observer = new globalThis.MutationObserver(() => {
+      const message = globalThis.document.querySelector(".transcript .message:last-child");
+      if (!message || message.classList.contains("is-streaming")) return;
+      const now = globalThis.performance.now();
+      globalThis.typingCompletion.start ??= now;
+      if (!message.querySelector(".text-type-cursor")) {
+        globalThis.typingCompletion.end = now;
+        observer.disconnect();
+      }
+    });
+    observer.observe(globalThis.document.querySelector(".transcript-content"), { attributes: true, subtree: true, childList: true, characterData: true });
+  });
+  emitChatEvent(42, "message_end", content);
+  emitChatEvent(43, "agent.message", content, "pi-entry:typing-reply");
+  await page.waitForFunction(() => !globalThis.document.querySelector(".text-type-cursor"), { polling: "raf" });
+  // Measure DOM commits in the browser, excluding Playwright transport/polling delays.
+  const elapsed = await page.evaluate(() => globalThis.typingCompletion.end - globalThis.typingCompletion.start);
+  assert.ok(elapsed < 250, `animation completion took ${elapsed}ms (250ms including frame scheduling)`);
+  const message = page.locator(".transcript .message").last();
+  await expect(message.locator("h2")).toHaveText("流式回复");
+  await expect(message.locator("li")).toHaveCount(2);
+  await expect(message.locator("a")).toHaveAttribute("href", "https://example.com/");
+  await expect(message.locator("code.hljs")).toHaveText("const answer = 42;");
+  await expect(message.locator('[role="status"]')).toHaveText(content);
+  assert.deepEqual(errors, []);
+});
+
+test("hydrated live text is immediate and only subsequent additions animate", async (t) => {
+  const restored = {
+    schemaVersion: 1, id: 40, sessionId: "a", jobId: "job-a", type: "message_update", audience: "chat",
+    transcriptSequence: null, transcriptTurnSequence: 31, source: "pi", sourceId: "typing-run:40",
+    runId: "typing-run", sequence: 40, payload: { role: "assistant", content: "恢复的已有内容" }, createdAt: timestamp
+  };
+  const { page } = await openChat(t, { snapshotOverrides: { a: { liveEvents: [restored] } } });
+  await ready(page);
+  const message = page.locator(".transcript .message").last().locator(".message-markdown");
+  await expect(message).toHaveText("恢复的已有内容");
+  await expect.poll(() => streams.get("/api/sessions/a/events")?.size ?? 0).toBeGreaterThan(0);
+  emitChatEvent(41, "message_update", `恢复的已有内容${"继续回答。".repeat(50)}`);
+  await expect(message).toContainText("恢复的已有内容");
+  await select({ page, compact: false }, "b");
+  await expect(page.locator(".text-type-cursor")).toHaveCount(0);
+  await select({ page, compact: false }, "a");
+  await expect(page.locator(".transcript .message").last().locator(".message-markdown")).toHaveText("恢复的已有内容");
+});
+
+for (const terminal of ["job.cancelled", "job.failed", "job.completed"]) {
+  test(`${terminal} flushes received text and removes the cursor immediately`, async (t) => {
+    const { page } = await openChat(t, { snapshotOverrides: { a: { activeJob: { ...sessions.find((item) => item.id === "c").activeJob, id: "job-a", sessionId: "a" } } } });
+    await ready(page);
+    await expect.poll(() => streams.get("/api/sessions/a/events")?.size ?? 0).toBeGreaterThan(0);
+    const content = "中断时保留已收到的所有文字。".repeat(300);
+    emitChatEvent(41, "message_update", content);
+    await expect(page.locator(".text-type-cursor")).toBeVisible();
+    emitChatEvent(42, terminal, "");
+    await expect(page.locator(".text-type-cursor")).toHaveCount(0);
+    await expect(page.locator(".transcript .message-markdown").last()).toHaveText(content);
+  });
+}
+
+test("reduced motion and returning to the foreground flush the animation backlog", async (t) => {
+  const { page } = await openChat(t);
+  await ready(page);
+  await expect.poll(() => streams.get("/api/sessions/a/events")?.size ?? 0).toBeGreaterThan(0);
+  const content = "无需重新播放积压的内容。".repeat(300);
+  emitChatEvent(41, "message_update", content);
+  await expect(page.locator(".text-type-cursor")).toBeVisible();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(page.locator(".text-type-cursor")).toHaveCount(0);
+  await expect(page.locator(".transcript .message-markdown").last()).toHaveText(content);
+  await expect(page.locator(".text-type [role=status]")).toBeEmpty();
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await expect(page.locator(".text-type-cursor")).toBeVisible();
+  const more = content + "新增内容".repeat(200);
+  emitChatEvent(42, "message_update", more);
+  await page.waitForFunction((length) => globalThis.document.querySelector(".transcript .message:last-child .message-markdown").textContent.length > length, content.length);
+  const foregroundFlushMs = await page.evaluate((full) => new Promise((resolve) => {
+    const started = globalThis.performance.now();
+    const message = globalThis.document.querySelector(".transcript .message:last-child .message-markdown");
+    const observer = new globalThis.MutationObserver(() => {
+      if (message.textContent !== full) return;
+      observer.disconnect();
+      globalThis.clearTimeout(timeout);
+      resolve(globalThis.performance.now() - started);
+    });
+    const timeout = globalThis.setTimeout(() => {
+      observer.disconnect();
+      resolve(Infinity);
+    }, 1000);
+    observer.observe(message, { childList: true, subtree: true, characterData: true });
+    globalThis.document.dispatchEvent(new globalThis.Event("visibilitychange"));
+  }), more);
+  assert.ok(foregroundFlushMs < 100, `foreground flush took ${foregroundFlushMs}ms`);
+  await expect(page.locator(".text-type [role=status]")).toBeEmpty();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  emitChatEvent(43, "message_end", more);
+  await expect(page.locator(".text-type [role=status]")).toHaveText(more);
+});
+
+test("reduced motion shows code immediately but defers highlighting and reader announcements until completion", async (t) => {
+  const { page, errors } = await openChat(t, { reducedMotion: "reduce" });
+  await ready(page);
+  await expect.poll(() => streams.get("/api/sessions/a/events")?.size ?? 0).toBeGreaterThan(0);
+  const content = "```js\nconst greeting = '你好 👩🏽‍💻';\n```";
+  emitChatEvent(41, "message_update", content);
+  const message = page.locator(".transcript .message").last();
+  await expect(message.locator("pre code")).toHaveText("const greeting = '你好 👩🏽‍💻';");
+  await expect(message.locator(".text-type-cursor")).toHaveCount(0);
+  await expect(message.locator("code.hljs")).toHaveCount(0);
+  await expect(message.locator("[role=status]")).toBeEmpty();
+  emitChatEvent(42, "message_end", content);
+  await expect(message.locator("code.hljs")).toHaveText("const greeting = '你好 👩🏽‍💻';");
+  await expect(message.locator("[role=status]")).toHaveText(content);
+  assert.deepEqual(errors, []);
+});
+
+for (const width of [1440, 820, 560, 390, 320]) {
+  test(`typewriter caret, themes and reader position remain stable at ${width}px`, async (t) => {
+    const { page, errors } = await openChat(t, { width, language: "zh-CN" });
+    await ready(page);
+    await expect.poll(() => streams.get("/api/sessions/a/events")?.size ?? 0).toBeGreaterThan(0);
+    const content = `## 回复示例\n\n${"中文与 English 👩🏽‍💻 é 🇨🇳 混合换行。".repeat(18)}\n\n- 保持 Markdown 列表\n- [链接](https://example.com/)\n\n尾部光标`;
+    emitChatEvent(41, "message_update", content);
+    await expect(page.locator(".transcript .message").last().locator("p").last()).toHaveText("尾部光标");
+    await expect(page.locator(".text-type-cursor")).toHaveAttribute("data-waiting", "true");
+    for (const mode of ["dark", "light"]) {
+      for (const scheme of (width === 1440 ? ["neon", "mono", "graphite", "synthwave", "bloodline", "terminal", "amber"] : ["neon"])) {
+        await page.evaluate(({ scheme, mode }) => {
+          globalThis.localStorage.setItem("cyberos:appearance:v1", JSON.stringify({ scheme, mode }));
+          globalThis.window.dispatchEvent(new globalThis.StorageEvent("storage", { key: "cyberos:appearance:v1" }));
+        }, { scheme, mode });
+        await expect(page.locator("html")).toHaveAttribute("data-cyber-mode", mode);
+        const measured = await page.locator(".text-type").evaluate((element) => {
+          const caret = element.querySelector(".text-type-cursor");
+          const paragraph = element.querySelector(".message-markdown > p:last-child");
+          const range = globalThis.document.createRange();
+          range.selectNodeContents(paragraph);
+          const end = range.getClientRects()[range.getClientRects().length - 1];
+          const rect = caret.getBoundingClientRect();
+          return {
+            dx: Math.abs(rect.left - end.right), dy: Math.abs(rect.top - end.top),
+            width: rect.width, height: rect.height,
+            sameColor: globalThis.getComputedStyle(caret).backgroundColor === globalThis.getComputedStyle(paragraph).color,
+            overflow: globalThis.document.documentElement.scrollWidth > globalThis.innerWidth
+          };
+        });
+        assert.ok(measured.dx <= 3 && measured.dy <= 2, JSON.stringify(measured));
+        assert.equal(measured.width, 2);
+        assert.ok(measured.height > 0);
+        assert.equal(measured.sameColor, true);
+        assert.equal(measured.overflow, false);
+      }
+      if (width === 1440 || width === 390) {
+        await page.screenshot({ path: fileURLToPath(new URL(`../.cyberos/chat-typewriter/${width}-${mode}.png`, import.meta.url)) });
+      }
+    }
+    await page.locator(".transcript").evaluate((element) => { element.scrollTop = 220; });
+    emitChatEvent(42, "message_update", `${content}\n\n${"新增内容不打断阅读。".repeat(100)}`);
+    await page.waitForFunction(() => globalThis.document.querySelector(".text-type-cursor")?.dataset.waiting === "false");
+    assert.equal(await page.locator(".transcript").evaluate((element) => element.scrollTop), 220);
+    assert.deepEqual(errors, []);
+  });
+}
+
+test("records the live typewriter and a second reply in the same run", async (t) => {
+  const { page, errors } = await openChat(t, { width: 1440, language: "zh-CN", recordVideo: true });
+  await ready(page);
+  await expect.poll(() => streams.get("/api/sessions/a/events")?.size ?? 0).toBeGreaterThan(0);
+  const text = "## 光标打字机\n\n现在逐字显示新回复，中文、English 和 👩🏽‍💻 都保持完整。\n\n- 模型输出较快时自动追赶\n- 历史记录直接显示\n\n正在等待下一段内容。";
+  let id = 41;
+  const graphemes = Array.from(new Intl.Segmenter("zh", { granularity: "grapheme" }).segment(text), ({ segment }) => segment);
+  for (let count = 6; count < graphemes.length + 6; count += 6) {
+    emitChatEvent(id++, "message_update", graphemes.slice(0, count).join(""));
+    await page.waitForTimeout(90);
+  }
+  emitChatEvent(id++, "message_end", text);
+  emitChatEvent(id++, "agent.message", text, "pi-entry:demo-first");
+  await expect(page.locator(".text-type-cursor")).toHaveCount(0);
+  const second = "同一次运行中的下一条回复，会从自己的第一个字开始。";
+  emitChatEvent(id++, "message_start", "");
+  emitChatEvent(id++, "message_update", second);
+  await expect(page.locator(".transcript .message").last().locator(".message-markdown")).toHaveText(second);
+  emitChatEvent(id++, "message_end", second);
+  emitChatEvent(id++, "agent.message", second, "pi-entry:demo-second");
+  await expect(page.locator(".text-type-cursor")).toHaveCount(0);
+  await expect(page.locator(".transcript .message").nth(31).locator("h2")).toHaveText("光标打字机");
+  assert.deepEqual(errors, []);
+  const video = page.video();
+  await page.close();
+  await video.saveAs(fileURLToPath(new URL("../.cyberos/chat-typewriter/chat-typewriter-demo.webm", import.meta.url)));
+});
 
 async function select(chat, id, { preserveFocus = false } = {}) {
   const { page, compact } = chat;
@@ -346,6 +591,42 @@ test("empty history, failures and subsequent switches keep the shell usable", as
   await assertSameShell(page);
   assert.deepEqual(chat.errors, []);
 });
+
+for (const language of ["en-US", "zh-CN"]) {
+  test(`empty history stays centred in the transcript at every width (${language})`, async (t) => {
+    const chat = await openChat(t, { language });
+    const { page } = chat;
+    await ready(page);
+    await select(chat, "empty");
+    await ready(page);
+    const empty = page.locator(".transcript .empty-state");
+    for (const width of [1920, 1440, 1280, 820, 560, 390, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(empty).toBeVisible();
+      await page.evaluate(() => globalThis.document.fonts.ready);
+      const geometry = await empty.evaluate(element => {
+        const bounds = element.getBoundingClientRect();
+        const transcript = element.closest(".transcript");
+        const area = transcript.getBoundingClientRect();
+        return {
+          offsetX: bounds.x + bounds.width / 2 - area.x - area.width / 2,
+          offsetY: bounds.y + bounds.height / 2 - area.y - area.height / 2,
+          overflowX: transcript.scrollWidth - transcript.clientWidth,
+          overflowY: transcript.scrollHeight - transcript.clientHeight
+        };
+      });
+      if (width === 1440 || width === 390) {
+        const directory = fileURLToPath(new URL("../.cyberos/chat-browser/", import.meta.url));
+        await mkdir(directory, { recursive: true });
+        await page.screenshot({ path: `${directory}/empty-${language}-${width}.png` });
+      }
+      assert.ok(Math.abs(geometry.offsetX) <= 1, `${width}px horizontal centring: ${JSON.stringify(geometry)}`);
+      assert.ok(Math.abs(geometry.offsetY) <= 1, `${width}px vertical centring: ${JSON.stringify(geometry)}`);
+      assert.ok(geometry.overflowX <= 1 && geometry.overflowY <= 1, `${width}px empty history overflowed: ${JSON.stringify(geometry)}`);
+    }
+    assert.deepEqual(chat.errors, []);
+  });
+}
 
 for (const failure of ["sessions", "transcript", "model"]) {
   test(`initial ${failure} failure exits the full skeleton`, async (t) => {

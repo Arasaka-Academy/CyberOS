@@ -4650,6 +4650,74 @@ describe("API server", () => {
     await server.close();
   });
 
+  it("forwards newly committed Worker events within 100ms", async () => {
+    const session = createSession(db, {});
+    const writer = openCyberOsDb(path.join(tempDir, "cyberos.sqlite"));
+    const server = await buildServer({ config: testConfig(tempDir), db });
+    await server.listen({ host: "127.0.0.1", port: 0 });
+    const address = server.server.address();
+    if (!address || typeof address === "string") throw new Error("Expected a TCP listener");
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2_000);
+    try {
+      const response = await fetch(`http://127.0.0.1:${address.port}/api/sessions/${session.id}/events`, { signal: controller.signal });
+      const reader = response.body!.getReader();
+      await reader.read(); // Connection is established before the other process commits.
+      const started = performance.now();
+      const event = appendEvent(writer, { sessionId: session.id, type: "message_update", payload: { role: "assistant", content: "新文字" } });
+      let text = "";
+      while (!text.includes("data: ")) {
+        const chunk = await reader.read();
+        if (chunk.done) throw new Error("SSE closed before the Worker event arrived");
+        text += new TextDecoder().decode(chunk.value);
+      }
+      expect(JSON.parse(text.split("data: ")[1]!.split("\n")[0]!).id).toBe(event.id);
+      expect(performance.now() - started).toBeLessThan(100);
+    } finally {
+      clearTimeout(timeout);
+      controller.abort();
+      await server.close();
+      writer.close();
+    }
+  });
+
+  it("drains more than two event batches promptly and reconnects after the header cursor", async () => {
+    const session = createSession(db, {});
+    const events = Array.from({ length: 235 }, (_, index) => appendEvent(db, {
+      sessionId: session.id, type: "message_update", payload: { role: "assistant", content: `Reply ${index}` }
+    }));
+    const server = await buildServer({ config: testConfig(tempDir), db });
+    await server.listen({ host: "127.0.0.1", port: 0 });
+    const address = server.server.address();
+    if (!address || typeof address === "string") throw new Error("Expected a TCP listener");
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2_000);
+    try {
+      for (const after of [0, events[110]!.id]) {
+        const started = performance.now();
+        const response = await fetch(`http://127.0.0.1:${address.port}/api/sessions/${session.id}/events?after=0`, {
+          headers: { "Last-Event-ID": String(after) }, signal: controller.signal
+        });
+        const reader = response.body!.getReader();
+        let text = "";
+        while (!text.includes(`id: ${events.at(-1)!.id}\n`)) {
+          const chunk = await reader.read();
+          if (chunk.done) throw new Error("SSE closed before the backlog was drained");
+          text += new TextDecoder().decode(chunk.value);
+        }
+        const ids = text.split("\n").filter((line) => line.startsWith("data: "))
+          .map((line) => (JSON.parse(line.slice(6)) as { id: number }).id);
+        expect(ids).toEqual(events.filter((event) => event.id > after).map((event) => event.id));
+        expect(performance.now() - started).toBeLessThan(100);
+        await reader.cancel();
+      }
+    } finally {
+      clearTimeout(timeout);
+      controller.abort();
+      await server.close();
+    }
+  });
+
   it("loads a completed chat as a snapshot and only streams events after that snapshot", async () => {
     const session = createSession(db, {});
     const { job } = createUserMessageAndJob(db, { sessionId: session.id, content: "Hello" });

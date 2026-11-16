@@ -171,6 +171,44 @@ describe("transcriptReducer", () => {
     expect(state.streamSequences).toEqual({});
   });
 
+  it("keeps a live reply's presentation identity through persistence and starts the next reply separately", () => {
+    let state = transcriptReducer(initialTranscriptState, { type: "begin", sessionId: "session-1" });
+    state = transcriptReducer(state, { type: "snapshot", sessionId: "session-1", messages: [] });
+    state = transcriptReducer(state, {
+      type: "stream", sessionId: "session-1", event: streamEvent("message_update", 2, "你好 👩🏽‍💻")
+    });
+    const presentation = state.messages[0]?.presentation;
+    expect(presentation).toEqual({ key: "reply:session-1:2", initialContent: "" });
+    state = transcriptReducer(state, {
+      type: "stream", sessionId: "session-1", event: streamEvent("message_end", 3, "你好 👩🏽‍💻")
+    });
+    state = transcriptReducer(state, {
+      type: "event", sessionId: "session-1", runId: "pi-entry:reply-1",
+      message: message("event:4", 2, "你好 👩🏽‍💻", 1)
+    });
+    expect(state.messages[0]?.presentation).toBe(presentation);
+    state = transcriptReducer(state, {
+      type: "stream", sessionId: "session-1", event: streamEvent("message_update", 5, "下一条回复")
+    });
+    expect(state.messages[1]?.presentation).toEqual({ key: "reply:session-1:5", initialContent: "" });
+    expect(state.messages[0]?.presentation).toBe(presentation);
+  });
+
+  it("starts recovered live text at its existing content and animates only subsequent additions", () => {
+    let state = transcriptReducer(initialTranscriptState, { type: "begin", sessionId: "session-1" });
+    state = transcriptReducer(state, {
+      type: "stream", sessionId: "session-1", origin: "snapshot",
+      event: streamEvent("message_update", 2, "已经收到的文字")
+    });
+    expect(state.messages[0]?.presentation?.initialContent).toBe("已经收到的文字");
+    const presentation = state.messages[0]?.presentation;
+    state = transcriptReducer(state, {
+      type: "stream", sessionId: "session-1", event: streamEvent("message_update", 3, "已经收到的文字，新增部分")
+    });
+    expect(state.messages[0]?.presentation).toBe(presentation);
+    expect(state.messages[0]?.content).toBe("已经收到的文字，新增部分");
+  });
+
   it("ignores late work from another session", () => {
     let state = transcriptReducer(initialTranscriptState, { type: "begin", sessionId: "session-1" });
     state = transcriptReducer(state, { type: "begin", sessionId: "session-2" });

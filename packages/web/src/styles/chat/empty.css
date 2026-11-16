@@ -1,0 +1,12 @@
+.transcript:has(> .transcript-content > .empty-state) {
+  display: flex;
+  padding: 16px;
+}
+
+.transcript-content:has(> .empty-state) {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  width: 100%;
+  margin: auto;
+}

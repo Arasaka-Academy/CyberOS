@@ -681,6 +681,9 @@ function AppContent() {
         setRetryJobId(null);
       }
       const targetsCurrentJob = targetsActiveAgentJob(activeAgentJobRef.current, eventJobId);
+      if ((parsed.type === "job.completed" || parsed.type === "job.failed" || parsed.type === "job.cancelled") && targetsCurrentJob) {
+        dispatchTranscript({ type: "settle", sessionId });
+      }
       if (parsed.type === "job.completed" && targetsCurrentJob) {
         setStatus("ready");
         transitionActiveAgentJob((current) => settleActiveAgentJob(current, eventJobId));
@@ -1458,7 +1461,7 @@ function AppContent() {
   function restoreTranscriptSnapshot(sessionId: string, snapshot: SessionTranscriptSnapshot): void {
     dispatchTranscript({ type: "snapshot", sessionId, messages: snapshot.transcript });
     for (const event of snapshot.liveEvents) {
-      dispatchTranscript({ type: "stream", sessionId, event });
+      dispatchTranscript({ type: "stream", sessionId, event, origin: "snapshot" });
     }
     restoreSessionJob(snapshot);
     setAgentToolActivities(snapshot.liveEvents.reduce(reduceAgentToolActivities, []));
@@ -1714,12 +1717,12 @@ function AppContent() {
       return;
     }
     try {
+      setStatus("cancelling");
       if (hasActiveAgentTurn(activeJobId, activeJobStatus)) {
         await sendAgentSessionCommand(session.id, "abort");
       } else {
         await cancelJob(activeJobId);
       }
-      setStatus("cancelling");
     } catch (nextError) {
       setError(toErrorMessage(nextError));
       setStatus("error");

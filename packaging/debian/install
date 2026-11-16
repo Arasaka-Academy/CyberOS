@@ -21,6 +21,8 @@ packages/ui/src/fonts/Oxanium-*.ttf usr/share/fonts/truetype/cyberos/
 packages/shared/src/fonts/ShareTechMono-Regular.ttf usr/share/fonts/truetype/cyberos/
 packages/ui/src/fonts/OFL-Oxanium.txt usr/share/doc/cyberos/fonts/
 packages/shared/src/fonts/share-tech-mono.LICENSE usr/share/doc/cyberos/fonts/
+packages/web/src/components/react-bits/LICENSE.md usr/share/doc/cyberos/react-bits/
+packages/web/src/components/react-bits/UPSTREAM.md usr/share/doc/cyberos/react-bits/
 packages/web/dist/* usr/lib/cyberos/apps/web/dist/
 docs/dist/* usr/lib/cyberos/docs/dist/
 node_modules/* usr/lib/cyberos/node_modules/

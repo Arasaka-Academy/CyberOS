@@ -45,7 +45,8 @@ import {
   splitWorkspaceMessagePaths
 } from "../../lib/chat-paths.js";
 import { isAgentSession, sessionTitle } from "../../lib/session.js";
-import type { TranscriptPhase } from "../../lib/transcript.js";
+import type { TranscriptItem, TranscriptPhase } from "../../lib/transcript.js";
+import { TextType } from "../react-bits/TextType.js";
 import { PowerControl } from "../power/PowerControl.js";
 import { MobileAppHeader, useAppHeadingFocus } from "../../mobile/MobileAppHeader.js";
 import { useMobileNavigation } from "../../mobile/MobileNavigation.js";
@@ -241,7 +242,7 @@ function ChatPaneContent({
   activeSessionSummary: SessionSummary | undefined;
   sessions: SessionSummary[];
   activeSessionId: string;
-  transcript: TranscriptMessage[];
+  transcript: TranscriptItem[];
   transcriptPhase: TranscriptPhase;
   activeCapabilityApprovals: CapabilityApproval[];
   agentToolActivities?: AgentToolActivity[];
@@ -562,7 +563,7 @@ function ChatPaneContent({
           {transcriptLoading ? <TranscriptSkeleton /> : hasConversationContent ? (
             <>
               {transcript.map((item) => (
-                <article key={item.id} className={`message message-${item.role}${item.streaming ? " is-streaming" : ""}`}>
+                <article key={item.presentation?.key ?? item.id} aria-live={item.presentation ? "off" : undefined} className={`message message-${item.role}${item.streaming ? " is-streaming" : ""}`}>
                   <div className="avatar" aria-hidden="true">
                     {item.role === "assistant" ? <Bot size={17} /> : <MessageSquare size={17} />}
                   </div>
@@ -572,12 +573,26 @@ function ChatPaneContent({
                       {item.streaming ? <span className="message-meta">{t("chat.streaming")}</span> : null}
                       <time>{formatTime(item.createdAt, locale)}</time>
                     </header>
-                    <ChatMessageContent
+                    {item.presentation ? <TextType
+                      text={item.content}
+                      initialContent={item.presentation.initialContent}
+                      streaming={item.streaming === true}
+                      active={active}
+                      immediate={status === "cancelling" || status === "cancelled" || status === "error"}
+                    >
+                      {(content, typing) => <ChatMessageContent
+                        role={item.role}
+                        content={content}
+                        typing={typing}
+                        rootPath={selectedRoot?.path ?? null}
+                        onOpenWorkspacePath={onOpenWorkspacePath}
+                      />}
+                    </TextType> : <ChatMessageContent
                       role={item.role}
                       content={item.content}
                       rootPath={selectedRoot?.path ?? null}
                       onOpenWorkspacePath={onOpenWorkspacePath}
-                    />
+                    />}
                   </div>
                 </article>
               ))}
@@ -880,9 +895,11 @@ function formatApprovalValue(value: unknown): string | null {
 export function ChatMessageContent({
   role,
   content,
+  typing = false,
   rootPath = null,
   onOpenWorkspacePath = () => undefined
 }: Pick<TranscriptMessage, "role" | "content"> & {
+  typing?: boolean;
   rootPath?: string | null;
   onOpenWorkspacePath?: (path: string) => void;
 }) {
@@ -941,7 +958,7 @@ export function ChatMessageContent({
             }
 
             const language = markdownCodeLanguage(className);
-            if (!language) {
+            if (!language || typing) {
               return <code className={className}>{children}</code>;
             }
 
