@@ -106,5 +106,14 @@
     "severity": "medium",
     "summary": "Glob: AbortSignal cancellation bypass allows post-timeout filesystem traversal",
     "minimumVersion": "14.0.2"
+  },
+  {
+    "alert": 108,
+    "ghsa": "GHSA-rmxm-3fg6-px4f",
+    "package": "@hono/node-server",
+    "manifest": "package-lock.json",
+    "severity": "medium",
+    "summary": "@hono/node-server: `serveStatic` decodes the request path a second time, leading to bypass of middleware on static paths",
+    "minimumVersion": "2.1.3"
   }
 ]
