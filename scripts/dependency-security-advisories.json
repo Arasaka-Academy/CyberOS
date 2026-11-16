@@ -25,5 +25,14 @@
     "severity": "medium",
     "summary": "Hono: `csrf()` does not check requests sent by hyperlink auditing (`text/ping`)",
     "minimumVersion": "4.13.16"
+  },
+  {
+    "alert": 137,
+    "ghsa": "GHSA-4h7h-rv7c-7m2v",
+    "package": "hono",
+    "manifest": "package-lock.json",
+    "severity": "medium",
+    "summary": "Hono: `validator('form')` skips validation for `multipart/form-data` requests with extra parameters",
+    "minimumVersion": "4.13.16"
   }
 ]
