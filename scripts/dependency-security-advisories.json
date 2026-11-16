@@ -142,5 +142,14 @@
     "severity": "medium",
     "summary": "Rustls: Session Debug formatting exposes TLS master secrets and resumption PSKs",
     "minimumVersion": "0.23.46"
+  },
+  {
+    "alert": 93,
+    "ghsa": "GHSA-h2v8-394m-p7vv",
+    "package": "rustls",
+    "manifest": "Cargo.lock",
+    "severity": "low",
+    "summary": "Rustls: Brotli certificate decompression can allocate an attacker-controlled amount of memory up to 1 GiB before authentication.",
+    "minimumVersion": "0.23.46"
   }
 ]
