@@ -79,5 +79,23 @@
     "severity": "low",
     "summary": "fast-xml-parser: Quadratic CPU consumption scanning unterminated stop-node tags",
     "minimumVersion": "5.12.0"
+  },
+  {
+    "alert": 131,
+    "ghsa": "GHSA-g3hv-75wg-m249",
+    "package": "minimatch",
+    "manifest": "package-lock.json",
+    "severity": "medium",
+    "summary": "minimatch has potential denial of service via globparts amplification",
+    "minimumVersion": "11.0.1",
+    "unaffectedMajors": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ]
   }
 ]
