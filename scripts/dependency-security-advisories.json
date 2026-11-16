@@ -241,5 +241,15 @@
     "summary": "fast-uri vulnerable to URI scheme spoofing via percent-encoded scheme decoding",
     "minimumVersion": "3.1.9",
     "major": 3
+  },
+  {
+    "alert": 77,
+    "ghsa": "GHSA-xhq7-xmqj-769h",
+    "package": "fast-uri",
+    "manifest": "docs/package-lock.json",
+    "severity": "low",
+    "summary": "fast-uri vulnerable to improper path equivalence in relative reference normalization",
+    "minimumVersion": "3.1.9",
+    "major": 3
   }
 ]
