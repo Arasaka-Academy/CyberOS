@@ -280,5 +280,13 @@
     "severity": "low",
     "summary": "fastify is vulnerable to header validation bypass via case-sensitive propertyNames",
     "minimumVersion": "5.12.6"
+  },
+  {
+    "alert": "RUSTSEC-2026-0459",
+    "ghsa": "GHSA-72w2-rjgg-q729",
+    "package": "libsqlite3-sys",
+    "manifest": "Cargo.lock",
+    "summary": "`libsqlite3-sys` via C SQLite CVE-2026-119375",
+    "minimumVersion": "0.39.0"
   }
 ]
