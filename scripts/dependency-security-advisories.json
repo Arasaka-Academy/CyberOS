@@ -312,5 +312,13 @@
     "manifest": "Cargo.lock",
     "summary": "Double free / use-after-free in `Consumer::skip` and `Consumer::clear` when an element's `Drop` panics",
     "minimumVersion": "0.5.2"
+  },
+  {
+    "alert": "RUSTSEC-2026-0382",
+    "ghsa": "RUSTSEC-2026-0382",
+    "package": "rustls-webpki",
+    "manifest": "Cargo.lock",
+    "summary": "Certificate verification may accept distrusted intermediates",
+    "minimumVersion": "0.103.16"
   }
 ]
