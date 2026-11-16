@@ -271,5 +271,14 @@
     "summary": "fast-uri vulnerable to scheme injection via an unescaped first-segment colon in suffix references",
     "minimumVersion": "3.1.9",
     "major": 3
+  },
+  {
+    "alert": 72,
+    "ghsa": "GHSA-389g-gv7q-r4x8",
+    "package": "fastify",
+    "manifest": "package-lock.json",
+    "severity": "low",
+    "summary": "fastify is vulnerable to header validation bypass via case-sensitive propertyNames",
+    "minimumVersion": "5.12.6"
   }
 ]
