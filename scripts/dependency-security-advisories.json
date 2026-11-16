@@ -304,5 +304,13 @@
     "manifest": "Cargo.lock",
     "summary": "Quadratic run time when checking a start tag for duplicate attribute names",
     "minimumVersion": "0.41.0"
+  },
+  {
+    "alert": "RUSTSEC-2026-0293",
+    "ghsa": "RUSTSEC-2026-0293",
+    "package": "ringbuf",
+    "manifest": "Cargo.lock",
+    "summary": "Double free / use-after-free in `Consumer::skip` and `Consumer::clear` when an element's `Drop` panics",
+    "minimumVersion": "0.5.2"
   }
 ]
