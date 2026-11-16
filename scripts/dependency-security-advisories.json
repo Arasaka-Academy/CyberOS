@@ -328,5 +328,16 @@
     "manifest": "Cargo.lock",
     "summary": "Bundled root certificates allow trust in distrusted emSign intermediates",
     "minimumVersion": "1.0.10"
+  },
+  {
+    "alert": "RUSTSEC-2026-0486",
+    "ghsa": "GHSA-jh2m-fhpj-3vr7",
+    "package": "rustix",
+    "manifest": "Cargo.lock",
+    "summary": "xattr functions mark unwritten bytes as initialized when given a zero-length buffer",
+    "minimumVersion": "1.1.6",
+    "unaffectedMajors": [
+      0
+    ]
   }
 ]
