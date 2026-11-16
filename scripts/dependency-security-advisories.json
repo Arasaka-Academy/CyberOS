@@ -231,5 +231,15 @@
     "summary": "fast-uri vulnerable to scheme injection via an unescaped first-segment colon in suffix references",
     "minimumVersion": "3.1.9",
     "major": 3
+  },
+  {
+    "alert": 78,
+    "ghsa": "GHSA-w74x-v6f9-j3xg",
+    "package": "fast-uri",
+    "manifest": "docs/package-lock.json",
+    "severity": "medium",
+    "summary": "fast-uri vulnerable to URI scheme spoofing via percent-encoded scheme decoding",
+    "minimumVersion": "3.1.9",
+    "major": 3
   }
 ]
