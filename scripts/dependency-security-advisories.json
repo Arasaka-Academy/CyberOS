@@ -16,5 +16,14 @@
     "severity": "medium",
     "summary": "Astro: Image endpoint in @astrojs/node can read files from a case-variant sibling of the output directory on case-sensitive filesystems",
     "minimumVersion": "7.4.7"
+  },
+  {
+    "alert": 138,
+    "ghsa": "GHSA-46wx-v44x-9hh2",
+    "package": "hono",
+    "manifest": "package-lock.json",
+    "severity": "medium",
+    "summary": "Hono: `csrf()` does not check requests sent by hyperlink auditing (`text/ping`)",
+    "minimumVersion": "4.13.16"
   }
 ]
