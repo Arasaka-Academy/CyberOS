@@ -320,5 +320,13 @@
     "manifest": "Cargo.lock",
     "summary": "Certificate verification may accept distrusted intermediates",
     "minimumVersion": "0.103.16"
+  },
+  {
+    "alert": "RUSTSEC-2026-0383",
+    "ghsa": "RUSTSEC-2026-0383",
+    "package": "webpki-root-certs",
+    "manifest": "Cargo.lock",
+    "summary": "Bundled root certificates allow trust in distrusted emSign intermediates",
+    "minimumVersion": "1.0.10"
   }
 ]
