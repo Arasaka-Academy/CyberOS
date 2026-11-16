@@ -181,5 +181,15 @@
     "summary": "fast-uri vulnerable to improper path equivalence in relative reference normalization",
     "minimumVersion": "4.2.3",
     "major": 4
+  },
+  {
+    "alert": 86,
+    "ghsa": "GHSA-xhq7-xmqj-769h",
+    "package": "fast-uri",
+    "manifest": "package-lock.json",
+    "severity": "low",
+    "summary": "fast-uri vulnerable to improper path equivalence in relative reference normalization",
+    "minimumVersion": "3.1.9",
+    "major": 3
   }
 ]
