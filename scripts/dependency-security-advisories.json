@@ -1,0 +1,11 @@
+[
+  {
+    "alert": 142,
+    "ghsa": "GHSA-mh32-jxcr-mh9f",
+    "package": "astro",
+    "manifest": "docs/package-lock.json",
+    "severity": "low",
+    "summary": "Astro: XSS via attribute injection in dynamic tag names",
+    "minimumVersion": "7.4.5"
+  }
+]
