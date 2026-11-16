@@ -151,5 +151,15 @@
     "severity": "low",
     "summary": "Rustls: Brotli certificate decompression can allocate an attacker-controlled amount of memory up to 1 GiB before authentication.",
     "minimumVersion": "0.23.46"
+  },
+  {
+    "alert": 89,
+    "ghsa": "GHSA-w74x-v6f9-j3xg",
+    "package": "fast-uri",
+    "manifest": "package-lock.json",
+    "severity": "medium",
+    "summary": "fast-uri vulnerable to URI scheme spoofing via percent-encoded scheme decoding",
+    "minimumVersion": "4.2.3",
+    "major": 4
   }
 ]
