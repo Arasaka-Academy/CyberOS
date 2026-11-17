@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖产品 HTTP 动作与能力清单的映射契约。
+ * [OUTPUT]: 提供补充映射和第一方专用接口的排除理由。
+ * [POS]: 产品动作覆盖边界；凭据提交不成为模型工具。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 /** Product actions omitted from an entry's original route list, with their implemented capability. */
 export const ADDITIONAL_PRODUCT_ACTIONS: Readonly<Record<string, readonly string[]>> = {
   "cyberos.photos.status": ["GET /api/settings/photos"],
@@ -40,6 +46,9 @@ export const ADDITIONAL_PRODUCT_ACTIONS: Readonly<Record<string, readonly string
 export const PRODUCT_ACTION_EXCLUSIONS: readonly { reason: string; actions: readonly string[] }[] = [
   { reason: "First-party approval decisions and Agent job recovery must remain outside model-callable tools.", actions: [
     "GET /api/approvals", "POST /api/capability-approvals/:id/decision", "POST /api/jobs/:id/cancel", "POST /api/jobs/:id/retry"
+  ] },
+  { reason: "秘密输入仅由第一方界面提交；完全权限不允许模型取得或提交用户凭据。", actions: [
+    "POST /api/capability-approvals/:id/input"
   ] },
   { reason: "Conversation and session administration belong to the first-party chat host; model tools cannot recursively operate that host.", actions: [
     "GET /api/sessions", "POST /api/sessions", "PATCH /api/sessions/:id", "DELETE /api/sessions/:id", "GET /api/sessions/:id/commands",

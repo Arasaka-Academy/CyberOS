@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖 SQLite 设置行与共享设置类型。
+ * [OUTPUT]: 提供设置读取、兼容转换与字段校验。
+ * [POS]: 设置持久化边界；旧权限设置补全关闭的完全权限。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import type {
   AgentCapabilityPolicyMode,
   AgentCapabilityPolicySettingsRecord,
@@ -29,6 +35,9 @@ export function normalizeAgentCapabilityPolicySettings(
   settings: Partial<AgentCapabilityPolicySettingsRecord>,
   updatedAt: string
 ): AgentCapabilityPolicySettingsRecord {
+  if (settings.fullAccess !== undefined && typeof settings.fullAccess !== "boolean") {
+    throw new Error("Invalid Agent full access setting");
+  }
   const policies = { ...DEFAULT_AGENT_CAPABILITY_POLICY_SETTINGS.policies };
   for (const capabilityId of AGENT_CAPABILITY_IDS) {
     const mode = settings.policies?.[capabilityId];
@@ -37,7 +46,7 @@ export function normalizeAgentCapabilityPolicySettings(
       policies[capabilityId] = capabilityId === "cyberos.files.mutate" && mode === "auto" ? "approve" : mode;
     }
   }
-  return { policies, updatedAt };
+  return { fullAccess: settings.fullAccess ?? false, policies, updatedAt };
 }
 import type { DbSystemSettingRow } from "./repository-rows.js";
 

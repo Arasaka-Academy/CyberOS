@@ -1,9 +1,17 @@
+/**
+ * [INPUT]: 依赖临时存储、SQLite 与领域适配器。
+ * [OUTPUT]: 验证授权、撤权、执行和队列幂等性。
+ * [POS]: 能力运行状态和文件副作用的回归测试。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { access, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { CapabilityError } from "@cyberos/capabilities";
 import {
+  authorizeAgentCapabilityRun,
+  agentCapabilityRunInteraction,
   createCapabilityRun,
   cancelOwnedCapabilityRun,
   createMcpClient,
@@ -12,12 +20,14 @@ import {
   defaultAgentCapabilityPolicySettings,
   decideCapabilityApproval,
   getCapabilityApprovalByRun,
+  getAgentCapabilityApproval,
   getCapabilityRun,
   getCapabilityRunPayload,
   listCapabilityRunEvents,
   linkAgentJobToCapabilityRun,
   openCyberOsDb,
   saveAgentCapabilityPolicySettings,
+  updateJobStatus,
   type CyberOsDatabase
 } from "@cyberos/db";
 import { loadCyberOsRuntime, type CyberOsRuntime } from "@cyberos/shared";
@@ -30,6 +40,7 @@ import {
   proposePiMcpFileCapability,
   recoverCapabilityRuns
 } from "./orchestrator.js";
+import { startCapabilityRunQueue } from "./run-queue.js";
 import type { CapabilityDomainAdapter } from "./adapters.js";
 
 let tempDir: string;
@@ -50,6 +61,146 @@ afterEach(async () => {
 });
 
 describe("capability mutation runtime", () => {
+  it("automatically executes a linked full-access file mutation without human confirmation", async () => {
+    const defaults = defaultAgentCapabilityPolicySettings();
+    saveAgentCapabilityPolicySettings(db, { fullAccess: true, policies: { ...defaults.policies, "cyberos.files.mutate": "disabled" } });
+    const client = createMcpClient(db, { name: "Pi", kind: "pi", scopes: ["cyberos:files:propose"] });
+    const proposed = await proposeFileMutation({ dependencies: dependencies(), subject: subject(client.id),
+      request: { operation: "mkdir", storagePoolId: "local", targetPath: "automatic" }, requiresConfirmation: true });
+    linkProposalToAgentJob(proposed.runId!);
+    const approval = getAgentApproval(proposed.runId!);
+    expect(authorizeAgentCapabilityRun(db, { runId: proposed.runId!, jobId: approval.jobId })).toBe("automatic");
+    expect(getCapabilityApprovalByRun(db, proposed.runId!)?.decidedBy).toBe("system:full-access");
+    const run = await executeApprovedCapabilityRun(dependencies(), proposed.runId!);
+    expect(run.state).toBe("succeeded");
+    await expect(access(path.join(rootDir, "automatic"))).resolves.toBeUndefined();
+    await executeApprovedCapabilityRun(dependencies(), proposed.runId!);
+    expect(getCapabilityRun(db, proposed.runId!)?.revision).toBe(run.revision);
+  });
+
+  it("authorizes explicit-confirmation domains but blocks queued work after full access is disabled", async () => {
+    saveAgentCapabilityPolicySettings(db, { ...defaultAgentCapabilityPolicySettings(), fullAccess: true });
+    const id = "cyberos.system.power-propose";
+    const client = createMcpClient(db, { name: "Pi", kind: "pi", scopes: ["cyberos:admin:power"] });
+    const adapter = recordingAdapter();
+    const runtime = domainDependencies(id, adapter);
+    const proposed = await proposeDomainCapability({ dependencies: runtime, subject: domainSubject(client.id, "cyberos:admin:power"), capabilityId: id, request: { operation: "reboot" } });
+    linkProposalToAgentJob(proposed.runId!);
+    authorizeAgentCapabilityRun(db, { runId: proposed.runId!, jobId: getAgentApproval(proposed.runId!).jobId });
+    saveAgentCapabilityPolicySettings(db, defaultAgentCapabilityPolicySettings());
+    expect(await executeApprovedCapabilityRun(runtime, proposed.runId!)).toMatchObject({ state: "failed", errorCode: "FORBIDDEN" });
+    expect(adapter.executions).toEqual([]);
+  });
+
+  it("consumes automatically authorized work from the API queue exactly once", async () => {
+    saveAgentCapabilityPolicySettings(db, { ...defaultAgentCapabilityPolicySettings(), fullAccess: true });
+    const client = createMcpClient(db, { name: "Pi", kind: "pi", scopes: ["cyberos:admin:power"] });
+    const id = "cyberos.system.power-propose";
+    const adapter = recordingAdapter();
+    const runtime = domainDependencies(id, adapter);
+    const proposed = await proposeDomainCapability({ dependencies: runtime, subject: domainSubject(client.id, "cyberos:admin:power"), capabilityId: id, request: { operation: "reboot" } });
+    expect(() => authorizeAgentCapabilityRun(db, { runId: proposed.runId!, jobId: "unowned" })).toThrow(/owned/);
+    linkProposalToAgentJob(proposed.runId!);
+    expect(() => authorizeAgentCapabilityRun(db, { runId: proposed.runId!, jobId: "another-job" })).toThrow(/owned/);
+    const jobId = getAgentApproval(proposed.runId!).jobId;
+    authorizeAgentCapabilityRun(db, { runId: proposed.runId!, jobId });
+    authorizeAgentCapabilityRun(db, { runId: proposed.runId!, jobId });
+    const errors: unknown[] = [];
+    const stop = startCapabilityRunQueue(runtime, (error) => { errors.push(error); });
+    try {
+      await expect.poll(() => {
+        const run = getCapabilityRun(db, proposed.runId!);
+        return { state: run?.state, error: run?.errorMessage };
+      }).toEqual({ state: "succeeded", error: null });
+      expect(adapter.executions).toEqual([{}]);
+      expect(errors).toEqual([]);
+    } finally { await stop(); }
+  });
+
+  it("checks revocation again after asynchronous validation and before starting execution", async () => {
+    saveAgentCapabilityPolicySettings(db, { ...defaultAgentCapabilityPolicySettings(), fullAccess: true });
+    const client = createMcpClient(db, { name: "Pi", kind: "pi", scopes: ["cyberos:admin:power"] });
+    const id = "cyberos.system.power-propose";
+    const adapter = recordingAdapter();
+    adapter.revalidate = async () => { saveAgentCapabilityPolicySettings(db, defaultAgentCapabilityPolicySettings()); };
+    const runtime = domainDependencies(id, adapter);
+    const proposed = await proposeDomainCapability({ dependencies: runtime, subject: domainSubject(client.id, "cyberos:admin:power"), capabilityId: id, request: { operation: "reboot" } });
+    linkProposalToAgentJob(proposed.runId!);
+    authorizeAgentCapabilityRun(db, { runId: proposed.runId!, jobId: getAgentApproval(proposed.runId!).jobId });
+    expect(await executeApprovedCapabilityRun(runtime, proposed.runId!)).toMatchObject({ state: "failed", errorCode: "FORBIDDEN" });
+    expect(adapter.executions).toEqual([]);
+  });
+
+  it("leaves remaining runs queued when the API stops during execution", async () => {
+    saveAgentCapabilityPolicySettings(db, { ...defaultAgentCapabilityPolicySettings(), fullAccess: true });
+    const client = createMcpClient(db, { name: "Pi", kind: "pi", scopes: ["cyberos:admin:power"] });
+    const id = "cyberos.system.power-propose";
+    const adapter = recordingAdapter();
+    let release!: () => void;
+    let started!: () => void;
+    const executing = new Promise<void>((resolve) => { started = resolve; });
+    const blocked = new Promise<void>((resolve) => { release = resolve; });
+    let executions = 0;
+    adapter.execute = async () => {
+      executions += 1;
+      started();
+      await blocked;
+      return { data: {} };
+    };
+    const runtime = domainDependencies(id, adapter);
+    const runIds: string[] = [];
+    for (let i = 0; i < 2; i += 1) {
+      const proposed = await proposeDomainCapability({ dependencies: runtime, subject: domainSubject(client.id, "cyberos:admin:power"), capabilityId: id, request: { operation: "reboot" } });
+      linkProposalToAgentJob(proposed.runId!);
+      authorizeAgentCapabilityRun(db, { runId: proposed.runId!, jobId: getAgentApproval(proposed.runId!).jobId });
+      runIds.push(proposed.runId!);
+    }
+    const errors: unknown[] = [];
+    const stop = startCapabilityRunQueue(runtime, (error) => { errors.push(error); });
+    try {
+      await executing;
+      const stopped = stop();
+      release();
+      await stopped;
+      expect(executions).toBe(1);
+      expect(runIds.map((runId) => getCapabilityRun(db, runId)?.state).sort()).toEqual(["queued", "succeeded"]);
+      expect(errors).toEqual([]);
+    } finally {
+      release();
+      await stop();
+    }
+  });
+
+  it("does not execute automatically authorized work after its Agent job was cancelled", async () => {
+    saveAgentCapabilityPolicySettings(db, { ...defaultAgentCapabilityPolicySettings(), fullAccess: true });
+    const client = createMcpClient(db, { name: "Pi", kind: "pi", scopes: ["cyberos:admin:power"] });
+    const id = "cyberos.system.power-propose";
+    const adapter = recordingAdapter();
+    const runtime = domainDependencies(id, adapter);
+    const proposed = await proposeDomainCapability({ dependencies: runtime, subject: domainSubject(client.id, "cyberos:admin:power"), capabilityId: id, request: { operation: "reboot" } });
+    linkProposalToAgentJob(proposed.runId!);
+    const jobId = getAgentApproval(proposed.runId!).jobId;
+    authorizeAgentCapabilityRun(db, { runId: proposed.runId!, jobId });
+    updateJobStatus(db, jobId, "cancelled");
+    expect(await executeApprovedCapabilityRun(runtime, proposed.runId!)).toMatchObject({ state: "failed", errorCode: "FORBIDDEN" });
+    expect(adapter.executions).toEqual([]);
+  });
+
+  it("keeps historical proposals manual and requires secrets without requesting approval", async () => {
+    const client = createMcpClient(db, { name: "Pi", kind: "pi", scopes: ["cyberos:settings:propose"] });
+    const id = "cyberos.settings.update-propose";
+    const runtime = domainDependencies(id, recordingAdapter(true));
+    const legacy = await proposeDomainCapability({ dependencies: runtime, subject: domainSubject(client.id, "cyberos:settings:propose"), capabilityId: id, request: { operation: "model_provider" } });
+    linkProposalToAgentJob(legacy.runId!);
+    saveAgentCapabilityPolicySettings(db, { ...defaultAgentCapabilityPolicySettings(), fullAccess: true });
+    expect(authorizeAgentCapabilityRun(db, { runId: legacy.runId!, jobId: getAgentApproval(legacy.runId!).jobId })).toBe("approval");
+    const proposed = await proposeDomainCapability({ dependencies: runtime, subject: domainSubject(client.id, "cyberos:settings:propose"), capabilityId: id, request: { operation: "model_provider" } });
+    linkProposalToAgentJob(proposed.runId!);
+    expect(authorizeAgentCapabilityRun(db, { runId: proposed.runId!, jobId: getAgentApproval(proposed.runId!).jobId })).toBe("input_required");
+    expect(agentCapabilityRunInteraction(db, proposed.runId!)).toBe("input_required");
+    expect(getCapabilityRun(db, proposed.runId!)?.state).toBe("waiting_approval");
+  });
+
   it("executes an approved Pi MCP read and stores its result for continuation", async () => {
     const client = createMcpClient(db, { name: "Pi", kind: "pi", scopes: ["cyberos:files:read"] });
     const proposed = await proposePiMcpFileCapability({
@@ -338,6 +489,10 @@ describe("capability mutation runtime", () => {
 
 function subject(clientId: string) {
   return { id: clientId, clientId, kind: "pi" as const, scopes: new Set(["cyberos:files:propose"]) };
+}
+
+function getAgentApproval(runId: string) {
+  return getAgentCapabilityApproval(db, getCapabilityApprovalByRun(db, runId)!.id)!;
 }
 
 function domainSubject(clientId: string, scope: string) {

@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖系统配置、设置仓库与主机服务。
+ * [OUTPUT]: 提供系统设置接口和 Agent 完全权限开关。
+ * [POS]: 第一方设置写入边界；保留部分更新的未修改字段。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { randomUUID } from "node:crypto";
 import { constants as fsConstants } from "node:fs";
 import { access, chmod, mkdir, rename, rm, stat, writeFile } from "node:fs/promises";
@@ -495,13 +501,14 @@ export function registerSettingsRoutes(server: FastifyInstance, { config, db, sy
   });
 
   server.patch<{
-    Body: { policies?: Partial<Record<AgentCapabilityId, AgentCapabilityPolicyMode>> };
+    Body: { fullAccess?: boolean; policies?: Partial<Record<AgentCapabilityId, AgentCapabilityPolicyMode>> };
   }>("/api/settings/agent-capability-policy", async (request, reply) => {
     const existing = readForRepair(
       () => getAgentCapabilityPolicySettings(db),
       defaultAgentCapabilityPolicySettings
     );
     const next: Omit<AgentCapabilityPolicySettingsRecord, "updatedAt"> = {
+      fullAccess: Object.hasOwn(request.body ?? {}, "fullAccess") ? request.body.fullAccess! : existing.fullAccess,
       policies: {
         ...DEFAULT_AGENT_CAPABILITY_POLICY_SETTINGS.policies,
         ...existing.policies,

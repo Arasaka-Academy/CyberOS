@@ -1,4 +1,10 @@
-import type { FastifyInstance } from "fastify";
+/**
+ * [INPUT]: 依赖能力运行、作业归属、当前授权模式与秘密输入验证。
+ * [OUTPUT]: 提供人工审批和完全权限下的第一方补充信息接口。
+ * [POS]: 第一方交互边界；凭据仅在请求内存中交给执行器。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   capabilityRunSecretRequirements,
   executeApprovedCapabilityRun,
@@ -7,6 +13,8 @@ import {
 } from "@cyberos/capability-runtime";
 import {
   appendEvent,
+  agentCapabilityRunInteraction,
+  FULL_ACCESS_DECISION_SOURCE,
   decideCapabilityApproval,
   deleteCapabilityRunPayload,
   expireCapabilityApprovals,
@@ -14,6 +22,17 @@ import {
   listPendingAgentCapabilityApprovals
 } from "@cyberos/db";
 import type { ApiRouteContext } from "../context.js";
+
+interface ApprovalDecisionRequest {
+  Params: { id: string };
+  Body: {
+    sessionId?: string;
+    decision?: "approved" | "rejected";
+    expectedRevision?: number;
+    confirmed?: boolean;
+    secretInput?: Record<string, string>;
+  };
+}
 
 export function registerApprovalRoutes(server: FastifyInstance, context: ApiRouteContext): void {
   const { config, db } = context;
@@ -30,22 +49,16 @@ export function registerApprovalRoutes(server: FastifyInstance, context: ApiRout
     return {
       capabilityApprovals: listPendingAgentCapabilityApprovals(db, {
         sessionId: request.query.sessionId
+      }).map((approval) => {
+        const interaction = agentCapabilityRunInteraction(db, approval.run.id);
+        return { ...approval, interaction, requiresConfirmation: interaction === "input_required" ? false : approval.requiresConfirmation };
       })
     };
   });
 
-  server.post<{
-    Params: { id: string };
-    Body: {
-      sessionId?: string;
-      decision?: "approved" | "rejected";
-      expectedRevision?: number;
-      confirmed?: boolean;
-      secretInput?: Record<string, string>;
-    };
-  }>("/api/capability-approvals/:id/decision", async (request, reply) => {
+  const decide = async (request: FastifyRequest<ApprovalDecisionRequest>, reply: FastifyReply, inputOnly: boolean) => {
     const sessionId = request.body?.sessionId;
-    const decision = request.body?.decision;
+    const decision = inputOnly ? "approved" : request.body?.decision;
     const expectedRevision = request.body?.expectedRevision;
     if (!sessionId || (decision !== "approved" && decision !== "rejected") || !Number.isInteger(expectedRevision)) {
       reply.status(400).send({ error: "sessionId, a valid decision, and expectedRevision are required" });
@@ -55,6 +68,10 @@ export function registerApprovalRoutes(server: FastifyInstance, context: ApiRout
     const approval = getAgentCapabilityApproval(db, request.params.id);
     if (!approval || approval.sessionId !== sessionId) {
       reply.status(404).send({ error: "Agent approval not found" });
+      return;
+    }
+    if (inputOnly && agentCapabilityRunInteraction(db, approval.run.id) !== "input_required") {
+      reply.status(409).send({ error: "This run requires a new approval or no longer accepts input" });
       return;
     }
 
@@ -79,8 +96,8 @@ export function registerApprovalRoutes(server: FastifyInstance, context: ApiRout
       approvalId: approval.id,
       expectedRevision: expectedRevision!,
       decision,
-      decidedBy: "local-admin",
-      confirmed: request.body?.confirmed === true,
+      decidedBy: inputOnly ? FULL_ACCESS_DECISION_SOURCE : "local-admin",
+      confirmed: inputOnly || request.body?.confirmed === true,
       startRunning: decision === "approved" && secretRequirements.length > 0
     });
     if (!decided) {
@@ -127,5 +144,7 @@ export function registerApprovalRoutes(server: FastifyInstance, context: ApiRout
 
     deleteCapabilityRunPayload(db, decided.run.id);
     reply.status(200).send(decided);
-  });
+  };
+  server.post<ApprovalDecisionRequest>("/api/capability-approvals/:id/decision", async (request, reply) => decide(request, reply, false));
+  server.post<ApprovalDecisionRequest>("/api/capability-approvals/:id/input", async (request, reply) => decide(request, reply, true));
 }

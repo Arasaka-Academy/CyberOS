@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖 SQLite、能力交互与操作通知仓库。
+ * [OUTPUT]: 提供作业租约、状态转换和事件快照。
+ * [POS]: worker 调度边界；自动等待不标为待审批。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { randomUUID } from "node:crypto";
 import type {
   AgentEventAudience,
@@ -18,6 +24,7 @@ import {
   updateOperationNotificationForJob
 } from "./operation-notifications.js";
 import { cancelAgentCapabilityRunsForJob } from "./capability-runs.js";
+import { agentCapabilityJobInteraction } from "./agent-capability-authorization.js";
 import {
   createAgentSessionCommand,
   failQueuedActiveTurnCommands,
@@ -417,7 +424,7 @@ export function updateJobStatus(
           now: new Date(updatedAt)
         });
       }
-      const notificationStatus = notificationStatusForJob(status);
+      const notificationStatus = notificationStatusForJob(db, jobId, status);
       if (notificationStatus) {
         updateOperationNotificationForJob(db, {
           jobId,
@@ -620,8 +627,8 @@ export function getSessionEventSnapshot(db: CyberOsDatabase, sessionId: string):
   return { lastEventId, activeJob, liveEvents: rows.map(mapEvent) };
 }
 
-function notificationStatusForJob(status: JobStatus): OperationNotificationStatus | null {
-  if (status === "waiting_approval") return "pending_approval";
+function notificationStatusForJob(db: CyberOsDatabase, jobId: string, status: JobStatus): OperationNotificationStatus | null {
+  if (status === "waiting_approval") return agentCapabilityJobInteraction(db, jobId) === "approval" ? "pending_approval" : "running";
   if (status === "queued" || status === "running") return "running";
   if (status === "completed") return "succeeded";
   if (status === "failed") return "failed";

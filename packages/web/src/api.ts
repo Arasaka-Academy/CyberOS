@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖公共契约与同源 HTTP 接口。
+ * [OUTPUT]: 提供 Web 数据类型、设置保存与第一方凭据提交。
+ * [POS]: Web 请求边界；秘密输入使用独立接口。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 export * from "./lib/tailscale-api.js";
 import type {
   PublicAudioSettings,
@@ -361,6 +367,7 @@ export interface Job {
   sessionId: string;
   messageId: string;
   status: SharedJobStatus;
+  capabilityInteraction?: "approval" | "input_required" | "automatic";
 }
 
 export type JobStatus = SharedJobStatus;
@@ -402,6 +409,7 @@ export type ShareOperationProposal = SharedShareOperationProposal;
 export type StorageOperationProposal = SharedStorageOperationProposal;
 
 export interface CapabilityApproval {
+  interaction?: "approval" | "input_required";
   id: string;
   runId: string;
   status: "pending";
@@ -1779,7 +1787,7 @@ export async function getAgentCapabilityPolicySettings(): Promise<AgentCapabilit
 }
 
 export async function saveAgentCapabilityPolicySettings(
-  input: Pick<AgentCapabilityPolicySettings, "policies">
+  input: Pick<AgentCapabilityPolicySettings, "policies" | "fullAccess">
 ): Promise<AgentCapabilityPolicySettings> {
   const response = await fetch("/api/settings/agent-capability-policy", {
     method: "PATCH",
@@ -2799,18 +2807,18 @@ export async function getApprovals(sessionId: string): Promise<ApprovalQueue> {
 }
 
 export async function decideCapabilityApproval(
-  approval: Pick<CapabilityApproval, "id" | "revision" | "sessionId">,
+  approval: Pick<CapabilityApproval, "id" | "revision" | "sessionId" | "interaction">,
   decision: "approved" | "rejected",
   options: { confirmed?: boolean; secretInput?: Record<string, string> } = {}
 ): Promise<void> {
-  const response = await fetch(`/api/capability-approvals/${encodeURIComponent(approval.id)}/decision`, {
+  const inputOnly = approval.interaction === "input_required" && decision === "approved";
+  const response = await fetch(`/api/capability-approvals/${encodeURIComponent(approval.id)}/${inputOnly ? "input" : "decision"}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       sessionId: approval.sessionId,
-      decision,
+      ...(inputOnly ? {} : { decision, confirmed: options.confirmed === true }),
       expectedRevision: approval.revision,
-      confirmed: options.confirmed === true,
       ...(options.secretInput ? { secretInput: options.secretInput } : {})
     })
   });

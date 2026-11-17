@@ -18,12 +18,15 @@ sourceOfTruth:
   - packages/api/src/lib/system-mutation-capabilities.ts
   - packages/mcp/src/tasks.ts
   - packages/mcp/src/server.ts
+  - packages/db/src/repositories/agent-capability-authorization.ts
+  - packages/capability-runtime/src/run-queue.ts
+  - packages/web/src/components/settings/SettingsToolPolicyPage.tsx
   - packages/web/src/components/settings/SettingsMcpPage.tsx
   - packages/web/src/components/settings/SettingsSkillsPage.tsx
   - packages/web/src/components/settings/SettingsAudioPage.tsx
 ---
 
-CyberOS 把 AI 设置拆成模型 Provider、Pi Agent、Audio、MCP 和 Skills 五个同级页面。所有产品设置保存在 SQLite；MCP secret 和已安装 Skill 使用固定的受限 state 目录，不需要产品配置文件。
+CyberOS 把 AI 设置拆成模型 Provider、Pi Agent、Audio、MCP 和 Skills 五个同级页面。所有产品设置保存在 SQLite；MCP secret 和已安装 Skill 使用固定的受限 state 目录，不需要产品配置文件。本文的系统 MCP 面向内部 Agent。下文的审批和明确确认说明适用于标准模式；完全权限使用自动授权，所需秘密通过补充信息界面提交。
 
 ## Audio
 
@@ -31,7 +34,11 @@ CyberOS 把 AI 设置拆成模型 Provider、Pi Agent、Audio、MCP 和 Skills �
 
 ## Pi Agent
 
-**设置 > Pi Agent** 只管理 Pi 的 capability 执行策略、审批策略和项目资源信任。`auto` 直接返回有界结果，`approve` 和 `confirm` 创建持久 capability run/approval，`disabled` 从 Pi 工具目录移除能力。文件 mutation 仍通过 `capability_runs` 与 `capability_approvals`，不会因为启用了第三方 MCP 或 Skill 而绕过 CyberOS 的文件与宿主机边界。
+**设置 > Pi Agent** 管理完全权限和逐项 capability 策略。完全权限默认关闭；开启后，所有已启用的内部系统能力自动授权，覆盖逐项权限但保留原配置。关闭后恢复逐项策略。主机功能开关、scope、路径和目标状态检查持续生效。
+
+标准模式下，`auto` 直接返回有界读取结果，`approve` 和 `confirm` 创建持久 capability run/approval，`disabled` 从 Pi 工具目录移除能力。文件 mutation 仍使用持久运行。完全权限通过 `GET/PATCH /api/settings/agent-capability-policy` 的 `fullAccess` 字段保存；Agent 的设置工具不能修改此开关。
+
+自动执行仍记录 run、作业归属、结果与 `system:full-access` 授权来源。开启开关不自动执行历史待审批提案；关闭后尚未开始的自动授权运行终止。需要密码等新凭据时显示“补充信息”，第一方提交后自动执行，秘密不进入模型参数、上下文或运行记录。
 
 当前会话信任项目后，Pi 才会加载项目中的 `.agents/skills`。信任只影响项目资源，不影响由 CyberOS 管理的全局 Skills。
 
@@ -39,9 +46,9 @@ CyberOS 把 AI 设置拆成模型 Provider、Pi Agent、Audio、MCP 和 Skills �
 
 CyberOS 内置 MCP 缺少设置记录时默认开启。**设置 > MCP** 可以启停它，但不能修改地址、认证或删除。首次启用或受保护 token 丢失时，API 创建或修复 `Built-in Pi` 身份，并把 token 以 `0600` 写入 `/cyberos/state/mcp/pi.token`；数据库只保存 token 摘要。
 
-内置 MCP 把 CyberOS capability registry 作为 Streamable HTTP 暴露给 Pi。Pi 的 mutation 继续遵循 capability policy 和审批。配置 generation 改变后，worker 在下一轮对话重建 MCP 与 Skill 资源，不中断正在执行的 turn。
+内置 MCP 把 CyberOS capability registry 作为 Streamable HTTP 提供给内部 Pi。工具保留固有风险和审批元数据，同时公开有效策略及授权模式。Pi 的 mutation 遵循当前权限；权限或资源配置改变后，worker 在下一轮对话重建工具目录，不中断正在执行的 turn。
 
-CyberOS 也保留 `/mcp` 作为已配对外部客户端的只读能力入口。API 仍绑定 loopback；需要 LAN 访问时使用专用 TLS listener，不能把本地 REST API 直接暴露到公网。
+内置 MCP 复用 loopback API 的 `/mcp` 路由。完全权限只作用于内部 Pi 身份，不增加对外访问能力。
 
 ### 音乐、影视与 NAS 播放
 
@@ -121,7 +128,7 @@ Bearer Token 或自定义 Secret Headers 原子写入 `/cyberos/state/secrets/mc
 
 `cyberos.settings.public` 返回脱敏后的内置 MCP 状态、第三方 Server 摘要、全局 Skills 摘要和共享 generation。`cyberos.settings.update-propose` 提供 MCP/Skills 的 CRUD、测试、启停、安装与更新操作。凭据由审批 UI 的 secret input 通道注入，永远不成为模型工具参数。
 
-外部 MCP 客户端可以用 `cyberos.runs.get`、`cyberos.runs.list` 和 `cyberos.runs.wait` 观察自己拥有的持久 run；`cyberos.runs.cancel` 只能取消同一客户端拥有且可中断的 run。MCP 不提供 approve 工具，审批只能由第一方 UI 完成。
+内部 Agent 可以用 `cyberos.runs.get`、`cyberos.runs.list` 和 `cyberos.runs.wait` 观察自己拥有的持久 run；`cyberos.runs.cancel` 只能取消同一身份拥有且可中断的 run。MCP 不提供 approve 工具，标准模式的审批由第一方 UI 完成。
 
 ### 系统与日常领域能力
 
@@ -148,7 +155,7 @@ Bearer Token 或自定义 Secret Headers 原子写入 `/cyberos/state/secrets/mc
 | `cyberos.settings.proxy`、`settings.proxy-propose` | 系统代理读取与配置审批 |
 | `cyberos.backup.status`、`backup.coverage`、`backup.snapshots`、`backup.restore-propose` | 仓库和凭据可用性、保护范围、快照分页及经过验证的 staging 恢复 |
 
-读取使用 `cyberos:<domain>:read`，申请变更使用 `cyberos:<domain>:propose`。新增的 `nvr`、`tailscale`、`bluetooth`、`iscsi`、`audio`、`tasks` scopes 必须由外部客户端管理员明确授权；已有凭据不会自动扩权。外部客户端继续只读，即使授予 propose scope 也不会安装写工具。内置 Pi 通过既有目录同步获得能力，变更仍经过策略、有效期、第一方审批、目标 revision 和执行时检查。
+读取使用 `cyberos:<domain>:read`，申请变更使用 `cyberos:<domain>:propose`。内置 Pi 通过既有目录同步获得能力，变更经过当前授权模式、有效期、目标 revision 和执行时检查。完全权限不会跳过 scope 校验。
 
 照片查询每页最多 100；文件历史、下载文件、快照及任务列表最多 200。Docker 日志 `tail` 最多 500，结果仍受总字节预算限制；其他大数组、长字符串也会返回 `truncated/truncation`。分页使用响应中的 `nextCursor`（任务列表位于统一结果的 `page`），保持筛选条件一致。游标失效、资源过期或目标改变后重新读取，不要把截断结果当作完整清单。
 

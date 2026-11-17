@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖隔离 API、设置页面与 Playwright。
+ * [OUTPUT]: 验证设置保存、响应布局与交互契约。
+ * [POS]: 浏览器设置验收入口，不访问生产配置。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import { createRequire } from "node:module";
@@ -104,6 +110,41 @@ async function selectSection(view, id) {
   await page.evaluate(() => globalThis.document.fonts.ready);
   await page.waitForTimeout(100);
 }
+
+test("Agent full access saves globally and restores individual policies", async context => {
+  for (const width of [1440, 390]) for (const language of ["en", "zh-CN"]) {
+    await context.test(`${width}px ${language}`, async child => {
+      const endpoint = "/api/settings/agent-capability-policy";
+      const original = (await api.inject({ method: "GET", url: endpoint })).json().settings;
+      const overrides = new Map([[endpoint, async request => {
+        const response = await api.inject({ method: request.method(), url: endpoint,
+          ...(request.method() === "PATCH" ? { payload: request.postDataJSON() } : {}) });
+        return { status: response.statusCode, json: response.json() };
+      }]]);
+      const view = await openSettings(child, { width, height: 900 }, language, overrides);
+      await selectSection(view, "pi-agent");
+      const toggle = view.page.getByRole("switch");
+      const policies = view.page.locator('.settings-tool-policy-list [aria-haspopup="listbox"]');
+      const save = view.page.locator('.settings-actions button[type="submit"]');
+      await expect(toggle).not.toBeChecked();
+      await expect(policies).toHaveCount(9);
+      await view.page.locator(".hud-switch").click();
+      await expect(policies.first()).toBeDisabled();
+      await expect(save).toBeEnabled();
+      await save.click();
+      await expect.poll(async () => (await api.inject({ method: "GET", url: endpoint })).json().settings.fullAccess).toBe(true);
+      await expect(save).toBeEnabled();
+      await assertContained(view.page);
+      await view.page.screenshot({ path: path.join(directory, `agent-full-access-${width}-${language}.png`) });
+      await view.page.locator(".hud-switch").click();
+      await expect(policies.first()).toBeEnabled();
+      await save.click();
+      await expect.poll(async () => (await api.inject({ method: "GET", url: endpoint })).json().settings.fullAccess).toBe(false);
+      assert.deepEqual((await api.inject({ method: "GET", url: endpoint })).json().settings.policies, original.policies);
+      assert.deepEqual(view.errors, []);
+    });
+  }
+});
 
 test("NVR settings live in Media, load only on entry and keep failed policy drafts without changing recording", async context => {
   for (const width of [1440, 390]) await context.test(`${width}px`, async child => {

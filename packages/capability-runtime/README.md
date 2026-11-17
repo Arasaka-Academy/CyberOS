@@ -2,7 +2,7 @@
 
 `@cyberos/capability-runtime` 把统一能力契约连接到实际文件操作和领域 Adapter。它负责准备可审查提案、持久化运行参数、在第一方批准后复查授权与目标状态，执行动作并保存结果。
 
-它由 API/MCP 等调用方嵌入，不是独立进程。模型可以请求提案，审批决定来自第一方界面；执行成功以后，worker 通过持久续接恢复 Agent 对话。
+它由 API/MCP 等调用方嵌入，不是独立进程。标准模式的审批决定来自第一方界面。完全权限模式由系统自动授权；两种模式都在执行后通过 worker 持久续接恢复 Agent 对话。
 
 [返回工作空间总览](../README.md) · [包定义](package.json)
 
@@ -17,6 +17,7 @@
 | 文件 | 职责 |
 | --- | --- |
 | [src/orchestrator.ts](src/orchestrator.ts) | 文件/领域提案、批准后执行、状态推进、恢复、清理与错误收敛 |
+| [src/run-queue.ts](src/run-queue.ts) | API 消费已授权队列，关闭时等待当前执行完成 |
 | [src/adapters.ts](src/adapters.ts) | Adapter 四阶段接口、持久 payload/proposal、秘密输入验证 |
 | [src/file-read.ts](src/file-read.ts) | 扩展文件读取、检索、查找、Git 与归档检查 |
 | [src/storage-pools.ts](src/storage-pools.ts) | pool 解析与就绪检查 |
@@ -32,6 +33,10 @@
 | `proposePiMcpFileCapability` | 当 Pi 读取策略需要批准时，为读取能力生成提案，而非直接读取 |
 
 提案默认 TTL 为 15 分钟。公开摘要与私有执行 payload 分开存储；幂等键用于识别同一客户端的重复请求，同键不同输入返回冲突。
+
+完全权限默认关闭。新提案保存创建时的授权模式。worker 先关联 Agent 作业，再核对当前开关并记录 `system:full-access` 自动授权。API 每 250ms 消费已授权队列。历史提案不因开关启用而自动执行；关闭开关后，尚未开始的自动授权运行失败。功能开关、scope、路径和目标状态校验仍生效。
+
+需要新凭据的操作呈现“补充信息”。第一方 `/api/capability-approvals/:id/input` 校验会话、revision、当前完全权限与秘密输入，随后自动执行，不要求批准或确认。秘密只在请求内存中传递；标准模式继续使用原审批接口。
 
 ## 第一方批准后如何执行
 

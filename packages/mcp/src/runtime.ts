@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖能力目录、共享权限决策、数据库和领域适配器。
+ * [OUTPUT]: 提供客户端工具目录、有效权限和能力调用。
+ * [POS]: 内部 Agent 的 MCP 能力入口；主机功能开关独立生效。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -80,7 +86,7 @@ import {
 } from "@cyberos/db";
 import { inferMimeType, statPath } from "@cyberos/storage-tools";
 import { domainTaskReference, ownedDomainTask } from "./tasks.js";
-import type { AgentCapabilityId, AgentCapabilityPolicyMode, DownloadTaskStatus, PublicBuildInfo, CyberOsRuntime } from "@cyberos/shared";
+import { agentPolicyCapabilityId, effectiveAgentCapabilityPolicy, type AgentCapabilityPolicyMode, type DownloadTaskStatus, type PublicBuildInfo, type CyberOsRuntime } from "@cyberos/shared";
 
 export interface McpRuntimeDependencies {
   db: CyberOsDatabase;
@@ -101,6 +107,7 @@ export interface McpRuntimeDependencies {
 }
 
 export interface ClientRuntime {
+  fullAccess: boolean;
   client: McpClientRecord;
   registry: CapabilityRegistry;
   context: CapabilityContext;
@@ -174,11 +181,11 @@ export function createClientRuntime(dependencies: McpRuntimeDependencies, client
     if (
       base.id === FILE_RESOURCE_LINK_CAPABILITY
       && client.kind === "pi"
-      && policySettings.policies["cyberos.files.read"] !== "auto"
+      && effectiveAgentCapabilityPolicy(policySettings, "cyberos.files.read") !== "auto"
     ) continue;
-    if (client.kind === "pi" && agentCapabilityId && policySettings.policies[agentCapabilityId] === "disabled") continue;
+    if (client.kind === "pi" && effectiveAgentCapabilityPolicy(policySettings, base.id) === "disabled") continue;
     const agentPolicy = client.kind === "pi" && agentCapabilityId
-      ? policySettings.policies[agentCapabilityId]
+      ? effectiveAgentCapabilityPolicy(policySettings, base.id)
       : null;
     const configured = agentPolicy && agentPolicy !== "auto"
       ? { ...base, approval: "first_party" as const }
@@ -200,7 +207,7 @@ export function createClientRuntime(dependencies: McpRuntimeDependencies, client
       : { ...configured, availability: () => ({ available: false, reason: "Domain adapter is not installed" }) };
     registry.register(descriptor);
   }
-  return { client, registry, context };
+  return { client, registry, context, fullAccess: client.kind === "pi" && policySettings.fullAccess };
 }
 
 export async function invokeCapability(runtime: ClientRuntime, id: string, input: JsonValue): Promise<CapabilityResult> {
@@ -219,6 +226,11 @@ export async function catalogForClient(runtime: ClientRuntime): Promise<JsonValu
       title: descriptor.title,
       risk: descriptor.risk,
       approval: descriptor.approval,
+      effectivePolicy: runtime.context.subject.kind === "pi"
+        ? effectiveAgentCapabilityPolicy(
+          getAgentCapabilityPolicySettings(runtimeDependencies(runtime.context).db) ?? defaultAgentCapabilityPolicySettings(),
+          descriptor.id, descriptor.approval === "first_party_confirm" ? "confirm" : descriptor.approval === "first_party" ? "approve" : "auto"
+        ) : "auto",
       requiredScopes: [...descriptor.requiredScopes],
       available: availability.available,
       reason: availability.reason ?? null,
@@ -767,31 +779,8 @@ function piAgentPolicy(
 ): AgentCapabilityPolicyMode | null {
   if (context.subject.kind !== "pi") return null;
   const policyCapabilityId = agentPolicyCapabilityId(capabilityId);
-  if (!policyCapabilityId) return null;
   const settings = getAgentCapabilityPolicySettings(dependencies.db) ?? defaultAgentCapabilityPolicySettings();
-  return settings.policies[policyCapabilityId];
-}
-
-function agentPolicyCapabilityId(capabilityId: string): AgentCapabilityId | null {
-  switch (capabilityId) {
-    case "cyberos.files.list": return "cyberos.files.list";
-    case "cyberos.files.stat":
-    case "cyberos.files.read":
-    case FILE_RESOURCE_LINK_CAPABILITY: return "cyberos.files.read";
-    case "cyberos.files.search": return "cyberos.files.search";
-    case "cyberos.files.grep": return "cyberos.files.grep";
-    case "cyberos.files.find": return "cyberos.files.find";
-    case FILE_MUTATION_CAPABILITY:
-    case "cyberos.files.rollback-propose":
-    case "cyberos.files.restore-propose":
-    case "cyberos.files.extract-propose":
-    case "cyberos.files.batch-propose":
-    case "cyberos.files.batch-cancel-propose": return FILE_MUTATION_CAPABILITY;
-    case "cyberos.files.edit": return "cyberos.files.edit";
-    case "cyberos.files.write": return "cyberos.files.write";
-    case "cyberos.shell.run": return "cyberos.shell.run";
-    default: return null;
-  }
+  return settings.fullAccess ? "auto" : policyCapabilityId ? effectiveAgentCapabilityPolicy(settings, capabilityId) : null;
 }
 
 function isPiMcpFileCapability(capabilityId: string): capabilityId is PiMcpFileCapabilityId {

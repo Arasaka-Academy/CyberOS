@@ -1,4 +1,11 @@
+/**
+ * [INPUT]: 依赖 SQLite、能力契约和当前 Agent 设置。
+ * [OUTPUT]: 提供持久运行、审批、作业归属与续跑仓库。
+ * [POS]: 能力执行的状态边界；提案记录创建时的授权模式。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { createHash, randomUUID } from "node:crypto";
+import { getAgentCapabilityPolicySettings } from "./settings.js";
 import type { CapabilityErrorCode, CapabilityRisk, CapabilityRunState, JsonValue } from "@cyberos/capabilities";
 import type { CyberOsDatabase } from "../connection.js";
 
@@ -189,7 +196,9 @@ export function createCapabilityProposal(db: CyberOsDatabase, input: {
       id: randomUUID(),
       runId: created.id,
       status: "pending",
-      proposal: input.proposal,
+      proposal: getAgentCapabilityPolicySettings(db)?.fullAccess && input.proposal && typeof input.proposal === "object" && !Array.isArray(input.proposal)
+        ? { ...input.proposal, authorizationMode: "full_access" }
+        : input.proposal,
       risk: input.risk,
       revision: 1,
       requiresConfirmation: input.requiresConfirmation ?? false,

@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖公共设置类型与界面翻译。
+ * [OUTPUT]: 提供设置分类、表单默认值和逐项策略选项。
+ * [POS]: 设置界面的配置边界；完全权限默认关闭。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import type { TFunction } from "i18next";
 import type {
   BuildInfo,
@@ -340,6 +346,7 @@ export function providerLabel(providerName: ModelProviderName, t: Translate): st
 
 export function defaultToolPolicyForm(): ToolPolicyFormState {
   return {
+    fullAccess: false,
     policies: {
       "cyberos.files.list": "auto",
       "cyberos.files.read": "auto",

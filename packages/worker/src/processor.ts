@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖 Agent 运行时、SQLite 作业和共享权限设置。
+ * [OUTPUT]: 提供作业执行、自动授权、事件投递和持久续跑。
+ * [POS]: worker 的会话执行入口；先建立归属再自动授权。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { existsSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
@@ -12,6 +18,8 @@ import {
 } from "@cyberos/agent";
 import {
   appendEvent,
+  agentCapabilityRunInteraction,
+  authorizeAgentCapabilityRun,
   claimNextAgentSessionCommand,
   claimNextCapabilityContinuation,
   claimNextJob,
@@ -166,7 +174,7 @@ export async function processNextAgentCommand({
       ),
       providerSession: getAgentProviderSession(db, session.id),
       emit: (event) => {
-        appendEvent(db, {
+        appendCapabilityEvent(db, {
           sessionId: session.id,
           jobId: activeJob?.id ?? null,
           type: event.type,
@@ -207,6 +215,7 @@ export async function processNextAgentCommand({
           runId: capabilityRunId,
           providerSessionId
         });
+        authorizeAgentCapabilityRun(db, { jobId: activeJob.id, runId: capabilityRunId });
       },
       ...(resources.mcp.servers.length > 0 ? { mcp: resources.mcp } : {}),
       skills: resources.skills
@@ -342,7 +351,7 @@ export async function processNextJob({
           providerSession: getAgentProviderSession(db, session.id),
           ...(agentRunner ? { runner: agentRunner } : {}),
           emit: (event) => {
-            appendEvent(db, {
+            appendCapabilityEvent(db, {
               sessionId: session.id,
               jobId: job.id,
               type: event.type,
@@ -379,6 +388,7 @@ export async function processNextJob({
           },
           onCapabilityRunPending: (runId, providerSessionId) => {
             linkAgentJobToCapabilityRun(db, { jobId: job.id, runId, providerSessionId });
+            authorizeAgentCapabilityRun(db, { jobId: job.id, runId });
           },
           ...(resources.mcp.servers.length > 0 ? { mcp: resources.mcp } : {}),
           skills: resources.skills
@@ -408,7 +418,7 @@ export async function processNextJob({
 
     if (result.status === "waiting_approval") {
       if (updateJobStatus(db, job.id, "waiting_approval", null, ["running"])) {
-        appendEvent(db, {
+        appendCapabilityEvent(db, {
           sessionId: session.id,
           jobId: job.id,
           type: "approval.pending",
@@ -568,7 +578,7 @@ async function loadPiAgentResources(db: CyberOsDatabase, config: CyberOsRuntime)
       id: "builtin",
       name: "cyberos",
       url: `http://127.0.0.1:${config.api.port}/mcp`,
-      description: "CyberOS capabilities, durable runs, resources, and approval-gated proposals.",
+      description: "CyberOS capabilities, durable runs, resources, and operations governed by the current Agent policy.",
       exposure: "codemode" as const,
       timeoutSeconds: 60,
       allowInsecureHttp: true,
@@ -599,6 +609,19 @@ async function loadPiAgentResources(db: CyberOsDatabase, config: CyberOsRuntime)
         .map((skill) => path.join(config.paths.piSkillsDir, skill.id))
     }
   };
+}
+
+function appendCapabilityEvent(db: CyberOsDatabase, event: Parameters<typeof appendEvent>[1]) {
+  const payload = event.payload && typeof event.payload === "object" && !Array.isArray(event.payload)
+    ? event.payload as Record<string, unknown> : {};
+  const runId = payload.runId;
+  const interaction = event.type === "approval.pending" && typeof runId === "string"
+    ? agentCapabilityRunInteraction(db, runId) : "approval";
+  return appendEvent(db, interaction === "approval" ? event : {
+    ...event,
+    type: "approval.updated",
+    payload: { ...payload, interaction }
+  });
 }
 
 async function readExternalMcpHeaders(

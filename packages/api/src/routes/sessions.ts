@@ -1,8 +1,16 @@
+/**
+ * [INPUT]: 依赖会话仓库、作业状态、权限交互类型和文件路径校验。
+ * [OUTPUT]: 提供会话、消息、命令、事件流与待审批计数。
+ * [POS]: Agent 会话接口；补充凭据不计为人工审批。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { randomUUID } from "node:crypto";
 import { stat } from "node:fs/promises";
 import type { FastifyInstance } from "fastify";
 import {
   AgentSessionCommandStateError,
+  agentCapabilityJobInteraction,
+  agentCapabilityRunInteraction,
   appendEvent,
   createAgentSessionCommand,
   createSession,
@@ -28,10 +36,13 @@ import { getAgentMessageContent, getAgentMessageRole, getFailedJobMessageContent
 
 export function registerSessionRoutes(server: FastifyInstance, { db, config }: ApiRouteContext): void {
   const dataRoot = config.paths.dataRoot;
+  const presentJob = (job: ReturnType<typeof getCurrentAgentJobForSession>) => job?.status === "waiting_approval"
+    ? { ...job, capabilityInteraction: agentCapabilityJobInteraction(db, job.id) } : job;
   server.get("/api/sessions", async (_request, reply) => {
     expireCapabilityApprovals(db);
     const pendingApprovalCounts = new Map<string, number>();
     for (const approval of listPendingAgentCapabilityApprovals(db)) {
+      if (agentCapabilityRunInteraction(db, approval.run.id) !== "approval") continue;
       pendingApprovalCounts.set(
         approval.sessionId,
         (pendingApprovalCounts.get(approval.sessionId) ?? 0) + 1
@@ -48,7 +59,7 @@ export function registerSessionRoutes(server: FastifyInstance, { db, config }: A
         firstMessage: messages[0]?.content ?? null,
         lastMessage: messages.at(-1)?.content ?? null,
         pendingApprovalCount: pendingApprovalCounts.get(session.id) ?? 0,
-        activeJob: getCurrentAgentJobForSession(db, session.id)
+        activeJob: presentJob(getCurrentAgentJobForSession(db, session.id))
       };
     });
 
@@ -161,7 +172,7 @@ export function registerSessionRoutes(server: FastifyInstance, { db, config }: A
       })
       .filter((message) => message !== null && message.content);
 
-    reply.send({ session, transcript, ...eventSnapshot });
+    reply.send({ session, transcript, ...eventSnapshot, activeJob: presentJob(eventSnapshot.activeJob) });
   });
 
   server.post<{

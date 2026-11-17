@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖隔离数据库和 Agent 运行夹具。
+ * [OUTPUT]: 验证作业、能力授权、事件与续跑。
+ * [POS]: worker 调度行为回归测试。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -12,6 +18,9 @@ import {
   createUserMessageAndJob,
   createCapabilityProposal,
   createMcpClient,
+  defaultAgentCapabilityPolicySettings,
+  getCapabilityApprovalByRun,
+  saveAgentCapabilityPolicySettings,
   decideCapabilityApproval,
   deleteSession,
   getAgentProviderSession,
@@ -49,6 +58,27 @@ afterEach(async () => {
 });
 
 describe("worker processor", () => {
+  it("queues full-access capability work without emitting an approval request", async () => {
+    saveAgentCapabilityPolicySettings(db, { ...defaultAgentCapabilityPolicySettings(), fullAccess: true });
+    const session = createSession(db, {});
+    const { job } = createUserMessageAndJob(db, { sessionId: session.id, content: "Create a directory" });
+    let runId = "";
+    const runner: PiAgentRunner = async (input) => {
+      const proposed = createCapabilityProposal(db, { subjectId: session.id, subjectKind: "pi",
+        capabilityId: "cyberos.files.mutate", risk: "high", redactedInput: {}, proposal: { summary: "Create a directory" },
+        requiresConfirmation: true, expiresAt: new Date(Date.now() + 60_000).toISOString() });
+      runId = proposed.run.id;
+      await input.onCapabilityRunPending?.(runId, "full-access-session");
+      await input.emit({ type: "approval.pending", runId: "turn", sequence: 1, payload: { runId } });
+      return { status: "waiting_approval", runId };
+    };
+    await processNextJob({ db, config: testConfig(), agentRunner: runner });
+    expect(getCapabilityApprovalByRun(db, runId)).toMatchObject({ status: "approved", decidedBy: "system:full-access" });
+    expect(listPendingAgentCapabilityApprovals(db, { sessionId: session.id })).toEqual([]);
+    expect(listEvents(db, { sessionId: session.id }).map((event) => event.type)).not.toContain("approval.pending");
+    expect(getJob(db, job.id)?.status).toBe("waiting_approval");
+  });
+
   it("claims a queued job and writes ordered agent events", async () => {
     const session = createSession(db, { });
     createUserMessageAndJob(db, {

@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖 SQLite、设置转换器和共享权限决策。
+ * [OUTPUT]: 提供系统设置持久化与 Pi 有效工具策略。
+ * [POS]: API 和 worker 共用的设置仓库。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import path from "node:path";
 import type {
   AgentCapabilityPolicySettingsRecord,
@@ -20,6 +26,7 @@ import type {
   VmSettingsRecord
 } from "@cyberos/shared";
 import {
+  effectiveAgentCapabilityPolicy,
   normalizeAudioSettings,
   AUDIO_SETTING_FIELDS,
   normalizeSystemProxySettings,
@@ -307,6 +314,7 @@ export function saveModelProviderSettings(
 
 export function defaultAgentCapabilityPolicySettings(): AgentCapabilityPolicySettingsRecord {
   return {
+    fullAccess: false,
     policies: { ...DEFAULT_AGENT_CAPABILITY_POLICY_SETTINGS.policies },
     updatedAt: new Date(0).toISOString()
   };
@@ -320,7 +328,7 @@ export function getAgentCapabilityPolicySettings(db: CyberOsDatabase): AgentCapa
 
 export function saveAgentCapabilityPolicySettings(
   db: CyberOsDatabase,
-  settings: Omit<AgentCapabilityPolicySettingsRecord, "updatedAt">
+  settings: Pick<AgentCapabilityPolicySettingsRecord, "policies"> & Partial<Pick<AgentCapabilityPolicySettingsRecord, "fullAccess">>
 ): AgentCapabilityPolicySettingsRecord {
   const updatedAt = new Date().toISOString();
   const record = normalizeAgentCapabilityPolicySettings(settings, updatedAt);
@@ -358,13 +366,14 @@ export function agentCapabilityPolicyToPiToolPolicy(
   settings: AgentCapabilityPolicySettingsRecord
 ): PiToolPolicySettingsRecord {
   return {
-    read: settings.policies["cyberos.files.read"],
-    grep: settings.policies["cyberos.files.grep"],
-    find: settings.policies["cyberos.files.find"],
-    ls: settings.policies["cyberos.files.list"],
-    bash: settings.policies["cyberos.shell.run"],
-    edit: settings.policies["cyberos.files.edit"],
-    write: settings.policies["cyberos.files.write"],
+    fullAccess: settings.fullAccess,
+    read: effectiveAgentCapabilityPolicy(settings, "cyberos.files.read"),
+    grep: effectiveAgentCapabilityPolicy(settings, "cyberos.files.grep"),
+    find: effectiveAgentCapabilityPolicy(settings, "cyberos.files.find"),
+    ls: effectiveAgentCapabilityPolicy(settings, "cyberos.files.list"),
+    bash: effectiveAgentCapabilityPolicy(settings, "cyberos.shell.run"),
+    edit: effectiveAgentCapabilityPolicy(settings, "cyberos.files.edit"),
+    write: effectiveAgentCapabilityPolicy(settings, "cyberos.files.write"),
     updatedAt: settings.updatedAt
   };
 }

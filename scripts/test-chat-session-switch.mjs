@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖聊天页面、隔离路由夹具与 Playwright。
+ * [OUTPUT]: 验证会话切换、实时状态与凭据输入交互。
+ * [POS]: 聊天浏览器验收入口，不调用真实能力。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -152,6 +158,48 @@ function emitChatEvent(id, type, content, runId = "typing-run") {
     response.write(`id: ${id}\nevent: ${type}\ndata: ${JSON.stringify(event)}\n\n`);
   }
 }
+
+test("full access restores automatic execution as running after reload", async t => {
+  const { page, errors } = await openChat(t, { snapshotOverrides: {
+    a: { activeJob: { id: "job-a", sessionId: "a", messageId: "prompt-a", status: "waiting_approval", capabilityInteraction: "automatic" } }
+  } });
+  await ready(page);
+  await expect(page.locator('.composer-status[data-state="running"]')).toBeVisible();
+  await expect(page.locator(".approval-card")).toHaveCount(0);
+  assert.deepEqual(errors, []);
+});
+
+test("full access requests credentials without an approval confirmation", async t => {
+  for (const width of [1440, 390]) await t.test(`${width}px`, async child => {
+    const approval = {
+      id: "input-a", runId: "run-a", sessionId: "a", jobId: "job-a", status: "pending",
+      proposal: { summary: "Connect service", requiredSecrets: [{ name: "apiKey", label: "API key" }] },
+      interaction: "input_required", risk: "high", revision: 1, requiresConfirmation: false,
+      expiresAt: "2099-11-05T00:00:00.000Z", createdAt: timestamp, updatedAt: timestamp,
+      client: null,
+      run: { id: "run-a", capabilityId: "cyberos.settings.update-propose", state: "waiting_approval",
+        subjectId: "a", subjectKind: "pi", input: {}, revision: 1, createdAt: timestamp }
+    };
+    const { page, errors } = await openChat(child, { width, initialApprovals: [approval] });
+    let submitted;
+    await page.route("**/api/capability-approvals/input-a/input", async route => {
+      submitted = route.request().postDataJSON();
+      await route.fulfill({ json: { run: { state: "succeeded" } } });
+    });
+    await ready(page);
+    await page.locator(".approval-approve").click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByRole("checkbox")).toHaveCount(0);
+    await expect(dialog.getByRole("button", { name: /approve/i })).toHaveCount(0);
+    await dialog.getByLabel("API key").fill("browser-test-value");
+    await dialog.getByRole("button", { name: "Submit", exact: true }).click();
+    await expect.poll(() => submitted?.sessionId).toBe("a");
+    assert.equal(submitted.expectedRevision, 1);
+    assert.equal(submitted.decision, undefined);
+    assert.equal(submitted.confirmed, undefined);
+    assert.deepEqual(errors, []);
+  });
+});
 
 test("live text types progressively and keeps its DOM identity when persisted", async (t) => {
   const { page, errors } = await openChat(t);

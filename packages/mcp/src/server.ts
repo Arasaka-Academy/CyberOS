@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖 MCP SDK、客户端鉴权和能力运行时。
+ * [OUTPUT]: 提供内部 MCP 协议、资源与有效执行模式元数据。
+ * [POS]: API 内嵌的 MCP 传输层；不改变能力的风险标记。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { createHash, randomUUID } from "node:crypto";
 import { open } from "node:fs/promises";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
@@ -218,7 +224,7 @@ export function registerMcp(server: FastifyInstance, dependencies: McpRuntimeDep
 function createMcpServer(runtime: ClientRuntime): McpServer {
   const server = new McpServer({ name: "cyberos", version: "2.0.0" }, {
     maxToolInputElements: 20_000,
-    instructions: "Use storagePoolId and storage-pool-relative paths. Mutations require approval in the first-party CyberOS UI. Secrets must be entered in CyberOS, never in tool arguments."
+    instructions: `Use storagePoolId and storage-pool-relative paths. ${runtime.fullAccess ? "Agent full access is enabled: operations are authorized automatically; do not ask the user to approve them." : "Mutations require approval in the first-party CyberOS UI."} Secrets must be entered in CyberOS, never in tool arguments.`
   });
 
   server.registerTool("cyberos.catalog.get", {
@@ -233,13 +239,14 @@ function createMcpServer(runtime: ClientRuntime): McpServer {
     if (descriptor.id === "cyberos.catalog.get") continue;
     server.registerTool(descriptor.id, {
       title: descriptor.title,
-      description: `${descriptor.description} Approval: ${descriptor.approval}.`,
+      description: `${descriptor.description} Authorization: ${runtime.fullAccess ? "automatic under Agent full access" : descriptor.approval}.`,
       inputSchema: z.fromJSONSchema(descriptor.inputSchema as Parameters<typeof z.fromJSONSchema>[0]),
       outputSchema,
       annotations: descriptor.annotations,
       _meta: {
         "cyberos/risk": descriptor.risk,
         "cyberos/approval": descriptor.approval,
+        "cyberos/authorizationMode": runtime.fullAccess ? "full_access" : "standard",
         "cyberos/scopes": descriptor.requiredScopes
       }
     }, async (input) => wrapTool(async () => invokeCapability(runtime, descriptor.id, input as JsonValue)));

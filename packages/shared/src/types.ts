@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖系统领域的共享数据约定。
+ * [OUTPUT]: 提供 API、worker 与界面的类型和 Agent 权限设置。
+ * [POS]: shared 的跨进程类型契约。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import type { PhotosMediaKind } from "./photos-config.js";
 import type { MonitoringHealthStatus } from "./monitoring.js";
 import type { VodPlayerErrorCode, VodPlayerState } from "./vod-player-protocol.js";
@@ -2332,6 +2338,7 @@ export interface SystemStorageSummary {
 }
 
 export interface PiToolPolicySettingsRecord {
+  fullAccess?: boolean;
   read: PiToolPolicyMode;
   grep: PiToolPolicyMode;
   find: PiToolPolicyMode;
@@ -2343,6 +2350,7 @@ export interface PiToolPolicySettingsRecord {
 }
 
 export interface AgentCapabilityPolicySettingsRecord {
+  fullAccess: boolean;
   policies: Record<AgentCapabilityId, AgentCapabilityPolicyMode>;
   updatedAt: string;
 }

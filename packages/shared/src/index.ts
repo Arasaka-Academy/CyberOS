@@ -1,3 +1,10 @@
+/**
+ * [INPUT]: 依赖共享配置、协议、类型与权限规则。
+ * [OUTPUT]: 提供跨工作空间的共享公共接口。
+ * [POS]: shared 的包入口。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
+export * from "./agent-capability-policy.js";
 export * from "./config.js";
 export * from "./docker-images.js";
 export * from "./docker-resources.js";

@@ -17,6 +17,8 @@ source-layout work.
 - `packages/web`: React/Vite web UI.
 - `packages/api`: Fastify API, WebSocket/SSE endpoints, and production static files.
 - `packages/worker`: agent job worker.
+- `packages/capabilities`, `packages/capability-runtime`, `packages/mcp`:
+  capability contracts, durable authorized execution, and internal Agent MCP.
 - `packages/ops`, `packages/backup`: one-shot operations and restic jobs.
 - `packages/db`, `packages/storage-tools`, `packages/agent`, `packages/shared`:
   persistence, path-safe filesystem operations, agent routing, and shared
@@ -249,8 +251,11 @@ CyberOS installation created with the current `/cyberos` layout.
 
 - Keep all storage reads/writes inside configured storage pools. Preserve traversal,
   symlink, mount-readiness, and path normalization protections.
-- Mutating file operations and agent actions remain approval-gated. Do not add
-  an approval bypass without explicit product direction.
+- Mutating file operations and agent actions require approval in standard mode.
+  The first-party Agent settings page can enable full access for all enabled
+  capabilities. This mode records system authorization and preserves path,
+  scope, host-feature, target-revision, and execution checks. Agents cannot
+  change the full-access switch through their tools.
 - Keep API response contracts stable unless an API change is explicitly
   requested and tested.
 - SQLite is shared by API, worker, indexer, Ops, and backup; avoid

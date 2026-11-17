@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖 Fastify、系统运行服务与能力执行队列。
+ * [OUTPUT]: 提供 HTTP/MCP 服务及生命周期清理。
+ * [POS]: API 组合入口；启动恢复后消费已授权能力运行。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import cors from "@fastify/cors";
 import fastifyMultipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
@@ -37,7 +43,7 @@ import { DockerHostAccessControlClient } from "./lib/docker-host-access-control.
 import { dockerEngine } from "./lib/docker-service.js";
 import { collectDockerSummary } from "./lib/docker-service.js";
 import { registerMcp, type McpRuntimeDependencies } from "@cyberos/mcp";
-import { recoverCapabilityRuns } from "@cyberos/capability-runtime";
+import { recoverCapabilityRuns, startCapabilityRunQueue } from "@cyberos/capability-runtime";
 import { collectSystemNetwork, collectSystemNetworkTraffic, collectSystemStorage } from "./lib/system-management.js";
 import { SystemNetworkManagerRuntime } from "./lib/network-manager.js";
 import { SystemEthernetManagerRuntime } from "./lib/ethernet-manager.js";
@@ -269,11 +275,15 @@ export async function buildServer({ buildInfo, config, db, monitoring: monitorin
   }, 60_000);
   hostAccessDraftCleanup.unref();
 
+  let stopCapabilityRunQueue: (() => Promise<void>) | undefined;
   server.addHook("onReady", async () => {
     const recoveredRuns = await recoverCapabilityRuns(capabilityRuntime);
     if (recoveredRuns.expired > 0 || recoveredRuns.interrupted > 0 || recoveredRuns.resumed > 0) {
       server.log.info(recoveredRuns, "Recovered capability runs");
     }
+    stopCapabilityRunQueue = startCapabilityRunQueue(capabilityRuntime, (error) => {
+      server.log.error({ err: error }, "Capability run queue failed");
+    });
     fileBatches.start();
     audio.start();
     const currentDockerConfig = effectiveDockerConfig(config, getDockerSettings(db)).docker;
@@ -306,6 +316,7 @@ export async function buildServer({ buildInfo, config, db, monitoring: monitorin
   });
 
   server.addHook("onClose", async () => {
+    await stopCapabilityRunQueue?.();
     await audio.close();
     clearInterval(hostAccessDraftCleanup);
     await fileBatches.stop();

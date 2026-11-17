@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖 Pi SDK、模型绑定、会话资源与有效工具策略。
+ * [OUTPUT]: 提供可续跑 Agent 会话、工具事件和运行结果。
+ * [POS]: Pi 会话宿主；权限改变后重建工具目录，复用对话历史。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
@@ -255,6 +261,7 @@ export class PiAgentSessionHost {
       workingPath: workspace.relativePath,
       runtimeGeneration: runtime.generation,
       mcp: piMcpFingerprint(input.mcp),
+      toolPolicy: input.toolPolicy,
       skills: piSkillFingerprint(input.skills),
       resourcesTrusted: input.session.piResourcesTrusted === true
     });
@@ -285,6 +292,7 @@ export class PiAgentSessionHost {
       workingPath: workspace.relativePath,
       runtimeGeneration: runtime.generation,
       mcp: piMcpFingerprint(commandInput.mcp),
+      toolPolicy: commandInput.toolPolicy,
       skills: piSkillFingerprint(commandInput.skills),
       resourcesTrusted: commandInput.session.piResourcesTrusted === true
     });
@@ -735,7 +743,7 @@ function cyberosSystemPrompt(workingPath: string): string {
     "You are running inside CyberOS.",
     `The current working directory is ${workingPath}.`,
     "Use the CyberOS MCP server for NAS and system capabilities. Paths are always relative to a selected storage pool.",
-    "Mutating capabilities return durable runs and require approval in the first-party CyberOS UI.",
+    "Mutating capabilities return durable runs. Follow the current authorization mode: full access executes automatically; standard mode uses the first-party CyberOS approval UI.",
     "Never request or include passwords, API keys, Wi-Fi secrets, registry tokens, or host absolute paths."
   ].join("\n");
 }

@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖运行仓库、共享权限规则、存储工具与领域适配器。
+ * [OUTPUT]: 提供提案准备、授权后执行、队列执行与恢复。
+ * [POS]: 能力的执行边界；自动授权仍复查归属、策略与目标。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { createHash } from "node:crypto";
 import { lstat, stat } from "node:fs/promises";
 import path from "node:path";
@@ -10,6 +16,7 @@ import {
 } from "@cyberos/capabilities";
 import {
   createCapabilityProposal,
+  FULL_ACCESS_DECISION_SOURCE,
   createTrashEntry,
   defaultAgentCapabilityPolicySettings,
   deleteCapabilityRunPayload,
@@ -36,7 +43,7 @@ import {
   resolveSafeTargetPath,
   statPath
 } from "@cyberos/storage-tools";
-import type { AgentCapabilityId, FileMutationOperation, FileOperationProposal, CyberOsRuntime } from "@cyberos/shared";
+import { agentPolicyCapabilityId, effectiveAgentCapabilityPolicy, type FileMutationOperation, type FileOperationProposal, type CyberOsRuntime } from "@cyberos/shared";
 import {
   isStoredCapabilityAdapterPayload,
   parseStoredCapabilityAdapterProposal,
@@ -307,10 +314,13 @@ export async function executeApprovedCapabilityRun(
     if (initial.subjectKind !== "pi" || !getAgentCapabilityApproval(dependencies.db, approval.id)) {
       return failQueuedRun(dependencies.db, initial, "FORBIDDEN", "Approval is not linked to a Pi Agent conversation");
     }
+    const settings = getAgentCapabilityPolicySettings(dependencies.db) ?? defaultAgentCapabilityPolicySettings();
+    if (approval.decidedBy === FULL_ACCESS_DECISION_SOURCE && !settings.fullAccess) {
+      return failQueuedRun(dependencies.db, initial, "FORBIDDEN", "Full access was disabled before execution");
+    }
     const policyCapabilityId = agentPolicyCapabilityId(initial.capabilityId);
     if (policyCapabilityId) {
-      const policy = (getAgentCapabilityPolicySettings(dependencies.db) ?? defaultAgentCapabilityPolicySettings())
-        .policies[policyCapabilityId];
+      const policy = effectiveAgentCapabilityPolicy(settings, initial.capabilityId);
       if (policy === "disabled") {
         return failQueuedRun(dependencies.db, initial, "FORBIDDEN", "Capability was disabled after approval was requested");
       }
@@ -348,14 +358,7 @@ export async function executeApprovedCapabilityRun(
       return failQueuedRun(dependencies.db, initial, "CONFLICT", "File state changed after the proposal was created");
     }
 
-    const running = transitionCapabilityRun(dependencies.db, {
-      runId,
-      expectedRevision: initial.revision,
-      from: ["queued"],
-      to: "running",
-      progress: { phase: "executing" },
-      cancellable: false
-    });
+    const running = startAuthorizedRun(dependencies.db, initial);
     if (!running) return getCapabilityRun(dependencies.db, runId)!;
 
     try {
@@ -449,10 +452,13 @@ export async function executeStartedSecretCapabilityRun(
     if (initial.subjectKind !== "pi" || !getAgentCapabilityApproval(dependencies.db, approval.id)) {
       return fail("FORBIDDEN", "Approval is not linked to a Pi Agent conversation");
     }
+    const settings = getAgentCapabilityPolicySettings(dependencies.db) ?? defaultAgentCapabilityPolicySettings();
+    if (approval.decidedBy === FULL_ACCESS_DECISION_SOURCE && !settings.fullAccess) {
+      return fail("FORBIDDEN", "Full access was disabled before execution");
+    }
     const policyCapabilityId = agentPolicyCapabilityId(initial.capabilityId);
     if (policyCapabilityId) {
-      const policy = (getAgentCapabilityPolicySettings(dependencies.db) ?? defaultAgentCapabilityPolicySettings())
-        .policies[policyCapabilityId];
+      const policy = effectiveAgentCapabilityPolicy(settings, initial.capabilityId);
       if (policy === "disabled") return fail("FORBIDDEN", "Capability was disabled after approval was requested");
       if (policy === "confirm" && !approval.requiresConfirmation) {
         return fail("CONFLICT", "Capability now requires a new confirmed approval");
@@ -564,14 +570,7 @@ async function executeApprovedDomainAdapterRun(
     );
   }
 
-  const running = transitionCapabilityRun(dependencies.db, {
-    runId: initial.id,
-    expectedRevision: initial.revision,
-    from: ["queued"],
-    to: "running",
-    progress: { phase: "executing" },
-    cancellable: false
-  });
+  const running = startAuthorizedRun(dependencies.db, initial);
   if (!running) return getCapabilityRun(dependencies.db, initial.id)!;
 
   try {
@@ -602,6 +601,24 @@ async function executeApprovedDomainAdapterRun(
     deleteCapabilityRunPayload(dependencies.db, initial.id);
     return failed;
   }
+}
+
+function startAuthorizedRun(db: CyberOsDatabase, initial: CapabilityRunRecord): CapabilityRunRecord | null {
+  return db.transaction(() => {
+    const approval = getCapabilityApprovalByRun(db, initial.id);
+    if (approval?.decidedBy === FULL_ACCESS_DECISION_SOURCE) {
+      const linked = getAgentCapabilityApproval(db, approval.id);
+      const activeJob = linked && db.prepare("SELECT 1 FROM jobs WHERE id = ? AND status IN ('running', 'waiting_approval')").pluck().get(linked.jobId);
+      if (!getAgentCapabilityPolicySettings(db)?.fullAccess || !activeJob) {
+        failQueuedRun(db, initial, "FORBIDDEN", "Full access or the Agent job was revoked before execution");
+        return null;
+      }
+    }
+    return transitionCapabilityRun(db, {
+      runId: initial.id, expectedRevision: initial.revision,
+      from: ["queued"], to: "running", progress: { phase: "executing" }, cancellable: false
+    });
+  }).immediate();
 }
 
 function adapterContext(
@@ -866,14 +883,7 @@ async function executeApprovedPiMcpFileRun(
   payload: StoredPiMcpFilePayload
 ): Promise<CapabilityRunRecord> {
   await validatePiMcpFileCapability(dependencies, payload.capabilityId, payload.input);
-  const running = transitionCapabilityRun(dependencies.db, {
-    runId: initial.id,
-    expectedRevision: initial.revision,
-    from: ["queued"],
-    to: "running",
-    progress: { phase: "executing" },
-    cancellable: false
-  });
+  const running = startAuthorizedRun(dependencies.db, initial);
   if (!running) return getCapabilityRun(dependencies.db, initial.id)!;
 
   try {
@@ -963,27 +973,6 @@ function piMcpFileSummary(capabilityId: PiMcpFileCapabilityId, input: Record<str
     case "cyberos.files.find": return `Find files below ${requestedPath}`;
     case "cyberos.files.git": return `Inspect Git state at ${requestedPath}`;
     case "cyberos.files.archive-inspect": return `Inspect archive ${requestedPath}`;
-  }
-}
-
-function agentPolicyCapabilityId(capabilityId: string): AgentCapabilityId | null {
-  switch (capabilityId) {
-    case "cyberos.files.list": return "cyberos.files.list";
-    case "cyberos.files.stat":
-    case "cyberos.files.read": return "cyberos.files.read";
-    case "cyberos.files.search": return "cyberos.files.search";
-    case "cyberos.files.grep": return "cyberos.files.grep";
-    case "cyberos.files.find": return "cyberos.files.find";
-    case FILE_MUTATION_CAPABILITY:
-    case "cyberos.files.rollback-propose":
-    case "cyberos.files.restore-propose":
-    case "cyberos.files.extract-propose":
-    case "cyberos.files.batch-propose":
-    case "cyberos.files.batch-cancel-propose": return FILE_MUTATION_CAPABILITY;
-    case "cyberos.files.edit": return "cyberos.files.edit";
-    case "cyberos.files.write": return "cyberos.files.write";
-    case "cyberos.shell.run": return "cyberos.shell.run";
-    default: return null;
   }
 }
 

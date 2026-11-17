@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖隔离 API 与设置仓库。
+ * [OUTPUT]: 验证设置持久化、字段校验与兼容更新。
+ * [POS]: API 设置契约回归测试。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import Fastify from "fastify";
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -25,6 +31,18 @@ afterEach(async () => {
 });
 
 describe("settings routes", () => {
+  it("saves full access independently and preserves it across partial policy updates", async () => {
+    const server = createServer(db);
+    expect((await server.inject({ method: "GET", url: "/api/settings/agent-capability-policy" })).json().settings.fullAccess).toBe(false);
+    const enabled = await server.inject({ method: "PATCH", url: "/api/settings/agent-capability-policy", payload: { fullAccess: true } });
+    expect(enabled.statusCode).toBe(200);
+    expect(enabled.json().settings.fullAccess).toBe(true);
+    const partial = await server.inject({ method: "PATCH", url: "/api/settings/agent-capability-policy", payload: { policies: { "cyberos.files.read": "disabled" } } });
+    expect(partial.json().settings.fullAccess).toBe(true);
+    expect((await server.inject({ method: "PATCH", url: "/api/settings/agent-capability-policy", payload: { fullAccess: "true" } })).statusCode).toBe(400);
+    await server.close();
+  });
+
   it("accepts write-only audio tokens without exposing them in any settings response", async () => {
     const server = createServer(db);
     const saved = await server.inject({ method: "PATCH", url: "/api/settings/audio", payload: { cyberAudioToken: "sensitive-voice-token" } });

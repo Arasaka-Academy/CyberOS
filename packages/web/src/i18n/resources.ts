@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖 Web 的统一翻译键约定。
+ * [OUTPUT]: 提供中文与英文界面文案。
+ * [POS]: 包含完全权限设置与补充凭据的操作文案。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { nvrEn, nvrZh } from "./nvr.js";
 export const en = {
   nvr: nvrEn,
@@ -502,6 +508,9 @@ export const en = {
       secrets: "Local input",
       preview: "Requested action",
       localConfirmation: "Approve capability",
+      inputTitle: "Additional information required",
+      provideInput: "Enter credentials",
+      submitInput: "Submit",
       confirm: "This action requires an additional first-party confirmation. Approve and execute it now?"
     },
     approvalCards: {
@@ -3282,10 +3291,14 @@ export const en = {
       pickerSelect: "Use this ZIP"
     },
     toolPolicy: {
+      fullAccessTitle: "Full Access",
+      fullAccessLabel: "Agent full access",
+      fullAccessDescription: "Allow the Agent to execute all enabled system capabilities without individual approval.",
+      fullAccessOverrides: "Individual policies are overridden. Turning full access off restores them.",
       readOnlyTitle: "Read-Only Tools",
       readOnlyDescription: "Tools that can run automatically while staying inside the storage pool.",
       dangerousTitle: "Approval Tools",
-      dangerousDescription: "File mutation proposals always require approval. Edit, write, and shell capabilities may run automatically, require approval or confirmation, or stay disabled.",
+      dangerousDescription: "In standard mode, file mutations require approval. Configure edit, write, and restricted shell permissions below.",
       modes: {
         auto: "Auto",
         approve: "Approve",
@@ -4070,6 +4083,9 @@ export const zhCN = {
       secrets: "本机补录",
       preview: "请求内容",
       localConfirmation: "批准能力",
+      inputTitle: "补充信息",
+      provideInput: "提供凭据",
+      submitInput: "提交",
       confirm: "此操作需要额外的第一方确认。确认现在批准并执行吗？"
     },
     approvalCards: {
@@ -6850,10 +6866,14 @@ export const zhCN = {
       pickerSelect: "使用此 ZIP"
     },
     toolPolicy: {
+      fullAccessTitle: "完全权限",
+      fullAccessLabel: "Agent 完全权限",
+      fullAccessDescription: "允许 Agent 直接执行所有已启用的系统能力，无需逐项审批。",
+      fullAccessOverrides: "当前覆盖逐项权限策略；关闭后恢复原有配置。",
       readOnlyTitle: "只读工具",
       readOnlyDescription: "只读工具可自动运行，但始终受 storage pool 路径保护。",
       dangerousTitle: "审批工具",
-      dangerousDescription: "文件变更提案始终需要审批；编辑、写入与 shell 能力可设置为自动执行、审批、二次确认或禁用。",
+      dangerousDescription: "标准模式下，文件变更需要审批。下方可配置编辑、写入与受限 Shell 的权限。",
       modes: {
         auto: "自动",
         approve: "审批",

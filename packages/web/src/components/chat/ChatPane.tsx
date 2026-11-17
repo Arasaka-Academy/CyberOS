@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖会话状态、能力交互记录与聊天控件。
+ * [OUTPUT]: 提供 Agent 对话、人工审批和独立凭据输入。
+ * [POS]: 聊天渲染层；补充信息不显示批准与明确确认。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { Button as UiButton, Checkbox, DialogActions, DialogHeader, EmptyState, Input } from "@cyberos/ui";
 import { ModalPortal } from "../common/ModalPortal.js";
 import { BrandLogo } from "../common/BrandLogo.js";
@@ -112,7 +118,7 @@ export function composerFeedbackState({
   if (activeJobStatus === "queued") {
     return "queued";
   }
-  if (activeJobStatus === "running") {
+  if (activeJobStatus === "running" || (activeJobStatus === "waiting_approval" && status === "agent-running")) {
     return "running";
   }
   return null;
@@ -375,15 +381,16 @@ function ChatPaneContent({
     const target = proposalTarget ?? requestTarget;
     const secrets = capabilitySecretRequirements(approval);
     const title = typeof proposal.title === "string" ? proposal.title : approval.run.capabilityId;
+    const inputOnly = approval.interaction === "input_required";
     return (
-      <article className="ui-card ui-card-frame approval-card" aria-label={t("chat.pendingApprovals")}>
+      <article className="ui-card ui-card-frame approval-card" aria-label={t(inputOnly ? "chat.capabilityApproval.inputTitle" : "chat.pendingApprovals")}>
         <div className="approval-card-icon" aria-hidden="true" data-kind="capability">
           <Settings size={18} />
         </div>
         <div className="approval-card-body">
           <div className="approval-card-head">
             <div>
-              <span className="approval-card-kicker">{t("chat.capabilityApproval.kicker")}</span>
+              <span className="approval-card-kicker">{t(inputOnly ? "chat.capabilityApproval.inputTitle" : "chat.capabilityApproval.kicker")}</span>
               <strong>{title}</strong>
             </div>
             <span className="risk-pill" data-risk={approval.risk}>
@@ -435,19 +442,19 @@ function ChatPaneContent({
               }
               else onApproveCapability(approval, { confirmed: false });
             }}
-            data-tooltip={t("common.actions.approve")}
+            data-tooltip={t(inputOnly ? "chat.capabilityApproval.provideInput" : "common.actions.approve")}
           >
             <Check aria-hidden="true" size={15} />
-            <span>{t("common.actions.approve")}</span>
+            <span>{t(inputOnly ? "chat.capabilityApproval.provideInput" : "common.actions.approve")}</span>
           </UiButton>
           <UiButton variant="ghost"
             type="button"
             className="approval-reject"
             onClick={() => onRejectCapability(approval)}
-            data-tooltip={t("common.actions.reject")}
+            data-tooltip={t(inputOnly ? "common.actions.cancel" : "common.actions.reject")}
           >
             <X aria-hidden="true" size={15} />
-            <span>{t("common.actions.reject")}</span>
+            <span>{t(inputOnly ? "common.actions.cancel" : "common.actions.reject")}</span>
           </UiButton>
         </div>
       </article>
@@ -833,7 +840,7 @@ function ChatPaneContent({
               });
             }}
           >
-            <DialogHeader title={t("chat.capabilityApproval.localConfirmation")} eyebrow={<>{t("chat.capabilityApproval.kicker")}</>} headingId="approval-secret-title" />
+            <DialogHeader title={t(approvalDialog.interaction === "input_required" ? "chat.capabilityApproval.inputTitle" : "chat.capabilityApproval.localConfirmation")} eyebrow={<>{t(approvalDialog.interaction === "input_required" ? "chat.capabilityApproval.provideInput" : "chat.capabilityApproval.kicker")}</>} headingId="approval-secret-title" />
             <p>{typeof approvalDialog.proposal.summary === "string" ? approvalDialog.proposal.summary : t("chat.capabilityApproval.detail")}</p>
             {capabilitySecretRequirements(approvalDialog).map((requirement) => (
               <label key={requirement.name} className="approval-secret-field">
@@ -849,7 +856,7 @@ function ChatPaneContent({
                 {requirement.description ? <small>{requirement.description}</small> : null}
               </label>
             ))}
-            {approvalDialog.requiresConfirmation ? (
+            {approvalDialog.requiresConfirmation && approvalDialog.interaction !== "input_required" ? (
               <label className="approval-strong-confirmation">
                 <Checkbox  required />
                 <span>{t("chat.capabilityApproval.confirm")}</span>
@@ -859,9 +866,9 @@ function ChatPaneContent({
               <UiButton variant="secondary" type="button" className="secondary-button" onClick={closeApprovalDialog}>
                 {t("common.actions.cancel")}
               </UiButton>
-              <UiButton variant={approvalDialog.risk === "high" || approvalDialog.risk === "critical" ? "danger" : "primary"} type="submit" className={approvalDialog.risk === "high" || approvalDialog.risk === "critical" ? "danger-button" : "primary-button"}>
+              <UiButton variant={approvalDialog.interaction !== "input_required" && (approvalDialog.risk === "high" || approvalDialog.risk === "critical") ? "danger" : "primary"} type="submit">
                 <Check aria-hidden="true" size={15} />
-                <span>{t("common.actions.approve")}</span>
+                <span>{t(approvalDialog.interaction === "input_required" ? "chat.capabilityApproval.submitInput" : "common.actions.approve")}</span>
               </UiButton>
             </DialogActions>
           </form>

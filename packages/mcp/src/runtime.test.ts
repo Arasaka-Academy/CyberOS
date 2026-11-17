@@ -1,7 +1,14 @@
+/**
+ * [INPUT]: 依赖隔离能力目录和 MCP 客户端。
+ * [OUTPUT]: 验证工具可见性、调用与有效权限。
+ * [POS]: MCP 运行时行为回归测试。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { z } from "zod";
 import { createCatalogDescriptors } from "@cyberos/capabilities";
 import type { CapabilityDomainAdapter } from "@cyberos/capability-runtime";
 import {
@@ -63,6 +70,25 @@ afterEach(async () => {
 });
 
 describe("Pi MCP capability discovery", () => {
+  it("overrides disabled Agent permissions while retaining host feature gates", async () => {
+    const defaults = defaultAgentCapabilityPolicySettings();
+    saveAgentCapabilityPolicySettings(db, { fullAccess: true, policies: { ...defaults.policies, "cyberos.files.read": "disabled", "cyberos.files.mutate": "disabled" } });
+    const runtime = createRuntime(false);
+    expect(runtime.registry.get("cyberos.files.read")).not.toBeNull();
+    expect(runtime.registry.get("cyberos.files.mutate")).not.toBeNull();
+    expect(runtime.registry.get("cyberos.shell.run")).toBeNull();
+    const catalog = await catalogForClient(runtime) as Array<{ id: string; effectivePolicy: string }>;
+    expect(catalog.find((item) => item.id === "cyberos.system.power-propose")?.effectivePolicy).toBe("auto");
+  });
+
+  it("does not expose the full access switch to Agent settings tools", () => {
+    const descriptor = createRuntime(false).registry.get("cyberos.settings.update-propose")!;
+    const schema = z.fromJSONSchema(descriptor.inputSchema as Parameters<typeof z.fromJSONSchema>[0]);
+    expect(schema.safeParse({ request: { operation: "agent_policy", policies: { "cyberos.files.read": "auto" } } }).success).toBe(true);
+    expect(schema.safeParse({ request: { operation: "agent_policy", policies: {}, fullAccess: true } }).success).toBe(false);
+    expect(schema.safeParse({ request: { operation: "agent_policy", policies: { fullAccess: true } } }).success).toBe(false);
+  });
+
   it("discovers all 27 planned capabilities when adapters and Shell are enabled", async () => {
     const runtime = createRuntime(true);
     const discovered = runtime.registry.listForScopes(runtime.context.subject.scopes)

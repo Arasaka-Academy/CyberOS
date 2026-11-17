@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖 Web 服务接口、设置资源与 Agent 事件流。
+ * [OUTPUT]: 提供应用状态、工作区与设置交互。
+ * [POS]: Web 应用组合层；区分自动执行和补充信息事件。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { AppearanceProvider, Button as UiButton } from "@cyberos/ui";
 import { getMusicPlayer } from "./lib/music-api.js";
 import { MusicTakeoverDialog, MusicProvider } from "./components/music/MusicProvider.js";
@@ -703,11 +709,11 @@ function AppContent() {
         setAgentToolActivities([]);
       }
       if (parsed.type === "approval.pending" || parsed.type === "approval.updated") {
-        if (parsed.type === "approval.pending" && targetsCurrentJob) {
+        if (targetsCurrentJob && (parsed.type === "approval.pending" || parsed.payload.interaction)) {
           transitionActiveAgentJob((current) => markActiveAgentJobWaitingApproval(current, eventJobId));
         }
         if (targetsCurrentJob) {
-          setStatus("ready");
+          setStatus(parsed.payload.interaction === "automatic" ? "agent-running" : "ready");
         }
         void Promise.all([refreshWorkQueues(), reloadSessions()]);
       }
@@ -1195,7 +1201,7 @@ function AppContent() {
           break;
         }
         case "pi-agent": {
-          const settings = await saveAgentCapabilityPolicySettings({ policies: toolPolicyForm.policies });
+          const settings = await saveAgentCapabilityPolicySettings({ policies: toolPolicyForm.policies, fullAccess: toolPolicyForm.fullAccess });
           if (!settingsResources.isCurrent(round)) return;
           setToolPolicyForm(settings);
           break;
@@ -1476,7 +1482,7 @@ function AppContent() {
       id: activeJob?.id ?? null,
       status: activeJob?.status ?? null
     });
-    if (activeJob?.status === "running") {
+    if (activeJob?.status === "running" || activeJob?.capabilityInteraction === "automatic") {
       setStatus("agent-running");
     } else if (activeJob?.status === "queued") {
       setStatus("queued");
