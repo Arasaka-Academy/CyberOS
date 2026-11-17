@@ -1,5 +1,5 @@
 /**
- * [INPUT]: 依赖 Pi SDK、模型绑定、会话资源与有效工具策略。
+ * [INPUT]: 依赖 Pi SDK、模型绑定、会话资源与 MCP 短工具名策略。
  * [OUTPUT]: 提供可续跑 Agent 会话、工具事件和运行结果。
  * [POS]: Pi 会话宿主；权限改变后重建工具目录，复用对话历史。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
@@ -136,15 +136,15 @@ export interface PiAgentRuntimeInput {
 }
 
 const DIRECT_MCP_TOOLS = [
-  "cyberos.catalog.get",
-  "cyberos.system.status",
-  "cyberos.storage_pools.list",
-  "cyberos.files.list",
-  "cyberos.files.stat",
-  "cyberos.files.read",
-  "cyberos.files.search",
-  "cyberos.files.mutate",
-  "cyberos.runs.get"
+  "catalog.get",
+  "system.status",
+  "storage-pools.list",
+  "files.list",
+  "files.stat",
+  "files.read",
+  "files.search",
+  "files.mutate",
+  "runs.get"
 ] as const;
 const MCP_RESOURCE_TOOL_NAMES = [
   "list_mcp_resources",

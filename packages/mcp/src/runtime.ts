@@ -1,6 +1,6 @@
 /**
- * [INPUT]: 依赖能力目录、共享权限决策、数据库和领域适配器。
- * [OUTPUT]: 提供客户端工具目录、有效权限和能力调用。
+ * [INPUT]: 依赖能力目录、工具名映射、共享权限决策和领域适配器。
+ * [OUTPUT]: 提供含短工具名的目录、有效权限和能力调用。
  * [POS]: 内部 Agent 的 MCP 能力入口；主机功能开关独立生效。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
@@ -86,6 +86,7 @@ import {
 } from "@cyberos/db";
 import { inferMimeType, statPath } from "@cyberos/storage-tools";
 import { domainTaskReference, ownedDomainTask } from "./tasks.js";
+import { mcpToolName } from "./tool-names.js";
 import { agentPolicyCapabilityId, effectiveAgentCapabilityPolicy, type AgentCapabilityPolicyMode, type DownloadTaskStatus, type PublicBuildInfo, type CyberOsRuntime } from "@cyberos/shared";
 
 export interface McpRuntimeDependencies {
@@ -222,6 +223,7 @@ export async function catalogForClient(runtime: ClientRuntime): Promise<JsonValu
     const availability = await descriptor.availability?.(runtime.context) ?? { available: true };
     return {
       id: descriptor.id,
+      toolName: mcpToolName(descriptor.id),
       domain: descriptor.domain,
       title: descriptor.title,
       risk: descriptor.risk,

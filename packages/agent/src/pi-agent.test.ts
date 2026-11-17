@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖 Pi SDK、隔离会话和 MCP 工具夹具。
+ * [OUTPUT]: 验证会话续跑、工具发现和 Agent 事件。
+ * [POS]: Pi 会话宿主的集成回归测试。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import { createServer } from "node:http";
@@ -326,6 +332,20 @@ describe("Pi MCP run continuation", () => {
 });
 
 describe("Pi MCP tool selection", () => {
+  it("keeps built-in short tools directly visible to the model", async () => {
+    const loaded = await loadControlledPiMcpConfig({ generation: 1, servers: [{
+      id: "builtin", name: "cyberos", description: "CyberOS", url: "http://127.0.0.1:3010/mcp",
+      exposure: "codemode", timeoutSeconds: 60, allowInsecureHttp: true
+    }] });
+    try {
+      expect(loaded.config.servers[0]!.config.toolExposure).toEqual({
+        "catalog.get": "direct", "system.status": "direct", "storage-pools.list": "direct",
+        "files.list": "direct", "files.stat": "direct", "files.read": "direct",
+        "files.search": "direct", "files.mutate": "direct", "runs.get": "direct"
+      });
+    } finally { await loaded.close(); }
+  });
+
   it("loads all three third-party exposure modes into controlled HTTP transports", async () => {
     const loaded = await loadControlledPiMcpConfig({
       generation: 9,
@@ -366,8 +386,8 @@ describe("Pi MCP tool selection", () => {
         (pi) => {
           pi.on("session_start", () => {
             for (const tool of [
-              stubTool("mcp__cyberos__cyberos_files_read", "direct"),
-              stubTool("mcp__cyberos__cyberos_apps_inspect", "codemode"),
+              stubTool("mcp__cyberos__files_read", "direct"),
+              stubTool("mcp__cyberos__apps_inspect", "codemode"),
               stubTool("mcp__external__danger", "direct"),
               stubTool("mcp__external__lookup", "codemode"),
               stubTool("list_mcp_resources", "direct"),
@@ -398,9 +418,9 @@ describe("Pi MCP tool selection", () => {
 
       const activeTools = session.getActiveToolNames();
       const callableTools = session.getCallableToolNames();
-      expect(activeTools).toContain("mcp__cyberos__cyberos_files_read");
-      expect(activeTools).not.toContain("mcp__cyberos__cyberos_apps_inspect");
-      expect(callableTools).toContain("mcp__cyberos__cyberos_apps_inspect");
+      expect(activeTools).toContain("mcp__cyberos__files_read");
+      expect(activeTools).not.toContain("mcp__cyberos__apps_inspect");
+      expect(callableTools).toContain("mcp__cyberos__apps_inspect");
       expect(activeTools).toContain("mcp__external__danger");
       expect(callableTools).toContain("mcp__external__lookup");
       expect(callableTools).toEqual(expect.arrayContaining([

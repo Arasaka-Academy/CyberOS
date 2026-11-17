@@ -1,6 +1,6 @@
 /**
- * [INPUT]: 依赖 MCP SDK、客户端鉴权和能力运行时。
- * [OUTPUT]: 提供内部 MCP 协议、资源与有效执行模式元数据。
+ * [INPUT]: 依赖 MCP SDK、客户端鉴权、工具名映射和能力运行时。
+ * [OUTPUT]: 提供短工具名、内部 MCP 协议和资源。
  * [POS]: API 内嵌的 MCP 传输层；不改变能力的风险标记。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
@@ -21,6 +21,7 @@ import {
 } from "@cyberos/db";
 import { assertNoSymlinkPathSegments, resolveSafeExistingPath } from "@cyberos/storage-tools";
 import { catalogForClient, createClientRuntime, invokeCapability, type ClientRuntime, type McpRuntimeDependencies } from "./runtime.js";
+import { mcpToolName, normalizeLegacyMcpToolCall } from "./tool-names.js";
 
 export interface McpRegistrationOptions {
   enabled: boolean;
@@ -122,7 +123,7 @@ export function registerMcp(server: FastifyInstance, dependencies: McpRuntimeDep
       await nodeHandler(
         request.raw as unknown as Parameters<typeof nodeHandler>[0],
         reply.raw,
-        request.body
+        normalizeLegacyMcpToolCall(request.body)
       );
     } finally {
       close();
@@ -224,10 +225,10 @@ export function registerMcp(server: FastifyInstance, dependencies: McpRuntimeDep
 function createMcpServer(runtime: ClientRuntime): McpServer {
   const server = new McpServer({ name: "cyberos", version: "2.0.0" }, {
     maxToolInputElements: 20_000,
-    instructions: `Use storagePoolId and storage-pool-relative paths. ${runtime.fullAccess ? "Agent full access is enabled: operations are authorized automatically; do not ask the user to approve them." : "Mutations require approval in the first-party CyberOS UI."} Secrets must be entered in CyberOS, never in tool arguments.`
+    instructions: `Use storagePoolId and storage-pool-relative paths. Call tools using the catalog toolName; capability IDs are internal identifiers. ${runtime.fullAccess ? "Agent full access is enabled: operations are authorized automatically; do not ask the user to approve them." : "Mutations require approval in the first-party CyberOS UI."} Secrets must be entered in CyberOS, never in tool arguments.`
   });
 
-  server.registerTool("cyberos.catalog.get", {
+  server.registerTool(mcpToolName("cyberos.catalog.get"), {
     title: "List CyberOS capabilities",
     description: "Return the scoped capability catalog and runtime availability.",
     inputSchema: z.fromJSONSchema(runtime.registry.get("cyberos.catalog.get")!.inputSchema as Parameters<typeof z.fromJSONSchema>[0]),
@@ -237,7 +238,7 @@ function createMcpServer(runtime: ClientRuntime): McpServer {
 
   for (const descriptor of runtime.registry.listForScopes(runtime.context.subject.scopes)) {
     if (descriptor.id === "cyberos.catalog.get") continue;
-    server.registerTool(descriptor.id, {
+    server.registerTool(mcpToolName(descriptor.id), {
       title: descriptor.title,
       description: `${descriptor.description} Authorization: ${runtime.fullAccess ? "automatic under Agent full access" : descriptor.approval}.`,
       inputSchema: z.fromJSONSchema(descriptor.inputSchema as Parameters<typeof z.fromJSONSchema>[0]),
@@ -315,7 +316,7 @@ function registerPrompts(server: McpServer): void {
   server.registerPrompt("cyberos.diagnose", {
     title: "Diagnose CyberOS",
     description: "Inspect status, readiness, monitoring, and recent runs without changing the NAS."
-  }, () => ({ messages: [{ role: "user", content: { type: "text", text: "Diagnose the current CyberOS state. Start with cyberos.system.status and cyberos.storage-pools.list, then inspect only the relevant read capabilities. Report evidence and do not propose changes until the cause is clear." } }] }));
+  }, () => ({ messages: [{ role: "user", content: { type: "text", text: "Diagnose the current CyberOS state. Start with system.status and storage-pools.list, then inspect only the relevant read capabilities. Report evidence and do not propose changes until the cause is clear." } }] }));
   server.registerPrompt("cyberos.organize", {
     title: "Organize NAS files",
     description: "Plan a reversible file organization workflow."

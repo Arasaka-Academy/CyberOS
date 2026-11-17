@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖媒体适配器、隔离数据库与 MCP 传输层。
+ * [OUTPUT]: 验证媒体能力、短工具名、结果预算与审批边界。
+ * [POS]: API 媒体能力的集成回归测试。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import Fastify, { type FastifyInstance } from "fastify";
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -116,11 +122,11 @@ describe("media capability adapters", () => {
       return JSON.parse(data) as { result: { tools?: Array<{ name: string }>; structuredContent?: unknown; isError?: boolean }; error?: unknown };
     };
     const listing = await call("tools/list", {});
-    expect(listing.result.tools?.map((tool) => tool.name)).toContain("cyberos.music.query");
-    expect(listing.result.tools?.map((tool) => tool.name)).not.toContain("cyberos.music.manage-propose");
-    const query = await call("tools/call", { name: "cyberos.music.query", arguments: { entity: "tracks", query: "Test" } });
+    expect(listing.result.tools?.map((tool) => tool.name)).toContain("music.query");
+    expect(listing.result.tools?.map((tool) => tool.name)).not.toContain("music.manage-propose");
+    const query = await call("tools/call", { name: "music.query", arguments: { entity: "tracks", query: "Test" } });
     expect(query.result.structuredContent).toMatchObject({ data: { items: [{ title: "Test song" }] } });
-    const denied = await call("tools/call", { name: "cyberos.music.manage-propose", arguments: { request: { operation: "playlist_create", name: "Forbidden" } } });
+    const denied = await call("tools/call", { name: "music.manage-propose", arguments: { request: { operation: "playlist_create", name: "Forbidden" } } });
     expect(denied.error || denied.result.isError).toBeTruthy();
     const noScopes = createClientRuntime(dependencies, { ...client, scopes: [] });
     await expect(invokeCapability(noScopes, "cyberos.music.query", { entity: "tracks" })).rejects.toMatchObject({ code: "FORBIDDEN" });

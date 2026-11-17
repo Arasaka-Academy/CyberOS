@@ -18,6 +18,7 @@ sourceOfTruth:
   - packages/api/src/lib/system-mutation-capabilities.ts
   - packages/mcp/src/tasks.ts
   - packages/mcp/src/server.ts
+  - packages/mcp/src/tool-names.ts
   - packages/db/src/repositories/agent-capability-authorization.ts
   - packages/capability-runtime/src/run-queue.ts
   - packages/web/src/components/settings/SettingsToolPolicyPage.tsx
@@ -49,6 +50,8 @@ CyberOS 内置 MCP 缺少设置记录时默认开启。**设置 > MCP** 可以�
 内置 MCP 把 CyberOS capability registry 作为 Streamable HTTP 提供给内部 Pi。工具保留固有风险和审批元数据，同时公开有效策略及授权模式。Pi 的 mutation 遵循当前权限；权限或资源配置改变后，worker 在下一轮对话重建工具目录，不中断正在执行的 turn。
 
 内置 MCP 复用 loopback API 的 `/mcp` 路由。完全权限只作用于内部 Pi 身份，不增加对外访问能力。
+
+工具名省略能力 ID 的 `cyberos.` 前缀。例如，能力 `cyberos.downloads.list` 对应 MCP 工具 `downloads.list`，Pi 显示为 `mcp__cyberos__downloads_list`。`catalog.get` 返回稳定的 `id` 和可调用的 `toolName`；下表使用能力 ID。历史 `cyberos.*` 工具调用继续有效，但工具发现只返回短名称。
 
 ### 音乐、影视与 NAS 播放
 
@@ -132,7 +135,7 @@ Bearer Token 或自定义 Secret Headers 原子写入 `/cyberos/state/secrets/mc
 
 ### 系统与日常领域能力
 
-能力目录、工具 Schema 和实际 adapter 一起决定可调用范围。先调用 `cyberos.catalog.get`，检查 scope、策略和运行状态；目录中的能力不表示对应硬件已连接或服务已就绪。资源权限直接采用对应 capability 的 scope，例如 `cyberos://storage-pools/{id}` 使用 `cyberos:storage:read`。
+能力目录、工具 Schema 和实际 adapter 一起决定可调用范围。先调用 `catalog.get`，检查 scope、策略和运行状态；目录中的能力不表示对应硬件已连接或服务已就绪。资源权限直接采用对应 capability 的 scope，例如 `cyberos://storage-pools/{id}` 使用 `cyberos:storage:read`。
 
 | 工具 | 用途与边界 |
 | --- | --- |

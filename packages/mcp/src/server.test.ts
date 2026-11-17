@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖隔离数据库、MCP 客户端与 Fastify 传输层。
+ * [OUTPUT]: 验证工具命名、鉴权、审批和资源协议。
+ * [POS]: 内置 MCP 的协议集成测试。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -52,6 +58,39 @@ afterEach(async () => {
 });
 
 describe("MCP Streamable HTTP", () => {
+  it("advertises short tool names with stable capability IDs", async () => {
+    const list = await postMcp({ jsonrpc: "2.0", id: 90, method: "tools/list", params: {} }, "2025-11-25");
+    const names = (parseMcpResponse(list.body).result.tools as Array<{ name: string }>).map((tool) => tool.name);
+    expect(names).toEqual(expect.arrayContaining(["catalog.get", "downloads.list", "files.read"]));
+    expect(names.every((name) => !name.startsWith("cyberos."))).toBe(true);
+    expect(new Set(names.map((name) => name.replace(/[^a-zA-Z0-9_]/gu, "_"))).size).toBe(names.length);
+
+    const catalog = await postMcp({ jsonrpc: "2.0", id: 91, method: "tools/call", params: {
+      name: "catalog.get", arguments: {}
+    } }, "2025-11-25");
+    const entries = (parseMcpResponse(catalog.body).result.structuredContent as {
+      data: Array<{ id: string; toolName: string }>;
+    }).data;
+    expect(entries).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "cyberos.downloads.list", toolName: "downloads.list" })
+    ]));
+    expect(entries.map((entry) => entry.toolName).sort()).toEqual([...names].sort());
+  });
+
+  it.each(["files.read", "cyberos.files.read"])("accepts %s without weakening scope checks", async (name) => {
+    const read = await postMcp({ jsonrpc: "2.0", id: 92, method: "tools/call", params: {
+      name, arguments: { storagePoolId: "pool-1", path: "hello.txt" }
+    } }, "2025-11-25");
+    expect(parseMcpResponse(read.body).result.structuredContent).toMatchObject({
+      data: { preview: { content: "hello from CyberOS" } }
+    });
+    token = createMcpClient(db, { name: "Catalog only", kind: "local", scopes: ["cyberos:catalog:read"] }).token;
+    const forbidden = await postMcp({ jsonrpc: "2.0", id: 93, method: "tools/call", params: {
+      name, arguments: { storagePoolId: "pool-1", path: "hello.txt" }
+    } }, "2025-11-25");
+    expect(parseMcpResponse(forbidden.body).error).toBeDefined();
+  });
+
   it("derives storage resource scopes from the capability descriptor", async () => {
     const listing = await postMcp({ jsonrpc: "2.0", id: 87, method: "resources/templates/list", params: {} }, "2025-11-25");
     const templates = parseMcpResponse(listing.body).result.resourceTemplates as Array<{ uriTemplate: string }>;
@@ -77,7 +116,7 @@ describe("MCP Streamable HTTP", () => {
       }
     } }, { enabled: true });
     const response = await postMcp({ jsonrpc: "2.0", id: 89, method: "tools/call", params: {
-      name: "cyberos.downloads.manage-propose", arguments: { request: { operation: "create_torrent", torrentPreviewId: "preview", selectedFileIndices: Array.from({ length: 10000 }, (_, index) => index), storagePoolId: "pool-1", targetDirectory: ".", fileName: "release" } }
+      name: "downloads.manage-propose", arguments: { request: { operation: "create_torrent", torrentPreviewId: "preview", selectedFileIndices: Array.from({ length: 10000 }, (_, index) => index), storagePoolId: "pool-1", targetDirectory: ".", fileName: "release" } }
     } }, "2025-11-25");
     expect(parseMcpResponse(response.body).result.structuredContent).toMatchObject({ data: { state: "waiting_approval" } });
     expect(selectedCount).toBe(10000);
@@ -212,7 +251,7 @@ describe("MCP Streamable HTTP", () => {
       expect(client.getProtocolEra()).toBe("modern");
       expect(client.getNegotiatedProtocolVersion()).toBe("2026-07-28");
       const tools = await client.listTools();
-      expect(tools.tools.some((tool) => tool.name === "cyberos.files.read")).toBe(true);
+      expect(tools.tools.some((tool) => tool.name === "files.read")).toBe(true);
     } finally {
       await client.close();
     }
@@ -222,15 +261,15 @@ describe("MCP Streamable HTTP", () => {
     const list = await postMcp({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }, "2025-11-25");
     expect(list.statusCode).toBe(200);
     const names = (parseMcpResponse(list.body).result.tools as Array<{ name: string }>).map((tool) => tool.name);
-    expect(names).toContain("cyberos.files.read");
-    expect(names).not.toContain("cyberos.files.mutate");
-    expect(names).not.toContain("cyberos.docker.manage-propose");
+    expect(names).toContain("files.read");
+    expect(names).not.toContain("files.mutate");
+    expect(names).not.toContain("docker.manage-propose");
 
     const read = await postMcp({
       jsonrpc: "2.0",
       id: 3,
       method: "tools/call",
-      params: { name: "cyberos.files.read", arguments: { storagePoolId: "pool-1", path: "hello.txt" } }
+      params: { name: "files.read", arguments: { storagePoolId: "pool-1", path: "hello.txt" } }
     }, "2025-11-25");
     expect(read.statusCode).toBe(200);
     const readPayload = parseMcpResponse(read.body);
@@ -246,7 +285,7 @@ describe("MCP Streamable HTTP", () => {
       jsonrpc: "2.0",
       id: 5,
       method: "tools/call",
-      params: { name: "cyberos.catalog.get", arguments: {} }
+      params: { name: "catalog.get", arguments: {} }
     }, "2025-11-25");
 
     const payload = parseMcpResponse(catalog.body);
@@ -277,8 +316,8 @@ describe("MCP Streamable HTTP", () => {
     const disabled = await postMcp({ jsonrpc: "2.0", id: 20, method: "tools/list", params: {} }, "2025-11-25");
     const disabledNames = (parseMcpResponse(disabled.body).result.tools as Array<{ name: string }>)
       .map((tool) => tool.name);
-    expect(disabledNames).not.toContain("cyberos.files.read");
-    expect(disabledNames).not.toContain("cyberos.files.resource-link");
+    expect(disabledNames).not.toContain("files.read");
+    expect(disabledNames).not.toContain("files.resource-link");
     const disabledResources = await postMcp({
       jsonrpc: "2.0",
       id: 201,
@@ -300,13 +339,13 @@ describe("MCP Streamable HTTP", () => {
     }, "2025-11-25");
     const approvalToolNames = (parseMcpResponse(approvalTools.body).result.tools as Array<{ name: string }>)
       .map((tool) => tool.name);
-    expect(approvalToolNames).toContain("cyberos.files.read");
-    expect(approvalToolNames).not.toContain("cyberos.files.resource-link");
+    expect(approvalToolNames).toContain("files.read");
+    expect(approvalToolNames).not.toContain("files.resource-link");
     const read = await postMcp({
       jsonrpc: "2.0",
       id: 21,
       method: "tools/call",
-      params: { name: "cyberos.files.read", arguments: { storagePoolId: "pool-1", path: "hello.txt" } }
+      params: { name: "files.read", arguments: { storagePoolId: "pool-1", path: "hello.txt" } }
     }, "2025-11-25");
     const readResult = parseMcpResponse(read.body).result.structuredContent as {
       data: { state: string };
@@ -332,7 +371,7 @@ describe("MCP Streamable HTTP", () => {
       id: 22,
       method: "tools/call",
       params: {
-        name: "cyberos.files.mutate",
+        name: "files.mutate",
         arguments: { request: { operation: "mkdir", storagePoolId: "pool-1", targetPath: "Archive" } }
       }
     }, "2025-11-25");
@@ -355,7 +394,7 @@ describe("MCP Streamable HTTP", () => {
       jsonrpc: "2.0",
       id: 32,
       method: "tools/call",
-      params: { name: "cyberos.files.read", arguments: { storagePoolId: "missing", path: "hello.txt" } }
+      params: { name: "files.read", arguments: { storagePoolId: "missing", path: "hello.txt" } }
     }, "2025-11-25");
 
     const payload = parseMcpResponse(read.body);
@@ -422,7 +461,7 @@ describe("MCP Streamable HTTP", () => {
       jsonrpc: "2.0",
       id: 31,
       method: "tools/call",
-      params: { name: "cyberos.settings.public", arguments: {} }
+      params: { name: "settings.public", arguments: {} }
     }, "2025-11-25");
     const payload = parseMcpResponse(settings.body);
     expect(payload.result.structuredContent).toMatchObject({
@@ -471,7 +510,7 @@ describe("MCP Streamable HTTP", () => {
       jsonrpc: "2.0",
       id: 33,
       method: "tools/call",
-      params: { name: "cyberos.downloads.list", arguments: {} }
+      params: { name: "downloads.list", arguments: {} }
     }, "2025-11-25");
     const body = response.body;
     expect(body).not.toMatch(/user:password|token=secret|\/secret\/host\/path/u);
@@ -491,7 +530,7 @@ describe("MCP Streamable HTTP", () => {
       id: 4,
       method: "tools/call",
       params: {
-        name: "cyberos.files.mutate",
+        name: "files.mutate",
         arguments: {
           request: { operation: "move", storagePoolId: "pool-1", sourcePath: "hello.txt", targetPath: "moved.txt" },
           idempotencyKey: "move-hello-0001"
@@ -511,7 +550,7 @@ describe("MCP Streamable HTTP", () => {
       id: 40,
       method: "tools/call",
       params: {
-        name: "cyberos.files.resource-link",
+        name: "files.resource-link",
         arguments: { storagePoolId: "pool-1", path: "hello.txt" }
       }
     }, "2025-11-25");
@@ -552,7 +591,7 @@ describe("MCP Streamable HTTP", () => {
       id: 41,
       method: "tools/call",
       params: {
-        name: "cyberos.files.resource-link",
+        name: "files.resource-link",
         arguments: { storagePoolId: "pool-1", path: "hello.txt" }
       }
     }, "2025-11-25");

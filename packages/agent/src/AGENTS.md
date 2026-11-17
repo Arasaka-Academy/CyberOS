@@ -8,8 +8,8 @@ agent-session-manager.ts: 公开 ManagedAgentSession, AgentSessionRunInput, Agen
 index.ts: 本模块公共导出入口。
 model-runtime-manager.test.ts: model-runtime-manager 的行为与契约验证。
 model-runtime-manager.ts: 公开 ModelRuntimeBinding, ModelRuntimeFactory, registerConfiguredProvider, ModelRuntimeManager 等接口。
-pi-agent.test.ts: pi-agent 的行为与契约验证。
-pi-agent.ts: Pi 会话宿主；按当前权限重建工具并保留会话历史。
+pi-agent.test.ts: 验证会话续跑、MCP 短工具名和模型工具可见性。
+pi-agent.ts: Pi 会话宿主；按短工具名配置 MCP 可见性，按权限重建工具并保留历史。
 pi-compatibility.test.ts: pi-compatibility 的行为与契约验证。
 pi-resource-policy.test.ts: pi-resource-policy 的行为与契约验证。
 pi-resource-policy.ts: 公开 PiResourcePolicyDecision, PiResourcePolicy。
