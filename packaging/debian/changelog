@@ -1,3 +1,9 @@
+cyberos (2.4.13) unstable; urgency=medium
+
+  * Add TV screensaver sources, idle display power control, and HDMI-aware music presentation.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Wed, 18 Nov 2026 05:47:17 +0000
+
 cyberos (2.4.12) unstable; urgency=medium
 
   * Remediate remaining npm and Rust dependency vulnerabilities, update bundled SQLite, and align secure build prerequisites.
