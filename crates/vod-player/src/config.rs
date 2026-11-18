@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 读取环境变量和 SQLite 中的电视与蓝牙设置。
+ * [OUTPUT]: 为音乐与视频构建受限播放配置。
+ * [POS]: 配置读取边界；电视新增字段不破坏旧记录。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 use std::env;
 use std::path::{Path, PathBuf};
 
@@ -41,6 +47,31 @@ struct StoredTvSettings {
     audio_device: Option<String>,
     hardware_decoding: String,
     updated_at: String,
+    #[serde(default)]
+    screensaver_source: StoredScreensaverSource,
+    #[serde(default = "default_screensaver_minutes")]
+    screensaver_after_minutes: Option<u16>,
+    #[serde(default = "default_screen_off_minutes")]
+    screen_off_after_minutes: Option<u16>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(tag = "kind", rename_all = "lowercase", deny_unknown_fields)]
+enum StoredScreensaverSource {
+    #[default]
+    Builtin,
+    Directory {
+        #[serde(rename = "storagePoolId")]
+        storage_pool_id: String,
+        path: String,
+    },
+}
+
+fn default_screensaver_minutes() -> Option<u16> {
+    Some(5)
+}
+fn default_screen_off_minutes() -> Option<u16> {
+    Some(30)
 }
 
 #[derive(Default, Deserialize)]
@@ -58,6 +89,9 @@ impl Default for StoredTvSettings {
             audio_device: None,
             hardware_decoding: "auto-safe".to_owned(),
             updated_at: "1970-01-01T00:00:00.000Z".to_owned(),
+            screensaver_source: StoredScreensaverSource::default(),
+            screensaver_after_minutes: default_screensaver_minutes(),
+            screen_off_after_minutes: default_screen_off_minutes(),
         }
     }
 }
@@ -252,7 +286,27 @@ fn load_tv_settings(path: &Path) -> Result<StoredTvSettings, VodError> {
 }
 
 fn validate_settings(settings: &StoredTvSettings) -> Result<(), VodError> {
+    let source_valid = match &settings.screensaver_source {
+        StoredScreensaverSource::Builtin => true,
+        StoredScreensaverSource::Directory {
+            storage_pool_id,
+            path,
+        } => {
+            !storage_pool_id.is_empty()
+                && !path.starts_with('/')
+                && !path.contains('\0')
+                && !path.split('/').any(|part| part == "..")
+        }
+    };
     if settings.updated_at.trim().is_empty()
+        || !source_valid
+        || settings
+            .screensaver_after_minutes
+            .is_some_and(|n| ![1, 2, 5, 10, 15, 30, 60].contains(&n))
+        || settings
+            .screen_off_after_minutes
+            .is_some_and(|n| ![5, 10, 15, 30, 60, 120].contains(&n))
+        || matches!((settings.screensaver_after_minutes, settings.screen_off_after_minutes), (Some(saver), Some(off)) if off <= saver)
         || !matches!(settings.video_output.as_str(), "drm" | "wayland")
         || !matches!(
             settings.hardware_decoding.as_str(),
@@ -282,6 +336,26 @@ pub fn is_absolute(path: &Path) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn accepts_idle_settings_and_defaults_old_records_without_relaxing_strictness() {
+        let old = serde_json::json!({"enabled":true,"videoOutput":"wayland","drmConnector":null,"audioDevice":null,"hardwareDecoding":"auto-safe","updatedAt":"2026-11-18"});
+        let defaults: StoredTvSettings = serde_json::from_value(old.clone()).unwrap();
+        assert_eq!(defaults.screensaver_after_minutes, Some(5));
+        assert_eq!(defaults.screen_off_after_minutes, Some(30));
+        let mut new = old.clone();
+        new["screensaverSource"] =
+            serde_json::json!({"kind":"directory","storagePoolId":"pool-1","path":"pictures"});
+        new["screensaverAfterMinutes"] = serde_json::Value::Null;
+        new["screenOffAfterMinutes"] = serde_json::Value::Null;
+        let settings: StoredTvSettings = serde_json::from_value(new).unwrap();
+        assert_eq!(settings.screensaver_after_minutes, None);
+        assert_eq!(settings.screen_off_after_minutes, None);
+        assert!(validate_settings(&settings).is_ok());
+        let mut invalid = old;
+        invalid["unrecognized"] = serde_json::json!(true);
+        assert!(serde_json::from_value::<StoredTvSettings>(invalid).is_err());
+    }
 
     #[test]
     fn validates_current_tv_settings() {

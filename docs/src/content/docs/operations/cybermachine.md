@@ -4,7 +4,7 @@ description: 在 cybermachine（Linux arm64）上原生构建、安装、验收�
 type: operation
 status: current
 audience: [operator]
-sourceOfTruth: [scripts/deploy-cybermachine.mjs, scripts/cybermachine-build-local.mjs, scripts/cybermachine-builder.Dockerfile, scripts/cybermachine-runtime.mjs, packaging/scripts/build-deb.sh, packaging/scripts/install.sh, packaging/scripts/cyberos-deploy, packaging/scripts/cyberos-tv-mode, packaging/systemd/cyberos-tv.target, packaging/debian/rules]
+sourceOfTruth: [scripts/deploy-cybermachine.mjs, scripts/cybermachine-build-local.mjs, scripts/cybermachine-builder.Dockerfile, scripts/cybermachine-runtime.mjs, packaging/scripts/build-deb.sh, packaging/scripts/install.sh, packaging/scripts/cyberos-deploy, packaging/scripts/cyberos-tv-mode, packaging/systemd/cyberos-tv.target, packaging/debian/rules, packaging/native/tv-display/module.c, packages/shared/src/tv.ts, packages/api/src/lib/tv-display.ts]
 sidebar:
   order: 2
 ---
@@ -84,6 +84,10 @@ CYBEROS_NPM_REGISTRY=https://registry.npmmirror.com \
   ./packaging/scripts/build-deb.sh
 ```
 
+TV 显示模块按 Weston 10、13、14 分开构建。`build-deb.sh` 使用对应 Debian 12、Ubuntu 24.04、Debian 13 的 Linux 容器，构建当前架构并运行非 root headless 验证。构建主机需要 Docker CLI、可用的 Docker engine 和可信 CA 文件；CyberOS 的运行服务仍为原生 systemd 进程。安装脚本在首次源码构建前准备 Docker，再安装产品包。
+
+已验证的离线产物放在 `.cyberos/tv-display/<amd64|arm64>/weston-{10,13,14}/cyberos-tv-display.so`，并在架构目录放置 `cyberos-tv-input`。设置 `CYBEROS_TV_NATIVE_PREBUILT=1` 可复用这些产物。输入客户端必须来自 Debian 12 构建环境，保留旧 libc 兼容性。宿主不需要安装三个版本的 Weston 开发包。镜像下载较慢时，可设置 `CYBEROS_TV_NATIVE_APT_BASE=https://mirrors.aliyun.com`。`CYBEROS_TV_NATIVE_CA` 可指定受信任的 CA 文件；构建始终验证 TLS 证书。
+
 若源码构建使用的 Node.js 版本不满足 22.23.4+ 要求，可让安装脚本下载并校验 Node.js 22.23.4：
 
 ```bash
@@ -97,7 +101,7 @@ sudo CYBEROS_ENABLE_NGINX=1 \
 
 电视模式不是把 Debian 桌面换成另一个完整桌面。Weston 以非 root `cyberos` 用户持有 DRM/HDMI 会话，Chromium 只运行全屏 `/tv/` Web shell，电影解码和音视频输出仍由原生 mpv/VOD 进程完成。这样媒体库、匹配、播放进度和 Web 管理页共享同一 API，同时把浏览界面与硬件播放故障隔离开。
 
-标准安装会预装 Chromium、Weston、mpv、seatd、CEC 与输入工具，并按默认设置启用 TV 模式。在 Web 的“设置 > 媒体”可以关闭 TV 模式或调整输出设备与硬件解码策略。API 会通过 typed hostd 操作切换 systemd 状态；应用失败不会改写数据库，数据库持久化失败会尝试回滚宿主状态。本地维护时也可直接执行：
+标准安装会预装 Chromium、Weston、mpv、seatd、CEC 与输入工具，并按默认设置启用 TV 模式。在 Web 的“设置 > TV”可以关闭 TV 模式、调整输出设备与硬件解码策略，以及设置屏保和熄屏。API 会通过 typed hostd 操作切换 systemd 状态；应用失败不会改写数据库，数据库持久化失败会尝试回滚宿主状态。本地维护时也可直接执行：
 
 ```bash
 sudo cyberos-tv-mode enable
@@ -118,7 +122,7 @@ sudo cyberos-tv-mode disable
 
 ### 健康与输入
 
-媒体设置页展示 TV 总体状态及 Weston、Chromium、VOD、CEC、Gamepad 五个组件。命令行检查：
+TV 设置页展示 TV 总体状态、显示控制状态及 Weston、Chromium、VOD、CEC、Gamepad 五个组件。命令行检查：
 
 ```bash
 curl -fsS http://127.0.0.1:3010/api/tv/status
@@ -128,13 +132,25 @@ sudo journalctl -u cyberos-tv-weston.service -u cyberos-tv-chromium.service \
   -u cyberos-vod-player.service -u cyberos-tv-cec.service -u cyberos-tv-gamepad.service -n 200 --no-pager
 ```
 
-CEC 和手柄输入都是可选组件；未连接 CEC 电视、Weston 不支持虚拟键盘注入或未打开手柄时只会显示降级，不会判定 TV 模式失败。CEC 的 `ready` 状态同时要求 `wtype` 实际完成一次无操作按键探测，不能只表示 `/dev/cec*` 存在。USB/无线键盘和提供标准蓝牙 HID 输入的遥控器可作为输入设备：媒体库中方向键移动焦点，Enter 选择。全屏视频由原生播放器接收按键，不经过 Web 页面。CyberOS 不会在首版自动切换电视输入源或控制 HDMI 电源。
+CEC 和手柄输入都是可选组件；未连接 CEC 电视、显示控制桥不可用或未打开手柄时显示降级，不会判定 TV 模式失败。CEC 和手柄通过权限为 `0600` 的 `/run/cyberos-tv/display.sock` 向 Weston 模块提交按键。CEC 的 `ready` 状态要求桥接探测成功，不能只表示 `/dev/cec*` 存在。USB/无线键盘和标准蓝牙 HID 遥控器直接进入 Weston 输入链路。媒体库中方向键移动焦点，Enter 选择；全屏视频由原生播放器接收按键。CyberOS 不自动切换电视输入源。
 
 全屏播放控制浮层居中偏下，显示进度、暂停/继续、前后跳 10 秒、音轨和字幕选择。隐藏时确定键仅唤出浮层，再按确定操作当前按钮；左右键可直接前后跳 10 秒并显示进度焦点，上下键可唤出控制。显示时左右选择按钮，上键进入进度、下键回到按钮行，进度焦点下左右跳转。音轨和字幕菜单以上下选择、确定应用，字幕可关闭；返回先关闭轨道菜单，否则退出视频并回到 TV 界面，Home 始终退出视频。返回和主页覆盖原生 `GO_BACK` / `HOMEPAGE`，同时支持键盘 Escape / Home。播放中闲置 5 秒自动隐藏，暂停或轨道菜单打开时保持显示；空格/媒体播放键直接切换暂停，`A` / `S` 或 `F9` / `F10` 打开音轨/字幕菜单。
 
 Xbox Series、Xbox One S 及其他提供标准 Linux evdev 手柄能力的蓝牙或 USB 手柄由 `cyberos-tv-gamepad.service` 读取。首次蓝牙扫描和配对仍在 Web 的“设置 > 蓝牙”完成，不会在 TV 首屏自动扫描；BlueZ 将设备识别为 gamepad 且配对成功后，hostd 会设为受信任并尝试连接。自动连接失败不会撤销配对或信任，可在同一设置页重试连接。
 
-首版手柄映射如下：D-pad/左摇杆用于方向导航；A 确认或操作播放浮层；B 返回或停止；LB/RB 在播放中后退/前进 10 秒；X/Y 在全屏视频中打开音轨/字幕菜单；Menu 打开媒体库搜索。TV shell 不会因空闲自动覆盖纯黑遮罩；显示器节能由电视本身管理。Guide、View、扳机、右摇杆、震动和电量暂不处理。手柄关闭、休眠或重新打开后服务会自动移除或重新打开 evdev 节点，无需重启 TV 模式。
+手柄映射如下：D-pad/左摇杆用于方向导航；A 确认或操作播放浮层；B 返回或停止；LB/RB 在播放中后退/前进 10 秒；X/Y 在全屏视频中打开音轨/字幕菜单；Menu 打开媒体库搜索。Guide、View、扳机、右摇杆、震动和电量暂不处理。手柄关闭、休眠或重新打开后服务会自动移除或重新打开 evdev 节点，无需重启 TV 模式。
+
+### 屏保、熄屏与音乐
+
+TV 设置默认在空闲 5 分钟后进入屏保，30 分钟后关闭实际 HDMI 输出。两个时间都从最后输入或媒体暂停时计算，各自支持“从不”；同时启用时，熄屏时间必须晚于屏保。熄屏通过 Weston 输出电源接口执行，不用纯黑页面代替。
+
+屏保来源支持内置生成图形或 NAS 图片目录。目录包含子目录，跳过符号链接，只读取配置存储池中的图片。清单和解码都有数量、尺寸、时间与缓存上限；目录离线、无图或图片损坏时回退内置图形。屏保就绪后独立浏览器视图覆盖暂停的视频，不重启 mpv 或改动会话；熄屏时卸载屏保内容。
+
+视频播放时禁止进入屏保或熄屏，暂停后开始完整空闲计时。只有原生播放器确认实际 HDMI 音频输出，音乐才自动进入全屏播放页并保持亮屏。播放中返回和 Home 只关闭内部弹层；暂停后可以返回浏览，恢复播放后重新进入播放页。蓝牙或已确认本地音频不触发此页，未知实际输出保持亮屏并显示未知状态。第一次按键只唤醒，按下和释放都不传给播放器；暂停状态、播放位置和浏览上下文保持不变。
+
+Debian 包按 Weston ABI 10、13、14 并列安装显示模块，启动脚本仅加载匹配版本。模块不匹配、socket 失联或策略/播放租约过期时保持亮屏，TV 设置显示降级原因。策略和播放状态分别续租，重复续租不重置空闲计时。检查 `/api/tv/status` 的 `display` 字段与 Weston journal，确认 `supported` 和实际输出状态；物理遥控唤醒与真实 HDMI 播放必须在设备上验收。
+
+原生 socket 保留 `PLAYBACK <0|1>`，并接受 `PLAYBACK <0|1> <requestId>`。请求编号必须是非零 `u64` 十进制整数；该命令的 JSON 直回包含数字 `requestId`，状态广播不带编号。播放器启动或恢复前等待同一编号且 `state=active` 的确认，不能将积压的状态广播当作本次唤醒完成。
 
 ### 4K SDR 验收
 

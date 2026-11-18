@@ -19,6 +19,8 @@ import {
   getMonitoringAlertSummary,
   getShareSettings,
   getVmSettings,
+  getTvSettings,
+  defaultTvSettings,
   listDockerComposeAppSummaries,
   listDockerOperations,
   listDockerRegistryCredentials,
@@ -60,10 +62,11 @@ import {
   McpResourceError
 } from "./lib/mcp-resources.js";
 import { reconcileAgentMcp } from "./lib/agent-mcp-settings.js";
+import { TvDisplayClient } from "./lib/tv-display.js";
 
 export type { ServerDependencies } from "./context.js";
 
-export async function buildServer({ buildInfo, config, db, monitoring: monitoringDependency, monitoringEvents: monitoringEventsDependency, docker, vm, shares, system, terminal, videoTranscoder, vodPlayer, photosMap, hostAccess, tvMode, audio: audioDependency, audioRuntime }: ServerDependencies): Promise<FastifyInstance> {
+export async function buildServer({ buildInfo, config, db, monitoring: monitoringDependency, monitoringEvents: monitoringEventsDependency, docker, vm, shares, system, terminal, videoTranscoder, vodPlayer, photosMap, hostAccess, tvMode, tvDisplay: tvDisplayDependency, audio: audioDependency, audioRuntime }: ServerDependencies): Promise<FastifyInstance> {
   if (!isLoopbackHost(config.api.host)) {
     throw new Error("CyberOS API must bind to a loopback host");
   }
@@ -141,7 +144,10 @@ export async function buildServer({ buildInfo, config, db, monitoring: monitorin
     audioRuntime ?? new UnixAudioRuntime(audioSocketPath(config.paths.runDir)),
     new CyberAudioClient(), new MediaAudioFocus(vodPlayer ?? createVodPlayerRuntime({ ...config.vodPlayer, enabled: true })),
     new VoiceMediaStore(config.paths.stateDir, db));
+  const displayClient = tvDisplayDependency ? null : new TvDisplayClient(config.environment === "production" ? "/run/cyberos-tv/display.sock" : path.join(config.paths.tvStateDir, "display.sock"));
+  const tvDisplay = tvDisplayDependency ?? displayClient!;
   const routeContext: ApiRouteContext = {
+    tvDisplay,
     audio,
     ...(buildInfo ? { buildInfo } : {}),
     config,
@@ -277,6 +283,7 @@ export async function buildServer({ buildInfo, config, db, monitoring: monitorin
 
   let stopCapabilityRunQueue: (() => Promise<void>) | undefined;
   server.addHook("onReady", async () => {
+    displayClient?.start(() => getTvSettings(db) ?? defaultTvSettings());
     const recoveredRuns = await recoverCapabilityRuns(capabilityRuntime);
     if (recoveredRuns.expired > 0 || recoveredRuns.interrupted > 0 || recoveredRuns.resumed > 0) {
       server.log.info(recoveredRuns, "Recovered capability runs");
@@ -316,6 +323,7 @@ export async function buildServer({ buildInfo, config, db, monitoring: monitorin
   });
 
   server.addHook("onClose", async () => {
+    displayClient?.close();
     await stopCapabilityRunQueue?.();
     await audio.close();
     clearInterval(hostAccessDraftCleanup);

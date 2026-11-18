@@ -14,6 +14,9 @@ endif
 	dh $@ --with dkms
 
 override_dh_auto_build:
+	@test -f .cyberos/tv-display/$(DEB_HOST_ARCH)/weston-10/cyberos-tv-display.so
+	@test -f .cyberos/tv-display/$(DEB_HOST_ARCH)/weston-13/cyberos-tv-display.so
+	@test -f .cyberos/tv-display/$(DEB_HOST_ARCH)/weston-14/cyberos-tv-display.so
 	npm ci --registry="$${CYBEROS_NPM_REGISTRY:-https://registry.npmmirror.com}"
 	npm --prefix docs ci --registry="$${CYBEROS_NPM_REGISTRY:-https://registry.npmmirror.com}"
 	npm run build
@@ -32,6 +35,9 @@ override_dh_auto_install:
 # them from the staged runtime so the package contains no dangling symlinks.
 override_dh_install:
 	dh_install
+	install -d debian/cyberos/usr/lib/cyberos/tv-display debian/cyberos/usr/lib/cyberos/bin
+	cp -a .cyberos/tv-display/$(DEB_HOST_ARCH)/weston-* debian/cyberos/usr/lib/cyberos/tv-display/
+	install -m 0755 .cyberos/tv-display/$(DEB_HOST_ARCH)/cyberos-tv-input debian/cyberos/usr/lib/cyberos/bin/
 	rm -rf debian/cyberos/usr/lib/cyberos/node_modules/@cyberos
 	# The Pi 1.4 lockfile hoists the SDK. Keep its packaged directory/symlink so
 	# upgrading the old package never requires a symlink-to-directory transition.
@@ -55,10 +61,12 @@ override_dh_dkms:
 override_dh_strip:
 	dh_strip --exclude=.bare --exclude=.node
 
-# Dependency analysis must likewise ignore foreign Bare/native prebuilds and
-# musl fallbacks that npm installs alongside the host glibc binaries.
+# Dependency analysis ignores foreign npm prebuilds and optional ABI modules.
+# The Weston modules use an explicit runtime OR dependency in control; scanning
+# every variant would incorrectly require all libweston majors at once.
+# Other host ELF consumers, including cyberos-tv-input, remain scanned.
 override_dh_shlibdeps:
-	dh_shlibdeps --exclude=.bare --exclude=linuxmusl --exclude=.node
+	dh_shlibdeps --exclude=.bare --exclude=linuxmusl --exclude=.node --exclude=cyberos-tv-display.so
 
 # Services are started by the installer after first-boot configuration. Timers
 # and units must not be enabled implicitly by debhelper during package install.

@@ -24,6 +24,7 @@ photos.test.ts: photos 的行为与契约验证。
 repositories-core.test.ts: repositories-core 的行为与契约验证。
 repositories-operations.test.ts: repositories-operations 的行为与契约验证。
 repositories.ts: 数据库仓库公共导出入口。
+tv-settings.test.ts: TV 空闲策略默认值、来源和旧记录兼容验证。
 schema.test.ts: schema 的行为与契约验证。
 schema.ts: SQLite 表结构和迁移入口。
 terminal-tabs.test.ts: terminal-tabs 的行为与契约验证。

@@ -24,6 +24,9 @@
 | [src/music_controller.rs](src/music_controller.rs) | Controller 的音乐队列操作、接管、切曲与历史收尾 |
 | [src/music.rs](src/music.rs) | 队列模型、版本、持久化和播放历史 |
 | [src/mpv.rs](src/mpv.rs) | mpv 参数、FD 传递、JSON IPC、事件、能力探测与错误分类 |
+| [src/audio_route.rs](src/audio_route.rs) | 实际 PCM 描述符与子设备身份的音频路由判定 |
+| [src/audio_route_alsa.rs](src/audio_route_alsa.rs) | Linux ALSA 只读 ELD 控制项枚举 |
+| [src/display.rs](src/display.rs) | 原生显示唤醒确认、播放抑制与租约续期 |
 | [src/storage.rs](src/storage.rs) | 音频/视频的存储池、安全打开和文件身份 |
 | [src/session.rs](src/session.rs) | 视频会话检查点、原子写入与损坏隔离 |
 | [src/preferences.rs](src/preferences.rs) | 播放偏好的独立保存 |
@@ -88,6 +91,12 @@ JSON 检查点采用临时文件、文件同步、重命名和父目录同步。
 TV 禁用不会关闭整个 daemon：无界面音乐仍需要共享引擎，视频能力与生命周期分开判断。Wayland/DRM、BlueZ/BlueALSA 和 ALSA 的实际可用性受设备与部署权限影响。
 
 ## 原生 TV 控制与隔离
+
+播放中的视频抑制显示空闲。音乐只有确认蓝牙或本地非 HDMI 路由后才解除抑制。HDMI、未知及暂不可用的音乐路由保持显示唤醒，避免路由证据尚未齐全时关屏。暂停、停止和错误释放抑制，让原生状态机重新计时。屏保和关屏不改变 mpv 会话。
+
+`actualAudioRoute.kind` 来自 mpv 实际打开的 `/proc/<pid>/fd` PCM。子设备必须由该 mpv 的 `owner_pid` 证明。ALSA 通过只读控制句柄枚举 ELD，必须同时匹配 PCM device 和 subdevice，并验证有效载荷；默认设备名、HDMI 标签或同声卡的其他 ELD 都不能证明 HDMI 路由。同声卡其他 PCM 的 ELD 证明当前 PCM 不关联该 HDMI 路由。实际 PCM 的 sysfs USB 传输也构成本地路由证据。没有控制项证据、音频服务器隐藏硬件或探测失败时输出 `unknown`。探测在启动、音频重新打开事件及一秒周期执行，不重启或停止 mpv。
+
+继续播放前，控制器通过 `/run/cyberos-tv/display.sock` 发送 `PLAYBACK 1 <requestId>`。每次请求使用非零编号，只接受编号匹配的直回快照，并确认 `supported` 和 `active`。广播和旧编号不能确认请求。释放抑制使用相同编号协议。原生遥控暂停与继续发送控制器意图，使用相同顺序。播放抑制每秒续租；模块租约为十秒。模块不可用时，客户端以五秒退避重连并继续播放，状态确认最多等待 500 毫秒。
 
 mpv 的原生 TV 控制使用随程序内嵌的 Lua 脚本，在播放时写入私有临时文件并通过 `--script` 传入；生命周期结束清理临时脚本。浏览器控件不会覆盖原生全屏 mpv，所以原生输入与显示需要单独实现和验证。
 

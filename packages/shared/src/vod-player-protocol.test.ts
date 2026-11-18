@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 使用版本化播放帧和历史协议样本。
+ * [OUTPUT]: 验证命令、快照与实际路由的兼容边界。
+ * [POS]: 共享播放器协议的 TypeScript 契约测试。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import {
@@ -9,6 +15,7 @@ import {
 } from "./vod-player-protocol.js";
 
 const status: VodPlayerStatus = {
+  actualAudioRoute: { kind: "unknown" },
   state: "playing",
   sessionId: "session-1",
   serviceInstanceId: "instance-1",
@@ -43,6 +50,14 @@ const status: VodPlayerStatus = {
 };
 
 describe("VOD player broker protocol", () => {
+  it("defaults old route snapshots to unknown and accepts only actual route kinds", () => {
+    const frame = (route?: unknown) => parseVodPlayerBrokerResponse(JSON.stringify({ version: VOD_PLAYER_PROTOCOL_VERSION, id: "route", ok: true, status: { ...status, actualAudioRoute: route } }));
+    expect(frame()).toMatchObject({ ok: true, status: { actualAudioRoute: { kind: "unknown" } } });
+    for (const kind of ["hdmi", "bluetooth", "local", "unknown", "unavailable"]) {
+      expect(frame({ kind })).toMatchObject({ ok: true, status: { actualAudioRoute: { kind } } });
+    }
+    for (const route of [null, "hdmi", {}, { kind: "default" }, { kind: "hdmi", device: "default" }]) expect(frame(route)).toBeNull();
+  });
   it("accepts native UI themes without a playback session and rejects arbitrary payloads", () => {
     const frame = (command: unknown) => parseVodPlayerBrokerRequest(JSON.stringify({ version: VOD_PLAYER_PROTOCOL_VERSION, id: "theme", command }));
     for (const scheme of ["neon", "mono", "graphite", "synthwave", "bloodline", "terminal", "amber"]) {

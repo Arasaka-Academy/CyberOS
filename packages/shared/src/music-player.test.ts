@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 使用原生播放快照和模拟 Unix 服务。
+ * [OUTPUT]: 验证音乐视图、路由证据和命令关联。
+ * [POS]: 共享音乐客户端的契约测试。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { mkdtemp, rm } from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
@@ -46,6 +52,11 @@ async function startServer(respond: (request: { id: string; version: number; com
 }
 
 describe("Music player shared engine view", () => {
+  it("retains actual hardware route evidence with backwards defaults", () => {
+    expect(parseMusicPlayerStatus(snapshot())).toMatchObject({ actualAudioRoute: { kind: "unknown" } });
+    expect(parseMusicPlayerStatus({ ...snapshot(), actualAudioRoute: { kind: "hdmi" } })).toMatchObject({ actualAudioRoute: { kind: "hdmi" } });
+    expect(parseMusicPlayerStatus({ ...snapshot(), actualAudioRoute: { kind: "default" } })).toBeNull();
+  });
   it("retains the music queue position while video owns the output", () => {
     const raw = snapshot();
     raw.owner = "video";

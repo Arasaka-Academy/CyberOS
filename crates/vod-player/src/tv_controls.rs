@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 读取内嵌 Lua 脚本和共享界面调色板。
+ * [OUTPUT]: 创建私有原生控制脚本并在播放器结束时回收。
+ * [POS]: mpv 原生界面的脚本与主题装配边界。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 use std::fs::{OpenOptions, create_dir_all, remove_file};
 use std::io::Write;
 use std::os::unix::fs::OpenOptionsExt;

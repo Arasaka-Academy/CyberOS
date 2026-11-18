@@ -1,5 +1,12 @@
+/**
+ * [INPUT]: 读取原生播放器 JSON 帧及 Rust 生成的协议类型。
+ * [OUTPUT]: 验证播放协议；旧路由字段补为 unknown。
+ * [POS]: API 与原生播放器之间的共享契约边界。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { appearanceSchemes, type AppearancePreference, type Scheme } from "./appearance.js";
 import type {
+  ActualAudioRoute as GeneratedActualAudioRoute,
   VodPlayerCapabilities as GeneratedVodPlayerCapabilities,
   VodPlayerErrorCode as GeneratedVodPlayerErrorCode,
   VodPlayerState as GeneratedVodPlayerState,
@@ -14,6 +21,7 @@ export const VOD_PLAYER_BROKER_CONNECT_TIMEOUT_MS = 5_000;
 export type VodPlayerState = GeneratedVodPlayerState;
 export type VodPlayerErrorCode = GeneratedVodPlayerErrorCode;
 export type VodPlayerCapabilities = GeneratedVodPlayerCapabilities;
+export type ActualAudioRoute = GeneratedActualAudioRoute;
 export type VodPlayerStatus = Omit<GeneratedVodPlayerStatus, "owner" | "music" | "preferences" | "audioDelayKey">;
 
 type GeneratedPlayCommand = Extract<VodPlayerWireCommand, { type: "play" }>;
@@ -167,7 +175,7 @@ function parseStatus(value: unknown): VodPlayerStatus | null {
     !hasOnlyKeys(value, [
       "state", "sessionId", "serviceInstanceId", "revision", "storagePoolId",
       "relativePath", "fileName", "mediaFileId", "videoOutput", "positionSeconds", "durationSeconds", "volume", "retryCount",
-      "nextRetryAt", "audioDeviceId", "effectiveAudioDeviceId", "audioFallbackReason",
+      "nextRetryAt", "audioDeviceId", "effectiveAudioDeviceId", "audioFallbackReason", "actualAudioRoute",
       "audioTracks", "subtitleTracks", "selectedAudioTrackId", "selectedSubtitleTrackId",
       "capabilities", "error", "errorCode", "updatedAt", "owner", "music", "preferences", "audioDelayKey", "tvHomeRequestId"
     ]) ||
@@ -179,6 +187,7 @@ function parseStatus(value: unknown): VodPlayerStatus | null {
   const revision = nonNegativeInteger(value.revision);
   const retryCount = nonNegativeInteger(value.retryCount);
   const capabilities = parseCapabilities(value.capabilities);
+  const actualAudioRoute = parseActualAudioRoute(value.actualAudioRoute);
   if (
     (typeof value.sessionId !== "string" && value.sessionId !== null) ||
     typeof value.serviceInstanceId !== "string" || !value.serviceInstanceId ||
@@ -198,11 +207,12 @@ function parseStatus(value: unknown): VodPlayerStatus | null {
     !isTrackList(value.audioTracks) || !isTrackList(value.subtitleTracks) ||
     (value.selectedAudioTrackId !== null && !positiveInteger(value.selectedAudioTrackId)) ||
     (value.selectedSubtitleTrackId !== null && !positiveInteger(value.selectedSubtitleTrackId)) ||
-    !capabilities || (typeof value.error !== "string" && value.error !== null) ||
+    !capabilities || !actualAudioRoute || (typeof value.error !== "string" && value.error !== null) ||
     (value.errorCode !== null && !isVodPlayerErrorCode(value.errorCode)) ||
     typeof value.updatedAt !== "string"
   ) return null;
   const status: VodPlayerStatus = {
+    actualAudioRoute,
     ...(typeof value.tvHomeRequestId === "string" ? { tvHomeRequestId: value.tvHomeRequestId } : {}),
     state: value.state,
     sessionId: value.sessionId,
@@ -241,6 +251,13 @@ function parseStatus(value: unknown): VodPlayerStatus | null {
     };
   }
   return status;
+}
+
+export function parseActualAudioRoute(value: unknown): ActualAudioRoute | null {
+  if (value === undefined) return { kind: "unknown" };
+  if (!isRecord(value) || !hasOnlyKeys(value, ["kind"])) return null;
+  const kind = value.kind;
+  return kind === "hdmi" || kind === "bluetooth" || kind === "local" || kind === "unknown" || kind === "unavailable" ? { kind } : null;
 }
 
 function isTrackList(value: unknown): value is VodPlayerStatus["audioTracks"] {

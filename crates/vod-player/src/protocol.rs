@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 接收受限播放命令和控制器状态。
+ * [OUTPUT]: 定义版本化 JSON 协议并生成 TypeScript 类型。
+ * [POS]: 原生播放器与 API 的契约边界。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 use serde::{Deserialize, Serialize};
 
 use crate::error::{ErrorCode, VodError};
@@ -408,6 +414,9 @@ pub enum PlaybackOwner {
 #[cfg_attr(test, ts(export_to = "vod-player.ts", rename = "VodPlayerStatus"))]
 #[serde(rename_all = "camelCase")]
 pub struct Status {
+    #[serde(default)]
+    #[cfg_attr(test, ts(as = "Option<ActualAudioRoute>", optional))]
+    pub actual_audio_route: ActualAudioRoute,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(test, ts(optional))]
     pub tv_home_request_id: Option<String>,
@@ -444,6 +453,27 @@ pub struct Status {
     pub error: Option<String>,
     pub error_code: Option<ErrorCode>,
     pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(ts_rs::TS))]
+#[cfg_attr(test, ts(export_to = "vod-player.ts"))]
+#[serde(rename_all = "camelCase")]
+pub struct ActualAudioRoute {
+    pub kind: ActualAudioRouteKind,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(ts_rs::TS))]
+#[cfg_attr(test, ts(export_to = "vod-player.ts"))]
+#[serde(rename_all = "lowercase")]
+pub enum ActualAudioRouteKind {
+    Hdmi,
+    Bluetooth,
+    Local,
+    #[default]
+    Unknown,
+    Unavailable,
 }
 
 #[derive(Debug, Serialize)]
@@ -682,7 +712,7 @@ mod tests {
             RequestEnvelope::parse(frame.as_bytes()).unwrap();
         }
         for frame in fixtures.responses {
-            let value: serde_json::Value = serde_json::from_str(&frame).unwrap();
+            let mut value: serde_json::Value = serde_json::from_str(&frame).unwrap();
             let encoded = match serde_json::from_value(value.clone()).unwrap() {
                 GoldenResponse::Success(response) => {
                     assert_eq!(response.version, PROTOCOL_VERSION);
@@ -709,6 +739,13 @@ mod tests {
                     .unwrap()
                 }
             };
+            if let Some(status) = value.get_mut("status") {
+                status
+                    .as_object_mut()
+                    .unwrap()
+                    .entry("actualAudioRoute")
+                    .or_insert_with(|| serde_json::json!({"kind":"unknown"}));
+            }
             assert_eq!(encoded, value);
         }
     }

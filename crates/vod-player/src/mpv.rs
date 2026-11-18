@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 接收已验证的媒体描述符和控制器命令。
+ * [OUTPUT]: 启动 mpv，提供有序事件、命令响应和进程身份。
+ * [POS]: 播放控制器的唯一 mpv IPC 与进程边界。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 use std::collections::VecDeque;
 use std::ffi::OsStr;
 use std::fs::File;
@@ -53,6 +59,7 @@ impl Availability {
 pub enum MpvEvent {
     FileLoaded,
     TvHome,
+    TvPause(Option<bool>),
     EndFile {
         reason: String,
         error: Option<String>,
@@ -325,6 +332,19 @@ impl MpvHandle {
                 return Err(error);
             }
         }
+        // Route monitoring is advisory. Older or headless mpv builds can omit these properties.
+        for (id, property) in [
+            (7, "audio-device"),
+            (8, "current-ao"),
+            (9, "audio-out-params"),
+        ] {
+            if let Err(error) = handle
+                .command(json!(["observe_property", id, property]))
+                .await
+            {
+                tracing::debug!(%property, %error, "audio route property observation unavailable");
+            }
+        }
         Ok(handle)
     }
 
@@ -400,6 +420,23 @@ impl MpvHandle {
             }
         }
         self.deferred.drain(..).collect()
+    }
+
+    pub(crate) fn process_id(&self) -> u32 {
+        self.pid.as_raw() as u32
+    }
+
+    pub(crate) async fn next_event(&mut self) -> MpvEvent {
+        if let Some(event) = self.deferred.pop_front() {
+            return event;
+        }
+        loop {
+            match self.incoming.recv().await {
+                Some(Incoming::Event(event)) => return event,
+                Some(Incoming::Response { .. }) => {}
+                None => return MpvEvent::ProtocolFailure("mpv IPC closed".into()),
+            }
+        }
     }
 
     pub async fn shutdown(mut self) {
@@ -801,6 +838,21 @@ async fn handle_ipc_line(line: &str, sender: &mpsc::Sender<Incoming>) {
         Some("file-loaded") => Some(MpvEvent::FileLoaded),
         Some("client-message") if value.get("args") == Some(&json!(["cyberos-tv-home"])) => {
             Some(MpvEvent::TvHome)
+        }
+        Some("client-message")
+            if value.get("args") == Some(&json!(["cyberos-tv-pause", "toggle"])) =>
+        {
+            Some(MpvEvent::TvPause(None))
+        }
+        Some("client-message")
+            if value.get("args") == Some(&json!(["cyberos-tv-pause", "pause"])) =>
+        {
+            Some(MpvEvent::TvPause(Some(true)))
+        }
+        Some("client-message")
+            if value.get("args") == Some(&json!(["cyberos-tv-pause", "resume"])) =>
+        {
+            Some(MpvEvent::TvPause(Some(false)))
         }
         Some("end-file") => Some(MpvEvent::EndFile {
             reason: value

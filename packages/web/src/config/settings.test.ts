@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖设置分组、表单转换函数和国际化资源。
+ * [OUTPUT]: 验证导航顺序与各领域表单默认值。
+ * [POS]: 前端设置配置与状态派生的回归测试。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { beforeAll, describe, expect, it } from "vitest";
 import { i18n, initI18n } from "../i18n/index.js";
 import {
@@ -15,18 +21,18 @@ beforeAll(async () => {
 });
 
 describe("settings helpers", () => {
-  it("keeps all 26 sections once in the agreed task-oriented order", () => {
+  it("keeps all 27 sections once in the agreed task-oriented order", () => {
     const groups = [...new Set(SETTINGS_SECTIONS.map((section) => section.group))];
     expect(groups.map((group) => ({ group, sections: SETTINGS_SECTIONS.filter((section) => section.group === group).map((section) => section.id) }))).toEqual([
       { group: "general", sections: ["overview", "appearance", "system-profile", "version"] },
       { group: "network", sections: ["wireless", "bluetooth", "proxy", "tailscale"] },
       { group: "storage", sections: ["files", "indexer", "shares", "backup"] },
-      { group: "media", sections: ["photos", "media", "nvr", "downloads"] },
+      { group: "media", sections: ["photos", "media", "tv", "nvr", "downloads"] },
       { group: "ai", sections: ["model-providers", "pi-agent", "mcp", "skills", "audio"] },
       { group: "system", sections: ["docker", "virtual-machines", "monitoring", "alerts", "operations"] }
     ]);
-    expect(SETTINGS_SECTIONS).toHaveLength(26);
-    expect(new Set(SETTINGS_SECTIONS.map((section) => section.id)).size).toBe(26);
+    expect(SETTINGS_SECTIONS).toHaveLength(27);
+    expect(new Set(SETTINGS_SECTIONS.map((section) => section.id)).size).toBe(27);
   });
 
   it.each([

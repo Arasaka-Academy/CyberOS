@@ -1,4 +1,10 @@
-import { Button as UiButton, DescriptionList, EmptyState, Field, Input, Section, SectionHeader, StatusBadge } from "@cyberos/ui";
+/**
+ * [INPUT]: 依赖媒体库接口、存储目录选择器和元数据配置。
+ * [OUTPUT]: 提供媒体源、扫描和匹配设置页面。
+ * [POS]: 媒体设置边界；TV 配置由独立页面加载。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
+import { Button as UiButton, DescriptionList, EmptyState, Field, Input, Section, SectionHeader } from "@cyberos/ui";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   Check,
@@ -21,28 +27,22 @@ import {
   getMediaScans,
   getMediaSources,
   getMediaTitles,
-  getTvStatus,
-  getTvSettings,
   requestMediaScan,
   updateMediaLibrarySettings,
   updateMediaMatch,
   updateMediaSource,
-  updateTvSettings,
   type MediaLibrarySettings,
   type MediaLibraryStatus,
   type MediaMatchCandidate,
   type MediaScanRun,
   type MediaSource,
   type MediaSourceKind,
-  type MediaTitleSummary,
-  type TvModeStatus,
-  type TvSettings
+  type MediaTitleSummary
 } from "../../api.js";
 import type { SystemProxySettings } from "../../api.js";
 import { systemProxyUrl } from "@cyberos/shared";
 import type { SupportedLocale } from "../../i18n/locale.js";
 import { Switch } from "../common/Switch.js";
-import { CustomSelect } from "../common/CustomSelect.js";
 import { SettingsSecretField } from "./SettingsSecretField.js";
 import { SettingsMusicLibraryCard } from "./SettingsMusicLibraryCard.js";
 import {
@@ -57,8 +57,6 @@ interface MediaPageData {
   status: MediaLibraryStatus;
   scans: MediaScanRun[];
   unmatched: MediaTitleSummary[];
-  tvStatus: TvModeStatus;
-  tvSettings: TvSettings;
 }
 
 export function SettingsMediaPage({
@@ -95,15 +93,13 @@ export function SettingsMediaPage({
   const load = useCallback(async (reportError = true, syncForm = false) => {
     const sequence = ++loadSequence.current;
     try {
-      const [settings, sources, status, scans, pending, unmatched, tvStatus, tvSettings, proxySettings] = await Promise.all([
+      const [settings, sources, status, scans, pending, unmatched, proxySettings] = await Promise.all([
         getMediaLibrarySettings(),
         getMediaSources(),
         getMediaLibraryStatus(),
         getMediaScans(undefined, 30),
         getMediaTitles({ matchStatus: "pending", limit: 100 }),
         getMediaTitles({ matchStatus: "unmatched", limit: 100 }),
-        getTvStatus(),
-        getTvSettings(),
         getSystemProxySettings().catch(() => null)
       ]);
       if (sequence !== loadSequence.current) return;
@@ -114,9 +110,7 @@ export function SettingsMediaPage({
         status,
         scans,
         unmatched: [...pending, ...unmatched].filter((title, index, titles) =>
-          titles.findIndex((candidate) => candidate.id === title.id) === index),
-        tvStatus,
-        tvSettings
+          titles.findIndex((candidate) => candidate.id === title.id) === index)
       });
       if (syncForm) {
         setTmdbUseProxy(settings.tmdbUseProxy);
@@ -172,30 +166,6 @@ export function SettingsMediaPage({
       setTmdbToken("");
       setClearTmdbToken(false);
     }, t("settings.media.settingsSaved"));
-  }
-
-  async function toggleTv(enabled: boolean) {
-    if (!window.confirm(t(enabled ? "settings.media.tvEnableConfirm" : "settings.media.tvDisableConfirm"))) return;
-    await run("tv-mode", async () => {
-      const tvSettings = await updateTvSettings({
-        enabled,
-        ...(enabled ? { videoOutput: "wayland" as const } : {}),
-        confirmed: true
-      });
-      setData((current) => current ? { ...current, tvSettings } : current);
-    }, t(enabled ? "settings.media.tvEnabled" : "settings.media.tvDisabled"));
-  }
-
-  async function saveTvSettings() {
-    if (!data) return;
-    await run("tv-settings", async () => {
-      const tvSettings = await updateTvSettings({
-        audioDevice: data.tvSettings.audioDevice,
-        drmConnector: data.tvSettings.drmConnector,
-        hardwareDecoding: data.tvSettings.hardwareDecoding
-      });
-      setData((current) => current ? { ...current, tvSettings } : current);
-    }, t("settings.media.tvSettingsSaved"));
   }
 
   async function addSource(selection: StorageFileSelection) {
@@ -291,12 +261,6 @@ export function SettingsMediaPage({
                 void searchCandidates(title, title.title);
               }}
               onApplyMatch={(title, candidate) => void applyMatch(title, candidate)}
-              onToggleTv={(enabled) => void toggleTv(enabled)}
-              onTvSettingsChange={(patch) => setData((current) => current ? {
-                ...current,
-                tvSettings: { ...current.tvSettings, ...patch }
-              } : current)}
-              onSaveTvSettings={() => void saveTvSettings()}
             />
           )}
         </div>
@@ -344,10 +308,7 @@ export function SettingsMediaContent({
   onCandidateQueryChange,
   onSearchCandidates,
   onSelectTitle,
-  onApplyMatch,
-  onToggleTv,
-  onTvSettingsChange,
-  onSaveTvSettings
+  onApplyMatch
 }: {
   data: MediaPageData;
   busy: string | null;
@@ -377,9 +338,6 @@ export function SettingsMediaContent({
   onSearchCandidates: (title: MediaTitleSummary) => void;
   onSelectTitle: (title: MediaTitleSummary) => void;
   onApplyMatch: (title: MediaTitleSummary, candidate: MediaMatchCandidate | null) => void;
-  onToggleTv: (enabled: boolean) => void;
-  onTvSettingsChange: (patch: Partial<TvSettings>) => void;
-  onSaveTvSettings: () => void;
 }) {
   const { t } = useTranslation();
   const scansBySource = useMemo(() => new Map(data.sources.map((source) => [
@@ -438,31 +396,6 @@ export function SettingsMediaContent({
           ]} />
         </Section>
 
-        <Section className="settings-section-card settings-field-wide settings-tv-status" title={t("settings.media.tvStatusTitle")} description={t("settings.media.tvStatusDescription")} actions={<><Switch checked={data.tvSettings.enabled} disabled={busy !== null} label={t("settings.media.tvMode")} onCheckedChange={onToggleTv} /></>}>
-
-          <div className="settings-tv-control-grid">
-            <Field label={t("settings.media.audioDevice")}><Input value={data.tvSettings.audioDevice ?? ""} onChange={(event) => onTvSettingsChange({ audioDevice: event.target.value || null })} placeholder="default" /></Field>
-            <Field label={t("settings.media.drmConnector")}><Input value={data.tvSettings.drmConnector ?? ""} onChange={(event) => onTvSettingsChange({ drmConnector: event.target.value || null })} placeholder="HDMI-A-1" /></Field>
-            <Field className="settings-preference-field" label={t("settings.media.hardwareDecoding")}><CustomSelect value={data.tvSettings.hardwareDecoding} ariaLabel={t("settings.media.hardwareDecoding")} options={[
-              { value: "auto-safe", label: t("settings.media.hwdec.autoSafe") },
-              { value: "auto", label: t("settings.media.hwdec.auto") },
-              { value: "no", label: t("settings.media.hwdec.no") }
-            ]} onChange={(hardwareDecoding) => onTvSettingsChange({ hardwareDecoding })} /></Field>
-            <UiButton variant="secondary" className="secondary-button" type="button" disabled={busy !== null} aria-busy={busy === "tv-settings" || undefined} onClick={onSaveTvSettings}>{busy === "tv-settings" ? <LoaderCircle className="is-spinning" size={15} /> : <Check size={15} />}{t("common.actions.save")}</UiButton>
-          </div>
-          <strong className={`settings-tv-overall is-${data.tvStatus.state}`}>
-            {t(`settings.media.tvStates.${data.tvStatus.state}`)}
-          </strong>
-          <DescriptionList items={(["weston", "chromium", "vodPlayer", "cec", "gamepad"] as const).map((component) => {
-              const health = data.tvStatus[component];
-              return {
-                id: component,
-                label: t(`settings.media.tvComponents.${component}`),
-                value: <StatusBadge state={health.state === "ready" ? "ready" : health.state === "degraded" ? "warning" : health.state === "unavailable" ? "offline" : health.state}>{t(`settings.media.componentStates.${health.state}`)}</StatusBadge>,
-                detail: health.detail ?? t("settings.media.noStatusDetail")
-              };
-            })} />
-        </Section>
 
         <Section className="settings-section-card settings-field-wide" title={t("settings.media.sourcesTitle")} description={t("settings.media.sourcesDescription")} actions={<><div className="settings-media-header-actions">
               <UiButton variant="secondary" type="button" className="secondary-button" onClick={() => onAddSource("movie")}>

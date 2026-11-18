@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 读取 Debian 元数据、systemd 单元和安装脚本。
+ * [OUTPUT]: 验证交付路径、运行依赖和服务启停顺序。
+ * [POS]: 原生安装与包构建文件的交付契约测试。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { readFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
@@ -219,8 +225,9 @@ describe("native packaging artifacts", () => {
     expect(tvCec).toContain("KillMode=mixed");
     const tvCecScript = await readPackagingFile("scripts", "cyberos-tv-cec");
     expect(tvCecScript).toContain("trap terminate HUP INT TERM");
-    expect(tvCecScript).toContain('wtype -k F24');
-    expect(tvCecScript).toContain("Wayland virtual keyboard input is unavailable");
+    expect(tvCecScript).toContain('"$input_helper" probe');
+    expect(tvCecScript).not.toContain("wtype");
+    expect(tvCecScript).toContain("Native TV input is unavailable");
     expect(tvCecScript).toContain('"$status_writer" cec degraded');
     expect(tvCecScript).toContain('wait "$cec_pid" 2>/dev/null || true');
     expect(tvCecScript).toContain('wait "$heartbeat_pid" 2>/dev/null || true');
@@ -417,7 +424,7 @@ describe("native packaging artifacts", () => {
     expect(control).toContain("libimage-exiftool-perl");
     expect(control).toContain("libvips-tools");
     expect(control).toMatch(/^Depends:.*ffmpeg.*libraw-bin/m);
-    expect(control).toMatch(/^Depends:.*chromium.*weston.*mpv.*v4l-utils.*wtype/m);
+    expect(control).toMatch(/^Depends:.*chromium.*weston.*mpv.*v4l-utils/m);
     expect(control).not.toMatch(/^Suggests:.*ffmpeg/m);
     expect(control).toContain("Suggests:");
     expect(control.match(/^Depends:.*$/mu)?.[0]).toContain("git");
@@ -557,11 +564,17 @@ describe("native packaging artifacts", () => {
     expect(depends.split(", ")).toContain("${cyberos:VmDepends}");
     expect(depends.split(", ")).toContain("ipxe-qemu");
     expect(depends.split(", ")).toEqual(expect.arrayContaining([
-      "chromium", "weston", "mpv", "v4l-utils", "seatd", "wtype"
+      "chromium", "weston", "mpv", "v4l-utils", "seatd"
     ]));
     expect(suggests.split(", ")).not.toContain("smartmontools");
     expect(suggests.split(", ")).not.toContain("docker.io");
     expect(suggests.split(", ")).not.toContain("libvirt-daemon-system");
+    expect(control).not.toMatch(/^Build-Depends:.*libweston/m);
+    expect(control).toContain("libweston-14-0 | libweston-13-0 | libweston-10-0");
+    expect(rules).toContain("--exclude=cyberos-tv-display.so");
+    expect(installer).toContain("ensure_native_tv_builder");
+    expect(installer).toContain("CYBEROS_TV_NATIVE_PREBUILT");
+    expect(installer.indexOf("ensure_native_tv_builder\nlog")).toBeLessThan(installer.indexOf('"$ROOT_DIR/packaging/scripts/build-deb.sh"'));
     expect(rules).toContain("CYBEROS_VM_DEPENDS = qemu-system-arm, qemu-efi-aarch64");
     expect(rules).toContain("CYBEROS_VM_DEPENDS = qemu-system-x86, ovmf");
     expect(rules).toContain('dh_gencontrol -- -Vcyberos:VmDepends="$(CYBEROS_VM_DEPENDS)"');
@@ -569,6 +582,10 @@ describe("native packaging artifacts", () => {
     expect(releaseWorkflow).not.toContain("dtolnay/rust-toolchain@1.95.0");
     expect(releaseWorkflow.match(/uses: dtolnay\/rust-toolchain@[0-9a-f]{40}/gu)).toHaveLength(3);
     expect(releaseWorkflow.match(/toolchain: 1\.95\.0/gu)).toHaveLength(3);
+    expect(releaseWorkflow).toContain("container: node:22-bookworm");
+    expect(releaseWorkflow).toContain("name: Native TV (${{ matrix.architecture }})");
+    expect(releaseWorkflow).toContain("CYBEROS_TV_NATIVE_PREBUILT=1");
+    expect(releaseWorkflow).toContain("name: cyberos-tv-native-arm64");
     expect(releaseWorkflow).toMatch(/package-arm64:[\s\S]*?apt-get install[\s\S]*?\n\s+acl \\/u);
     expect(deployWorkflow).toContain('repository_name="${GITHUB_REPOSITORY#*/}"');
     expect(deployWorkflow).toContain(

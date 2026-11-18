@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖遥控按键映射、模态关闭和空间焦点布局。
+ * [OUTPUT]: 提供 TV 方向导航与媒体传输按键分发。
+ * [POS]: TV 外壳的唯一键盘事件入口。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { useEffect, useRef } from "react";
 import { closeModalForHome } from "../components/workspace/useModalDialog.js";
 import { isBackKey, isHomeKey } from "../lib/remote-keys.js";
@@ -34,7 +40,7 @@ export function useRemoteNavigation(actions: {
         if (modal) return;
         event.preventDefault(); current.current.onBack(); return;
       }
-      if (["MediaPlayPause", "MediaPlay", "MediaPause", "MediaStop"].includes(event.key)) {
+      if (["MediaPlayPause", "MediaPlay", "MediaPause", "MediaStop", "MediaTrackNext", "MediaTrackPrevious"].includes(event.key)) {
         event.preventDefault(); event.stopPropagation();
         if (!event.repeat && !modal) current.current.onTransport(event.key);
         return;

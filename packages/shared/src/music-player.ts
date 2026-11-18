@@ -1,7 +1,13 @@
+/**
+ * [INPUT]: 接收原生播放器快照和版本化音乐命令。
+ * [OUTPUT]: 提供音乐视图及实际音频路由。
+ * [POS]: NAS 共享播放器的音乐客户端契约。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { randomUUID } from "node:crypto";
 import net from "node:net";
 import type { VodPlayerConfig } from "./types.js";
-import { VOD_PLAYER_PROTOCOL_VERSION, type VodPlayerErrorCode, type VodPlayerState } from "./vod-player-protocol.js";
+import { VOD_PLAYER_PROTOCOL_VERSION, parseActualAudioRoute, type ActualAudioRoute, type VodPlayerErrorCode, type VodPlayerState } from "./vod-player-protocol.js";
 import { VodPlayerRuntimeError } from "./vod-player-client.js";
 
 export type MusicRepeatMode = "off" | "one" | "all";
@@ -19,6 +25,7 @@ export interface MusicQueueEntry {
 }
 
 export interface MusicPlayerStatus {
+  actualAudioRoute?: ActualAudioRoute;
   owner: "music" | "video" | null;
   state: VodPlayerState;
   sessionId: string | null;
@@ -134,6 +141,8 @@ export function createMusicPlayerRuntime(config: VodPlayerConfig): MusicPlayerRu
 export function parseMusicPlayerStatus(value: unknown): MusicPlayerStatus | null {
   if (!record(value) || !record(value.music)) return null;
   const music = value.music;
+  const actualAudioRoute = parseActualAudioRoute(value.actualAudioRoute);
+  if (!actualAudioRoute) return null;
   if ((value.owner !== null && value.owner !== "music" && value.owner !== "video") ||
     !Array.isArray(music.queue) || !music.queue.every(isEntry) ||
     !integer(music.queueVersion) || !integer(value.revision) ||
@@ -146,6 +155,7 @@ export function parseMusicPlayerStatus(value: unknown): MusicPlayerStatus | null
   const active = value.owner === "music";
   const current = music.queue.find((entry) => entry.id === music.currentItemId);
   return {
+    actualAudioRoute,
     owner: value.owner,
     state: active ? value.state as VodPlayerState : music.queue.length ? "paused" : "idle",
     sessionId: value.sessionId,

@@ -1,0 +1,43 @@
+/*
+ * [INPUT]: 依赖 TV 尺度与共享主题令牌。
+ * [OUTPUT]: 提供屏保和远距音乐页面样式。
+ * [POS]: TV 应用层；息屏时关闭屏保节点。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
+.tv-awake-shell { width: 100%; height: 100%; }
+.tv-screensaver { position: absolute; inset: 0; z-index: 200; background: var(--cyber-bg); overflow: hidden; pointer-events: none; }
+.tv-screensaver-image { display: block; width: 100%; height: 100%; object-fit: contain; }
+.tv-screensaver-builtin { position: relative; display: grid; place-items: center; width: 100%; height: 100%; }
+.tv-screensaver-geometry { position: absolute; width: 90%; height: 90%; stroke: var(--cyber-accent2); stroke-width: 1; opacity: .22; animation: tv-saver-drift 90s ease-in-out infinite alternate; }
+.tv-screensaver-builtin time { color: var(--cyber-ink); font: calc(96px * var(--tv-scale))/1 var(--cyberos-font-mono); animation: tv-saver-clock 120s ease-in-out infinite alternate; }
+.tv-music-player { display: flex; flex-direction: column; width: 100%; height: 100%; padding: var(--tv-safe); background: var(--cyber-bg); }
+.tv-music-main { display: grid; grid-template-columns: minmax(240px, 38%) minmax(0, 1fr); gap: calc(64px * var(--tv-scale)); min-height: 0; flex: 1; padding-bottom: var(--tv-space); }
+.tv-music-cover { display: grid; place-items: center; align-self: center; width: 100%; aspect-ratio: 1; max-height: 100%; background: var(--cyber-soft); border: 1px solid var(--cyber-line); overflow: hidden; }
+.tv-music-cover img { width: 100%; height: 100%; object-fit: cover; }
+.tv-music-cover > svg { width: 35%; height: 35%; color: var(--cyber-accent); }
+.tv-music-copy { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.tv-music-copy h1 { font-size: calc(48px * var(--tv-scale)); line-height: 1.2; max-height: 2.4em; overflow: hidden; }
+.tv-music-artist { margin-top: var(--tv-space); font-size: calc(30px * var(--tv-scale)); }
+.tv-music-album { font-size: var(--tv-font); color: var(--cyberos-color-text-muted); }
+.tv-music-lyrics { min-height: 0; overflow-y: auto; margin-top: var(--tv-space); padding-block: calc(8px * var(--tv-scale)); font-size: calc(28px * var(--tv-scale)); line-height: 1.8; color: var(--cyberos-color-text-muted); }
+.tv-music-lyrics p[aria-current='true'] { color: var(--cyber-ink); font-weight: 700; border-left: 3px solid var(--cyber-accent); padding-left: var(--tv-space); }
+.tv-music-controls { flex: none; border-top: 1px solid var(--cyber-line); padding-top: var(--tv-space); }
+.tv-music-progress { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--tv-space); align-items: center; font: var(--tv-small) var(--cyberos-font-mono); }
+.tv-music-progress input, .tv-music-volume input { min-width: 0; width: 100%; height: var(--tv-control); accent-color: var(--cyber-accent); }
+.tv-music-controls input[type='range'] { appearance: none; background: transparent; cursor: pointer; }
+.tv-music-controls input[type='range']::-webkit-slider-runnable-track { height: 4px; background: linear-gradient(to right, var(--cyber-accent) var(--playback-slider-fill), var(--cyber-line) var(--playback-slider-fill)); }
+.tv-music-controls input[type='range']::-moz-range-track { height: 4px; background: linear-gradient(to right, var(--cyber-accent) var(--playback-slider-fill), var(--cyber-line) var(--playback-slider-fill)); }
+.tv-music-controls input[type='range']::-webkit-slider-thumb { appearance: none; width: calc(12px * var(--tv-scale)); height: calc(24px * var(--tv-scale)); margin-top: calc(2px - 12px * var(--tv-scale)); background: var(--cyber-ink); border: 0; border-radius: 0; }
+.tv-music-controls input[type='range']::-moz-range-thumb { width: calc(12px * var(--tv-scale)); height: calc(24px * var(--tv-scale)); background: var(--cyber-ink); border: 0; border-radius: 0; }
+.tv-music-controls input[type='range']:disabled { opacity: .4; cursor: not-allowed; }
+.tv-music-transport { display: flex; align-items: center; gap: var(--tv-space); margin-top: var(--tv-space); }
+.tv-music-volume { display: flex; align-items: center; gap: calc(12px * var(--tv-scale)); min-width: 160px; flex: 1; margin-left: auto; }
+.tv-music-queue { display: flex; flex-direction: column; gap: var(--tv-space); }
+.tv-music-queue-list { min-height: 0; overflow-y: auto; display: grid; gap: 8px; }
+.tv-music-queue-list > button { justify-content: flex-start !important; text-align: left; width: 100%; }
+.tv-music-queue-list strong, .tv-music-queue-list small { display: block; overflow-wrap: anywhere; }
+.tv-music-queue-list button[aria-current='true'] { border-left: 3px solid var(--cyber-accent); background: var(--cyber-soft); }
+@keyframes tv-saver-drift { from { transform: translate(-3%, -2%) rotate(-4deg); } to { transform: translate(3%, 2%) rotate(4deg); } }
+@keyframes tv-saver-clock { from { transform: translate(-8vw, -8vh); } to { transform: translate(8vw, 8vh); } }
+@media (prefers-reduced-motion: reduce) { .tv-screensaver-geometry, .tv-screensaver-builtin time { animation: none; } }
+@media (max-width: 820px) { .tv-music-main { gap: var(--tv-space); grid-template-columns: minmax(140px, 34%) minmax(0, 1fr); } .tv-music-transport { flex-wrap: wrap; } .tv-music-copy h1 { font-size: calc(36px * var(--tv-scale)); } .tv-music-volume { max-width: 280px; } }

@@ -1,6 +1,6 @@
 # tv-gamepad — 手柄到 TV 界面的输入桥接
 
-`cyberos-tv-gamepad` 从 Linux evdev 读取手柄事件，转换为固定键盘操作，再通过 `wtype` 注入当前 Wayland 会话。它把设备扫描、输入策略、按键注入和健康状态分开，使 USB/蓝牙手柄最终都能通过 Linux 输入设备进入同一条路径。
+`cyberos-tv-gamepad` 从 Linux evdev 读取手柄事件，转换为固定键盘操作，再通过 `cyberos-tv-input` 向原生 Weston 模块发送按下和释放。它把设备扫描、输入策略、按键注入和健康状态分开，使 USB/蓝牙手柄最终都能通过 Linux 输入设备进入同一条路径。
 
 它不访问 SQLite、不开放网络接口，也不负责蓝牙配对。只有 TV target 启用并具备输入设备与 Wayland 会话时，系统服务才进入正常工作环境。
 
@@ -17,7 +17,7 @@
 | 路径 | 职责 |
 | --- | --- |
 | [src/lib.rs](src/lib.rs) | 能力识别、轴归一化、按钮/方向策略、重复节奏、InputHub 和健康分级 |
-| [src/main.rs](src/main.rs) | evdev 热插拔、设备读取任务、代次过滤、wtype 和状态脚本 |
+| [src/main.rs](src/main.rs) | evdev 热插拔、设备读取任务、代次过滤、原生输入客户端和状态脚本 |
 
 library target 不直接打开设备或执行命令，便于对输入策略做确定性测试；binary target 处理真实 Linux/Wayland 运行环境。
 
@@ -28,7 +28,7 @@ library target 不直接打开设备或执行命令，便于对输入策略做�
 3. 每个设备启动独立异步读取任务，把按钮和支持的轴事件送入容量为 256 的 channel。
 4. 设备路径和 generation 一起随事件传递，重连后丢弃旧任务迟到的事件。
 5. `InputHub` 按设备保存状态，处理按下/释放、摇杆归一化、hat 和 D-pad，再输出固定键名。
-6. 主循环调用有 2 秒超时的 `wtype`，向 Wayland 注入按键。
+6. 主循环调用有 2 秒超时的 `原生输入客户端`，向 Wayland 注入按键。
 7. 每 20ms 驱动一次重复检查，每 5 秒汇总设备和注入健康，调用状态写入脚本。
 
 断开设备时移除对应状态和读取任务关联，不把旧设备保持的方向继续当作新设备输入。
@@ -70,13 +70,13 @@ F6–F10 的产品语义由当前前端或播放器输入绑定决定。本 crat
 | --- | --- |
 | CLI | 不接受参数，额外参数返回用法错误 |
 | 输入目录 | 固定 `/dev/input` |
-| 按键工具 | PATH 中的 `wtype` |
+| 按键工具 | `/usr/lib/cyberos/bin/cyberos-tv-input` |
 | 状态工具 | `/usr/lib/cyberos/scripts/cyberos-tv-write-status` |
 | Wayland | `XDG_RUNTIME_DIR` 与 `WAYLAND_DISPLAY`，服务内默认 `/run/cyberos-tv` / `wayland-0` |
 | 账号与组 | `cyberos`，附加 `input` 组 |
 | 服务归属 | `cyberos-tv.target`，要求 TV prepare，跟随 Weston |
 
-`runtime_preflight` 检查 wtype 和 Wayland socket。存在运行或读取错误时为 unavailable；没有受支持手柄时为 degraded；至少一个受支持手柄且无相应错误时为 ready。
+`runtime_preflight` 用 STATUS 检查原生 socket，不注入测试键。存在运行或读取错误时为 unavailable；没有受支持手柄时为 degraded；至少一个受支持手柄且无相应错误时为 ready。
 
 ready 说明本服务的设备和注入条件满足。某个窗口是否有焦点、页面是否处理按键或真实用户操作是否正确，仍需在 TV 界面验证。
 
@@ -95,7 +95,7 @@ cargo check --locked -p cyberos-tv-gamepad
 cargo test --locked -p cyberos-tv-gamepad
 ```
 
-纯状态机测试可验证轴范围、阈值、方向/面键、重复、重连和健康判断。实际运行依赖 Linux evdev、设备权限和支持 wtype 的 Wayland compositor；合成事件不能证明真实手柄已控制 TV 页面。
+纯状态机测试可验证轴范围、阈值、方向/面键、重复、重连和健康判断。实际运行依赖 Linux evdev、设备权限和支持 原生输入客户端 的 Wayland compositor；合成事件不能证明真实手柄已控制 TV 页面。
 
 ```bash
 systemctl status cyberos-tv-gamepad.service
@@ -107,3 +107,8 @@ journalctl -u cyberos-tv-gamepad.service -n 100 --no-pager
 - [输入策略与映射](src/lib.rs) 和 [Linux 主循环](src/main.rs)。
 - [vod-player](../vod-player/README.md)：本机媒体的遥控输入和原生播放。
 - [hostd TV 操作](../hostd/src/tv.rs)：TV 模式启停入口。
+
+首次唤醒手势由原生模块吞噬，包含长按重复与配对释放。
+InputHub 暴露真实按住键集合，服务对集合差异发送 KEY 按下/释放。
+设备断开时发送剩余释放，避免遗留按住键。
+原生模块将映射按下转为短按，保持手柄的显式重复节奏。真实释放只结束输入手势，防止客户端再次自动重复。

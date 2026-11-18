@@ -1,5 +1,5 @@
 /**
- * [INPUT]: 依赖系统设置资源、业务设置页与移动导航。
+ * [INPUT]: 依赖系统设置资源、自加载 TV 页与移动导航。
  * [OUTPUT]: 提供当前设置分类的页面组合。
  * [POS]: 设置页面路由；Agent 权限交由独立页面渲染。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
@@ -33,6 +33,7 @@ import { SettingsAudioPage } from "./SettingsAudioPage.js";
 import { SettingsDockerPage } from "./SettingsDockerPage.js";
 import { SettingsBluetoothPage } from "./SettingsBluetoothPage.js";
 import { SettingsMediaPage } from "./SettingsMediaPage.js";
+import { SettingsTvPage } from "./SettingsTvPage.js";
 import { SettingsNvrPage } from "./SettingsNvrPage.js";
 import { SettingsSystemProfilePage } from "./SettingsSystemProfilePage.js";
 import { SettingsMonitoringPage } from "./SettingsMonitoringPage.js";
@@ -344,6 +345,7 @@ export function SettingsContent({
             />
           ) : null}
 
+          {activeSection === "tv" ? <SettingsTvPage pools={storagePools} locale={resolvedLocale} onNotifySuccess={onNotifySuccess} onNotifyError={onNotifyError} /> : null}
           {activeSection === "media" ? (
             <SettingsMediaPage
               pools={storagePools}

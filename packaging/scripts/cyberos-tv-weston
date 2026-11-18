@@ -1,4 +1,8 @@
 #!/bin/sh
+# [INPUT]: HDMI 连接、Weston 主版本与匹配原生模块。
+# [OUTPUT]: 非 root kiosk 合成器与运行状态。
+# [POS]: systemd 启动边界；缺少匹配模块时保留基础 TV。
+# [PROTOCOL]: Update this header on change, then check AGENTS.md
 set -eu
 
 runtime_dir=/run/cyberos-tv
@@ -42,7 +46,15 @@ while ! hdmi_connected; do
 done
 
 "$status_writer" weston degraded "Weston is starting"
-weston --backend=drm-backend.so --shell=kiosk-shell.so --socket=wayland-0 \
+weston_major=$(weston --version | sed -n 's/^weston \([0-9][0-9]*\)\..*/\1/p')
+module_path="/usr/lib/cyberos/tv-display/weston-$weston_major/cyberos-tv-display.so"
+if [ ! -f "$module_path" ]; then
+  "$status_writer" weston degraded "Native display module unavailable for Weston $weston_major"
+  module_argument=
+else
+  module_argument="--modules=$module_path"
+fi
+weston ${module_argument:+"$module_argument"} --backend=drm-backend.so --shell=kiosk-shell.so --socket=wayland-0 \
   --config="$runtime_dir/weston.ini" --log="$runtime_dir/weston.log" &
 weston_pid=$!
 

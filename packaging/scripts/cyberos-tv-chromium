@@ -1,4 +1,8 @@
 #!/bin/sh
+# [INPUT]: CyberOS TV 页面与 Wayland 会话。
+# [OUTPUT]: app-id 为 cyberos-tv 的全屏 Chromium。
+# [POS]: 原生屏保模块通过稳定 app-id 识别页面。
+# [PROTOCOL]: Update this header on change, then check AGENTS.md
 set -eu
 
 runtime_dir=/run/cyberos-tv
@@ -49,6 +53,7 @@ install -d -m 0750 /cyberos/state/tv/chromium
 "$chromium_bin" \
   --ozone-platform=wayland \
   --enable-features=UseOzonePlatform \
+  --class=cyberos-tv \
   --kiosk \
   --app="$tv_url" \
   --user-data-dir=/cyberos/state/tv/chromium \

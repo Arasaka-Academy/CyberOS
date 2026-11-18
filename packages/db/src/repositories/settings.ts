@@ -22,7 +22,6 @@ import type {
   ShareSettingsRecord,
   SystemProfileSettingsRecord,
   SystemProxySettingsRecord,
-  TvSettingsRecord,
   VmSettingsRecord
 } from "@cyberos/shared";
 import {
@@ -54,6 +53,8 @@ import {
 import { mapShareSettings, normalizeShareSettings } from "./share-settings-mapper.js";
 import { DEFAULT_AGENT_CAPABILITY_POLICY_SETTINGS } from "./settings-constants.js";
 import type { DbSystemSettingRow } from "./repository-rows.js";
+import { settingRow, saveSetting, currentSettingsObject, currentSettingsUpdatedAt, isNullableString } from "./settings-storage.js";
+export { DEFAULT_TV_SETTINGS, defaultTvSettings, getTvSettings, saveTvSettings, validateTvSettings } from "./tv-settings.js";
 
 const MODEL_PROVIDER_SETTING_KEY = "model_provider";
 const AUDIO_SETTING_KEY = "audio_settings";
@@ -70,7 +71,6 @@ const SYSTEM_PROFILE_SETTING_KEY = "system_profile_settings";
 const SYSTEM_PROXY_SETTING_KEY = "system_proxy_settings";
 const MONITORING_SETTING_KEY = "monitoring_settings";
 const BACKUP_SETTING_KEY = "backup_settings";
-const TV_SETTING_KEY = "tv_settings";
 
 const EPOCH = new Date(0).toISOString();
 
@@ -133,14 +133,6 @@ export const DEFAULT_BACKUP_SETTINGS: Omit<BackupSettingsRecord, "updatedAt"> = 
   keepDaily: 7,
   keepWeekly: 4,
   validatedAt: null
-};
-
-export const DEFAULT_TV_SETTINGS: Omit<TvSettingsRecord, "updatedAt"> = {
-  enabled: true,
-  videoOutput: "wayland",
-  drmConnector: null,
-  audioDevice: null,
-  hardwareDecoding: "auto-safe"
 };
 
 export const DEFAULT_BLUETOOTH_SETTINGS: Omit<BluetoothSettingsRecord, "updatedAt"> = {
@@ -514,47 +506,6 @@ export function saveBackupSettings(
   return record;
 }
 
-export function defaultTvSettings(): TvSettingsRecord {
-  return { ...DEFAULT_TV_SETTINGS, updatedAt: EPOCH };
-}
-
-export function getTvSettings(db: CyberOsDatabase): TvSettingsRecord | null {
-  const row = settingRow(db, TV_SETTING_KEY);
-  if (!row) return null;
-  const parsed = currentSettingsObject(JSON.parse(row.value_json), [
-    "enabled",
-    "videoOutput",
-    "drmConnector",
-    "audioDevice",
-    "hardwareDecoding",
-    "updatedAt"
-  ], "TV");
-  return normalizeTvSettings(parsed, currentSettingsUpdatedAt(parsed, "TV"));
-}
-
-export function saveTvSettings(
-  db: CyberOsDatabase,
-  settings: Omit<TvSettingsRecord, "updatedAt">
-): TvSettingsRecord {
-  const updatedAt = new Date().toISOString();
-  const record = normalizeTvSettings(settings, updatedAt);
-  saveSetting(db, TV_SETTING_KEY, record, updatedAt);
-  return record;
-}
-
-export function validateTvSettings(
-  settings: Omit<TvSettingsRecord, "updatedAt">
-): Omit<TvSettingsRecord, "updatedAt"> {
-  const validated = normalizeTvSettings(settings, EPOCH);
-  return {
-    enabled: validated.enabled,
-    videoOutput: validated.videoOutput,
-    drmConnector: validated.drmConnector,
-    audioDevice: validated.audioDevice,
-    hardwareDecoding: validated.hardwareDecoding
-  };
-}
-
 export function getShareSettings(db: CyberOsDatabase): ShareSettingsRecord | null {
   const row = db
     .prepare("SELECT key, value_json, updated_at FROM system_settings WHERE key = ?")
@@ -774,58 +725,11 @@ function normalizeBackupSettings(value: Record<string, unknown>, updatedAt: stri
   };
 }
 
-function normalizeTvSettings(value: Record<string, unknown>, updatedAt: string): TvSettingsRecord {
-  if (typeof value.enabled !== "boolean") throw new Error("TV enabled must be a boolean");
-  if (value.videoOutput !== "drm" && value.videoOutput !== "wayland") {
-    throw new Error("TV video output must be drm or wayland");
-  }
-  if (value.hardwareDecoding !== "auto-safe" && value.hardwareDecoding !== "auto" && value.hardwareDecoding !== "no") {
-    throw new Error("TV hardware decoding mode is invalid");
-  }
-  if (!isNullableString(value.drmConnector) || !isNullableString(value.audioDevice)) {
-    throw new Error("TV output device settings must be text or null");
-  }
-  if (value.enabled && value.videoOutput !== "wayland") {
-    throw new Error("TV mode requires Wayland video output");
-  }
-  return {
-    enabled: value.enabled,
-    videoOutput: value.videoOutput,
-    drmConnector: normalizeNullableText(value.drmConnector, 128),
-    audioDevice: normalizeNullableText(value.audioDevice, 256),
-    hardwareDecoding: value.hardwareDecoding,
-    updatedAt
-  };
-}
-
 function settingInteger(label: string, value: unknown, minimum: number, maximum: number): number {
   if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum || value > maximum) {
     throw new Error(`${label} must be an integer between ${minimum} and ${maximum}`);
   }
   return value;
-}
-
-function normalizeNullableText(value: string | null, maximum: number): string | null {
-  if (value === null) return null;
-  const normalized = value.trim();
-  if (normalized.length > maximum) throw new Error(`Setting text cannot exceed ${maximum} characters`);
-  return normalized || null;
-}
-
-function settingRow(
-  db: CyberOsDatabase,
-  key: string
-): Pick<DbSystemSettingRow, "value_json" | "updated_at"> | undefined {
-  return db.prepare("SELECT value_json, updated_at FROM system_settings WHERE key = ?")
-    .get(key) as Pick<DbSystemSettingRow, "value_json" | "updated_at"> | undefined;
-}
-
-function saveSetting(db: CyberOsDatabase, key: string, record: object, updatedAt: string): void {
-  db.prepare(`
-    INSERT INTO system_settings (key, value_json, updated_at)
-    VALUES (?, ?, ?)
-    ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = excluded.updated_at
-  `).run(key, JSON.stringify(record), updatedAt);
 }
 
 function normalizeDownloadSettings(
@@ -935,27 +839,4 @@ function normalizeIndexerSettings(
     ocrStoragePoolIds: [...new Set(value.ocrStoragePoolIds.map((storagePoolId) => storagePoolId.trim()))].sort(),
     updatedAt
   };
-}
-
-function currentSettingsObject(value: unknown, keys: readonly string[], label: string): Record<string, unknown> {
-  if (
-    !value
-    || typeof value !== "object"
-    || Array.isArray(value)
-    || keys.some((key) => !Object.hasOwn(value, key))
-  ) {
-    throw new Error(`${label} settings do not match the CyberOS 2.0 format`);
-  }
-  return value as Record<string, unknown>;
-}
-
-function currentSettingsUpdatedAt(value: Record<string, unknown>, label: string): string {
-  if (typeof value.updatedAt !== "string" || !Number.isFinite(Date.parse(value.updatedAt))) {
-    throw new Error(`${label} settings require a valid updatedAt timestamp`);
-  }
-  return value.updatedAt;
-}
-
-function isNullableString(value: unknown): value is string | null {
-  return value === null || typeof value === "string";
 }

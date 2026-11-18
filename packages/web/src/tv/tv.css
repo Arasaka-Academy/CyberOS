@@ -1,3 +1,9 @@
+/*
+ * [INPUT]: 依赖共享主题与 TV 各功能样式。
+ * [OUTPUT]: 组合 TV 浏览、屏保、音乐与遥控样式层。
+ * [POS]: TV 独立样式入口。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 @layer theme, base, components, app, utilities;
 @import "./styles/imports.css" layer(base);
 @import "@cyberos/shared/appearance.css";
@@ -7,3 +13,4 @@
 @import "./styles/media.css" layer(app);
 @import "./styles/overlays.css" layer(app);
 @import "./styles/remote.css" layer(app);
+@import "./styles/idle-music.css" layer(app);

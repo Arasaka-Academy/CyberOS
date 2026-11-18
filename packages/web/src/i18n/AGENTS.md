@@ -10,6 +10,7 @@ index.ts: 本模块公共导出入口。
 locale.test.ts: locale 的行为与契约验证。
 locale.ts: 公开 DEFAULT_LOCALE, SUPPORTED_LOCALES, LANGUAGE_STORAGE_KEY, SupportedLocale 等接口。
 nvr.ts: 公开 nvrEn, nvrZh。
+tv-idle.ts: TV 待机设置、屏保和音乐页面的中英文文案。
 resources.test.ts: resources 的行为与契约验证。
 resources.ts: 界面中英文文案；包含完全权限和凭据输入文案。
 

@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖各领域运行时和共享配置契约。
+ * [OUTPUT]: 提供 API 路由注入依赖的类型边界。
+ * [POS]: 服务组合入口向 HTTP 路由传递能力。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import type { CyberOsDatabase } from "@cyberos/db";
 import type { CapabilityRuntimeDependencies } from "@cyberos/capability-runtime";
 import type { MonitoringReader } from "@cyberos/monitoring";
@@ -18,6 +24,7 @@ import type { FileBatchRuntime } from "./lib/file-batch-runner.js";
 import type { DockerHostAccessRuntime } from "./lib/docker-host-access.js";
 import type { MonitoringEventBroker } from "./lib/monitoring-events.js";
 import type { TvModeRuntime } from "./lib/tv-mode.js";
+import type { TvDisplayRuntime } from "./lib/tv-display.js";
 import type { TailscaleManagerRuntime } from "./lib/tailscale-manager.js";
 import type { MediaStreamRuntime } from "@cyberos/shared";
 import type { AudioRuntime } from "./lib/audio-runtime.js";
@@ -56,6 +63,7 @@ export interface ApiRouteContext {
   hostAccess?: DockerHostAccessRuntime;
   capabilityRuntime?: CapabilityRuntimeDependencies;
   tvMode?: TvModeRuntime;
+  tvDisplay?: TvDisplayRuntime;
 }
 
 export type ServerDependencies = Omit<ApiRouteContext, "monitoring" | "monitoringEvents"> & {

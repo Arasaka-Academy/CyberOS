@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖设置导航定义、业务资源与共享模态层。
+ * [OUTPUT]: 提供桌面和移动设置入口与分组导航。
+ * [POS]: 设置外壳；TV 与媒体使用独立页面。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { Button as UiButton, DialogHeader, Input, InputGroup, Notice } from "@cyberos/ui";
 import { Component, Suspense, lazy, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -272,6 +278,8 @@ function settingsSectionIcon(section: SettingsSectionId) {
       return <BellRing aria-hidden="true" size={16} />;
     case "photos":
       return <Images aria-hidden="true" size={16} />;
+    case "tv":
+      return <Video aria-hidden="true" size={16} />;
     case "media":
       return <Film aria-hidden="true" size={16} />;
     case "nvr":

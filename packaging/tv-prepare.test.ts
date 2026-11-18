@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 在临时 DRM 目录中运行 TV 启动准备脚本。
+ * [OUTPUT]: 验证 HDMI 配置、HPD 覆盖及其清理。
+ * [POS]: TV 启动准备脚本的隔离集成测试。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { chmod, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -12,7 +18,7 @@ afterEach(async () => {
 });
 
 describe("cyberos-tv-prepare", () => {
-  it("configures connected HDMI outputs and ignores DRM writeback connectors", async () => {
+  it("configures dedicated HDMI outputs and disables other connectors", async () => {
     const fixture = await createFixture();
     await addConnector(fixture, "card1-HDMI-A-1", "connected", "3840x2160\n1920x1080\n");
     await addConnector(fixture, "card1-Writeback-1", "connected", "4096x2160\n");
@@ -23,7 +29,7 @@ describe("cyberos-tv-prepare", () => {
     const config = await readFile(path.join(fixture.runtimeDirectory, "weston.ini"), "utf8");
     expect(config).toContain("name=HDMI-A-1");
     expect(config).toContain("scale=2");
-    expect(config).not.toContain("Writeback");
+    expect(config).toContain("name=Writeback-1\nmode=off");
   });
 
   it("forces and later releases the preferred HDMI connector when HPD is unavailable", async () => {

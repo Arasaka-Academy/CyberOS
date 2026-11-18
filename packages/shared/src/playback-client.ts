@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 接收原生播放器帧并验证音乐、视频和偏好。
+ * [OUTPUT]: 提供包含实际音频路由的 NAS 播放快照。
+ * [POS]: API 使用的共享播放器 Unix 套接字客户端。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import net from "node:net";
 import { randomUUID } from "node:crypto";
 import { parseMusicPlayerStatus } from "./music-player.js";
@@ -64,6 +70,7 @@ export function parsePlaybackSnapshot(raw: unknown): NasPlaybackStatus | null {
       ? raw.audioDelayKey
       : (active.audioDeviceId ?? "tv");
   return {
+    actualAudioRoute: active.actualAudioRoute ?? { kind: "unknown" },
     audioDelayKey,
     target: "nas",
     owner: music.owner,

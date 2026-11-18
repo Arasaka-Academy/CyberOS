@@ -944,14 +944,14 @@ been cleared for every commercial, promotional, or redistributive use.</metadata
         <text x="550" y="92" class="t-muted" font-size="9" text-anchor="middle">归一化、方向仲裁与重复节奏</text>
         </g>
 
-        <g id="node-inject" data-node-id="inject" data-node-label="wtype 注入" tabindex="0" role="button" aria-label="聚焦wtype 注入，每次按键调用有超时, 架构组件" aria-pressed="false" data-node-kind="backend" data-node-sublabel="每次按键调用有超时" data-node-context="架构组件">
-          <title>wtype 注入 · 每次按键调用有超时 · 架构组件</title>
+        <g id="node-inject" data-node-id="inject" data-node-label="native KEY 注入" tabindex="0" role="button" aria-label="聚焦native KEY 注入，每次按键调用有超时, 架构组件" aria-pressed="false" data-node-kind="backend" data-node-sublabel="每次按键调用有超时" data-node-context="架构组件">
+          <title>native KEY 注入 · 每次按键调用有超时 · 架构组件</title>
           <rect x="840" y="40" width="220" height="76" rx="8" class="c-mask"/>
           <rect x="840" y="40" width="220" height="76" rx="8" class="c-backend" data-animate="node" style="--step: 2; --flow-node-name: archify-relay-node-4;" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(846 46) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
-          <text data-node-label="" x="950" y="76" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">wtype 注入</text>
+          <text data-node-label="" x="950" y="76" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">native KEY 注入</text>
         <text x="950" y="92" class="t-muted" font-size="9" text-anchor="middle">每次按键调用有超时</text>
         </g>
 

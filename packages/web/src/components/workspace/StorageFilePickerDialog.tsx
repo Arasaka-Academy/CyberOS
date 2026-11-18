@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖存储池目录接口和调用方的选择范围。
+ * [OUTPUT]: 提供文件、目录和镜像的模态选择器。
+ * [POS]: 共享选择边界；TV 屏保复用存储路径保护。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { Button as UiButton, DialogActions, DialogHeader, EmptyState, Input, Notice, StatusBadge } from "@cyberos/ui";
 import { ModalPortal } from "../common/ModalPortal.js";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from "react";
@@ -54,7 +60,7 @@ export function StorageFilePickerDialog({
   initialPoolId: string;
   locale: SupportedLocale;
   mode?: "iso" | "directory" | "files" | "skill-zip";
-  directoryPurpose?: "downloads" | "photoLibrary" | "photoMove" | "fileMove" | "bluetoothInbox" | "mediaLibrary" | "musicLibrary" | "backupRepository";
+  directoryPurpose?: "downloads" | "photoLibrary" | "photoMove" | "fileMove" | "bluetoothInbox" | "mediaLibrary" | "musicLibrary" | "backupRepository" | "tvScreensaver";
   initialPath?: string;
   boundaryPath?: string;
   directorySelectionDisabled?: (path: string) => boolean;
@@ -89,6 +95,8 @@ export function StorageFilePickerDialog({
   const backupPicker = directoryPurpose === "backupRepository";
   const directoryCopy = backupPicker
     ? { eyebrow: t("settings.backup.repository"), title: t("settings.backup.pickerTitle"), description: t("settings.backup.pickerDescription"), list: t("settings.backup.pickerList"), empty: t("settings.backup.pickerEmpty"), select: t("settings.backup.useDirectory") }
+    : directoryPurpose === "tvScreensaver"
+    ? { eyebrow: t("tvIdle.source"), title: t("tvIdle.pickerTitle"), description: t("tvIdle.pickerDescription"), list: t("tvIdle.pickerList"), empty: t("tvIdle.pickerEmpty"), select: t("tvIdle.useDirectory") }
     : directoryPurpose === "musicLibrary"
     ? { eyebrow: t("music.pickerEyebrow"), title: t("music.pickerTitle"), description: t("music.pickerDescription"), list: t("music.pickerList"), empty: t("music.pickerEmpty"), select: t("music.useDirectory") }
     : directoryPurpose === "bluetoothInbox"

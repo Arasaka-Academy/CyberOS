@@ -49,6 +49,7 @@ playback.ts: 公开 playbackRuntime, registerPlaybackRoutes。
 service-diagnostics.ts: 公开 registerServiceDiagnosticsRoutes。
 sessions.ts: Agent 会话接口；补充凭据不计为人工审批。
 settings.test.ts: settings 的行为与契约验证。
+settings-tv.ts: TV 设置读写；校验素材目录并同步空闲策略。
 settings.ts: 系统设置 HTTP 接口；第一方保存完全权限开关。
 shares.ts: 公开 registerShareRoutes。
 storage.ts: 公开 registerStorageRoutes。
@@ -61,6 +62,9 @@ terminal.test.ts: terminal 的行为与契约验证。
 terminal.ts: 公开 registerTerminalRoutes。
 tv-music.test.ts: tv-music 的行为与契约验证。
 tv.test.ts: tv 的行为与契约验证。
+tv-display.ts: TV 显示事件流；渲染握手限本机，隔离远程 TV 页面。
+tv-display.test.ts: 显示事件断连清理、渲染输入和素材接口回归。
+tv-screensaver.ts: 已保存 NAS 素材的只读清单与图片接口。
 tv.ts: 公开 registerTvRoutes。
 vms.test.ts: vms 的行为与契约验证。
 vms.ts: 公开 vmConsoleSpawnSpec, registerVmRoutes。

@@ -8,6 +8,7 @@ import type { PhotosMediaKind } from "./photos-config.js";
 import type { MonitoringHealthStatus } from "./monitoring.js";
 import type { VodPlayerErrorCode, VodPlayerState } from "./vod-player-protocol.js";
 import type { CyberOsPaths } from "./paths.js";
+import type { TvDisplayStatus, TvIdleSettings } from "./tv.js";
 
 export type JobStatus =
   | "queued"
@@ -474,6 +475,7 @@ export interface TvModeStatus {
   cec: TvComponentHealth;
   gamepad: TvComponentHealth;
   vodPlayer: TvComponentHealth;
+  display?: TvDisplayStatus;
   updatedAt: string;
 }
 
@@ -1496,7 +1498,7 @@ export interface BackupDirectoryListing {
   }>;
 }
 
-export interface TvSettingsRecord {
+export interface TvSettingsRecord extends TvIdleSettings {
   enabled: boolean;
   videoOutput: "drm" | "wayland";
   drmConnector: string | null;

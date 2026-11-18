@@ -11,7 +11,7 @@ media-contracts.test.ts: 音乐、影视和播放请求契约验证。
 media-contracts.ts: 音乐、影视和播放能力请求 schema。
 parity-manifest.ts: 产品领域与能力、HTTP 动作的映射。
 parity-routes.test.ts: 双向验证产品动作映射和第一方排除项。
-product-actions.ts: 补充动作映射与排除理由；凭据输入只属第一方界面。
+product-actions.ts: 补充动作映射与排除理由；凭据和 TV 展示握手只属第一方界面。
 registry.test.ts: 能力目录、scope 和调用校验测试。
 registry.ts: 能力注册、scope 检查和有界调用。
 request-contracts.ts: 模型可见的能力请求类型与 schema。

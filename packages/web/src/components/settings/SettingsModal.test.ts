@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖 React 静态渲染、国际化和设置页面组合。
+ * [OUTPUT]: 验证导航分组、领域页签和局部读取故障。
+ * [POS]: 设置弹窗与内容组合的渲染契约测试。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { createElement, type ComponentProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeAll, describe, expect, it, vi } from "vitest";
@@ -30,7 +36,7 @@ describe("SettingsModal", () => {
       { title: "General", count: 4 },
       { title: "Network & Connections", count: 4 },
       { title: "Files & Data", count: 4 },
-      { title: "Media & Downloads", count: 4 },
+      { title: "Media & Downloads", count: 5 },
       { title: "AI & Voice", count: 5 },
       { title: "System & Maintenance", count: 5 }
     ]);

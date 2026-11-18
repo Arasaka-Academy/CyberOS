@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖共享播放会话和 TV 音乐页面入口。
+ * [OUTPUT]: 提供播放恢复入口和视频控制弹窗。
+ * [POS]: TV 浏览底栏；音乐入口打开完整音乐页面。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { Button, DialogActions, DialogHeader, Notice } from "@cyberos/ui";
 import { AudioLines, Pause, Play, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -7,8 +13,9 @@ import { useMusicRemote } from "../components/music/MusicProvider.js";
 import { ModalPortal } from "../components/common/ModalPortal.js";
 import { useModalDialog } from "../components/workspace/useModalDialog.js";
 import { isActiveVodPlayback } from "./player-controls.js";
+import { hdmiMusic } from "./music-screen.js";
 
-export function TvPlaybackDock({ onError }: { onError: (error: string) => void }) {
+export function TvPlaybackDock({ onError, onOpenMusic }: { onError: (error: string) => void; onOpenMusic: () => void }) {
   const playback = usePlayback();
   const music = useMusicRemote();
   const { t: translate } = useTranslation();
@@ -36,7 +43,7 @@ export function TvPlaybackDock({ onError }: { onError: (error: string) => void }
     finally { lock.current = false; setBusy(false); }
   };
   return <>
-    <div className="tv-playback-dock" data-tv-region="playback"><Button variant="secondary" data-tv-focusable data-playback-restore onClick={() => setOpen(true)}><AudioLines /><span><small>{translate("playback.nowPlaying")}</small><strong>{title ?? translate("playback.tvOutput")}</strong></span>{playing ? <Pause /> : <Play />}</Button></div>
+    <div className="tv-playback-dock" data-tv-region="playback"><Button variant="secondary" data-tv-focusable data-playback-restore onClick={() => { if (!video && hdmiMusic(nas)) onOpenMusic(); else setOpen(true); }}><AudioLines /><span><small>{translate("playback.nowPlaying")}</small><strong>{title ?? translate("playback.tvOutput")}</strong></span>{playing ? <Pause /> : <Play />}</Button></div>
     {open ? <ModalPortal className="tv-dialog-backdrop"><section ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="tv-playback-title" className="tv-dialog">
       <DialogHeader title={translate("playback.nowPlaying")} headingId="tv-playback-title" /><p>{title}</p><Notice>{translate("playback.tvOutput")}</Notice>
       <DialogActions><Button onClick={() => setOpen(false)} disabled={busy}>{translate("video.close")}</Button><Button variant="danger" disabled={busy} onClick={() => void command(true)}><Square />{translate("video.stop")}</Button><Button variant="primary" busy={busy} onClick={() => void command()}>{playing ? <Pause /> : <Play />}{translate(playing ? "tv.pause" : "tv.resume")}</Button></DialogActions>

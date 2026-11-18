@@ -42,6 +42,7 @@ export type SettingsSectionId =
   | "alerts"
   | "photos"
   | "media"
+  | "tv"
   | "nvr"
   | "downloads"
   | "appearance";
@@ -136,6 +137,10 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     group: "media"
   },
   {
+    id: "tv",
+    group: "media"
+  },
+  {
     id: "nvr",
     group: "media"
   },
@@ -209,6 +214,7 @@ const SECTION_TITLE_KEYS = {
   alerts: "settings.sections.alerts.title",
   photos: "settings.sections.photos.title",
   media: "settings.sections.media.title",
+  tv: "tvIdle.title",
   nvr: "settings.sections.nvr.title",
   downloads: "settings.sections.downloads.title",
   appearance: "settings.sections.appearance.title"
@@ -238,6 +244,7 @@ const SECTION_DESCRIPTION_KEYS = {
   alerts: "settings.sections.alerts.description",
   photos: "settings.sections.photos.description",
   media: "settings.sections.media.description",
+  tv: "tvIdle.description",
   nvr: "settings.sections.nvr.description",
   downloads: "settings.sections.downloads.description",
   appearance: "settings.sections.appearance.description"

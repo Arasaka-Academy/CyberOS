@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 接收版本化音乐命令及控制器的共享播放状态。
+ * [OUTPUT]: 推进队列、切曲、输出和播放历史检查点。
+ * [POS]: Controller 的音乐行为；复用同一 mpv 和显示抑制边界。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 use std::collections::HashSet;
 
 use super::*;

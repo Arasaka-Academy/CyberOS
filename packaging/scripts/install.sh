@@ -1,4 +1,8 @@
 #!/bin/sh
+# [INPUT]: Debian 主机、工具链和 CyberOS 源码。
+# [OUTPUT]: 原生 Debian 包安装、配置初始化与 systemd 激活。
+# [POS]: 主机变更入口；先准备构建工具，再执行包构建。
+# [PROTOCOL]: Update this header on change, then check AGENTS.md
 set -eu
 
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
@@ -144,6 +148,21 @@ install_build_dependencies() {
     nodejs npm xz-utils
 }
 
+ensure_native_tv_builder() {
+  [ "${CYBEROS_TV_NATIVE_PREBUILT:-0}" != 1 ] || return 0
+  # ABI 构建先于产品包安装；干净主机在此准备已有产品依赖 Docker。
+  if ! command -v docker >/dev/null 2>&1; then
+    apt_install install -y --no-install-recommends docker.io
+    if ! command -v docker >/dev/null 2>&1; then
+      apt_install install -y --no-install-recommends docker-cli
+    fi
+  fi
+  if ! docker info >/dev/null 2>&1 && command -v systemctl >/dev/null 2>&1; then
+    systemctl start docker.service
+  fi
+  docker info >/dev/null 2>&1 || die "Docker engine is required for native TV ABI builds; provide CYBEROS_TV_NATIVE_PREBUILT=1 with validated artifacts to build offline"
+}
+
 install_rust_toolchain() {
   if [ ! -x "$CARGO_HOME/bin/rustup" ]; then
     log "installing rustup"
@@ -277,6 +296,7 @@ if ! /usr/sbin/modinfo target_core_mod >/dev/null 2>&1; then
   esac
 fi
 npm config set registry "$CYBEROS_NPM_REGISTRY" --global
+ensure_native_tv_builder
 log "building the native ${ARCH} Debian package"
 CYBEROS_CARGO_REGISTRY="$CYBEROS_CARGO_REGISTRY" \
   "$ROOT_DIR/packaging/scripts/build-deb.sh"

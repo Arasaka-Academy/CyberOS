@@ -1,3 +1,7 @@
+// [INPUT]: evdev 能力、按键与轴事件。
+// [OUTPUT]: 手柄映射、滞回、重复与真实按住键集合。
+// [POS]: 手柄服务的纯输入状态机。
+// [PROTOCOL]: Update this header on change, then check AGENTS.md
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::time::Duration;
 
@@ -284,6 +288,25 @@ pub struct InputHub {
 }
 
 impl InputHub {
+    /// 返回真实手势仍按住的映射键，供输入桥发送配对释放。
+    pub fn held_keys(&self) -> BTreeSet<&'static str> {
+        self.devices
+            .values()
+            .flat_map(|device| {
+                device
+                    .active_directions
+                    .iter()
+                    .map(|direction| direction.key())
+                    .chain(
+                        device
+                            .pressed_buttons
+                            .iter()
+                            .filter_map(|button| button_key(*button)),
+                    )
+            })
+            .collect()
+    }
+
     pub fn connect(&mut self, id: impl Into<String>, ranges: HashMap<u16, AxisRange>) {
         self.devices.insert(id.into(), DeviceState::new(ranges));
     }
@@ -341,6 +364,31 @@ pub fn evaluate_health(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn held_keys_preserve_overlapping_devices_until_the_last_release() {
+        let mut hub = InputHub::default();
+        hub.connect("first", HashMap::new());
+        hub.connect("second", HashMap::new());
+        let press = InputEvent::Button {
+            code: code::BTN_SOUTH,
+            value: 1,
+        };
+        hub.handle("first", press, Duration::ZERO);
+        hub.handle("second", press, Duration::ZERO);
+        assert_eq!(hub.held_keys(), BTreeSet::from(["Return"]));
+        hub.handle(
+            "first",
+            InputEvent::Button {
+                code: code::BTN_SOUTH,
+                value: 0,
+            },
+            Duration::ZERO,
+        );
+        assert_eq!(hub.held_keys(), BTreeSet::from(["Return"]));
+        hub.disconnect("second");
+        assert!(hub.held_keys().is_empty());
+    }
 
     fn gamepad_capabilities() -> CapabilityDescriptor {
         CapabilityDescriptor {
@@ -569,8 +617,8 @@ mod tests {
     #[test]
     fn runtime_failures_are_unavailable_and_recover() {
         assert_eq!(
-            evaluate_health(1, Some("wtype failed"), None),
-            Health::Unavailable("wtype failed".to_owned())
+            evaluate_health(1, Some("native input failed"), None),
+            Health::Unavailable("native input failed".to_owned())
         );
         assert!(matches!(evaluate_health(1, None, None), Health::Ready(_)));
         assert!(matches!(

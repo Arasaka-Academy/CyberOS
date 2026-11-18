@@ -32,5 +32,6 @@ export * from "./playback-client.js";
 export * from "./media-stream.js";
 export * from "./media-stream-client.js";
 export * from "./audio-settings.js";
+export * from "./tv.js";
 export * from "./nvr-client.js";
 export * from "./generated/nvr.js";

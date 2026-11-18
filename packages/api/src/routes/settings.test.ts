@@ -31,6 +31,19 @@ afterEach(async () => {
 });
 
 describe("settings routes", () => {
+  it("saves TV idle settings without changing host mode and preserves output fields", async () => {
+    const apply = vi.fn(async () => undefined);
+    const server = createServer(db, { apply });
+    const initial = (await server.inject({ method: "GET", url: "/api/settings/tv" })).json().settings;
+    expect(initial).toMatchObject({ screensaverAfterMinutes: 5, screenOffAfterMinutes: 30, screensaverSource: { kind: "builtin" } });
+    const saved = await server.inject({ method: "PATCH", url: "/api/settings/tv", payload: { screensaverAfterMinutes: 10, screenOffAfterMinutes: 60 } });
+    expect(saved.statusCode).toBe(200);
+    expect(saved.json().settings).toMatchObject({ ...initial, screensaverAfterMinutes: 10, screenOffAfterMinutes: 60, updatedAt: expect.any(String) });
+    expect(apply).not.toHaveBeenCalled();
+    expect((await server.inject({ method: "PATCH", url: "/api/settings/tv", payload: { screenOffAfterMinutes: 5 } })).statusCode).toBe(400);
+    expect((await server.inject({ method: "GET", url: "/api/settings/tv" })).json().settings.screenOffAfterMinutes).toBe(60);
+    await server.close();
+  });
   it("saves full access independently and preserves it across partial policy updates", async () => {
     const server = createServer(db);
     expect((await server.inject({ method: "GET", url: "/api/settings/agent-capability-policy" })).json().settings.fullAccess).toBe(false);

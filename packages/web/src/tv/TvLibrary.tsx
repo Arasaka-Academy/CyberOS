@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖共享播放会话、TV 显示快照和媒体浏览组件。
+ * [OUTPUT]: 提供遥控浏览、HDMI 音乐页面和原生屏保内容。
+ * [POS]: TV 外壳；保留浏览位置并协调显示层和播放所有者。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { Button, Notice } from "@cyberos/ui";
 import { BrandLogo } from "../components/common/BrandLogo.js";
 import { Bookmark, Clock3, Film, Home, Layers3, Palette, Search, Tv } from "lucide-react";
@@ -12,6 +18,10 @@ import { LibraryScreen } from "./LibraryScreen.js";
 import { SearchOverlay } from "./SearchOverlay.js";
 import { TitleDetail } from "./TitleDetail.js";
 import { TvPlaybackDock } from "./TvPlaybackDock.js";
+import { TvMusicPlayer } from "./TvMusicPlayer.js";
+import { TvScreensaver } from "./TvScreensaver.js";
+import { nextMusicScreen } from "./music-screen.js";
+import { useTvDisplay } from "./useTvDisplay.js";
 import type { TitleTarget, TvView } from "./library-model.js";
 import { gamepadConnectionTransition, isActiveVodPlayback } from "./player-controls.js";
 import { useRemoteNavigation } from "./remote-navigation.js";
@@ -22,6 +32,9 @@ export function TvLibrary() {
   const { t: translate, i18n } = useTranslation();
   const playback = usePlayback();
   const music = useMusicRemote();
+  const display = useTvDisplay();
+  const [musicOpen, setMusicOpen] = useState(false);
+  const musicReturnFocus = useRef<HTMLElement | null>(null);
   const nativeAppearance = useNativeAppearance(playback.nas?.serviceInstanceId);
   const [view, setView] = useState<TvView>("home");
   const [collection, setCollection] = useState<MediaCollection | null>(null);
@@ -39,6 +52,18 @@ export function TvLibrary() {
   const gamepad = useRef<"ready" | "degraded" | "unavailable" | null>(null);
   const nativeHome = useRef<{ instance: string; request: string | undefined } | null>(null);
   const transportBusy = useRef(false);
+
+  const closeMusic = useCallback(() => {
+    setMusicOpen(false);
+    requestAnimationFrame(() => { if (musicReturnFocus.current?.isConnected) musicReturnFocus.current.focus({ preventScroll: true }); });
+  }, []);
+  useEffect(() => {
+    const next = nextMusicScreen(musicOpen, playback.nas);
+    if (next && !musicOpen) {
+      musicReturnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      setSearchOpen(false); setAppearanceOpen(false); setMusicOpen(true);
+    } else if (!next && musicOpen) closeMusic();
+  }, [playback.nas, musicOpen, closeMusic]);
 
   useEffect(() => {
     document.querySelector<HTMLButtonElement>('[data-tv-nav="home"]')?.focus();
@@ -95,11 +120,12 @@ export function TvLibrary() {
     });
   }, [busy, target?.fromSearch, view]);
   const back = useCallback(() => {
+    if (musicOpen) { if (playback.nas?.music.state === "paused") closeMusic(); return; }
     if (busy) return;
     if (target) closeDetail();
     else if (collection) setCollection(null);
     else { setView("home"); requestAnimationFrame(() => document.querySelector<HTMLButtonElement>('[data-tv-nav="home"]')?.focus()); }
-  }, [busy, target, collection, closeDetail]);
+  }, [musicOpen, playback.nas?.music.state, closeMusic, busy, target, collection, closeDetail]);
   const navigateHome = useCallback(() => {
     if (busy) return;
     setSearchOpen(false); setAppearanceOpen(false); setTarget(null); setCollection(null); setView("home");
@@ -107,10 +133,11 @@ export function TvLibrary() {
     requestAnimationFrame(() => { if (content.current) content.current.scrollTop = 0; document.querySelector<HTMLButtonElement>('[data-tv-nav="home"]')?.focus(); });
   }, [busy]);
   const home = useCallback(() => {
+    if (musicOpen) { if (playback.nas?.music.state === "paused") closeMusic(); return; }
     if (busy) return;
     navigateHome();
     if (playback.nas?.owner === "video" && playback.nas.video.sessionId && isActiveVodPlayback(playback.nas.video)) void playback.control({ type: "stop", sessionId: playback.nas.video.sessionId }).catch(failure => setNotice(String(failure.message)));
-  }, [busy, navigateHome, playback.nas, playback.control]);
+  }, [musicOpen, closeMusic, busy, navigateHome, playback.nas, playback.control]);
   useEffect(() => {
     const status = playback.nas;
     if (!status) return;
@@ -127,19 +154,22 @@ export function TvLibrary() {
         if (key === "MediaStop") playback.stopBrowser();
         else if (key === "MediaPlayPause" || (key === "MediaPlay") !== playback.browser.playing) await playback.toggleBrowser();
       } else if (playback.nas?.owner === "video" && playback.nas.sessionId) {
+        if (["MediaTrackNext", "MediaTrackPrevious"].includes(key)) return;
         const playing = playback.nas.video.state === "playing";
         await playback.control({ type: key === "MediaStop" ? "stop" : key === "MediaPause" || (key === "MediaPlayPause" && playing) ? "pause" : "resume", sessionId: playback.nas.sessionId });
       } else if (music.status?.queue.length) {
-        if (key === "MediaStop" && playback.nas?.sessionId) await playback.control({ type: "stop", sessionId: playback.nas.sessionId });
+        if (key === "MediaTrackNext" || key === "MediaTrackPrevious") await music.execute({ type: key === "MediaTrackNext" ? "next" : "previous" });
+        else if (key === "MediaStop" && playback.nas?.sessionId) await playback.control({ type: "stop", sessionId: playback.nas.sessionId });
         else if (key !== "MediaStop") await music.execute({ type: key === "MediaPause" || (key === "MediaPlayPause" && music.status.state === "playing") ? "pause" : "resume" });
       }
     } catch (failure) { setNotice(failure instanceof Error ? failure.message : String(failure)); }
     finally { transportBusy.current = false; }
   };
-  useRemoteNavigation({ onBack: back, onHome: home, onSearch: () => setSearchOpen(true), onTransport: key => void transport(key) });
+  useRemoteNavigation({ onBack: back, onHome: home, onSearch: () => { if (!musicOpen) setSearchOpen(true); }, onTransport: key => void transport(key) });
 
   return <div className="tv-app tv-library-shell">
-    <div className="tv-browse-shell" hidden={target !== null} inert={target !== null || searchOpen || appearanceOpen}>
+    <div hidden={display?.display.state === "off"} inert={display?.display.state === "screensaver" || display?.display.state === "off"} className="tv-awake-shell">
+    <div className="tv-browse-shell" hidden={target !== null || musicOpen} inert={target !== null || musicOpen || searchOpen || appearanceOpen}>
       <aside className="tv-sidebar" aria-label={translate("video.library")}>
         <Button variant="ghost" className="tv-brand" aria-label="CyberOS" onClick={home}><BrandLogo /></Button>
         <nav className="tv-navigation" data-tv-region="sidebar">{NAVIGATION.map(({ id, icon: Icon }) => <Button variant="ghost" key={id} data-tv-nav={id} data-tv-focusable aria-current={view === id ? "page" : undefined} onClick={() => navigate(id)}><Icon /><span>{translate(`video.${id}`)}</span></Button>)}</nav>
@@ -149,11 +179,14 @@ export function TvLibrary() {
         <header className="tv-topbar"><span>CyberOS <span className="tv-topbar-divider">/</span> {translate("tv.library")}</span><time className="tv-clock"><Clock3 />{new Intl.DateTimeFormat(i18n.resolvedLanguage ?? "zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }).format(clock)}</time></header>
         <LibraryScreen view={view} collection={collection} onCollection={setCollection} onOpen={open} version={version} progressVersion={progressVersion} />
       </main>
-      <TvPlaybackDock onError={setNotice} />
+      <TvPlaybackDock onError={setNotice} onOpenMusic={() => { musicReturnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setMusicOpen(true); }} />
     </div>
-    {target ? <TitleDetail key={target.id} target={target} version={version + progressVersion} onClose={closeDetail} onChanged={() => setVersion(previous => previous + 1)} onBusy={setBusy} /> : null}
+    <div hidden={musicOpen}>{target ? <TitleDetail key={target.id} target={target} version={version + progressVersion} onClose={closeDetail} onChanged={() => setVersion(previous => previous + 1)} onBusy={setBusy} /> : null}</div>
+    {musicOpen ? <TvMusicPlayer /> : null}
     <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} onOpen={title => { setSearchOpen(false); open({ id: title.id, fromSearch: true }); }} />
     {appearanceOpen ? <AppearanceDialog onClose={() => setAppearanceOpen(false)} error={nativeAppearance.error} onRetry={nativeAppearance.retry} /> : null}
     {notice ? <Notice className="tv-notice" role="status">{notice}</Notice> : null}
+    </div>
+    <TvScreensaver snapshot={display} />
   </div>;
 }

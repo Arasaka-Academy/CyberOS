@@ -1,3 +1,7 @@
+-- [INPUT]: 加载原生播放控制脚本及模拟 mpv。
+-- [OUTPUT]: 验证遥控意图交由控制器执行。
+-- [POS]: Lua 控制界面的交互契约测试。
+-- [PROTOCOL]: Update this header on change, then check AGENTS.md
 local script = assert(arg[1])
 
 local function fixture(overrides)
@@ -85,6 +89,10 @@ local function fixture(overrides)
             for _, timer in ipairs(timers) do if timer.enabled then timer.callback() end end
         end,
         event = function(name) events[name]() end,
+        broker_pause = function(paused)
+            properties.pause = paused
+            if observers.pause then observers.pause("pause", paused) end
+        end,
     }
 end
 
@@ -116,7 +124,9 @@ assert(player.overlay.data == "", "HUD must hide after inactivity")
 player.press("ENTER")
 assert(#player.commands == 0, "First OK must reveal controls without pausing")
 player.press("ENTER")
-assert(player.properties.pause, "Second OK must pause")
+assert(player.commands[1][1] == "script-message" and player.commands[1][2] == "cyberos-tv-pause" and player.commands[1][3] == "toggle", "Second OK must ask the broker to pause")
+assert(not player.properties.pause, "Direct input must wait for the broker display lease")
+player.broker_pause(true)
 player.advance(30)
 assert(player.overlay.data ~= "", "Paused playback must keep controls visible")
 
@@ -176,6 +186,13 @@ player.event("end-file")
 assert(player.overlay.data == "", "End of playback must remove the overlay")
 
 print("TV controls: remote exit, HUD, seeking, track selection and timers passed")
+
+for _, control in ipairs({ { "SPACE", "toggle" }, { "PLAYPAUSE", "toggle" }, { "PLAY", "resume" }, { "PAUSE", "pause" } }) do
+    local direct = fixture({ pause = true })
+    direct.press(control[1])
+    assert(direct.commands[1][1] == "script-message" and direct.commands[1][2] == "cyberos-tv-pause" and direct.commands[1][3] == control[2], control[1] .. " must use broker intent")
+    assert(direct.properties.pause, "Only the broker can resume after waking the display")
+end
 
 -- Native theme changes redraw immediately and retain playback/navigation state.
 do

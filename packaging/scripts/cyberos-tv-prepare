@@ -1,4 +1,8 @@
 #!/bin/sh
+# [INPUT]: DRM HDMI 状态与 cyberos 服务身份。
+# [OUTPUT]: Weston 配置与私有运行目录，清除旧显示 socket。
+# [POS]: TV 启动前准备；原生模块独立执行闲置策略。
+# [PROTOCOL]: Update this header on change, then check AGENTS.md
 set -eu
 
 test_root=${CYBEROS_TEST_ROOT:-}
@@ -30,7 +34,7 @@ case "${1:-start}" in
 esac
 
 install -d -m 0700 -o cyberos -g cyberos "$runtime_dir" "$runtime_dir/status"
-rm -f "$runtime_dir/wayland-0" "$runtime_dir/wayland-0.lock" "$runtime_dir/status/weston.json" \
+rm -f "$runtime_dir/display.sock" "$runtime_dir/wayland-0" "$runtime_dir/wayland-0.lock" "$runtime_dir/status/weston.json" \
   "$runtime_dir/status/chromium.json" "$runtime_dir/status/cec.json" \
   "$runtime_dir/status/gamepad.json" "$runtime_dir/weston.log" "$forced_connectors"
 
@@ -95,3 +99,18 @@ chmod 0644 "$config_tmp"
 chown cyberos:cyberos "$config_tmp"
 mv -f "$config_tmp" "$runtime_dir/weston.ini"
 trap - EXIT HUP INT TERM
+
+# 专用 TV 合成器只启用 HDMI，避免休眠影响其他连接器。
+for connector_status in "$drm_root"/card*-*/status; do
+  [ -f "$connector_status" ] || continue
+  connector_dir=${connector_status%/status}
+  connector=${connector_dir##*/}
+  connector=${connector#*-}
+  case "$connector" in HDMI-A-*) continue ;; esac
+  cat >> "$runtime_dir/weston.ini" <<EOF
+
+[output]
+name=$connector
+mode=off
+EOF
+done

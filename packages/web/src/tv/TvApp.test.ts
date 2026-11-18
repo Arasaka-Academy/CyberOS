@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 读取 TV 入口组件、样式和共享主题源码。
+ * [OUTPUT]: 验证 TV 页面组合与原生待机职责边界。
+ * [POS]: TV 独立入口及样式架构的回归测试。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import { readStylesheet } from "../styles/test-utils.js";
@@ -9,13 +15,14 @@ describe("TV display policy", () => {
     expect(component).not.toContain("PlaybackBar");
     expect(component).toContain("TvLibrary");
   });
-  it("keeps the HDMI shell visible while idle", async () => {
+  it("leaves idle timing to native display snapshots", async () => {
     const [component, styles] = await Promise.all([
-      readFile(new URL("./TvApp.tsx", import.meta.url), "utf8"),
+      readFile(new URL("./useTvDisplay.ts", import.meta.url), "utf8"),
       readStylesheet(new URL("./tv.css", import.meta.url))
     ]);
 
     expect(component).not.toContain("IDLE_TIMEOUT_MS");
+    expect(component).toContain('/api/tv/events');
     expect(component).not.toContain("tv-sleep");
     expect(styles).not.toContain(".tv-sleep");
   });

@@ -32,7 +32,7 @@ media-stream.ts: 公开 StreamTrack, StreamOptions, StreamSession。
 monitoring-alerts.ts: 公开 MonitoringAlertSeverity, MonitoringAlertTransform, MonitoringAlertAggregation, MonitoringAlertComparator 等接口。
 monitoring.ts: 公开 MonitoringState, MonitoringMetricKind, MonitoringTransform, MonitoringResolution 等接口。
 music-player.test.ts: music-player 的行为与契约验证。
-music-player.ts: 公开 MusicRepeatMode, MusicQueueEntry, MusicPlayerStatus, MusicPlayerCommand 等接口。
+music-player.ts: 提供音乐视图、实际音频路由和版本化队列命令。
 music.ts: 公开 MusicScanState, MusicSource, MusicScan, MusicTrack 等接口。
 nvr-client.ts: 公开 NvrMethod, nvrSocketPath, NvrError, NvrRuntime 等接口。
 paths.test.ts: paths 的行为与契约验证。
@@ -42,8 +42,8 @@ photos-config.ts: 公开 PHOTOS_DATA_DIRECTORY_NAME, PHOTOS_BASE_MAP_DIRECTORY_N
 photos-embedding-client.test.ts: photos-embedding-client 的行为与契约验证。
 photos-embedding-client.ts: 公开 PhotosEmbeddingApiError, PhotosEmbeddingClient。
 photos-semantic.ts: 公开 PHOTOS_EMBEDDING_PROTOCOL, PHOTOS_DEFAULT_EMBEDDING_MODEL, PhotosEmbeddingModel, PhotosEmbeddingResponse 等接口。
-playback-client.ts: 公开 parsePlaybackSnapshot, createPlaybackRuntime。
-playback.ts: 公开 NasPlaybackStatus, PlaybackRuntime。
+playback-client.ts: 验证共享播放快照并保留实际音频路由。
+playback.ts: 定义 NAS 音乐、视频、偏好及实际路由快照。
 share-protocols.ts: 公开 isShareProtocol。
 system-proxy.ts: 公开 normalizeSystemProxySettings, systemProxyUrl。
 tailscale.test.ts: tailscale 的行为与契约验证。
@@ -51,11 +51,12 @@ tailscale.ts: 公开 parseTailscaleStatus, unavailableTailscaleStatus。
 terminal-protocol.test.ts: terminal-protocol 的行为与契约验证。
 terminal-protocol.ts: 公开 TERMINAL_PROTOCOL_VERSION, TERMINAL_MAX_FRAME_BYTES, TERMINAL_MAX_INPUT_BYTES, TERMINAL_MAX_OUTPUT_BYTES 等接口。
 types.ts: shared 的跨进程类型契约。
+tv.ts: TV 屏保来源、空闲策略校验与显示状态契约。
 video.ts: 公开 MediaPersonalState, VideoTitle, VideoTitleDetail, MediaCollection 等接口。
 vod-player-client.test.ts: vod-player-client 的行为与契约验证。
 vod-player-client.ts: 公开 VodPlayerRuntime, VodPlayerRuntimeError, createVodPlayerRuntime。
 vod-player-protocol.test.ts: vod-player-protocol 的行为与契约验证。
-vod-player-protocol.ts: 公开 VOD_PLAYER_PROTOCOL_VERSION, VOD_PLAYER_BROKER_MAX_FRAME_BYTES, VOD_PLAYER_BROKER_CONNECT_TIMEOUT_MS, VodPlayerState 等接口。
+vod-player-protocol.ts: 验证 v3 播放帧和实际路由；旧字段补为 unknown。
 fonts/: 字体文件和许可。
 generated/: 协议生成类型。
 

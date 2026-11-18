@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 接收版本化命令、mpv 事件和硬件音频路由证据。
+ * [OUTPUT]: 串行推进播放会话并续租原生显示抑制。
+ * [POS]: 音乐和视频共享 mpv 的唯一状态所有者。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 use std::collections::HashSet;
 use std::path::Path;
 use std::sync::Arc;
@@ -53,6 +59,7 @@ struct DesiredSession {
 }
 
 struct Controller {
+    display: crate::display::Display,
     audio_focus: Option<AudioFocus>,
     config: Arc<VodPlayerConfig>,
     receiver: mpsc::Receiver<Message>,
@@ -166,6 +173,7 @@ impl ControllerHandle {
         let progress = ProgressStore::new(config.database_path.clone());
         let progress_writer = ProgressWriter::new(progress.clone())?;
         let mut controller = Controller {
+            display: crate::display::Display::default(),
             audio_focus: None,
             config,
             receiver,
@@ -260,6 +268,7 @@ impl Controller {
                 message = self.receiver.recv() => match message {
                     Some(Message::Execute(command, response)) => {
                         let result = self.handle_command(command).await;
+                        self.sync_display().await;
                         let _ = response.send(result);
                     }
                     None => {
@@ -267,6 +276,15 @@ impl Controller {
                         self.done.send_replace(true);
                         return;
                     }
+                },
+                event = async {
+                    match self.mpv.as_mut() {
+                        Some(mpv) => mpv.next_event().await,
+                        None => std::future::pending().await,
+                    }
+                } => {
+                    self.handle_mpv_event(event).await;
+                    self.sync_display().await;
                 },
                 _ = tick.tick() => self.tick().await,
             }
@@ -622,6 +640,16 @@ impl Controller {
     }
 
     async fn execute_mpv_command(&mut self, command: serde_json::Value) -> Result<(), VodError> {
+        if command == json!(["set_property", "pause", false]) {
+            self.refresh_audio_route().await;
+            let inhibit = crate::display::inhibits(
+                self.status.owner,
+                PlayerState::Playing,
+                self.status.actual_audio_route.kind,
+            );
+            self.display.playback(inhibit).await;
+        }
+        let pausing = command == json!(["set_property", "pause", true]);
         let result = match self.mpv.as_mut() {
             Some(mpv) => mpv.command(command).await.map(|_| ()),
             None => Err(VodError::unavailable(
@@ -635,6 +663,9 @@ impl Controller {
             let recovery_error = error.clone();
             self.stop_mpv().await;
             self.schedule_recovery(recovery_error);
+        }
+        if pausing && result.is_ok() {
+            self.display.playback(false).await;
         }
         result
     }
@@ -725,6 +756,9 @@ impl Controller {
         self.status.next_retry_at = None;
         self.publish();
         self.persist_current()?;
+        if !is_music && !desired.paused {
+            self.display.playback(true).await;
+        }
         let requested_audio_device = audio_device_id.as_deref().map(bluetooth_alsa_device);
         let mpv = if let Some(audio_device) = requested_audio_device.as_deref() {
             match MpvHandle::start(
@@ -758,6 +792,7 @@ impl Controller {
             .await?
         };
         self.mpv = Some(mpv);
+        self.refresh_audio_route().await;
         if !is_music
             && playback_config.video_output == "wayland"
             && let Some(palette) =
@@ -820,6 +855,7 @@ impl Controller {
         self.status.next_retry_at = None;
         self.stable_since = (!desired.paused).then(Instant::now);
         self.publish();
+        self.sync_display().await;
         self.persist_current()?;
         Ok(())
     }
@@ -857,6 +893,8 @@ impl Controller {
                 break;
             }
         }
+        self.refresh_audio_route().await;
+        self.sync_display().await;
         if self.last_capability_probe.elapsed() >= Duration::from_secs(5) {
             self.refresh_capabilities().await;
         }
@@ -942,6 +980,19 @@ impl Controller {
 
     async fn handle_mpv_event(&mut self, event: MpvEvent) {
         match event {
+            MpvEvent::TvPause(paused) => {
+                let Some(session_id) = self.status.session_id.clone() else {
+                    return;
+                };
+                let command = match paused {
+                    Some(true) => Command::Pause { session_id },
+                    Some(false) => Command::Resume { session_id },
+                    None => Command::TogglePause { session_id },
+                };
+                if let Err(error) = Box::pin(self.handle_command(command)).await {
+                    tracing::warn!(%error, "native pause intent failed");
+                }
+            }
             MpvEvent::TvHome => {
                 if self.status.owner == Some(PlaybackOwner::Video)
                     && self.status.session_id.is_some()
@@ -1010,6 +1061,9 @@ impl Controller {
                         self.status.selected_audio_track_id = selected_audio;
                         self.status.selected_subtitle_track_id = selected_subtitle;
                         changed = true;
+                    }
+                    "audio-device" | "current-ao" | "audio-out-params" => {
+                        self.refresh_audio_route().await;
                     }
                     _ => {}
                 }
@@ -1324,6 +1378,8 @@ impl Controller {
     }
 
     async fn stop_mpv(&mut self) {
+        self.display.playback(false).await;
+        self.status.actual_audio_route = Default::default();
         if let Some(mpv) = self.mpv.take() {
             let diagnostic = mpv.stderr_summary();
             mpv.shutdown().await;
@@ -1331,6 +1387,32 @@ impl Controller {
                 tracing::debug!(stderr = %diagnostic, "mpv stopped");
             }
         }
+    }
+
+    async fn refresh_audio_route(&mut self) {
+        let kind = if let Some(mpv) = &self.mpv {
+            let pid = mpv.process_id();
+            let bluetooth = self.status.effective_audio_device_id.is_some();
+            tokio::task::spawn_blocking(move || crate::audio_route::detect(pid, bluetooth))
+                .await
+                .unwrap_or_default()
+        } else {
+            Default::default()
+        };
+        if self.status.actual_audio_route.kind != kind {
+            self.status.actual_audio_route.kind = kind;
+            self.publish();
+        }
+    }
+
+    async fn sync_display(&mut self) {
+        self.display
+            .playback(crate::display::inhibits(
+                self.status.owner,
+                self.status.state,
+                self.status.actual_audio_route.kind,
+            ))
+            .await;
     }
 
     async fn handle_audio_focus(&mut self, lease_id: String, action: &str) -> Result<(), VodError> {
@@ -1398,6 +1480,7 @@ fn empty_status(
     video_output: String,
 ) -> Status {
     Status {
+        actual_audio_route: Default::default(),
         tv_home_request_id: None,
         audio_delay_key: None,
         preferences: crate::preferences::PlaybackPreferences::default(),
@@ -1562,6 +1645,7 @@ mod tests {
         let (done, done_receiver) = watch::channel(false);
         (
             Controller {
+                display: crate::display::Display::default(),
                 audio_focus: None,
                 config: test_config(directory),
                 receiver,
@@ -1842,6 +1926,70 @@ done
             })
             .await
             .unwrap();
+    }
+
+    #[tokio::test]
+    async fn native_resume_waits_for_the_display_without_replacing_the_mpv_session() {
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+        use tokio::net::UnixListener;
+
+        let directory = tempfile::tempdir().unwrap();
+        let (mut controller, _sender, _done) = test_controller(directory.path());
+        prepare_music_process(&mut controller, directory.path());
+        start_test_music(&mut controller).await;
+        let pid = controller.mpv.as_ref().unwrap().process_id();
+        let session = controller.status.session_id.clone();
+        let path = directory.path().join("display.sock");
+        let listener = UnixListener::bind(&path).unwrap();
+        controller.display = crate::display::Display::at_path(path);
+        let server = tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.unwrap();
+            let mut stream = BufReader::new(stream);
+            let mut request_ids = HashSet::new();
+            for expected in [false, true, false] {
+                let mut command = String::new();
+                stream.read_line(&mut command).await.unwrap();
+                let fields: Vec<_> = command.split_whitespace().collect();
+                assert_eq!(fields.len(), 3);
+                assert_eq!(fields[0], "PLAYBACK");
+                assert_eq!(fields[1], u8::from(expected).to_string());
+                let request_id: u64 = fields[2].parse().unwrap();
+                assert_ne!(request_id, 0);
+                assert!(request_ids.insert(request_id));
+                if expected {
+                    stream
+                        .get_mut()
+                        .write_all(b"{\"state\":\"off\",\"supported\":true,\"reason\":null}\n")
+                        .await
+                        .unwrap();
+                    tokio::time::sleep(Duration::from_millis(40)).await;
+                }
+                stream
+                    .get_mut()
+                    .write_all(
+                        format!(
+                            "{{\"requestId\":{request_id},\"state\":\"active\",\"supported\":true,\"reason\":null}}\n"
+                        )
+                        .as_bytes(),
+                    )
+                    .await
+                    .unwrap();
+            }
+        });
+        controller
+            .handle_mpv_event(MpvEvent::TvPause(Some(true)))
+            .await;
+        assert_eq!(controller.status.state, PlayerState::Paused);
+        let start = Instant::now();
+        controller
+            .handle_mpv_event(MpvEvent::TvPause(Some(false)))
+            .await;
+        assert!(start.elapsed() >= Duration::from_millis(35));
+        assert_eq!(controller.status.state, PlayerState::Playing);
+        assert_eq!(controller.status.session_id, session);
+        assert_eq!(controller.mpv.as_ref().unwrap().process_id(), pid);
+        controller.stop_mpv().await;
+        server.await.unwrap();
     }
 
     #[tokio::test]

@@ -1,15 +1,21 @@
 #!/bin/sh
+# [INPUT]: cec-ctl 按下/释放事件与本地原生输入客户端。
+# [OUTPUT]: 白名单 KEY 手势与 CEC 健康状态。
+# [POS]: CEC 输入桥；不依赖 Wayland 虚拟键盘扩展。
+# [PROTOCOL]: Update this header on change, then check AGENTS.md
 set -eu
 
 runtime_dir=/run/cyberos-tv
 status_writer=/usr/lib/cyberos/scripts/cyberos-tv-write-status
-socket_path="$runtime_dir/wayland-0"
+input_helper=/usr/lib/cyberos/bin/cyberos-tv-input
+held_key=
 input_error_file="$runtime_dir/cec-input-error"
 cec_pid=
 heartbeat_pid=
 events_fifo=
 
 cleanup() {
+  release_key
   if [ -n "$cec_pid" ]; then
     kill "$cec_pid" 2>/dev/null || true
     wait "$cec_pid" 2>/dev/null || true
@@ -37,9 +43,20 @@ trap terminate HUP INT TERM
 
 send_key() {
   [ ! -s "$input_error_file" ] || return 0
-  if ! wtype -k "$1" >/dev/null 2>&1; then
-    printf '%s\n' "Wayland virtual keyboard input is unavailable" > "$input_error_file"
-    "$status_writer" cec degraded "$(sed -n '1p' "$input_error_file")"
+  if [ -n "$held_key" ] && [ "$held_key" != "$1" ]; then
+    "$input_helper" key "$held_key" 0 >/dev/null 2>&1 || true
+  fi
+  held_key=$1
+  if ! "$input_helper" key "$held_key" 1 >/dev/null 2>&1; then
+    printf '%s\n' "Native TV input is unavailable" > "$input_error_file"
+    "$status_writer" cec degraded "Native TV input is unavailable"
+  fi
+}
+
+release_key() {
+  if [ -n "$held_key" ]; then
+    "$input_helper" key "$held_key" 0 >/dev/null 2>&1 || true
+    held_key=
   fi
 }
 
@@ -54,16 +71,17 @@ publish_status() {
 handle_cec_line() {
   line=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
   case "$line" in
-    *"ui-cmd: 'up'"*) send_key Up ;;
-    *"ui-cmd: 'down'"*) send_key Down ;;
-    *"ui-cmd: 'left'"*) send_key Left ;;
-    *"ui-cmd: 'right'"*) send_key Right ;;
-    *"ui-cmd: 'select'"*|*"ui-cmd: 'enter'"*) send_key Return ;;
-    *"ui-cmd: 'back'"*|*"ui-cmd: 'exit'"*) send_key Escape ;;
-    *"ui-cmd: 'play'"*|*"ui-cmd: 'pause'"*|*"ui-cmd: 'play function'"*) send_key XF86AudioPlay ;;
-    *"ui-cmd: 'stop'"*) send_key XF86AudioStop ;;
-    *"ui-cmd: 'f1 (blue)'"*) send_key a ;;
-    *"ui-cmd: 'f2 (red)'"*) send_key s ;;
+    *"user control released"*|*"user_control_released"*) release_key ;;
+    *"ui-cmd: 'up'"*) send_key 103 ;;
+    *"ui-cmd: 'down'"*) send_key 108 ;;
+    *"ui-cmd: 'left'"*) send_key 105 ;;
+    *"ui-cmd: 'right'"*) send_key 106 ;;
+    *"ui-cmd: 'select'"*|*"ui-cmd: 'enter'"*) send_key 28 ;;
+    *"ui-cmd: 'back'"*|*"ui-cmd: 'exit'"*) send_key 1 ;;
+    *"ui-cmd: 'play'"*|*"ui-cmd: 'pause'"*|*"ui-cmd: 'play function'"*) send_key 164 ;;
+    *"ui-cmd: 'stop'"*) send_key 166 ;;
+    *"ui-cmd: 'f1 (blue)'"*) send_key 30 ;;
+    *"ui-cmd: 'f2 (red)'"*) send_key 31 ;;
   esac
 }
 
@@ -73,19 +91,8 @@ if ! command -v cec-ctl >/dev/null 2>&1; then
 fi
 
 rm -f "$input_error_file"
-if ! command -v wtype >/dev/null 2>&1; then
-  printf '%s\n' "wtype is not installed; keyboard input remains available" > "$input_error_file"
-else
-  attempt=0
-  while [ "$attempt" -lt 15 ] && [ ! -S "$socket_path" ]; do
-    attempt=$((attempt + 1))
-    sleep 1
-  done
-  if [ ! -S "$socket_path" ]; then
-    printf '%s\n' "Wayland display is unavailable; keyboard input remains available" > "$input_error_file"
-  elif ! wtype -k F24 >/dev/null 2>&1; then
-    printf '%s\n' "Wayland virtual keyboard input is unavailable; keyboard input remains available" > "$input_error_file"
-  fi
+if [ ! -x "$input_helper" ]; then
+  printf '%s\n' "Native TV input helper is unavailable" > "$input_error_file"
 fi
 
 while :; do
@@ -103,6 +110,12 @@ while :; do
   cec_pid=$!
   (
     while kill -0 "$cec_pid" 2>/dev/null; do
+      # STATUS 仅探测连接，绝不注入测试按键。
+      if "$input_helper" probe >/dev/null 2>&1; then
+        rm -f "$input_error_file"
+      else
+        printf '%s\n' "Native TV input is unavailable" > "$input_error_file"
+      fi
       publish_status "$device"
       sleep 5
     done
@@ -111,6 +124,7 @@ while :; do
   while IFS= read -r event_line; do
     handle_cec_line "$event_line"
   done < "$events_fifo"
+  release_key
   wait "$cec_pid" 2>/dev/null || true
   kill "$heartbeat_pid" 2>/dev/null || true
   wait "$heartbeat_pid" 2>/dev/null || true

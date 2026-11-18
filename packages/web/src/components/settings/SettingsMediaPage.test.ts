@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖 React 静态渲染、国际化和媒体设置组件。
+ * [OUTPUT]: 验证只写令牌、媒体源、扫描和匹配配置。
+ * [POS]: 媒体设置组件的静态渲染契约测试。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeAll, describe, expect, it, vi } from "vitest";
@@ -29,25 +35,7 @@ describe("SettingsMediaContent", () => {
           title: "Arrival", originalTitle: null, overview: null, year: 2016, releaseDate: null, runtimeMinutes: null,
           originalLanguage: null, genres: [], metadataSource: "filename", matchStatus: "unmatched", matchConfidence: null,
           posterKey: null, backdropKey: null, addedAt: "2026-10-21T00:00:00.000Z", updatedAt: "2026-10-21T00:00:00.000Z", progress: null
-        }],
-        tvStatus: {
-          enabled: true,
-          state: "ready",
-          weston: { state: "ready", detail: "wayland-0", updatedAt: "2026-10-21T00:00:00.000Z" },
-          chromium: { state: "ready", detail: "/tv/", updatedAt: "2026-10-21T00:00:00.000Z" },
-          vodPlayer: { state: "ready", detail: "idle", updatedAt: "2026-10-21T00:00:00.000Z" },
-          cec: { state: "degraded", detail: "Keyboard input remains available", updatedAt: "2026-10-21T00:00:00.000Z" },
-          gamepad: { state: "degraded", detail: "No supported gamepad connected", updatedAt: "2026-10-21T00:00:00.000Z" },
-          updatedAt: "2026-10-21T00:00:00.000Z"
-        },
-        tvSettings: {
-          enabled: true,
-          videoOutput: "wayland",
-          drmConnector: "HDMI-A-1",
-          audioDevice: "default",
-          hardwareDecoding: "auto-safe",
-          updatedAt: "2026-10-21T00:00:00.000Z"
-        }
+        }]
       },
       busy: null,
       deleteId: null,
@@ -64,8 +52,7 @@ describe("SettingsMediaContent", () => {
       region: "CN",
       onTmdbTokenChange: vi.fn(), onClearTmdbTokenChange: vi.fn(), onLanguageChange: vi.fn(), onRegionChange: vi.fn(),
       onSaveSettings: vi.fn(), onAddSource: vi.fn(), onToggleSource: vi.fn(), onScanSource: vi.fn(), onDeleteSource: vi.fn(),
-      onCancelDelete: vi.fn(), onCandidateQueryChange: vi.fn(), onSearchCandidates: vi.fn(), onSelectTitle: vi.fn(), onApplyMatch: vi.fn(),
-      onToggleTv: vi.fn(), onTvSettingsChange: vi.fn(), onSaveTvSettings: vi.fn()
+      onCancelDelete: vi.fn(), onCandidateQueryChange: vi.fn(), onSearchCandidates: vi.fn(), onSelectTitle: vi.fn(), onApplyMatch: vi.fn()
     }));
 
     expect(html).toContain("Configured; leave blank to keep");
@@ -76,9 +63,6 @@ describe("SettingsMediaContent", () => {
     expect(html).toContain("Completed");
     expect(html).toContain("Match correction");
     expect(html).toContain("First contact");
-    expect(html).toContain("TV mode health");
-    expect(html).toMatch(/role="switch"[^>]*aria-checked="true"/u);
-    expect(html).toContain("HDMI-A-1");
-    expect(html).toContain("Keyboard input remains available");
+    expect(html).not.toContain("TV mode health");
   });
 });

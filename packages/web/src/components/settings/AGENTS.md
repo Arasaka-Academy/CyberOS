@@ -22,7 +22,9 @@ SettingsLoading.test.ts: SettingsLoading 的行为与契约验证。
 SettingsLocalPages.tsx: 公开 SettingsAppearancePage, SettingsFilesPage。
 SettingsMcpPage.tsx: 公开 SettingsMcpPage。
 SettingsMediaPage.test.ts: SettingsMediaPage 的行为与契约验证。
-SettingsMediaPage.tsx: 公开 SettingsMediaPage, SettingsMediaContent。
+SettingsMediaPage.tsx: 媒体元数据、媒体源、扫描与匹配配置。
+SettingsTvPage.tsx: 独立 TV 输出、待机策略与运行状态；轮询不覆盖草稿。
+SettingsTvPage.test.ts: TV 提交字段、定时校验与本地化渲染验证。
 SettingsModal.test.ts: SettingsModal 的行为与契约验证。
 SettingsModal.tsx: 公开 SettingsModal。
 SettingsMonitoringPage.test.ts: SettingsMonitoringPage 的行为与契约验证。

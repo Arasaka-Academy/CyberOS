@@ -5,7 +5,9 @@
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
 import { nvrEn, nvrZh } from "./nvr.js";
+import { tvIdleEn, tvIdleZh } from "./tv-idle.js";
 export const en = {
+  tvIdle: tvIdleEn,
   nvr: nvrEn,
   voice: {
     title: "Voice", history: "Voice conversation history", fullSession: "Open full conversation", settings: "Audio settings",
@@ -3581,6 +3583,7 @@ type LocaleResource<T> = {
 };
 
 export const zhCN = {
+  tvIdle: tvIdleZh,
   nvr: nvrZh,
   voice: {
     title: "语音", history: "语音对话历史", fullSession: "打开完整会话", settings: "Audio 设置",

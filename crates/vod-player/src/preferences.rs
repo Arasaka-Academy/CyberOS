@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 读取播放偏好检查点及经过验证的控制器偏好。
+ * [OUTPUT]: 原子保存视频音量、静音、输出与延迟。
+ * [POS]: 音乐和视频共享的偏好持久化边界。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 use crate::error::VodError;
 use serde::{Deserialize, Serialize};
 use std::os::unix::fs::OpenOptionsExt;

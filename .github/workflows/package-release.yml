@@ -76,9 +76,36 @@ jobs:
       - name: Build
         run: npm run build
 
+  native-tv:
+    name: Native TV (${{ matrix.architecture }})
+    needs: quality
+    strategy:
+      matrix:
+        include:
+          - architecture: amd64
+            runner: ubuntu-24.04
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Build and verify matching Weston ABIs
+        run: packaging/native/tv-display/build-matrix.sh ${{ matrix.architecture }}
+      - name: Upload native TV artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: cyberos-tv-native-${{ matrix.architecture }}
+          path: .cyberos/tv-display/${{ matrix.architecture }}/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
   package:
     name: Package (amd64)
-    needs: quality
+    needs: [quality, native-tv]
     runs-on: ubuntu-24.04
 
     steps:
@@ -117,8 +144,14 @@ jobs:
             unzip \
             zip
 
+      - name: Download native TV artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: cyberos-tv-native-amd64
+          path: .cyberos/tv-display/amd64
+
       - name: Build Debian package
-        run: CYBEROS_NPM_REGISTRY=https://registry.npmjs.org packaging/scripts/build-deb.sh
+        run: CYBEROS_TV_NATIVE_PREBUILT=1 CYBEROS_NPM_REGISTRY=https://registry.npmjs.org packaging/scripts/build-deb.sh
 
       - name: Collect package artifacts
         run: |
@@ -155,7 +188,7 @@ jobs:
 
   package-arm64:
     name: Package (arm64)
-    needs: quality
+    needs: [quality, native-tv]
     runs-on: ubuntu-24.04-arm
     container: node:22-bookworm
 
@@ -199,8 +232,14 @@ jobs:
           node --version | grep -Eq '^v22\.'
           node scripts/check-node-version.mjs
 
+      - name: Download native TV artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: cyberos-tv-native-arm64
+          path: .cyberos/tv-display/arm64
+
       - name: Build Debian package
-        run: CYBEROS_NPM_REGISTRY=https://registry.npmjs.org packaging/scripts/build-deb.sh
+        run: CYBEROS_TV_NATIVE_PREBUILT=1 CYBEROS_NPM_REGISTRY=https://registry.npmjs.org packaging/scripts/build-deb.sh
 
       - name: Collect package artifacts
         run: |

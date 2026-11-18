@@ -1,3 +1,7 @@
+// [INPUT]: evdev 手柄、纯映射状态机与原生输入客户端。
+// [OUTPUT]: 配对 KEY 按下/释放与手柄健康快照。
+// [POS]: 服务入口；STATUS 预检不发送测试按键。
+// [PROTOCOL]: Update this header on change, then check AGENTS.md
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::ffi::OsStr;
@@ -19,11 +23,11 @@ use tracing_subscriber::EnvFilter;
 const SCAN_INTERVAL: Duration = Duration::from_secs(1);
 const REPEAT_TICK: Duration = Duration::from_millis(20);
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
-const WTYPE_TIMEOUT: Duration = Duration::from_secs(2);
+const INPUT_TIMEOUT: Duration = Duration::from_secs(2);
 const EVENT_QUEUE_CAPACITY: usize = 256;
 const INPUT_DIR: &str = "/dev/input";
 const STATUS_WRITER: &str = "/usr/lib/cyberos/scripts/cyberos-tv-write-status";
-const WTYPE: &str = "wtype";
+const INPUT_HELPER: &str = "/usr/lib/cyberos/bin/cyberos-tv-input";
 
 #[derive(Debug)]
 struct ActiveDevice {
@@ -70,7 +74,7 @@ async fn main() -> ExitCode {
 async fn run() -> io::Result<()> {
     let input_dir = PathBuf::from(INPUT_DIR);
     let status_writer = PathBuf::from(STATUS_WRITER);
-    let wtype = PathBuf::from(WTYPE);
+    let input_helper = PathBuf::from(INPUT_HELPER);
     let started = Instant::now();
     let (sender, mut receiver) = mpsc::channel(EVENT_QUEUE_CAPACITY);
     let mut active = HashMap::<PathBuf, ActiveDevice>::new();
@@ -88,6 +92,7 @@ async fn run() -> io::Result<()> {
     loop {
         tokio::select! {
             _ = scan_timer.tick() => {
+                let before = hub.held_keys();
                 input_error = scan_devices(
                     &input_dir,
                     &mut active,
@@ -95,14 +100,17 @@ async fn run() -> io::Result<()> {
                     &mut generation,
                     &sender,
                 );
+                for key in before.difference(&hub.held_keys()) {
+                    injection_error = inject_key(&input_helper, key, false).await.err().map(|error| error.to_string());
+                }
             }
             _ = repeat_timer.tick() => {
                 for key in hub.repeat(started.elapsed()) {
-                    injection_error = inject_key(&wtype, key).await.err().map(|error| error.to_string());
+                    injection_error = inject_key(&input_helper, key, true).await.err().map(|error| error.to_string());
                 }
             }
             _ = heartbeat_timer.tick() => {
-                let preflight_error = runtime_preflight(&wtype);
+                let preflight_error = runtime_preflight(&input_helper).await;
                 write_health(
                     &status_writer,
                     evaluate_health(
@@ -118,8 +126,14 @@ async fn run() -> io::Result<()> {
                     ReaderMessage::Event { path, generation: event_generation, event } => {
                         if active.get(&path).is_some_and(|device| device.generation == event_generation) {
                             let id = path.to_string_lossy();
-                            for key in hub.handle(&id, event, started.elapsed()) {
-                                injection_error = inject_key(&wtype, key).await.err().map(|error| error.to_string());
+                            let before = hub.held_keys();
+                            hub.handle(&id, event, started.elapsed());
+                            let after = hub.held_keys();
+                            for key in before.difference(&after) {
+                                injection_error = inject_key(&input_helper, key, false).await.err().map(|error| error.to_string());
+                            }
+                            for key in after.difference(&before) {
+                                injection_error = inject_key(&input_helper, key, true).await.err().map(|error| error.to_string());
                             }
                         }
                     }
@@ -127,7 +141,11 @@ async fn run() -> io::Result<()> {
                         if active.get(&path).is_some_and(|device| device.generation == event_generation) {
                             tracing::info!(device = %path.display(), reason = %detail, "Gamepad disconnected");
                             active.remove(&path);
+                            let before = hub.held_keys();
                             hub.disconnect(&path.to_string_lossy());
+                            for key in before.difference(&hub.held_keys()) {
+                                injection_error = inject_key(&input_helper, key, false).await.err().map(|error| error.to_string());
+                            }
                         }
                     }
                 }
@@ -315,19 +333,19 @@ async fn read_device(
     }
 }
 
-fn runtime_preflight(wtype: &Path) -> Option<String> {
-    if !command_exists(wtype) {
-        return Some(format!("{} is not available", wtype.display()));
+async fn runtime_preflight(input_helper: &Path) -> Option<String> {
+    if !command_exists(input_helper) {
+        return Some(format!("{} is not available", input_helper.display()));
     }
-    let runtime_dir = env::var_os("XDG_RUNTIME_DIR").map(PathBuf::from);
-    let display = env::var_os("WAYLAND_DISPLAY").unwrap_or_else(|| "wayland-0".into());
-    let Some(runtime_dir) = runtime_dir else {
-        return Some("XDG_RUNTIME_DIR is not set".to_owned());
-    };
-    if !runtime_dir.join(display).exists() {
-        return Some("Wayland display is not available".to_owned());
+    if !Path::new("/run/cyberos-tv/display.sock").exists() {
+        return Some("Native TV display input is not available".to_owned());
     }
-    None
+    let mut probe = Command::new(input_helper);
+    probe.kill_on_drop(true).arg("probe");
+    match timeout(INPUT_TIMEOUT, probe.output()).await {
+        Ok(Ok(output)) if output.status.success() => None,
+        _ => Some("Native TV input is not available".to_owned()),
+    }
 }
 
 fn command_exists(command: &Path) -> bool {
@@ -339,20 +357,36 @@ fn command_exists(command: &Path) -> bool {
     })
 }
 
-async fn inject_key(wtype: &Path, key: &str) -> io::Result<()> {
-    let mut command = Command::new(wtype);
-    command.kill_on_drop(true).args(["-k", key]);
-    let output = timeout(WTYPE_TIMEOUT, command.output())
+async fn inject_key(input_helper: &Path, key: &str, pressed: bool) -> io::Result<()> {
+    let mut command = Command::new(input_helper);
+    let code = match key {
+        "Up" => "103",
+        "Down" => "108",
+        "Left" => "105",
+        "Right" => "106",
+        "Return" => "28",
+        "Escape" => "1",
+        "F6" => "64",
+        "F7" => "65",
+        "F8" => "66",
+        "F9" => "67",
+        "F10" => "68",
+        _ => return Err(io::Error::other("Unsupported TV key")),
+    };
+    command
+        .kill_on_drop(true)
+        .args(["key", code, if pressed { "1" } else { "0" }]);
+    let output = timeout(INPUT_TIMEOUT, command.output())
         .await
-        .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "wtype timed out"))??;
+        .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "TV input timed out"))??;
     if output.status.success() {
         return Ok(());
     }
     let detail = String::from_utf8_lossy(&output.stderr).trim().to_owned();
     Err(io::Error::other(if detail.is_empty() {
-        format!("wtype exited with {}", output.status)
+        format!("TV input exited with {}", output.status)
     } else {
-        format!("wtype failed: {detail}")
+        format!("TV input failed: {detail}")
     }))
 }
 
@@ -380,9 +414,9 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn wtype_failure_recovers_on_the_next_successful_injection() {
+    async fn input_failure_recovers_on_the_next_successful_injection() {
         let directory = tempfile::tempdir().unwrap();
-        let command = directory.path().join("wtype");
+        let command = directory.path().join("input_helper");
         std::fs::write(
             &command,
             "#!/bin/sh\nstate=\"$0.state\"\nif [ ! -e \"$state\" ]; then : > \"$state\"; exit 1; fi\nexit 0\n",
@@ -390,7 +424,7 @@ mod tests {
         .unwrap();
         std::fs::set_permissions(&command, std::fs::Permissions::from_mode(0o755)).unwrap();
 
-        assert!(inject_key(&command, "Return").await.is_err());
-        assert!(inject_key(&command, "Return").await.is_ok());
+        assert!(inject_key(&command, "Return", true).await.is_err());
+        assert!(inject_key(&command, "Return", true).await.is_ok());
     }
 }

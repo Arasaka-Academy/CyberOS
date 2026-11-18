@@ -4,6 +4,7 @@
  * [POS]: 第一方设置写入边界；保留部分更新的未修改字段。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
+import { registerTvSettingsRoutes } from "./settings-tv.js";
 import { randomUUID } from "node:crypto";
 import { constants as fsConstants } from "node:fs";
 import { access, chmod, mkdir, rename, rm, stat, writeFile } from "node:fs/promises";
@@ -28,7 +29,6 @@ import {
   defaultSystemProxySettings,
   getSystemProxySettings,
   saveSystemProxySettings,
-  getTvSettings,
   getAgentCapabilityPolicySettings,
   getVmSettings,
   saveDockerSettings,
@@ -40,12 +40,9 @@ import {
   saveBackupSettings,
   saveMonitoringSettings,
   saveSystemProfileSettings,
-  saveTvSettings,
   defaultBackupSettings,
   defaultMonitoringSettings,
-  defaultSystemProfileSettings,
-  defaultTvSettings,
-  validateTvSettings
+  defaultSystemProfileSettings
 } from "@cyberos/db";
 import type {
   AgentCapabilityId,
@@ -59,7 +56,6 @@ import type {
   ModelProviderName,
   SystemProfileSettingsRecord,
   SystemProxySettingsRecord,
-  TvSettingsRecord
 } from "@cyberos/shared";
 import type { ApiRouteContext } from "../context.js";
 import {
@@ -83,7 +79,8 @@ import { AUDIO_SETTING_FIELDS, normalizeAudioSettings, publicAudioSettings } fro
 import { listBackupDirectories } from "../lib/backup-directories.js";
 import { resolveScopedExistingPath, resolveStoragePoolScope } from "../lib/storage-scope.js";
 
-export function registerSettingsRoutes(server: FastifyInstance, { config, db, system, tvMode, audio }: ApiRouteContext): void {
+export function registerSettingsRoutes(server: FastifyInstance, { config, db, system, tvMode, tvDisplay, audio }: ApiRouteContext): void {
+  registerTvSettingsRoutes(server, { config, db, ...(system ? { system } : {}), ...(tvMode ? { tvMode } : {}), ...(tvDisplay ? { tvDisplay } : {}) });
   server.get("/api/settings/audio", async (_request, reply) => {
     try {
       return { settings: publicAudioSettings(getAudioSettings(db) ?? defaultAudioSettings()) };
@@ -281,60 +278,6 @@ export function registerSettingsRoutes(server: FastifyInstance, { config, db, sy
     }
     const saved = saveBackupSettings(db, { ...settings, validatedAt: new Date().toISOString() });
     reply.send({ settings: await publicBackupSettings(saved, config.paths.backupPasswordPath) });
-  });
-
-  server.get("/api/settings/tv", async (_request, reply) => {
-    try {
-      reply.send({ settings: getTvSettings(db) ?? defaultTvSettings() });
-    } catch (error) {
-      reply.status(409).send({ error: settingError(error), state: "attention" });
-    }
-  });
-
-  server.patch<{ Body: Partial<Omit<TvSettingsRecord, "updatedAt">> & { confirmed?: boolean } }>("/api/settings/tv", async (request, reply) => {
-    if (hasUnknownFields(request.body, ["enabled", "videoOutput", "drmConnector", "audioDevice", "hardwareDecoding", "confirmed"])) {
-      reply.status(400).send({ error: "TV settings contain unknown fields" });
-      return;
-    }
-    const existing = readForRepair(() => getTvSettings(db), defaultTvSettings);
-    const { confirmed, ...updates } = request.body;
-    let next: Omit<TvSettingsRecord, "updatedAt">;
-    try {
-      next = validateTvSettings({ ...existing, ...updates });
-    } catch (error) {
-      reply.status(400).send({ error: settingError(error) });
-      return;
-    }
-    const changingMode = next.enabled !== existing.enabled || (updates.enabled !== undefined && confirmed === true);
-    if (changingMode && confirmed !== true) {
-      reply.status(400).send({ error: "TV mode changes require confirmation" });
-      return;
-    }
-    if (changingMode && !tvMode) {
-      reply.status(503).send({ error: "TV mode control is unavailable" });
-      return;
-    }
-    try {
-      if (changingMode) await tvMode!.apply(next.enabled);
-    } catch (error) {
-      reply.status(hostdSettingStatus(error)).send({ error: settingError(error) });
-      return;
-    }
-    try {
-      reply.send({ settings: saveTvSettings(db, next) });
-    } catch (error) {
-      if (changingMode) {
-        try {
-          await tvMode!.apply(existing.enabled);
-        } catch (rollbackError) {
-          reply.status(500).send({
-            error: `${settingError(error)}; TV mode rollback failed: ${settingError(rollbackError)}`
-          });
-          return;
-        }
-      }
-      reply.status(500).send({ error: settingError(error) });
-    }
   });
 
   server.get("/api/settings/indexer", async (_request, reply) => {
@@ -596,18 +539,6 @@ function readForRepair<T>(read: () => T | null, fallback: () => T): T {
 
 function settingError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-function hostdSettingStatus(error: unknown): number {
-  if (
-    typeof error === "object"
-    && error !== null
-    && "statusCode" in error
-    && typeof error.statusCode === "number"
-  ) {
-    return error.statusCode;
-  }
-  return 503;
 }
 
 async function publicBackupSettings(settings: BackupSettingsRecord, passwordPath: string) {

@@ -1,3 +1,7 @@
+-- [INPUT]: 接收 mpv 遥控按键和播放属性。
+-- [OUTPUT]: 绘制控制界面；暂停意图交由 Rust 控制器执行。
+-- [POS]: 原生视频界面，不直接改变暂停状态。
+-- [PROTOCOL]: Update this header on change, then check AGENTS.md
 local mp = require("mp")
 local assdraw = require("mp.assdraw")
 local utils = require("mp.utils")
@@ -114,6 +118,10 @@ local function seek(seconds)
     show()
 end
 
+local function pause_intent(action)
+    mp.commandv("script-message", "cyberos-tv-pause", action)
+end
+
 local function open_tracks(kind)
     local entries = {}
     if kind == "sub" then entries[1] = { id = "no", label = "关闭字幕" } end
@@ -227,7 +235,7 @@ local function activate()
         row = "buttons"
         selected = 2
     elseif selected == 1 then seek(-10); return
-    elseif selected == 2 then mp.commandv("cycle", "pause")
+    elseif selected == 2 then pause_intent("toggle")
     elseif selected == 3 then seek(10); return
     elseif selected == 4 then open_tracks("audio"); return
     elseif selected == 5 then open_tracks("sub"); return
@@ -276,10 +284,10 @@ bind("F7", function() seek(10) end, true)
 for _, key in ipairs({ "F9", "a", "A" }) do bind(key, function() open_tracks("audio") end) end
 for _, key in ipairs({ "F10", "s", "S" }) do bind(key, function() open_tracks("sub") end) end
 for _, key in ipairs({ "SPACE", "PLAYPAUSE" }) do
-    bind(key, function() mp.commandv("cycle", "pause"); show() end)
+    bind(key, function() pause_intent("toggle"); show() end)
 end
-bind("PLAY", function() mp.set_property_native("pause", false); show() end)
-bind("PAUSE", function() mp.set_property_native("pause", true); show() end)
+bind("PLAY", function() pause_intent("resume"); show() end)
+bind("PAUSE", function() pause_intent("pause"); show() end)
 
 mp.register_event("file-loaded", show)
 mp.register_event("end-file", hide)

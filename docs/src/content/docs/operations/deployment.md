@@ -58,7 +58,7 @@ sudo CYBEROS_ENABLE_NGINX=1 \
 
 脚本会安装 Node.js 22 和 Rust 1.95.0、构建并安装本架构 `.deb`，创建固定的 `/cyberos/state`、`/home/cyberos`、`/cyberos/data`、`/cyberos/backup` 和 `/cyberos/iso` 目录，再先运行 `cyberos-state-init.service` 创建并校验主数据库，然后启动 API 及其他数据库消费进程。`cyberos` 账号的家目录为 `/home/cyberos`，shell 为 `/bin/bash`，目录权限为 `0750 cyberos:cyberos`；共享账号仍使用 `/cyberos/home/share`。已有 `cyberos` 账号的 home 若不等于 `/home/cyberos`，安装将明确拒绝，要求干净安装，不搬移旧家目录或保留旧终端进程。缺失的设置在运行时使用代码默认值，不会为了填充默认值而写库。安装不会创建存储池，也不会探测或迁移 CyberOS 2.0 之前的目录、设置、数据库或服务。
 
-Docker Engine、Compose、QEMU、libvirt、Chromium、Weston、mpv、seatd、CEC 与输入工具都是 CyberOS 的安装依赖。安装器会启动 Docker 与 libvirt、准备默认 libvirt 网络，并在 API 就绪后按数据库设置应用 TV 模式。CyberOS 默认不开放 Docker 与虚拟机管理能力；安装完成后分别在“系统设置 > Docker”和“系统设置 > 虚拟机”中启用。TV 模式默认开启，可在“系统设置 > 媒体”中关闭或调整输出设备和硬件解码。KVM 硬件加速由宿主内核提供，启用虚拟机管理后仍需检查 `/dev/kvm`；缺失时页面会显示宿主降级，而不是把 QEMU/libvirt 误报为未安装。
+Docker Engine、Compose、QEMU、libvirt、Chromium、Weston、mpv、seatd、CEC 与输入工具都是 CyberOS 的安装依赖。安装器会启动 Docker 与 libvirt、准备默认 libvirt 网络，并在 API 就绪后按数据库设置应用 TV 模式。CyberOS 默认不开放 Docker 与虚拟机管理能力；安装完成后分别在“系统设置 > Docker”和“系统设置 > 虚拟机”中启用。TV 模式默认开启，可在“系统设置 > TV”中关闭或调整输出、硬件解码、屏保来源和空闲时间。KVM 硬件加速由宿主内核提供，启用虚拟机管理后仍需检查 `/dev/kvm`；缺失时页面会显示宿主降级，而不是把 QEMU/libvirt 误报为未安装。
 
 安装器默认通过 `sparse+https://rsproxy.cn/index/` 下载 Rust crate；可用 `CYBEROS_CARGO_REGISTRY` 指向其他以 `/` 结尾的 sparse HTTPS registry。该设置只写入一次性 Debian 构建副本，不覆盖 root 用户已有的 Cargo 配置。源码 checkout 和 `.cyberos/deb-build` 必须位于有足够空间的持久文件系统；不要在容量较小的 `/tmp` tmpfs 中执行完整构建。
 

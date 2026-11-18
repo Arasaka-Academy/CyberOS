@@ -50,6 +50,8 @@ repository-rows.ts: 公开 DbSessionRow, DbMessageRow, DbJobRow, DbEventRow 等�
 sessions.ts: 公开 createSession, getSession, listSessions, updateSessionPath 等接口。
 settings-constants.ts: 设置键和默认策略；完全权限默认关闭。
 settings-mappers.ts: 持久设置转换和字段校验；兼容旧权限记录。
+settings-storage.ts: SQLite 设置读写、记录格式和文本规范化。
+tv-settings.ts: TV 输出与屏保空闲策略持久化，兼容旧记录。
 settings.ts: 设置类型、默认值和持久化接口。
 share-operations.ts: 公开 createShareOperationRecord, getShareOperation, listShareOperations, updateShareOperationStatus。
 share-settings-mapper.ts: 公开 mapShareSettings, normalizeShareSettings。

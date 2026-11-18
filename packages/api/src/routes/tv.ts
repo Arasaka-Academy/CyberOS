@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖 TV 组件心跳、显示运行时与原生播放器。
+ * [OUTPUT]: 提供 TV 健康快照、显示事件和视频停止接口。
+ * [POS]: TV 会话的第一方只读状态与停止入口。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
@@ -5,6 +11,9 @@ import type { TvComponentHealth, TvModeStatus, VodPlayerStatus } from "@cyberos/
 import type { ApiRouteContext } from "../context.js";
 import { resolveVodPlayerRuntime } from "../lib/vod-player.js";
 import { resolveMusicPlayerRuntime } from "../lib/music-player.js";
+import { unavailableTvDisplay } from "../lib/tv-display.js";
+import { registerTvDisplayRoutes } from "./tv-display.js";
+import { registerTvScreensaverRoutes } from "./tv-screensaver.js";
 
 const DEFAULT_STATUS_DIRECTORY = "/run/cyberos-tv/status";
 const DEFAULT_ENABLED_MARKER = "/cyberos/state/tv/enabled";
@@ -21,6 +30,8 @@ export function registerTvRoutes(
   context: ApiRouteContext,
   dependencies: TvStatusDependencies = {}
 ): void {
+  registerTvDisplayRoutes(server, context);
+  registerTvScreensaverRoutes(server, context);
   server.post("/api/tv/stop-video", async (_request, reply) => {
     try {
       const current = await resolveMusicPlayerRuntime(context).getStatus();
@@ -51,7 +62,7 @@ export function registerTvRoutes(
         .catch(() => unavailable("VOD Player is unavailable"))
     ]);
     return {
-      status: buildTvModeStatus({ enabled, weston, chromium, cec, gamepad, vodPlayer: vodResult, now })
+      status: { ...buildTvModeStatus({ enabled, weston, chromium, cec, gamepad, vodPlayer: vodResult, now }), display: context.tvDisplay?.status() ?? unavailableTvDisplay() }
     };
   });
 }

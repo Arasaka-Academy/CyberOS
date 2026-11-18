@@ -30,6 +30,8 @@ source-layout work.
 - `docs`: Astro/Starlight documentation site and Playwright smoke tests.
 - `scripts`: build metadata, version policy, and release preparation.
 - `packaging`: Debian rules, systemd units, Nginx config, and host installer.
+- `packaging/native/tv-display`: non-root Weston display power, idle leases,
+  screensaver views, and input wake filtering for ABI 10/13/14.
 - `.github/workflows/package-release.yml`: CI quality, package, browser smoke,
   and tagged release workflow.
 
