@@ -1,5 +1,5 @@
 /**
- * [INPUT]: 依赖会话状态、能力交互记录与聊天控件。
+ * [INPUT]: 依赖会话状态、能力交互记录与工具摘要。
  * [OUTPUT]: 提供 Agent 对话、人工审批和独立凭据输入。
  * [POS]: 聊天渲染层；补充信息不显示批准与明确确认。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
@@ -61,6 +61,7 @@ import { PanelHeaderAction, PanelHeaderActions } from "../workspace/PanelHeader.
 import { hasActiveAgentTurn } from "../../lib/agent-composer.js";
 import { ChatPaneSkeleton, TranscriptSkeleton } from "./ChatPaneSkeleton.js";
 import { useTranscriptScroll } from "./useTranscriptScroll.js";
+import { ToolActivityLog } from "./ToolActivityLog.js";
 export { composeAgentMessage, hasActiveAgentTurn } from "../../lib/agent-composer.js";
 
 type CapabilityApprovalRisk = CapabilityApproval["risk"];
@@ -617,21 +618,7 @@ function ChatPaneContent({
                   </div>
                 </article>
               ))}
-              {agentToolActivities.length ? (
-                <div className="agent-tool-activity" role="status" aria-live="polite">
-                  {agentToolActivities.map((tool) => (
-                    <div key={`${tool.runId}:${tool.id}`} data-state={tool.status}>
-                      {tool.status === "running"
-                        ? <LoaderCircle aria-hidden="true" className="composer-spinner" size={14} />
-                        : tool.status === "completed"
-                          ? <Check aria-hidden="true" size={14} />
-                          : <X aria-hidden="true" size={14} />}
-                      <span>{tool.name}</span>
-                      <small>{t(`chat.toolStatus.${tool.status}`)}</small>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
+              <ToolActivityLog key={`${activeSessionId}:${agentToolActivities[0]?.id ?? ""}`} activities={agentToolActivities} />
             </>
           ) : transcriptPhase === "ready" ? (
             <EmptyState className="empty-state" icon={<Bot aria-hidden="true" size={22} />} title={t("chat.emptyTitle")}>

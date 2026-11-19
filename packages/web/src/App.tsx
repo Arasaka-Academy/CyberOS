@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 Web 服务接口、设置资源与 Agent 事件流。
  * [OUTPUT]: 提供应用状态、工作区与设置交互。
- * [POS]: Web 应用组合层；区分自动执行和补充信息事件。
+ * [POS]: Web 应用组合层；保留本轮工具摘要，新任务重置记录。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
 import { AppearanceProvider, Button as UiButton } from "@cyberos/ui";
@@ -278,8 +278,14 @@ function AppContent() {
   const [composerPath, setComposerPath] = useState<string | null>(null);
   const [messageSubmitting, setMessageSubmitting] = useState(false);
   const [activeAgentJob, setActiveAgentJob] = useState<ActiveAgentJobState>(EMPTY_ACTIVE_AGENT_JOB);
+  const [agentToolActivities, setAgentToolActivities] = useState<AgentToolActivity[]>([]);
+  const toolActivityJobIdRef = useRef<string | null>(null);
   const activeAgentJobRef = useRef<ActiveAgentJobState>(EMPTY_ACTIVE_AGENT_JOB);
   const commitActiveAgentJob = useCallback((next: ActiveAgentJobState) => {
+    if (next.id && next.id !== toolActivityJobIdRef.current) {
+      toolActivityJobIdRef.current = next.id;
+      setAgentToolActivities([]);
+    }
     activeAgentJobRef.current = next;
     setActiveAgentJob(next);
   }, []);
@@ -289,7 +295,6 @@ function AppContent() {
   const activeJobId = activeAgentJob.id;
   const activeJobStatus = activeAgentJob.status;
   const [retryJobId, setRetryJobId] = useState<string | null>(null);
-  const [agentToolActivities, setAgentToolActivities] = useState<AgentToolActivity[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOptions, setSearchOptions] = useState<WorkspaceSearchOptions>(() => defaultWorkspaceSearchOptions());
   const [searchResults, setSearchResults] = useState<IndexSearchResult[] | null>(null);
@@ -689,24 +694,23 @@ function AppContent() {
       const targetsCurrentJob = targetsActiveAgentJob(activeAgentJobRef.current, eventJobId);
       if ((parsed.type === "job.completed" || parsed.type === "job.failed" || parsed.type === "job.cancelled") && targetsCurrentJob) {
         dispatchTranscript({ type: "settle", sessionId });
+        // 终态保留记录；没有完成结果的调用不能继续显示执行中。
+        setAgentToolActivities(current => current.map(tool => tool.status === "running" ? { ...tool, status: "failed" } : tool));
       }
       if (parsed.type === "job.completed" && targetsCurrentJob) {
         setStatus("ready");
         transitionActiveAgentJob((current) => settleActiveAgentJob(current, eventJobId));
         void refreshWorkQueues();
         void reloadSessions();
-        setAgentToolActivities([]);
       }
       if (parsed.type === "job.failed" && targetsCurrentJob) {
         setStatus("error");
         transitionActiveAgentJob((current) => settleActiveAgentJob(current, eventJobId));
-        setAgentToolActivities([]);
         if (eventJobId && parsed.payload.retryable === true) setRetryJobId(eventJobId);
       }
       if (parsed.type === "job.cancelled" && targetsCurrentJob) {
         setStatus("cancelled");
         transitionActiveAgentJob((current) => settleActiveAgentJob(current, eventJobId));
-        setAgentToolActivities([]);
       }
       if (parsed.type === "approval.pending" || parsed.type === "approval.updated") {
         if (targetsCurrentJob && (parsed.type === "approval.pending" || parsed.payload.interaction)) {
@@ -1475,9 +1479,6 @@ function AppContent() {
   }
 
   function restoreSessionJob({ activeJob }: Pick<SessionSummary, "activeJob">): void {
-    if (!activeJob || activeJob.id !== activeAgentJobRef.current.id) {
-      setAgentToolActivities([]);
-    }
     commitActiveAgentJob({
       id: activeJob?.id ?? null,
       status: activeJob?.status ?? null
