@@ -3,6 +3,7 @@
 
 成员列表
 AGENTS.md: 本目录成员和依赖边界。
+chat-tool-activity-tests.mjs: 注册工具摘要、筛选、终态与轮次浏览器验收；复用聊天夹具。
 build-photos-basemap.sh: build-photos-basemap 模块入口或运行脚本。
 check-node-version.mjs: 公开 assertMinimumNodeVersion。
 check-node-version.test.mjs: check-node-version 的行为与契约验证。
@@ -30,7 +31,7 @@ sqlite-security.test.mjs: sqlite-security 的行为与契约验证。
 sync-cyberui-date-picker.mjs: sync-cyberui-date-picker 模块入口或运行脚本。
 sync-cyberui-slider.mjs: 从固定上游提交同步滑块并校验来源哈希。
 test-card-surfaces.mjs: test-card-surfaces 的行为与契约验证。
-test-chat-session-switch.mjs: test-chat-session-switch 的行为与契约验证。
+test-chat-session-switch.mjs: 提供聊天浏览器夹具；验证会话、阅读位置和凭据，注册工具验收子集。
 test-download-panel.mjs: 下载任务进度、窗口快照、一万条历史滚动和响应式浏览器验收。
 test-download-settings.mjs: test-download-settings 的行为与契约验证。
 test-nvr-browser.mjs: test-nvr-browser 的行为与契约验证。

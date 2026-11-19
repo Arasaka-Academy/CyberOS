@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖聊天基础布局与 HUD 主题令牌。
+ * [OUTPUT]: 提供消息、工具记录和审批的主题表现。
+ * [POS]: 聊天主题适配层；沿用 messages.css 的工具布局。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 .transcript {
   padding: 14px 12px 20px 14px;
   background: transparent;
@@ -128,10 +134,10 @@
   border-radius: 0;
 }
 
-.agent-tool-activity > div {
+.agent-tool-activity,
+.tool-activity-list li {
   border-color: var(--hud-line-soft);
   color: var(--hud-muted);
-  background: color-mix(in srgb, var(--cyberos-color-surface-raised) 78%, transparent);
 }
 
 .chat-pane .approval-card :where(strong, p, dd) {

@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 Web 的统一翻译键约定。
  * [OUTPUT]: 提供中文与英文界面文案。
- * [POS]: 包含完全权限设置与补充凭据的操作文案。
+ * [POS]: 集中维护界面、权限、凭据和工具摘要文案。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
 import { nvrEn, nvrZh } from "./nvr.js";
@@ -585,6 +585,21 @@ export const en = {
     followUp: "Follow-up",
     retryInterrupted: "Continue the interrupted turn",
     retry: "Retry",
+    toolActivity: {
+      title: "Execution log", calls_one: "{{count}} call", calls_other: "{{count}} calls",
+      failures_one: "{{count}} failed", failures_other: "{{count}} failed",
+      runningAction: "Running: {{name}}", failuresOnly: "Failures only",
+      showAll: "Show all ({{count}})", showRecent: "Show recent {{count}}",
+      names: {
+        codemode: "Run script", tool_search: "Find tools", catalog_get: "Tool catalog",
+        system_status: "System status", storage_pools_list: "Storage pools",
+        files_list: "File list", files_stat: "File info", files_read: "Read file",
+        files_search: "Search files", files_grep: "Search file contents", files_find: "Find files",
+        files_mutate: "Change files", files_edit: "Edit file", files_write: "Write file",
+        downloads_list: "Download tasks", docker_get: "Docker info",
+        docker_manage_propose: "Docker action", runs_get: "Execution status"
+      }
+    },
     toolStatus: {
       running: "Running",
       completed: "Completed",
@@ -4161,6 +4176,21 @@ export const zhCN = {
     followUp: "后续处理",
     retryInterrupted: "继续被中断的 turn",
     retry: "重试",
+    toolActivity: {
+      title: "执行记录", calls_one: "{{count}} 次调用", calls_other: "{{count}} 次调用",
+      failures_one: "{{count}} 次失败", failures_other: "{{count}} 次失败",
+      runningAction: "正在执行：{{name}}", failuresOnly: "仅看失败",
+      showAll: "查看全部（{{count}}）", showRecent: "仅显示最近 {{count}} 条",
+      names: {
+        codemode: "执行脚本", tool_search: "查找工具", catalog_get: "工具目录",
+        system_status: "系统状态", storage_pools_list: "存储池",
+        files_list: "文件列表", files_stat: "文件信息", files_read: "读取文件",
+        files_search: "搜索文件", files_grep: "搜索文件内容", files_find: "查找文件",
+        files_mutate: "修改文件", files_edit: "编辑文件", files_write: "写入文件",
+        downloads_list: "下载任务", docker_get: "Docker 信息",
+        docker_manage_propose: "Docker 操作", runs_get: "执行状态"
+      }
+    },
     toolStatus: {
       running: "执行中",
       completed: "已完成",

@@ -1,6 +1,6 @@
 /**
- * [INPUT]: 依赖聊天页面、隔离路由夹具与 Playwright。
- * [OUTPUT]: 验证会话切换、实时状态与凭据输入交互。
+ * [INPUT]: 依赖聊天页面、隔离夹具、工具验收子集与 Playwright。
+ * [OUTPUT]: 验证会话切换、工具摘要、轮次重置和凭据输入。
  * [POS]: 聊天浏览器验收入口，不调用真实能力。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
@@ -10,6 +10,7 @@ import { createRequire } from "node:module";
 import { after, before, test } from "node:test";
 import { fileURLToPath, URL } from "node:url";
 import { createServer } from "vite";
+import { registerToolActivityTests } from "./chat-tool-activity-tests.mjs";
 
 // Reuse the browser installed for the documentation smoke suite.
 const { chromium, expect } = createRequire(new URL("../docs/package.json", import.meta.url))("@playwright/test");
@@ -158,6 +159,8 @@ function emitChatEvent(id, type, content, runId = "typing-run") {
     response.write(`id: ${id}\nevent: ${type}\ndata: ${JSON.stringify(event)}\n\n`);
   }
 }
+
+registerToolActivityTests({ openChat, ready, select, emitChatEvent, streams, timestamp, expect });
 
 test("full access restores automatic execution as running after reload", async t => {
   const { page, errors } = await openChat(t, { snapshotOverrides: {

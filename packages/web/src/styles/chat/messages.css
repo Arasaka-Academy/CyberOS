@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖聊天消息结构与共享主题令牌。
+ * [OUTPUT]: 提供消息排版与工具记录的折叠、筛选布局。
+ * [POS]: 聊天基础样式；主题适配由 hud-transcript.css 补充。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 .message {
   display: grid;
   grid-template-columns: 36px minmax(0, 1fr);
@@ -50,41 +56,105 @@
 }
 
 .agent-tool-activity {
-  display: grid;
-  gap: 4px;
+  min-width: 0;
   margin: 2px 0 8px 46px;
-}
-
-.agent-tool-activity > div {
-  display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 6px;
-  min-height: 28px;
-  padding: 4px 8px;
   border-block: 1px solid var(--line);
   color: var(--muted);
   font-size: 12px;
 }
 
-.agent-tool-activity > div[data-state="completed"] svg {
-  color: var(--success-text);
+.agent-tool-activity > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 4px 2px;
+  border-radius: 0;
+  list-style: none;
+  cursor: pointer;
 }
 
-.agent-tool-activity > div[data-state="failed"] svg {
-  color: var(--danger-text);
-}
+.agent-tool-activity > summary::-webkit-details-marker { display: none; }
 
-.agent-tool-activity span {
+.tool-activity-chevron { flex: 0 0 auto; transition: transform 160ms ease; }
+.agent-tool-activity[open] .tool-activity-chevron { transform: rotate(90deg); }
+
+.tool-activity-heading {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.tool-activity-heading > svg { flex: 0 0 auto; }
+.tool-activity-heading > span,
+.tool-activity-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: var(--font-mono);
 }
 
-.agent-tool-activity small {
-  color: var(--muted-2);
+.tool-activity-count,
+.tool-activity-failures {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tool-activity-failures,
+.tool-activity-list li[data-state="failed"] > svg { color: var(--danger-text); }
+.tool-activity-list li[data-state="completed"] > svg { color: var(--success-text); }
+
+.tool-activity-toolbar { display: flex; justify-content: flex-end; }
+.tool-activity-list {
+  max-height: min(320px, 45dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tool-activity-list li {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 2px;
+  border-top: 1px solid var(--line);
+}
+
+.tool-activity-list small { color: var(--muted-2); font-size: 11px; }
+.agent-tool-activity button {
+  min-height: 44px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 0;
+  color: var(--muted);
+  background: transparent;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.agent-tool-activity button[aria-pressed="true"] { color: var(--accent-text); background: var(--surface-hover); }
+.agent-tool-activity :is(summary, button):hover { background: var(--surface-hover); }
+.agent-tool-activity :is(summary, button, [tabindex]):focus-visible {
+  outline: 2px solid var(--cyberos-color-focus);
+  outline-offset: -2px;
+}
+
+@media (max-width: 560px) {
+  .agent-tool-activity { margin-left: 0; }
+  .tool-activity-list li { min-height: 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tool-activity-chevron { transition: none; }
+  .agent-tool-activity .composer-spinner { animation: none; }
 }
 
 .message-text,
