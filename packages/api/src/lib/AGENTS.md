@@ -37,6 +37,7 @@ docker-registry.test.ts: 验证镜像名称、仓库地址和凭据选择。
 docker-registry.ts: 规范化镜像与仓库标识，生成 Docker 认证配置。
 docker-service.test.ts: 验证 Docker 汇总视图、占用判断和业务操作。
 docker-service.ts: 组合 Engine、Compose 和持久操作生成容器业务视图。
+download-lifecycle.ts: 串行执行每任务命令，在原租约截止前等待停止确认。
 ethernet-manager.test.ts: 验证以太网配置输入和宿主请求。
 ethernet-manager.ts: 校验有线网络配置并通过 hostd 提交变更。
 events.test.ts: 验证 Agent 事件起点和消息显示转换。

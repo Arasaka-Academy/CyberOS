@@ -1,7 +1,7 @@
 /**
- * [INPUT]: 依赖下载生命周期仓库和存储池安全边界。
+ * [INPUT]: 依赖下载仓库、每任务命令互斥和存储池安全边界。
  * [OUTPUT]: 提供下载创建、控制、删除与种子预览接口。
- * [POS]: 下载命令适配层；列表与事件流由 downloads-list 注册。
+ * [POS]: 下载命令适配层；删除等待 worker 停止确认。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
 import { constants as fsConstants } from "node:fs";
@@ -24,6 +24,7 @@ import {
 import { type DownloadTaskRecord, type DownloadTaskStatus } from "@cyberos/shared";
 import type { ApiRouteContext } from "../context.js";
 import { registerDownloadListRoutes } from "./downloads-list.js";
+import { stopDownloadTaskForRemoval, withDownloadTaskMutation } from "../lib/download-lifecycle.js";
 import {
   resolveScopedExistingPath,
   resolveScopedTargetPath,
@@ -209,155 +210,161 @@ export function registerDownloadRoutes(server: FastifyInstance, { config, db, sy
   server.post<{
     Params: { id: string };
   }>("/api/downloads/:id/pause", async (request, reply) => {
-    const task = getDownloadTask(db, request.params.id);
-    if (!task) {
-      reply.status(404).send({ error: "Download task not found" });
-      return;
-    }
-    if (task.status === "running" || task.status === "seeding") {
-      const requested = requestDownloadTaskControl(db, { id: task.id, request: "pause" });
-      reply.send({ task: requested ?? task });
-      return;
-    }
-    await transitionTaskStatus(db, dataRoot, system, request.params.id, { from: ["queued"], to: "paused" }, reply);
+    return withDownloadTaskMutation(db, request.params.id, async () => {
+      const task = getDownloadTask(db, request.params.id);
+      if (!task) {
+        reply.status(404).send({ error: "Download task not found" });
+        return;
+      }
+      if (task.status === "running" || task.status === "seeding") {
+        const requested = requestDownloadTaskControl(db, { id: task.id, request: "pause" });
+        reply.send({ task: requested ?? task });
+        return;
+      }
+      await transitionTaskStatus(db, dataRoot, system, request.params.id, { from: ["queued"], to: "paused" }, reply);
+    });
   });
 
   server.post<{
     Params: { id: string };
   }>("/api/downloads/:id/resume", async (request, reply) => {
-    await transitionTaskStatus(db, dataRoot, system, request.params.id, {
-      from: ["paused"],
-      to: "queued"
-    }, reply);
+    return withDownloadTaskMutation(db, request.params.id, async () => {
+      await transitionTaskStatus(db, dataRoot, system, request.params.id, {
+        from: ["paused"],
+        to: "queued"
+      }, reply);
+    });
   });
 
   server.post<{
     Params: { id: string };
   }>("/api/downloads/:id/cancel", async (request, reply) => {
-    const task = getDownloadTask(db, request.params.id);
-    if (!task) {
-      reply.status(404).send({ error: "Download task not found" });
-      return;
-    }
-    const wasRunning = task.status === "running";
-    if (wasRunning) {
-      const requested = requestDownloadTaskControl(db, { id: task.id, request: "cancel" });
-      reply.send({ task: requested ?? task });
-      return;
-    }
-    const cancelled = transitionDownloadTask(db, {
-      id: task.id,
-      from: ["queued", "running", "paused"],
-      to: "cancelled",
-      error: null
-    });
-    if (!cancelled) {
-      reply.status(409).send({ error: `Download task cannot be cancelled while ${task.status}` });
-      return;
-    }
-    if (!wasRunning) {
+    return withDownloadTaskMutation(db, request.params.id, async () => {
+      const task = getDownloadTask(db, request.params.id);
+      if (!task) {
+        reply.status(404).send({ error: "Download task not found" });
+        return;
+      }
+      if (task.status === "running") {
+        const requested = requestDownloadTaskControl(db, { id: task.id, request: "cancel" });
+        reply.send({ task: requested ?? task });
+        return;
+      }
+      const cancelled = transitionDownloadTask(db, {
+        id: task.id,
+        from: ["queued", "paused"],
+        to: "cancelled",
+        error: null
+      });
+      if (!cancelled) {
+        reply.status(409).send({ error: `Download task cannot be cancelled while ${task.status}` });
+        return;
+      }
       if (!(await removePartialFile(dataRoot, system, cancelled))) {
         reply.status(409).send({ error: "Download partial file could not be removed" });
         return;
       }
-    }
-    reply.send({ task: getDownloadTask(db, task.id) ?? cancelled });
+      reply.send({ task: getDownloadTask(db, task.id) ?? cancelled });
+    });
   });
 
   server.post<{
     Params: { id: string };
   }>("/api/downloads/:id/stop-seeding", async (request, reply) => {
-    const task = getDownloadTask(db, request.params.id);
-    if (!task) {
-      reply.status(404).send({ error: "Download task not found" });
-      return;
-    }
-    if (task.status !== "seeding") {
-      reply.status(409).send({ error: `Download task cannot stop seeding while ${task.status}` });
-      return;
-    }
-    const requested = requestDownloadTaskControl(db, { id: task.id, request: "stop_seeding" });
-    reply.send({ task: requested ?? task });
+    return withDownloadTaskMutation(db, request.params.id, async () => {
+      const task = getDownloadTask(db, request.params.id);
+      if (!task) {
+        reply.status(404).send({ error: "Download task not found" });
+        return;
+      }
+      if (task.status !== "seeding") {
+        reply.status(409).send({ error: `Download task cannot stop seeding while ${task.status}` });
+        return;
+      }
+      const requested = requestDownloadTaskControl(db, { id: task.id, request: "stop_seeding" });
+      reply.send({ task: requested ?? task });
+    });
   });
 
   server.post<{
     Params: { id: string };
   }>("/api/downloads/:id/retry", async (request, reply) => {
-    const task = getDownloadTask(db, request.params.id);
-    if (!task) {
-      reply.status(404).send({ error: "Download task not found" });
-      return;
-    }
-    const resetProgress = task.status === "cancelled" || task.errorCode === "checksum_mismatch";
-    if (resetProgress && !(await removePartialFile(dataRoot, system, task))) {
-      reply.status(409).send({ error: "Download partial file could not be removed" });
-      return;
-    }
-    const retried = transitionDownloadTask(db, {
-      id: task.id,
-      from: ["failed", "cancelled"],
-      to: "queued",
-      error: null,
-      resetProgress
+    return withDownloadTaskMutation(db, request.params.id, async () => {
+      const task = getDownloadTask(db, request.params.id);
+      if (!task) {
+        reply.status(404).send({ error: "Download task not found" });
+        return;
+      }
+      const resetProgress = task.status === "cancelled" || task.errorCode === "checksum_mismatch";
+      if (resetProgress && !(await removePartialFile(dataRoot, system, task))) {
+        reply.status(409).send({ error: "Download partial file could not be removed" });
+        return;
+      }
+      const retried = transitionDownloadTask(db, {
+        id: task.id,
+        from: ["failed", "cancelled"],
+        to: "queued",
+        error: null,
+        resetProgress
+      });
+      if (!retried) {
+        reply.status(409).send({ error: `Download task cannot be retried while ${task.status}` });
+        return;
+      }
+      reply.send({ task: retried });
     });
-    if (!retried) {
-      reply.status(409).send({ error: `Download task cannot be retried while ${task.status}` });
-      return;
-    }
-    reply.send({ task: retried });
   });
 
   server.delete<{
     Params: { id: string };
   }>("/api/downloads/:id", async (request, reply) => {
-    const originalTask = getDownloadTask(db, request.params.id);
-    if (!originalTask) {
-      reply.status(404).send({ error: "Download task not found" });
-      return;
-    }
-    if (originalTask.status === "running") {
-      reply.status(409).send({ error: "Running download tasks cannot be removed" });
-      return;
-    }
-    let task = originalTask;
-    if (task.status !== "completed" && task.status !== "cancelled") {
-      const isolated = transitionDownloadTask(db, {
-        id: task.id,
-        from: ["queued", "paused", "failed"],
-        to: "cancelled",
-        error: null
-      });
-      if (!isolated) {
-        const current = getDownloadTask(db, task.id);
-        if (!current) {
-          reply.status(404).send({ error: "Download task not found" });
-          return;
-        }
-        if (current.status === "running") {
-          reply.status(409).send({ error: "Running download tasks cannot be removed" });
-          return;
-        }
-        if (current.status === "completed") {
-          task = current;
-        } else if (current.status === "cancelled") {
+    return withDownloadTaskMutation(db, request.params.id, async () => {
+      const originalTask = getDownloadTask(db, request.params.id);
+      if (!originalTask) {
+        reply.status(404).send({ error: "Download task not found" });
+        return;
+      }
+      let task = originalTask;
+      if (!["running", "seeding", "completed", "cancelled"].includes(task.status)) {
+        const isolated = transitionDownloadTask(db, {
+          id: task.id,
+          from: ["queued", "paused", "failed"],
+          to: "cancelled",
+          error: null
+        });
+        if (!isolated) {
+          const current = getDownloadTask(db, task.id);
+          if (!current) {
+            reply.status(404).send({ error: "Download task not found" });
+            return;
+          }
           task = current;
         } else {
-          reply.status(409).send({ error: `Download task cannot be removed while ${current.status}` });
+          task = isolated;
+        }
+      }
+      if (task.status === "running" || task.status === "seeding") {
+        const stopped = await stopDownloadTaskForRemoval(db, task);
+        if (!stopped) {
+          reply.status(409).send({ error: "Download task stop could not be confirmed; retry removal after it stops" });
           return;
         }
-      } else {
-        task = isolated;
+        task = stopped;
       }
-    }
-    if (task.status !== "completed" && !(await removePartialFile(dataRoot, system, task))) {
-      reply.status(409).send({ error: "Download partial file could not be removed" });
-      return;
-    }
-    if (!deleteDownloadTask(db, task.id)) {
-      reply.status(409).send({ error: "Download task could not be removed" });
-      return;
-    }
-    reply.status(204).send();
+      if (task.status !== "completed" && task.status !== "cancelled") {
+        reply.status(409).send({ error: `Download task cannot be removed while ${task.status}` });
+        return;
+      }
+      if (task.status !== "completed" && !(await removePartialFile(dataRoot, system, task))) {
+        reply.status(409).send({ error: "Download partial file could not be removed" });
+        return;
+      }
+      if (!deleteDownloadTask(db, task.id)) {
+        reply.status(409).send({ error: "Download task could not be removed" });
+        return;
+      }
+      reply.status(204).send();
+    });
   });
 
 

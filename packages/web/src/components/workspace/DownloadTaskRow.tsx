@@ -1,21 +1,35 @@
 /**
- * [INPUT]: 依赖下载任务契约、共享 CyberUI 控件与本地化。
- * [OUTPUT]: 提供下载任务行及状态相关操作。
- * [POS]: 下载列表的展示边界；任务控制由列表数据层执行。
+ * [INPUT]: 依赖下载任务、受控选择状态、共享 CyberUI 控件与本地化。
+ * [OUTPUT]: 提供可多选任务行、无障碍状态图标与任务操作。
+ * [POS]: 下载列表的展示边界；选择和任务控制由面板数据层执行。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
-import { Button as UiButton } from "@cyberos/ui";
-import type { ReactNode } from "react";
-import { CheckCircle2, CircleAlert, Download, FileArchive, FolderOpen, Magnet, Pause, Play, RotateCw, Square, Trash2, X } from "lucide-react";
+import { Button as UiButton, Checkbox } from "@cyberos/ui";
+import type { MouseEvent, ReactNode } from "react";
+import { ArrowDownToLine, CheckCircle2, CircleAlert, CirclePause, CircleX, Clock3, Download, FileArchive, FolderOpen, Magnet, Pause, Play, RotateCw, Square, Trash2, Upload, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { DownloadTask } from "../../api.js";
 import { formatBytes, formatLocaleNumber } from "../../i18n/format.js";
 import type { SupportedLocale } from "../../i18n/locale.js";
 
+const statusIcons = {
+  queued: Clock3,
+  running: ArrowDownToLine,
+  paused: CirclePause,
+  seeding: Upload,
+  completed: CheckCircle2,
+  failed: CircleAlert,
+  cancelled: CircleX
+};
+
 export function DownloadTaskRow({
   task,
   locale,
   pendingAction,
+  selected,
+  selectionMode,
+  selectionBusy,
+  onToggleSelection,
   onAction,
   onDelete,
   onOpenDirectory
@@ -23,6 +37,10 @@ export function DownloadTaskRow({
   task: DownloadTask;
   locale: SupportedLocale;
   pendingAction: string | null;
+  selected: boolean;
+  selectionMode: boolean;
+  selectionBusy: boolean;
+  onToggleSelection: () => void;
   onAction: (action: "pause" | "resume" | "cancel" | "retry" | "stop-seeding") => void;
   onDelete: () => void;
   onOpenDirectory: () => void;
@@ -44,11 +62,24 @@ export function DownloadTaskRow({
   const canRetry = task.status === "failed" || task.status === "cancelled";
   const canOpenDirectory = task.status === "completed" || task.status === "seeding" || Boolean(task.contentCompletedAt);
   const actionBusy = pendingAction?.endsWith(`:${task.id}`) === true;
+  const controlsDisabled = selectionBusy || pendingAction !== null;
   const retryLabel = formatRetry(task, locale, t);
   const checksumLabel = formatChecksum(task, t);
+  const StatusIcon = statusIcons[task.status];
+  const statusLabel = t(`workspace.downloads.status.${task.status}`);
+
+  function selectFromRow(event: MouseEvent<HTMLElement>) {
+    if (selectionBusy || event.defaultPrevented || !(event.target instanceof Element)) return;
+    if (event.target.closest("button, input, label, a, [data-download-selection-ignore]")) return;
+    if (!selectionMode && window.matchMedia("(max-width: 560px)").matches) return;
+    onToggleSelection();
+  }
 
   return (
-    <article className="download-task-row" data-status={task.status} data-task-id={task.id}>
+    <article className="download-task-row" data-status={task.status} data-task-id={task.id} data-selected={selected || undefined} data-selection-mode={selectionMode || undefined} onClick={selectFromRow}>
+      <label className="download-task-select" data-tooltip={t("workspace.downloads.selectTask", { name: task.targetFileName })}>
+        <Checkbox checked={selected} disabled={selectionBusy} aria-label={t("workspace.downloads.selectTask", { name: task.targetFileName })} onChange={onToggleSelection} />
+      </label>
       <div className="download-task-main">
         <div className="download-task-heading">
           <span className="download-task-icon" aria-hidden="true">
@@ -57,11 +88,9 @@ export function DownloadTaskRow({
           <div>
             <strong data-tooltip={task.targetFileName}>{task.targetFileName}</strong>
           </div>
-          {task.status === "completed" || task.status === "failed" ? (
-            <span className="download-task-status is-icon" role="img" aria-label={t(`workspace.downloads.status.${task.status}`)} data-tooltip={t(`workspace.downloads.status.${task.status}`)}>
-              {task.status === "completed" ? <CheckCircle2 aria-hidden="true" size={17} /> : <CircleAlert aria-hidden="true" size={17} />}
-            </span>
-          ) : <span className="download-task-status">{t(`workspace.downloads.status.${task.status}`)}</span>}
+          <span className="download-task-status is-icon" role="img" tabIndex={0} aria-label={statusLabel} data-tooltip={statusLabel} data-download-selection-ignore>
+            <StatusIcon aria-hidden="true" size={17} />
+          </span>
         </div>
         <div className="download-task-path" data-tooltip={task.targetPath}>{task.targetPath}</div>
         <div
@@ -107,26 +136,24 @@ export function DownloadTaskRow({
       </div>
       <div className="download-task-actions" aria-label={t("workspace.downloads.actions")}>
         {canPause ? (
-          <IconAction icon={<Pause aria-hidden="true" size={14} />} label={t(task.status === "seeding" ? "workspace.downloads.pauseSeeding" : "workspace.downloads.pause")} disabled={actionBusy} busy={actionBusy} onClick={() => onAction("pause")} />
+          <IconAction icon={<Pause aria-hidden="true" size={14} />} label={t(task.status === "seeding" ? "workspace.downloads.pauseSeeding" : "workspace.downloads.pause")} disabled={controlsDisabled} busy={actionBusy} onClick={() => onAction("pause")} />
         ) : null}
         {canResume ? (
-          <IconAction icon={<Play aria-hidden="true" size={14} />} label={t("workspace.downloads.resume")} disabled={actionBusy} busy={actionBusy} onClick={() => onAction("resume")} />
+          <IconAction icon={<Play aria-hidden="true" size={14} />} label={t("workspace.downloads.resume")} disabled={controlsDisabled} busy={actionBusy} onClick={() => onAction("resume")} />
         ) : null}
         {canRetry ? (
-          <IconAction icon={<RotateCw aria-hidden="true" size={14} />} label={t("workspace.downloads.retry")} disabled={actionBusy} busy={actionBusy} onClick={() => onAction("retry")} />
+          <IconAction icon={<RotateCw aria-hidden="true" size={14} />} label={t("workspace.downloads.retry")} disabled={controlsDisabled} busy={actionBusy} onClick={() => onAction("retry")} />
         ) : null}
         {canCancel ? (
-          <IconAction icon={<X aria-hidden="true" size={14} />} label={t("workspace.downloads.cancel")} disabled={actionBusy} busy={actionBusy} onClick={() => onAction("cancel")} />
+          <IconAction icon={<X aria-hidden="true" size={14} />} label={t("workspace.downloads.cancel")} disabled={controlsDisabled} busy={actionBusy} onClick={() => onAction("cancel")} />
         ) : null}
         {canStopSeeding ? (
-          <IconAction icon={<Square aria-hidden="true" size={13} />} label={t("workspace.downloads.stopSeeding")} disabled={actionBusy} busy={actionBusy} onClick={() => onAction("stop-seeding")} />
+          <IconAction icon={<Square aria-hidden="true" size={13} />} label={t("workspace.downloads.stopSeeding")} disabled={controlsDisabled} busy={actionBusy} onClick={() => onAction("stop-seeding")} />
         ) : null}
         {canOpenDirectory ? (
           <IconAction icon={<FolderOpen aria-hidden="true" size={14} />} label={t("workspace.downloads.openDirectory")} onClick={onOpenDirectory} />
         ) : null}
-        {task.status !== "running" && task.status !== "seeding" ? (
-          <IconAction icon={<Trash2 aria-hidden="true" size={14} />} label={t("workspace.downloads.remove")} disabled={actionBusy} busy={actionBusy} onClick={onDelete} />
-        ) : null}
+        <IconAction icon={<Trash2 aria-hidden="true" size={14} />} label={t("workspace.downloads.remove")} disabled={controlsDisabled} busy={actionBusy} onClick={onDelete} />
       </div>
     </article>
   );

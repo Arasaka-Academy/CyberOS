@@ -1,13 +1,13 @@
 /**
- * [INPUT]: 下载面板、任务行与创建选择器。
- * [OUTPUT]: 验证紧凑布局、真实进度阶段和状态操作。
- * [POS]: 下载展示与创建入口回归。
+ * [INPUT]: 下载面板、受控多选任务行与创建选择器。
+ * [OUTPUT]: 验证状态图标、选择语义、真实进度阶段和任务操作。
+ * [POS]: 下载展示、多选控件与创建入口回归。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { initI18n } from "../../i18n/index.js";
+import { i18n, initI18n } from "../../i18n/index.js";
 import type { DownloadTask } from "../../api.js";
 import * as downloaderModule from "./HttpDownloaderPanel.js";
 import {
@@ -111,10 +111,23 @@ describe("DownloadTaskRow progress states", () => {
     expect(html).not.toContain("ETA unknown");
     expect(html).not.toContain("is-indeterminate");
   });
-  it.each(["completed", "failed"] as const)("uses an accessible %s icon instead of a text badge", (status) => {
+  it.each([
+    ["queued", "Queued", "clock-3"],
+    ["running", "Downloading", "arrow-down-to-line"],
+    ["paused", "Paused", "circle-pause"],
+    ["seeding", "Seeding", "upload"],
+    ["completed", "Completed", "circle-check"],
+    ["failed", "Failed", "circle-alert"],
+    ["cancelled", "Cancelled", "circle-x"]
+  ] as const)("uses a focusable accessible %s icon instead of a text badge", (status, label, icon) => {
     const html = renderDownloadRow({ status });
     expect(html).toContain('class="download-task-status is-icon" role="img"');
-    expect(html).toContain(`aria-label="${status === "completed" ? "Completed" : "Failed"}"`);
+    const marker = html.match(/<span class="download-task-status is-icon"[^>]*>[\s\S]*?<\/span>/u)?.[0] ?? "";
+    expect(marker).toContain('tabindex="0"');
+    expect(marker).toContain(`aria-label="${label}"`);
+    expect(marker).toContain(`data-tooltip="${label}"`);
+    expect(marker).toContain(`lucide-${icon}`);
+    expect(marker).not.toContain(`>${label}<`);
     expect(html).not.toContain(`class="download-task-status">`);
   });
   it.each(["paused", "completed", "failed"] as const)("hides stale speed and ETA for %s tasks", (status) => {
@@ -171,6 +184,45 @@ describe("DownloadTaskRow progress states", () => {
     expect(html).toContain("Retry 2 in");
     expect(html).toContain("SHA-256 mismatch");
     expect(html).toContain("Checksum mismatch");
+  });
+});
+
+describe("DownloadTaskRow selection and deletion", () => {
+  it("renders a named native checkbox and a controlled selected row", () => {
+    const html = renderDownloadRow({}, { selected: true, selectionMode: true });
+    expect(html).toContain('data-selected="true"');
+    expect(html).toContain('data-selection-mode="true"');
+    expect(html).toContain('type="checkbox"');
+    expect(html).toContain('checked=""');
+    expect(html).toContain('class="ui-checkbox"');
+    expect(html).not.toContain('aria-selected="true"');
+  });
+
+  it("renders an unchecked row without a selected surface marker", () => {
+    const html = renderDownloadRow();
+    expect(html).toContain('type="checkbox"');
+    expect(html).not.toContain('data-selected="true"');
+    expect(html).not.toContain('checked=""');
+  });
+
+  it.each(["queued", "running", "paused", "seeding", "completed", "failed", "cancelled"] as const)("offers deletion for a %s task", (status) => {
+    expect(renderDownloadRow({ status })).toContain(`aria-label="${i18n.t("workspace.downloads.remove")}"`);
+  });
+
+  it("disables selection and mutation controls throughout a batch", () => {
+    const html = renderDownloadRow({ status: "seeding" }, { selectionBusy: true });
+    expect(html.match(/<input[^>]*disabled=""[^>]*type="checkbox"/u)).not.toBeNull();
+    for (const label of ["Pause seeding", "Stop seeding", i18n.t("workspace.downloads.remove")]) {
+      expect(html).toMatch(new RegExp(`<button[^>]*aria-label="${label}"[^>]*disabled=""`, "u"));
+    }
+    expect(html).not.toMatch(/<button[^>]*aria-label="Open target directory"[^>]*disabled/u);
+  });
+
+  it("disables other task mutations while a global action is pending", () => {
+    const html = renderDownloadRow({}, { pendingAction: "pause:other-task" });
+    expect(html).toMatch(/<button[^>]*aria-label="Pause download"[^>]*disabled=""/u);
+    expect(html).toMatch(new RegExp(`<button[^>]*aria-label="${i18n.t("workspace.downloads.remove")}"[^>]*disabled=""`, "u"));
+    expect(html).not.toContain('aria-busy="true"');
   });
 });
 
@@ -313,11 +365,16 @@ const baseTask: DownloadTask = {
   seedStartedAt: null
 };
 
-function renderDownloadRow(overrides: Partial<DownloadTask> = {}): string {
+function renderDownloadRow(overrides: Partial<DownloadTask> = {}, controls: { selected?: boolean; selectionMode?: boolean; selectionBusy?: boolean; pendingAction?: string | null } = {}): string {
   return renderToStaticMarkup(createElement(DownloadTaskRow, {
     task: { ...baseTask, ...overrides },
     locale: "en",
     pendingAction: null,
+    selected: false,
+    selectionMode: false,
+    selectionBusy: false,
+    ...controls,
+    onToggleSelection: vi.fn(),
     onAction: vi.fn(),
     onDelete: vi.fn(),
     onOpenDirectory: vi.fn()

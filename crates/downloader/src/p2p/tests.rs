@@ -1,10 +1,143 @@
 /**
  * [INPUT]: 依赖父模块的隔离 BT 引擎和种子解析。
- * [OUTPUT]: 验证租约、网络约束与本地 peer 传输。
+ * [OUTPUT]: 验证停止确认、租约、网络约束与本地 peer 传输。
  * [POS]: BT 公网隔离回归测试。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
 use super::*;
+
+#[tokio::test]
+async fn control_acknowledgement_requires_successful_engine_removal() {
+    for control in ["pause", "cancel", "stop_seeding"] {
+        check_control_acknowledgement(control, true).await;
+    }
+}
+
+#[tokio::test]
+async fn successful_control_stops_the_engine_before_acknowledgement() {
+    for control in ["cancel", "stop_seeding"] {
+        check_control_acknowledgement(control, false).await;
+    }
+}
+
+async fn check_control_acknowledgement(control: &'static str, remove_first: bool) {
+    use std::time::Duration;
+    let root = tempfile::tempdir().expect("temporary root");
+    let data = root.path().join("data");
+    std::fs::create_dir_all(data.join("pool-1")).expect("pool");
+    let published = control == "stop_seeding";
+    if published {
+        std::fs::create_dir_all(data.join("pool-1/hello")).expect("published directory");
+        std::fs::write(data.join("pool-1/hello/hello.txt"), b"hello").expect("published content");
+    }
+    let database = root.path().join("db.sqlite");
+    rusqlite::Connection::open(&database)
+        .expect("database")
+        .execute_batch(crate::db::TEST_SCHEMA)
+        .expect("schema");
+    let db = Db::open(&database).expect("database actor");
+    let mut metainfo =
+        b"d4:infod6:lengthi5e4:name9:hello.txt12:piece lengthi16384e6:pieces20:".to_vec();
+    metainfo.extend([
+        0xaa, 0xf4, 0xc6, 0x1d, 0xdc, 0xc5, 0xe8, 0xa2, 0xda, 0xbe, 0xde, 0x0f, 0x3b, 0x48, 0x2c,
+        0xd9, 0xae, 0xa9, 0x43, 0x4d,
+    ]);
+    metainfo.extend(b"ee");
+    db.test_call(move |connection| {
+        connection.execute("INSERT INTO download_tasks(id,url,storage_pool_id,target_directory,target_file_name,target_path,partial_path,status,created_at,updated_at,source_kind,torrent_metainfo,total_bytes,selected_file_count,content_completed_at) VALUES('control-test','','pool-1','.','hello','hello','.hello.part','queued','2026-11-19T00:00:00Z','2026-11-19T00:00:00Z','torrent',?,5,1,?)", rusqlite::params![metainfo, published.then_some("2026-11-19T00:00:00Z")]).map_err(DownloadError::database)?;
+        connection.execute("INSERT INTO download_task_files VALUES('control-test',0,'hello.txt',5,1,0)", []).map_err(DownloadError::database)?;
+        Ok(())
+    }).await.expect("torrent task");
+    let task = db
+        .claim_torrent("control-worker", TORRENT_LEASE)
+        .await
+        .expect("claim")
+        .expect("task");
+    let engine = TorrentEngine::new_isolated(root.path(), None)
+        .await
+        .expect("isolated engine");
+    let inspect_engine = engine.clone();
+    let shutdown = tokio_util::sync::CancellationToken::new();
+    let db_run = db.clone();
+    let stop = shutdown.clone();
+    let run_data = data.clone();
+    let mut run = tokio::spawn(async move {
+        run_torrent_task(
+            &engine,
+            &db_run,
+            &task,
+            "control-worker",
+            &TorrentRunContext {
+                data_root: &run_data,
+                require_mount: false,
+                minimum_free_bytes: 0,
+                shutdown: &stop,
+            },
+        )
+        .await
+    });
+    tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            if db.test_call(|connection| connection.query_row("SELECT last_progress_at IS NOT NULL FROM download_tasks WHERE id='control-test'", [], |row| row.get::<_, bool>(0)).map_err(DownloadError::database)).await.expect("progress query") { break; }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    }).await.expect("initial engine progress");
+    if remove_first {
+        let handle = inspect_engine
+            .session
+            .with_torrents(|torrents| torrents.next().map(|(_, handle)| handle.clone()))
+            .expect("torrent handle");
+        inspect_engine
+            .remove(&handle)
+            .await
+            .expect("remove before control");
+    }
+    db.test_call(move |connection| {
+        connection
+            .execute(
+                "UPDATE download_tasks SET control_requested = ? WHERE id='control-test'",
+                [control],
+            )
+            .map_err(DownloadError::database)?;
+        Ok(())
+    })
+    .await
+    .expect("control request");
+    let result = tokio::time::timeout(Duration::from_secs(3), &mut run).await;
+    if result.is_err() {
+        shutdown.cancel();
+        let _ = run.await;
+    }
+    let result = result.expect("control must finish").expect("runner task");
+    let current = db
+        .get_task("control-test")
+        .await
+        .expect("task query")
+        .expect("task retained");
+    if remove_first {
+        assert!(result.is_err(), "failed engine removal must fail {control}");
+        assert_eq!(current.control_requested.as_deref(), Some(control));
+        assert_eq!(current.worker_id.as_deref(), Some("control-worker"));
+        assert!(matches!(current.status.as_str(), "running" | "seeding"));
+    } else {
+        result.expect("successful control");
+        assert_eq!(
+            current.status,
+            if published { "completed" } else { "cancelled" }
+        );
+        assert_eq!(current.worker_id, None);
+        assert_eq!(current.control_requested, None);
+        assert_eq!(
+            inspect_engine
+                .session
+                .with_torrents(|torrents| torrents.count()),
+            0
+        );
+    }
+    if published {
+        assert!(data.join("pool-1/hello/hello.txt").exists());
+    }
+}
 
 #[tokio::test]
 async fn lost_lease_stops_the_engine_without_modifying_the_new_owner() {

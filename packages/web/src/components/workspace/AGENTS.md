@@ -13,14 +13,16 @@ DockerInspectDetails.tsx: 提供 DockerNetworkDetailsState, DockerVolumeDetailsS
 DockerResourceStatus.test.ts: DockerResourceStatus 的行为回归。
 DockerResourceStatus.tsx: 提供 DockerResourceStatus。
 DownloadCreateDialog.tsx: 下载创建；公网链接、BT 预览、文件多选与目录选择。
-DownloadTaskList.tsx: 可变行高窗口列表；滚动分页、缺页补齐与阅读锚点。
-DownloadTaskRow.tsx: 下载任务展示；下载与校验阶段分离，提供状态相关操作。
+DownloadDeleteDialog.tsx: 删除确认；冻结任务清单、保留文件说明和批次进度。
+DownloadSelectionToolbar.tsx: 已加载任务全选半选、选择数量和批删入口。
+DownloadTaskList.tsx: 受控多选窗口列表；滚动分页、缺页补齐与阅读锚点。
+DownloadTaskRow.tsx: 可多选下载行；状态图标、校验阶段和任务操作。
 FilePreviewDialog.test.ts: FilePreviewDialog 的行为回归。
 FilePreviewDialog.tsx: 提供 FilePreviewDialog。
 HostAccessPicker.test.ts: HostAccessPicker 的行为回归。
 HostAccessPicker.tsx: 提供 HostAccessPicker, hostAccessPickerBlocked, validContainerTarget。
 HttpDownloaderPanel.test.ts: HttpDownloaderPanel 的行为回归。
-HttpDownloaderPanel.tsx: 下载入口；组合筛选、全局统计与独立创建流程。
+HttpDownloaderPanel.tsx: 下载入口；持有任务选择、冻结删除目标并展示批次结果。
 IscsiManagementCard.test.tsx: IscsiManagementCard 的行为回归。
 IscsiManagementCard.tsx: 提供 IscsiManagementCard, IscsiInventory。
 LocalTerminalPanel.test.ts: LocalTerminalPanel 的行为回归。
@@ -59,10 +61,13 @@ WorkspacePanelBoundary.tsx: 提供 WorkspacePanelBoundary。
 WorkspacePanelLoading.test.tsx: WorkspacePanelLoading 的行为回归。
 WorkspacePanelLoading.tsx: 提供 WorkspacePanelLoading。
 download-task-cache.test.ts: download-task-cache 的行为回归。
+download-task-deletion.ts: 串行删除确认目标；逐项进度与部分失败结果。
+download-task-selection.ts: 按任务 ID 切换选择、校准加载集合与计算全选半选。
+download-task-selection.test.ts: 选择快照、集合校准和串行部分失败回归。
 download-history-gaps.ts: 连续补页边界与请求归属；重启恢复不释放新请求。
 download-task-cache.ts: 版本化任务缓存；按 ID 合并、权威窗口删除与旧实例隔离。
 terminal/: terminal 子模块。
-use-download-tasks.ts: 下载同步；游标分页、窗口 SSE、缺页补齐与控制请求。
+use-download-tasks.ts: 下载同步；分页、窗口 SSE、控制互斥和版本化批删。
 useModalDialog.ts: 提供 closeModalForHome, useModalDialog。
 
 [PROTOCOL]: Update this header on change, then check AGENTS.md

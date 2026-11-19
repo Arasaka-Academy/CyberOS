@@ -1,3 +1,8 @@
+/* [INPUT]: 共享主题、CyberUI 适配与各业务模块样式。
+ * [OUTPUT]: 明确 legacy、components 与 app 的层叠顺序。
+ * [POS]: Web 样式组合入口；交互模块在 app 层覆盖共享外观。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 @layer theme, base, legacy, components, app, utilities;
 @import "@js-preview/excel/lib/index.css" layer(legacy);
 @import "maplibre-gl/dist/maplibre-gl.css" layer(legacy);
@@ -38,6 +43,7 @@
 @import "./styles/components/cards.css";
 @import "./styles/components/card-details.css";
 @import "./styles/management/header-actions.css" layer(app);
+@import "./styles/downloads/selection.css" layer(app);
 @import "./styles/settings.css" layer(app);
 @import "./styles/navigation-rails.css";
 @import "./styles/files/picker.css" layer(app);

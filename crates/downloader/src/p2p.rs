@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 librqbit、数据库租约和受限存储目标。
  * [OUTPUT]: 提供种子预览、引擎会话和 BT 执行循环。
- * [POS]: 协调传输、控制与发布；进度转换交给 progress。
+ * [POS]: 引擎停止成功后确认控制；进度转换交给 progress。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
 mod progress;
@@ -301,7 +301,7 @@ async fn run_torrent_task_with_peers(
                 return Ok(TorrentTaskOutcome::Interrupted);
             }
             if let Some(control) = current.control_requested.as_deref() {
-                let _ = engine.remove(&handle).await;
+                engine.remove(&handle).await?;
                 match control {
                     "pause" => db.finish_control(task, false).await?,
                     "cancel" => {

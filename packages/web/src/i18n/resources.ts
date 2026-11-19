@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 Web 的统一翻译键约定。
  * [OUTPUT]: 提供中文与英文界面文案。
- * [POS]: 集中维护界面、权限、凭据和工具摘要文案。
+ * [POS]: 集中维护权限、工具摘要和下载选择删除文案。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
 import { nvrEn, nvrZh } from "./nvr.js";
@@ -752,6 +752,21 @@ export const en = {
       eyebrow: "Transfer queue",
       title: "Downloads",
       description: "Queue and monitor public web, Magnet, and torrent downloads.",
+      selectTask: "Select {{name}}",
+      selectTasks: "Select tasks",
+      finishSelection: "Finish selection",
+      selectLoaded: "Select loaded tasks",
+      clearSelection: "Clear selection",
+      selectedCount: "Selected {{count}}",
+      deleteSelected: "Delete selected tasks",
+      deleteTasks: "Delete tasks",
+      deleteTitle_one: "Delete {{count}} task?",
+      deleteTitle_other: "Delete {{count}} tasks?",
+      deleteDescription: "Downloads and seeding will stop automatically. Tasks and unfinished temporary data will be removed. Downloaded files will be kept.",
+      deleteProgress: "Processed {{completed}} / {{total}}",
+      deleteSuccess_one: "Deleted {{count}} task",
+      deleteSuccess_other: "Deleted {{count}} tasks",
+      deleteResult: "Deleted {{deleted}} · Failed {{failed}}",
       active: "Active",
       queued: "Queued",
       speed: "Speed",
@@ -896,7 +911,7 @@ export const en = {
       cancel: "Cancel download",
       stopSeeding: "Stop seeding",
       openDirectory: "Open target directory",
-      remove: "Remove from history",
+      remove: "Delete task",
       status: {
         queued: "Queued",
         running: "Downloading",
@@ -4343,6 +4358,21 @@ export const zhCN = {
       eyebrow: "传输队列",
       title: "下载",
       description: "排队并监控公网链接、磁力链接和 BT 种子下载任务。",
+      selectTask: "选择 {{name}}",
+      selectTasks: "选择任务",
+      finishSelection: "完成选择",
+      selectLoaded: "全选已加载任务",
+      clearSelection: "清除选择",
+      selectedCount: "已选 {{count}} 项",
+      deleteSelected: "删除所选任务",
+      deleteTasks: "删除任务",
+      deleteTitle_one: "删除 {{count}} 个任务？",
+      deleteTitle_other: "删除 {{count}} 个任务？",
+      deleteDescription: "将自动停止下载或做种，移除任务并清理未完成的临时数据。已下载文件保留。",
+      deleteProgress: "已处理 {{completed}} / {{total}}",
+      deleteSuccess_one: "已删除 {{count}} 个任务",
+      deleteSuccess_other: "已删除 {{count}} 个任务",
+      deleteResult: "已删除 {{deleted}} 项 · 失败 {{failed}} 项",
       active: "活动",
       queued: "队列",
       speed: "速度",
@@ -4487,7 +4517,7 @@ export const zhCN = {
       cancel: "取消下载",
       stopSeeding: "停止做种",
       openDirectory: "打开目标目录",
-      remove: "从历史中移除",
+      remove: "删除任务",
       status: {
         queued: "等待中",
         running: "下载中",

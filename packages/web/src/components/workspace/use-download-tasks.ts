@@ -1,13 +1,14 @@
 /**
- * [INPUT]: 依赖分页 REST、可视窗口 SSE 和版本化任务操作。
- * [OUTPUT]: 提供下载筛选、历史加载、全局统计与任务控制状态。
+ * [INPUT]: 依赖分页 REST、可视窗口 SSE 和版本化批次删除。
+ * [OUTPUT]: 提供下载筛选、历史加载、全局统计与串行任务控制。
  * [POS]: 下载面板的数据边界；缓存保留历史，窗口快照校准可见任务。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
 import { useEffect, useRef, useState } from "react";
 import type { DownloadFilter, DownloadObservation, DownloadSummary, DownloadTaskKey, DownloadTaskPage, DownloadWindowSnapshot } from "@cyberos/shared";
-import { actOnDownloadObserved, deleteDownloadObserved, getDownloadPage, type DownloadTask, type DownloadWorkerHealth } from "../../api.js";
+import { actOnDownloadObserved, deleteDownloadObserved, DownloadRequestError, getDownloadPage, type DownloadTask, type DownloadWorkerHealth } from "../../api.js";
 import { DownloadTaskCache } from "./download-task-cache.js";
+import { deleteDownloadBatch, type DownloadDeleteProgress, type DownloadDeleteTarget } from "./download-task-deletion.js";
 
 export type DownloadAction = "pause" | "resume" | "cancel" | "retry" | "stop-seeding";
 import { advanceDownloadHistoryGap, createDownloadHistoryGap, DownloadGapRequests, resetDownloadHistoryGaps, type DownloadGap } from "./download-history-gaps.js";
@@ -25,6 +26,7 @@ export function useDownloadTasks(filter: DownloadFilter, onError: (message: stri
   const [health, setHealth] = useState<DownloadWorkerHealth | null>(null);
   const [summary, setSummary] = useState(emptySummary);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [deletionProgress, setDeletionProgress] = useState<DownloadDeleteProgress | null>(null);
   const [windowKey, setWindowKey] = useState("");
   const [gaps, setGaps] = useState<DownloadGap[]>([]);
   const gapsRef = useRef<DownloadGap[]>([]);
@@ -193,16 +195,31 @@ export function useDownloadTasks(filter: DownloadFilter, onError: (message: stri
     } catch (error) { if (scope === generation.current) onErrorRef.current(errorMessage(error)); }
     finally { actionBusy.current = false; setPendingAction(null); }
   }
-  async function removeTask(task: DownloadTask) {
-    if (actionBusy.current) return;
-    actionBusy.current = true; setPendingAction(`delete:${task.id}`);
-    const scope = generation.current;
+  async function removeTasks(targets: readonly DownloadDeleteTarget[]) {
+    if (actionBusy.current || targets.length === 0) return null;
+    actionBusy.current = true; setPendingAction("delete:batch");
+    const currentCache = cache.current;
     try {
-      const observation = await deleteDownloadObserved(task.id);
-      if (scope !== generation.current || !accept(observation)) return;
-      cache.current.remove(task.id, observation); setTasks(cache.current.tasks());
-    } catch (error) { if (scope === generation.current) onErrorRef.current(errorMessage(error)); }
-    finally { actionBusy.current = false; setPendingAction(null); }
+      return await deleteDownloadBatch(targets, async (task) => {
+        let observation: DownloadObservation;
+        try { observation = await deleteDownloadObserved(task.id); }
+        catch (error) {
+          if (!(error instanceof DownloadRequestError) || error.status !== 404) throw error;
+          // 404 确认任务已消失；读取新的观察版本，防止旧分页恢复记录。
+          const page = await getDownloadPage({ filter: currentCache.filter, limit: 1 });
+          observation = page.observation;
+          if (cache.current === currentCache && accept(observation)) applyMeta(page);
+        }
+        if (cache.current !== currentCache || !accept(observation)) return;
+        currentCache.remove(task.id, observation); setTasks(currentCache.tasks());
+      }, (progress) => {
+        setDeletionProgress(progress);
+        setPendingAction(`delete:${progress.currentId ?? "batch"}`);
+      });
+    } finally {
+      actionBusy.current = false; setPendingAction(null); setDeletionProgress(null);
+      if (cache.current === currentCache) refreshRef.current();
+    }
   }
-  return { tasks, gaps, loadGap: (id: string) => void loadGap(id), loading, loadingMore, loadError, hasMore: nextCursor !== null, health, summary, pendingAction, setViewport, runAction, removeTask, loadMore: () => void readPage(cursor.current ? "more" : "initial"), refresh: () => refreshRef.current() };
+  return { tasks, gaps, loadGap: (id: string) => void loadGap(id), loading, loadingMore, loadError, hasMore: nextCursor !== null, health, summary, pendingAction, deletionProgress, setViewport, runAction, removeTasks, loadMore: () => void readPage(cursor.current ? "more" : "initial"), refresh: () => refreshRef.current() };
 }

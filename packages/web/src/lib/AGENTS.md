@@ -22,7 +22,7 @@ docker-images.test.ts: docker-images 的行为回归。
 docker-images.ts: 提供 isValidDockerImageReference, filterDockerImages, dockerImageDisplayName, dockerImageDeleteTargets。
 docker-inventory.test.ts: docker-inventory 的行为回归。
 docker-inventory.ts: 提供 DockerImageUsage, sortDockerContainers, sortDockerImages, sortDockerNetworks。
-downloads-api.ts: 下载 REST 边界；游标与锚点分页、观察版本和删除墓碑。
+downloads-api.ts: 下载 REST 边界；游标分页、观察版本和保留 HTTP 状态的请求错误。
 events.test.ts: events 的行为回归。
 events.ts: 提供 reduceAgentToolActivities, eventToTranscriptMessage, getEventJobId。
 file-listing-sort.test.ts: file-listing-sort 的行为回归。

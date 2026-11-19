@@ -1,16 +1,17 @@
-/* [INPUT]: 下载列表和创建弹窗的基础布局。
- * [OUTPUT]: 窄屏、触控操作与统计换行规则。
- * [POS]: 下载模块的响应式适配。
+/* [INPUT]: 下载列表、复选框和创建弹窗的基础布局。
+ * [OUTPUT]: 窄屏选择模式、触控热区与统计换行规则。
+ * [POS]: 下载模块的响应式适配；桌面选择布局位于 list.css。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
 @media (max-width: 820px) {
 
   .download-task-row {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: var(--download-selection-width) minmax(0, 1fr);
     gap: 10px;
   }
 
   .download-task-actions {
+    grid-column: 2;
     width: auto;
     justify-content: flex-start;
   }
@@ -73,11 +74,15 @@
   }
 }
 
-@media (max-width: 560px), (pointer: coarse) {
+@media (max-width: 1040px), (pointer: coarse) {
+  .download-task-row { --download-selection-width: 44px; --download-actions-width: 188px; }
   .download-task-action { min-width: 44px; width: 44px; min-height: 44px; height: 44px; }
 }
 @media (max-width: 560px) {
   .download-task-row { padding: 10px 12px; gap: 6px; }
+  .download-task-row:not([data-selection-mode="true"]) { grid-template-columns: minmax(0, 1fr); }
+  .download-task-row:not([data-selection-mode="true"]) .download-task-select { display: none; }
+  .download-task-row:not([data-selection-mode="true"]) .download-task-actions { grid-column: 1; }
   .download-task-actions { flex-wrap: wrap; }
   .downloads-toolbar { padding: 8px 12px; gap: 8px; }
   .downloads-summary { flex-wrap: wrap; row-gap: 6px; }

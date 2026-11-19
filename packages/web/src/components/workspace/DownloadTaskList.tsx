@@ -1,7 +1,7 @@
 /**
- * [INPUT]: 依赖下载任务缓存、TanStack 可变行高窗口与任务行。
- * [OUTPUT]: 提供随滚动分页的下载列表及可见任务边界。
- * [POS]: 下载面板的滚动边界；保持阅读锚点并限制挂载行数。
+ * [INPUT]: 依赖下载缓存、面板选择状态与 TanStack 可变行高窗口。
+ * [OUTPUT]: 提供按任务 ID 多选的窗口列表及可见任务边界。
+ * [POS]: 下载面板的滚动边界；保留阅读锚点，选择独立于挂载行。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
 import { Button as UiButton } from "@cyberos/ui";
@@ -17,12 +17,13 @@ import type { DownloadAction, DownloadGap, DownloadViewport } from "./use-downlo
 
 interface Props {
   tasks: DownloadTask[]; gaps: DownloadGap[]; onLoadGap: (id: string) => void; locale: SupportedLocale; pendingAction: string | null;
+  selectedIds: ReadonlySet<string>; selectionMode: boolean; selectionBusy: boolean; onToggleSelection: (id: string) => void;
   hasMore: boolean; loadingMore: boolean; loadError: string | null;
   onLoadMore: () => void; onViewport: (window: DownloadViewport | null) => void;
   onAction: (task: DownloadTask, action: DownloadAction) => void;
   onDelete: (task: DownloadTask) => void; onOpenDirectory: (task: DownloadTask) => void;
 }
-export function DownloadTaskList({ tasks, gaps, onLoadGap, locale, pendingAction, hasMore, loadingMore, loadError, onLoadMore, onViewport, onAction, onDelete, onOpenDirectory }: Props) {
+export function DownloadTaskList({ tasks, gaps, onLoadGap, locale, pendingAction, selectedIds, selectionMode, selectionBusy, onToggleSelection, hasMore, loadingMore, loadError, onLoadMore, onViewport, onAction, onDelete, onOpenDirectory }: Props) {
   const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const entries = useMemo(() => {
@@ -106,7 +107,7 @@ export function DownloadTaskList({ tasks, gaps, onLoadGap, locale, pendingAction
         </div>;
         const task = entry.task;
         return <div key={item.key} role="listitem" data-index={item.index} ref={virtualizer.measureElement} className="downloads-virtual-row" style={{ transform: `translateY(${item.start}px)` }}>
-          <DownloadTaskRow task={task} locale={locale} pendingAction={pendingAction} onAction={(action) => onAction(task, action)} onDelete={() => onDelete(task)} onOpenDirectory={() => onOpenDirectory(task)} />
+          <DownloadTaskRow task={task} locale={locale} pendingAction={pendingAction} selected={selectedIds.has(task.id)} selectionMode={selectionMode} selectionBusy={selectionBusy} onToggleSelection={() => onToggleSelection(task.id)} onAction={(action) => onAction(task, action)} onDelete={() => onDelete(task)} onOpenDirectory={() => onOpenDirectory(task)} />
         </div>;
       })}
     </div>

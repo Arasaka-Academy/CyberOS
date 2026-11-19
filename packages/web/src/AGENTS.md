@@ -12,7 +12,7 @@ file-type-utils.ts: 公开 FileVisualKind, FileVisualInput, FileVisualDescriptor
 main.tsx: React 挂载入口。
 preview-utils.test.ts: preview-utils 的行为与契约验证。
 preview-utils.ts: 公开 StructuredPreviewKind, DelimitedPreviewDelimiter, TextPreviewDescriptor, HighlightedSource 等接口。
-styles.css: Web 样式组合入口。
+styles.css: Web 样式分层入口；下载多选等交互适配位于 app 层。
 vite-env.d.ts: vite-env.d 模块入口或运行脚本。
 components/: React 页面与界面组件。
 config/: 表单默认值和界面配置。
