@@ -1,7 +1,7 @@
 /**
- * [INPUT]: 依赖存储池安全解析、文件快照与 libvips。
- * [OUTPUT]: 提供有界图片清单和 TV 尺寸缓存预览。
- * [POS]: TV 素材只读服务；不建立照片库或修改原图。
+ * [INPUT]: 依赖存储池安全解析、文件描述符与 libvips。
+ * [OUTPUT]: 提供有界素材清单、图片预览和安全视频描述符。
+ * [POS]: TV 素材只读边界；不建立媒体会话或修改源文件。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
 import { createHash, randomUUID } from "node:crypto";
@@ -14,18 +14,19 @@ import { promisify } from "node:util";
 import type { TvScreensaverItems, TvScreensaverSource, TvSettingsRecord } from "@cyberos/shared";
 import { assertPathInsideStoragePool, resolveScopedExistingPath, type StoragePoolScope } from "./storage-scope.js";
 
-type DirectorySource = Extract<TvScreensaverSource, { kind: "directory" }>;
+type DirectorySource = Exclude<TvScreensaverSource, { kind: "builtin" }>;
 interface CatalogOptions {
   resolveScope(source: DirectorySource): Promise<StoragePoolScope>;
   cacheDirectory: string;
   thumbnail?: (source: string, destination: string) => Promise<void>;
 }
 interface Catalog { key: string; paths: Map<string, string>; expires: number; truncated: boolean }
-const MAX_IMAGES = 1_000;
+const MAX_ITEMS = 1_000;
 const MAX_ENTRIES = 10_000;
 const CACHE_MAX_BYTES = 128 * 1024 ** 2;
 const MAX_SOURCE_BYTES = 256 * 1024 ** 2;
 const EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".avif"]);
+const VIDEO_EXTENSIONS = new Map([[".mp4", "video/mp4"], [".webm", "video/webm"]]);
 
 export class TvScreensaverCatalog {
   private cached: Catalog | undefined;
@@ -55,11 +56,37 @@ export class TvScreensaverCatalog {
     if (offset > entries.length) throw new TvScreensaverError("Screensaver cursor is invalid", 400);
     const ids = entries.slice(offset, offset + 100);
     return {
-      items: ids.map(id => ({ id, url: `/api/tv/screensaver/image/${id}` })),
+      items: ids.map(id => {
+        const kind = source.kind === "video-directory" ? "video" : "image";
+        return { id, kind, mimeType: kind === "video" ? VIDEO_EXTENSIONS.get(path.extname(catalog.paths.get(id)!).toLowerCase())! : "image/jpeg", url: `/api/tv/screensaver/${kind}/${id}` };
+      }),
       nextCursor: offset + ids.length < entries.length ? `${sourceKey}:${offset + ids.length}` : null,
       sourceKey,
       fallbackReason: !entries.length ? "directory_empty" : catalog.truncated ? "catalog_truncated" : null
     };
+  }
+
+  async video(settings: TvSettingsRecord, id: string) {
+    const source = settings.screensaverSource;
+    const sourceKey = hash(JSON.stringify(source)).slice(0, 16);
+    const relative = this.cached?.key === sourceKey ? this.cached.paths.get(id) : undefined;
+    const mimeType = relative && VIDEO_EXTENSIONS.get(path.extname(relative).toLowerCase());
+    if (source.kind !== "video-directory" || !relative || !mimeType) throw new TvScreensaverError("Screensaver video is no longer available", 404);
+    try {
+      const scope = await this.options.resolveScope(source);
+      const safe = await resolveScopedExistingPath(scope, relative);
+      const metadata = await stat(safe.realPath);
+      const handle = await open(safe.realPath, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+      try {
+        const opened = await handle.stat();
+        if (!opened.isFile() || !Number.isSafeInteger(opened.size) || opened.size <= 0 || opened.dev !== metadata.dev || opened.ino !== metadata.ino || opened.size !== metadata.size || opened.mtimeMs !== metadata.mtimeMs || opened.ctimeMs !== metadata.ctimeMs) throw new Error("Video changed while opening");
+        if (process.platform === "linux") assertPathInsideStoragePool(scope, await realpath(`/proc/self/fd/${handle.fd}`));
+        const verified = await resolveScopedExistingPath(scope, relative);
+        const current = await stat(verified.realPath);
+        if (current.dev !== opened.dev || current.ino !== opened.ino) throw new Error("Video path changed");
+        return { handle, size: opened.size, mimeType };
+      } catch (error) { await handle.close(); throw error; }
+    } catch { throw new TvScreensaverError("Screensaver video is unavailable", 404); }
   }
 
   async image(settings: TvSettingsRecord, id: string): Promise<string> {
@@ -122,7 +149,7 @@ export class TvScreensaverCatalog {
     const queue = [{ relative: source.path, depth: 0 }];
     let visited = 0;
     const deadline = Date.now() + 5_000;
-    while (queue.length && visited < MAX_ENTRIES && paths.length < MAX_IMAGES && Date.now() < deadline) {
+    while (queue.length && visited < MAX_ENTRIES && paths.length < MAX_ITEMS && Date.now() < deadline) {
       const directory = queue.shift()!;
       let entries: Awaited<ReturnType<typeof opendir>>;
       try {
@@ -134,14 +161,14 @@ export class TvScreensaverCatalog {
       }
       for await (const entry of entries) {
         visited++;
-        if (visited > MAX_ENTRIES || paths.length >= MAX_IMAGES || Date.now() >= deadline) break;
+        if (visited > MAX_ENTRIES || paths.length >= MAX_ITEMS || Date.now() >= deadline) break;
         if (entry.name.startsWith(".") || entry.isSymbolicLink()) continue;
         const relative = path.posix.join(directory.relative, entry.name);
         if (entry.isDirectory() && directory.depth < 16) queue.push({ relative, depth: directory.depth + 1 });
-        else if (entry.isFile() && EXTENSIONS.has(path.extname(entry.name).toLowerCase())) paths.push(relative);
+        else if (entry.isFile() && (source.kind === "video-directory" ? VIDEO_EXTENSIONS.has(path.extname(entry.name).toLowerCase()) : EXTENSIONS.has(path.extname(entry.name).toLowerCase()))) paths.push(relative);
       }
     }
-    return { key, paths: new Map(paths.sort().map(relative => [hash(`${key}:${relative}`), relative])), expires: Date.now() + 60_000, truncated: queue.length > 0 || visited >= MAX_ENTRIES || paths.length >= MAX_IMAGES || Date.now() >= deadline };
+    return { key, paths: new Map(paths.sort().map(relative => [hash(`${key}:${relative}`), relative])), expires: Date.now() + 60_000, truncated: queue.length > 0 || visited >= MAX_ENTRIES || paths.length >= MAX_ITEMS || Date.now() >= deadline };
   }
 
   private async prune(keep: string): Promise<void> {

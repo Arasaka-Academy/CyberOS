@@ -1,12 +1,13 @@
 /*
  * [INPUT]: 依赖 TV 尺度与共享主题令牌。
- * [OUTPUT]: 提供屏保和远距音乐页面样式。
+ * [OUTPUT]: 提供图片视频屏保和远距音乐页面样式。
  * [POS]: TV 应用层；息屏时关闭屏保节点。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
 .tv-awake-shell { width: 100%; height: 100%; }
 .tv-screensaver { position: absolute; inset: 0; z-index: 200; background: var(--cyber-bg); overflow: hidden; pointer-events: none; }
-.tv-screensaver-image { display: block; width: 100%; height: 100%; object-fit: contain; }
+.tv-screensaver-image, .tv-screensaver-video { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; }
+.tv-screensaver .is-loading { visibility: hidden; }
 .tv-screensaver-builtin { position: relative; display: grid; place-items: center; width: 100%; height: 100%; }
 .tv-screensaver-geometry { position: absolute; width: 90%; height: 90%; stroke: var(--cyber-accent2); stroke-width: 1; opacity: .22; animation: tv-saver-drift 90s ease-in-out infinite alternate; }
 .tv-screensaver-builtin time { color: var(--cyber-ink); font: calc(96px * var(--tv-scale))/1 var(--cyberos-font-mono); animation: tv-saver-clock 120s ease-in-out infinite alternate; }

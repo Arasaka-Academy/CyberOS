@@ -1298,7 +1298,17 @@ ipc_fd=
 "#,
         );
         write_executable(&executable, &script);
-        let playback_config = config(directory.path()).for_music_session(false);
+        let initial = config(directory.path());
+        let connection = rusqlite::Connection::open(&initial.database_path).unwrap();
+        connection
+            .execute_batch("CREATE TABLE system_settings (key TEXT PRIMARY KEY, value_json TEXT);")
+            .unwrap();
+        connection.execute("INSERT INTO system_settings VALUES ('tv_settings', ?1)", [serde_json::json!({
+            "enabled":true,"videoOutput":"wayland","drmConnector":null,"audioDevice":"alsa/hdmi:CARD=selected,DEV=0","hardwareDecoding":"auto-safe","updatedAt":"2026-11-18"
+        }).to_string()]).unwrap();
+        let script = std::fs::read_to_string(&executable).unwrap().replace("ipc_fd=\n", "selected=0\nfor argument do\n  case \"$argument\" in --audio-device=alsa/hdmi:CARD=selected,DEV=0) selected=1 ;; esac\ndone\n[ \"$selected\" = 1 ] || exit 96\nipc_fd=\n");
+        write_executable(&executable, &script);
+        let playback_config = initial.for_music_session(false).unwrap();
         let handle = MpvHandle::start_with_executable(
             &playback_config,
             media(directory.path()),
@@ -1316,7 +1326,7 @@ ipc_fd=
     #[tokio::test]
     async fn pure_bluetooth_music_does_not_require_drm_or_local_sound_devices() {
         let directory = tempfile::tempdir().unwrap();
-        let mut playback_config = config(directory.path()).for_music_session(true);
+        let mut playback_config = config(directory.path()).for_music_session(true).unwrap();
         playback_config.audio_device =
             Some("alsa/bluealsa:DEV=AA:BB:CC:DD:EE:FF,PROFILE=a2dp".to_owned());
         let result = probe_active_outputs(&playback_config).await;

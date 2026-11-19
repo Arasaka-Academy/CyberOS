@@ -1,13 +1,18 @@
 #!/bin/sh
-# [INPUT]: HDMI 连接、Weston 主版本与匹配原生模块。
-# [OUTPUT]: 非 root kiosk 合成器与运行状态。
-# [POS]: systemd 启动边界；缺少匹配模块时保留基础 TV。
+# [INPUT]: HDMI 连接、Weston 主版本、原生模块与待确认 EDID。
+# [OUTPUT]: 非 root kiosk 合成器、确认 EDID 与运行状态。
+# [POS]: systemd 启动边界；新 socket 就绪后确认输出身份。
 # [PROTOCOL]: Update this header on change, then check AGENTS.md
 set -eu
 
-runtime_dir=/run/cyberos-tv
-drm_root=/sys/class/drm
-status_writer=/usr/lib/cyberos/scripts/cyberos-tv-write-status
+test_root=${CYBEROS_TEST_ROOT:-}
+case "$test_root" in
+  ""|/*) ;;
+  *) printf 'cyberos-tv-weston: CYBEROS_TEST_ROOT must be absolute\n' >&2; exit 2 ;;
+esac
+runtime_dir="$test_root/run/cyberos-tv"
+drm_root="$test_root/sys/class/drm"
+status_writer="$test_root/usr/lib/cyberos/scripts/cyberos-tv-write-status"
 socket_path="$runtime_dir/wayland-0"
 weston_pid=
 
@@ -47,13 +52,15 @@ done
 
 "$status_writer" weston degraded "Weston is starting"
 weston_major=$(weston --version | sed -n 's/^weston \([0-9][0-9]*\)\..*/\1/p')
-module_path="/usr/lib/cyberos/tv-display/weston-$weston_major/cyberos-tv-display.so"
+module_path="$test_root/usr/lib/cyberos/tv-display/weston-$weston_major/cyberos-tv-display.so"
 if [ ! -f "$module_path" ]; then
   "$status_writer" weston degraded "Native display module unavailable for Weston $weston_major"
   module_argument=
 else
   module_argument="--modules=$module_path"
 fi
+# 专用会话目录只属于此服务；独立重启也不能复用旧 socket。
+rm -f "$socket_path" "$socket_path.lock"
 weston ${module_argument:+"$module_argument"} --backend=drm-backend.so --shell=kiosk-shell.so --socket=wayland-0 \
   --config="$runtime_dir/weston.ini" --log="$runtime_dir/weston.log" &
 weston_pid=$!
@@ -62,6 +69,10 @@ attempt=0
 while [ "$attempt" -lt 150 ]; do
   kill -0 "$weston_pid" 2>/dev/null || break
   if [ -S "$socket_path" ]; then
+    kill -0 "$weston_pid" 2>/dev/null || break
+    if [ -f "$runtime_dir/output-identity.next.json" ]; then
+      mv -f "$runtime_dir/output-identity.next.json" "$runtime_dir/output-identity.json"
+    fi
     ready_detail=wayland-0
     if [ -s "$runtime_dir/forced-connectors" ]; then
       forced_status=$(sed -n '1p' "$runtime_dir/forced-connectors")

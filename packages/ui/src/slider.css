@@ -1,0 +1,12 @@
+/**
+ * [INPUT]: 依赖 CyberUI 滑块结构与共享主题令牌。
+ * [OUTPUT]: 提供 44px 触控区域与禁用反馈。
+ * [POS]: 上游组件外的 CyberOS 可访问性适配。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
+@layer app {
+  .ui-slider { min-width: 0; }
+  .ui-slider > div:last-child { min-height: 44px; }
+  .ui-slider[data-disabled] { opacity: .5; }
+  .ui-slider output { white-space: nowrap; }
+}

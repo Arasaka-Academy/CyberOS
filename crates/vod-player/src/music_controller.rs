@@ -291,6 +291,7 @@ impl Controller {
                     self.status.audio_device_id = self.status.music.audio_device_id.clone();
                     self.status.effective_audio_device_id = None;
                     self.resolved_audio_device = None;
+                    self.resolved_tv_config = None;
                     if self.desired.is_some()
                         && let Err(error) = self.attempt_start().await
                     {

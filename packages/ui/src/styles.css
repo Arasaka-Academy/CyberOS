@@ -1,3 +1,8 @@
+/* [INPUT]: 依赖固定 CyberUI 主题与 CyberOS 控件适配。
+ * [OUTPUT]: 组合共享组件样式与应用主题映射。
+ * [POS]: Web 与 TV 共用的 UI 样式入口。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 @layer theme, base, legacy, components, app, utilities;
 @import './vendor/styles.css';
 @import './vendor/button.module.css';
@@ -8,6 +13,7 @@
 @import './cards.css';
 @import './feedback.css';
 @import './dialog.css';
+@import './slider.css';
 
 @layer app {
   .cyberos-ui-root, [data-cyberui-portal] { --cyber-font-body: var(--cyberos-font-body); --cyber-font-display: var(--cyberos-font-ui); --cyber-font-mono: var(--cyberos-font-mono); }

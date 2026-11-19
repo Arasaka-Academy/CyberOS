@@ -20,6 +20,7 @@ TvMusicPlayer.tsx: 全屏音乐、歌词、队列与既有播放命令。
 TvMusicPlayer.test.ts: 音乐页面内容和播放状态渲染验证。
 TvPlaybackDock.tsx: 播放恢复入口与视频控制弹窗。
 TvScreensaver.tsx: 屏保内容与 DOM 提交握手；计时回退解除遮挡下的帧等待。
+TvScreensaverMedia.tsx: 图片和静音视频轮播、故障跳过与卸载资源释放。
 TvScreensaver.test.ts: 待机内容、目录回退与息屏卸载验证。
 api.ts: TV 媒体、显示状态、屏保素材与渲染接口。
 library-model.ts: 媒体视图、过滤与恢复位置计算。

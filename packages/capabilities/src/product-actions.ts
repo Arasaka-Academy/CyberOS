@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖产品 HTTP 动作与能力清单的映射契约。
  * [OUTPUT]: 提供补充映射和第一方专用接口的排除理由。
- * [POS]: 产品动作覆盖边界；凭据与屏保握手保留第一方。
+ * [POS]: 产品动作覆盖边界；凭据、屏保与 TV 输出保留第一方。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
 /** Product actions omitted from an entry's original route list, with their implemented capability. */
@@ -73,7 +73,11 @@ export const PRODUCT_ACTION_EXCLUSIONS: readonly { reason: string; actions: read
   { reason: "Browser-local playback sessions and TV presentation are independent from approved NAS playback.", actions: [
     "GET /api/media/playback-sessions/:id", "GET /api/media/playback-sessions/:id/assets/:name", "POST /api/media/playback-sessions",
     "POST /api/media/playback-sessions/:id/progress", "DELETE /api/media/playback-sessions/:id", "GET /api/tv/status", "POST /api/tv/stop-video",
-    "GET /api/tv/events", "GET /api/tv/screensaver/items", "GET /api/tv/screensaver/image/:id", "POST /api/tv/renderer"
+    "GET /api/tv/events", "GET /api/tv/screensaver/items", "GET /api/tv/screensaver/image/:id",
+    "GET /api/tv/screensaver/video/:id", "HEAD /api/tv/screensaver/video/:id", "POST /api/tv/renderer"
+  ] },
+  { reason: "TV 物理输出候选与立即重启由第一方设置界面确认；设置能力读取和保存配置，不提供宿主输出重配动作。", actions: [
+    "GET /api/settings/tv/outputs", "POST /api/settings/tv/apply-output"
   ] },
   { reason: "Presentation-only filter choices, map clustering and notification badges; domain queries expose the underlying records.", actions: [
     "GET /api/media/filter-options", "GET /api/music/filter-options", "POST /api/photos/map/query",

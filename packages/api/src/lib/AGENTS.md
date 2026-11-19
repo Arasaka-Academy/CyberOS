@@ -105,9 +105,14 @@ tmdb-client.test.ts: 验证 TMDB 查询与候选结果转换。
 tmdb-client.ts: 查询 TMDB 媒体候选并约束外部响应。
 tv-display.test.ts: 验证显示策略同步、渲染握手与失联降级。
 tv-display.ts: 向 Weston 模块续租显示策略并发布原生状态。
-tv-mode.ts: 通过 hostd 启用或停用整机 TV 模式。
-tv-screensaver.test.ts: 验证素材路径、扫描回退和预览缓存边界。
-tv-screensaver.ts: 枚举受控目录素材并生成有界屏保图片预览。
+tv-mode.ts: 通过 hostd 启停 TV 模式或独立重配 HDMI 输出。
+tv-output-monitor.ts: 比较稳定 EDID 与启动快照，空闲时重新匹配已应用输出。
+tv-output-monitor.test.ts: 验证热插屏恢复、播放会话保护、退避与关闭。
+tv-outputs.ts: 只读枚举 HDMI 和 ALSA 候选，并比较已应用输出。
+tv-outputs.test.ts: 验证真实输出枚举、独立失败与待应用状态。
+tv-settings-lock.ts: 按数据库串行执行 TV 保存与输出应用。
+tv-screensaver.test.ts: 验证素材路径、视频描述符和图片缓存边界。
+tv-screensaver.ts: 枚举受控图片或视频目录，提供图片预览和安全视频描述符。
 video-cache.test.ts: 验证视频预览转码、缓存复用与容量回收。
 video-cache.ts: 为浏览器视频预览提供有界转码与缓存。
 vm-service.test.ts: 验证虚拟机视图、QEMU 参数与业务操作。

@@ -83,4 +83,43 @@ describe("TV screensaver materials", () => {
     await rm(path.join(pool, "Pictures", "one.jpg"));
     await expect(catalog.image(settings, items[0]!.id)).rejects.toThrow();
   });
+  it("lists only MP4/WebM videos in path order and isolates image source tokens", async () => {
+    const { root, pool, scope, settings } = await fixture();
+    await writeFile(path.join(pool, "Pictures", "z.mp4"), "video-z");
+    await writeFile(path.join(pool, "Pictures", "nested", "a.webm"), "video-a");
+    await writeFile(path.join(pool, "Pictures", "image.jpg"), "image");
+    await writeFile(path.join(pool, "Pictures", "ignored.mkv"), "video");
+    await symlink(path.join(pool, "Pictures", "z.mp4"), path.join(pool, "Pictures", "link.mp4"));
+    const catalog = new TvScreensaverCatalog({ resolveScope: async () => scope, cacheDirectory: path.join(root, "cache") });
+    const images = await catalog.list(settings);
+    const videos = { ...settings, screensaverSource: { ...settings.screensaverSource, kind: "video-directory" as const } };
+    const listing = await catalog.list(videos);
+    expect(listing.items.map(item => [item.kind, item.mimeType])).toEqual([["video", "video/webm"], ["video", "video/mp4"]]);
+    expect(listing.sourceKey).not.toBe(images.sourceKey);
+    for (const [index, expected] of ["video-a", "video-z"].entries()) {
+      const opened = await catalog.video(videos, listing.items[index]!.id);
+      try { expect(await opened.handle.readFile("utf8")).toBe(expected); }
+      finally { await opened.handle.close(); }
+    }
+    await expect(catalog.image(videos, listing.items[0]!.id)).rejects.toThrow();
+    await expect(catalog.video(videos, images.items[0]!.id)).rejects.toThrow();
+  });
+  it("revalidates video files, offline pools and source changes before each open", async () => {
+    const { root, pool, scope, settings } = await fixture();
+    const original = path.join(pool, "Pictures", "one.mp4");
+    const outside = path.join(root, "outside.mp4");
+    await writeFile(original, "authorized"); await writeFile(outside, "outside");
+    let online = true;
+    const catalog = new TvScreensaverCatalog({ resolveScope: async () => { if (!online) throw new Error("offline"); return scope; }, cacheDirectory: path.join(root, "cache") });
+    const videos = { ...settings, screensaverSource: { ...settings.screensaverSource, kind: "video-directory" as const } };
+    const { items } = await catalog.list(videos);
+    const opened = await catalog.video(videos, items[0]!.id);
+    await rm(original); await symlink(outside, original);
+    try { expect(await opened.handle.readFile("utf8")).toBe("authorized"); }
+    finally { await opened.handle.close(); }
+    await expect(catalog.video(videos, items[0]!.id)).rejects.toThrow();
+    online = false;
+    await expect(catalog.video(videos, items[0]!.id)).rejects.toThrow();
+    await expect(catalog.video({ ...videos, screensaverSource: { ...videos.screensaverSource, path: "Other" } }, items[0]!.id)).rejects.toThrow();
+  });
 });

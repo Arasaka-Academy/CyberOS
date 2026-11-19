@@ -1,7 +1,13 @@
+# [INPUT]: 已就绪 API、TV 标记与 DRM 输出。
+# [OUTPUT]: 启动前 Weston 配置及停止后的 HPD 恢复。
+# [POS]: TV target 的先决服务；先读已保存输出再启动显示。
+# [PROTOCOL]: Update this header on change, then check AGENTS.md
 [Unit]
 Description=Prepare the CyberOS TV runtime
 ConditionPathExists=/cyberos/state/tv/enabled
 PartOf=cyberos-tv.target
+Wants=cyberos-api.service
+After=cyberos-api.service
 Before=cyberos-tv-weston.service cyberos-tv-chromium.service cyberos-tv-cec.service cyberos-tv-gamepad.service
 
 [Service]

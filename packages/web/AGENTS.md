@@ -12,6 +12,7 @@ package.json: Web 构建命令与工作区依赖。
 tsconfig.json: Web 严格类型检查范围。
 vite.config.ts: 主 Web 与 TV 双入口构建及开发 API 代理。
 test-tv-idle-browser.mjs: Chromium 验证 TV 音乐、无帧回调握手和设置草稿。
+test-tv-video-screensaver-browser.mjs: Chromium 验证真实静音视频轮播、故障回退和息屏释放。
 src/: Web 页面、领域组件与 TV 独立外壳。
 tv/: TV HTML 入口。
 public/: 图标与静态资源。

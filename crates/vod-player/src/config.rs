@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 读取环境变量和 SQLite 中的电视与蓝牙设置。
- * [OUTPUT]: 为音乐与视频构建受限播放配置。
+ * [OUTPUT]: 为音乐与视频重读本地音频配置，保留蓝牙优先。
  * [POS]: 配置读取边界；电视新增字段不破坏旧记录。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
@@ -53,6 +53,10 @@ struct StoredTvSettings {
     screensaver_after_minutes: Option<u16>,
     #[serde(default = "default_screen_off_minutes")]
     screen_off_after_minutes: Option<u16>,
+    #[serde(default)]
+    screensaver_enabled: Option<bool>,
+    #[serde(default)]
+    screen_off_enabled: Option<bool>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -61,6 +65,12 @@ enum StoredScreensaverSource {
     #[default]
     Builtin,
     Directory {
+        #[serde(rename = "storagePoolId")]
+        storage_pool_id: String,
+        path: String,
+    },
+    #[serde(rename = "video-directory")]
+    VideoDirectory {
         #[serde(rename = "storagePoolId")]
         storage_pool_id: String,
         path: String,
@@ -92,6 +102,8 @@ impl Default for StoredTvSettings {
             screensaver_source: StoredScreensaverSource::default(),
             screensaver_after_minutes: default_screensaver_minutes(),
             screen_off_after_minutes: default_screen_off_minutes(),
+            screensaver_enabled: None,
+            screen_off_enabled: None,
         }
     }
 }
@@ -206,17 +218,27 @@ impl VodPlayerConfig {
         Ok(config)
     }
 
-    pub fn for_music_session(&self, bluetooth: bool) -> Self {
+    pub fn for_music_session(&self, bluetooth: bool) -> Result<Self, VodError> {
         let mut config = self.clone();
         config.video_output = "null".to_owned();
-        config.audio_device = None;
+        config.audio_device = if bluetooth {
+            None
+        } else {
+            let settings = load_tv_settings(&self.database_path)?;
+            validate_settings(&settings)?;
+            if settings.enabled {
+                optional_text(settings.audio_device)
+            } else {
+                None
+            }
+        };
         config.drm_connector = None;
         config.hwdec = "no".to_owned();
         if bluetooth {
             // BlueALSA is a userspace ALSA plugin; /dev/snd need not exist.
             config.audio_output = "alsa".to_owned();
         }
-        config
+        Ok(config)
     }
 
     pub fn music_audio_device_id(
@@ -291,6 +313,10 @@ fn validate_settings(settings: &StoredTvSettings) -> Result<(), VodError> {
         StoredScreensaverSource::Directory {
             storage_pool_id,
             path,
+        }
+        | StoredScreensaverSource::VideoDirectory {
+            storage_pool_id,
+            path,
         } => {
             !storage_pool_id.is_empty()
                 && !path.starts_with('/')
@@ -302,11 +328,13 @@ fn validate_settings(settings: &StoredTvSettings) -> Result<(), VodError> {
         || !source_valid
         || settings
             .screensaver_after_minutes
-            .is_some_and(|n| ![1, 2, 5, 10, 15, 30, 60].contains(&n))
+            .is_some_and(|n| !(1..=60).contains(&n))
         || settings
             .screen_off_after_minutes
-            .is_some_and(|n| ![5, 10, 15, 30, 60, 120].contains(&n))
-        || matches!((settings.screensaver_after_minutes, settings.screen_off_after_minutes), (Some(saver), Some(off)) if off <= saver)
+            .is_some_and(|n| !(1..=120).contains(&n))
+        || settings.screensaver_enabled != Some(false)
+            && settings.screen_off_enabled != Some(false)
+            && matches!((settings.screensaver_after_minutes, settings.screen_off_after_minutes), (Some(saver), Some(off)) if off <= saver)
         || !matches!(settings.video_output.as_str(), "drm" | "wayland")
         || !matches!(
             settings.hardware_decoding.as_str(),
@@ -336,6 +364,22 @@ pub fn is_absolute(path: &Path) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn accepts_video_screensaver_switches_and_minute_values() {
+        let value = serde_json::json!({
+            "enabled":true,"videoOutput":"wayland","drmConnector":null,"audioDevice":null,
+            "hardwareDecoding":"auto-safe","updatedAt":"2026-11-18",
+            "screensaverSource":{"kind":"video-directory","storagePoolId":"pool-1","path":"Wallpapers"},
+            "screensaverEnabled":false,"screenOffEnabled":true,
+            "screensaverAfterMinutes":57,"screenOffAfterMinutes":7
+        });
+        let settings: StoredTvSettings = serde_json::from_value(value.clone()).unwrap();
+        assert!(validate_settings(&settings).is_ok());
+        let mut enabled = value;
+        enabled["screensaverEnabled"] = serde_json::json!(true);
+        assert!(validate_settings(&serde_json::from_value(enabled).unwrap()).is_err());
+    }
 
     #[test]
     fn accepts_idle_settings_and_defaults_old_records_without_relaxing_strictness() {

@@ -144,7 +144,7 @@ export type HostdStorageOperationResult = { "action": "create_pool", name: strin
 
 export type HostdTailscaleRequest = { "action": "status", } | { "action": "login", input: TailscaleLoginInput, } | { "action": "service", input: TailscaleServiceInput, } | { "action": "action", input: TailscaleActionInput, } | { "action": "settings", input: TailscaleSettingsInput, } | { "action": "confirm", id: string, } | { "action": "rollback", id: string, };
 
-export type HostdTvRequest = { enabled: boolean, confirmed: boolean, };
+export type HostdTvRequest = { enabled: boolean, confirmed: boolean, reconfigure?: boolean, drmConnector?: string, };
 
 export type HostdTvResult = { enabled: boolean, applied: true, };
 

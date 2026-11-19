@@ -5,8 +5,9 @@
 AGENTS.md: 播放器源码导航与依赖方向。
 lib.rs: 组合原生播放器模块并导出服务边界。
 main.rs: 装配配置、日志、信号和服务入口。
-config.rs: 只读解析 TV、蓝牙与运行配置；兼容旧空闲字段。
-controller.rs: 串行拥有 mpv 会话；处理命令和即时事件；续租显示抑制。
+config.rs: 每次新播放重读 TV 输出；蓝牙优先；兼容屏保开关和视频目录。
+controller.rs: 串行拥有 mpv 会话；共享锁保护命令和恢复；续租显示抑制。
+output_gate.rs: 只读验证固定运行锁；阻止输出重配期间新建播放。
 music_controller.rs: 实现控制器的音乐队列、切曲和播放历史。
 display.rs: 以请求编号关联原生唤醒确认；续租或释放播放抑制。
 audio_route.rs: 将实际 PCM 描述符和进程子设备身份转为路由证据。

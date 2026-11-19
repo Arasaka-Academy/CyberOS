@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖公共契约与同源 HTTP 接口。
- * [OUTPUT]: 提供 Web 数据类型、设置保存与第一方凭据提交。
+ * [OUTPUT]: 提供 Web 类型、设置、TV 输出应用与凭据提交。
  * [POS]: Web 请求边界；秘密输入使用独立接口。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
@@ -1472,6 +1472,14 @@ export async function validateBackupRepository(): Promise<BackupSettings> {
 export async function getTvSettings(): Promise<TvSettings> {
   return fetchJson<{ settings: TvSettings }>("/api/settings/tv")
     .then((body) => body.settings);
+}
+
+export function getTvOutputOptions(): Promise<import("@cyberos/shared").TvOutputOptions> {
+  return fetchJson("/api/settings/tv/outputs");
+}
+
+export function applyTvOutput(): Promise<{ applied: true; drmConnector: string | null }> {
+  return fetchJson("/api/settings/tv/apply-output", jsonRequest("POST", { confirmed: true }));
 }
 
 export async function updateTvSettings(

@@ -1,7 +1,7 @@
 #!/bin/sh
-# [INPUT]: DRM HDMI 状态与 cyberos 服务身份。
-# [OUTPUT]: Weston 配置与私有运行目录，清除旧显示 socket。
-# [POS]: TV 启动前准备；原生模块独立执行闲置策略。
+# [INPUT]: DRM HDMI 状态、已保存输出与 cyberos 服务身份。
+# [OUTPUT]: HDMI 的 Weston 配置、已应用选择与待确认 EDID 快照。
+# [POS]: TV 启动前采样屏幕；Weston 就绪后确认输出身份。
 # [PROTOCOL]: Update this header on change, then check AGENTS.md
 set -eu
 
@@ -11,7 +11,6 @@ case "$test_root" in
   /*) runtime_dir="$test_root/run/cyberos-tv"; drm_root="$test_root/sys/class/drm" ;;
   *) printf 'cyberos-tv-prepare: CYBEROS_TEST_ROOT must be absolute\n' >&2; exit 2 ;;
 esac
-preferred_connector=HDMI-A-1
 forced_connectors="$runtime_dir/forced-connectors"
 
 release_forced_connectors() {
@@ -33,14 +32,67 @@ case "${1:-start}" in
   *) printf 'cyberos-tv-prepare: usage: cyberos-tv-prepare [start|stop]\n' >&2; exit 2 ;;
 esac
 
+preferred_connector=HDMI-A-1
+selector_file="$test_root/run/cyberos/tv-connector"
+selected_connector=auto
+if [ -f "$selector_file" ]; then
+  selected_connector=$(cat "$selector_file")
+else
+  read_saved_connector() {
+    curl --fail --silent --show-error --max-time 2 http://127.0.0.1:3010/api/settings/tv | node -e '
+    let input=""; process.stdin.setEncoding("utf8"); process.stdin.on("data",chunk=>input+=chunk);
+    process.stdin.on("end",()=>{const value=JSON.parse(input).settings?.drmConnector; if(value!==null && (typeof value!=="string" || !/^HDMI-A-[1-9][0-9]*$/.test(value))) process.exit(1); console.log(value??"auto");});
+    ' 2>/dev/null
+  }
+  if [ -n "$test_root" ]; then read_attempts=1; else read_attempts=10; fi
+  while ! selected_connector=$(read_saved_connector); do
+    read_attempts=$((read_attempts - 1))
+    [ "$read_attempts" -gt 0 ] || { printf 'cyberos-tv-prepare: TV settings are unavailable\n' >&2; exit 1; }
+    sleep 1
+  done
+fi
+case "$selected_connector" in
+  auto) ;;
+  HDMI-A-*) suffix=${selected_connector#HDMI-A-}; case "$suffix" in ''|0*|*[!0-9]*) exit 2 ;; esac; preferred_connector=$selected_connector ;;
+  *) printf 'cyberos-tv-prepare: invalid HDMI selector\n' >&2; exit 2 ;;
+esac
+
 install -d -m 0700 -o cyberos -g cyberos "$runtime_dir" "$runtime_dir/status"
 rm -f "$runtime_dir/display.sock" "$runtime_dir/wayland-0" "$runtime_dir/wayland-0.lock" "$runtime_dir/status/weston.json" \
   "$runtime_dir/status/chromium.json" "$runtime_dir/status/cec.json" \
   "$runtime_dir/status/gamepad.json" "$runtime_dir/weston.log" "$forced_connectors"
 
+# 先采样 EDID，再读取输出配置，避免新屏幕匹配到旧模式。
+identity_tmp=$(mktemp "$runtime_dir/.output-identity.XXXXXX")
+trap 'rm -f "$identity_tmp"' EXIT HUP INT TERM
+python3 - "$drm_root" "$selected_connector" "$identity_tmp" <<'PY'
+import hashlib, json, pathlib, re, sys
+root, selected, target = sys.argv[1:]
+heads = {}
+for directory in sorted(pathlib.Path(root).glob('card*-HDMI-A-*')):
+    if not re.fullmatch(r'card\d+-HDMI-A-[1-9]\d*', directory.name):
+        continue
+    connector = re.sub(r'^card\d+-', '', directory.name)
+    if selected != 'auto' and connector != selected:
+        continue
+    try:
+        edid = (directory / 'edid').read_bytes()
+    except OSError:
+        edid = b''
+    heads[directory.name] = hashlib.sha256(edid).hexdigest() if edid else None
+pathlib.Path(target).write_text(json.dumps({'connector': selected, 'heads': heads}) + '\n')
+PY
+chmod 0644 "$identity_tmp"
+chown cyberos:cyberos "$identity_tmp"
+mv -f "$identity_tmp" "$runtime_dir/output-identity.next.json"
+trap - EXIT HUP INT TERM
+
 hdmi_connected=0
 for connector_status in "$drm_root"/card*-HDMI-A-*/status; do
   [ -f "$connector_status" ] || continue
+  if [ "$selected_connector" != auto ]; then
+    case "$connector_status" in "$drm_root"/card*-"$selected_connector"/status) ;; *) continue ;; esac
+  fi
   if [ "$(cat "$connector_status")" = connected ]; then
     hdmi_connected=1
     break
@@ -75,6 +127,9 @@ EOF
 
 for connector_status in "$drm_root"/card*-HDMI-A-*/status; do
   [ -f "$connector_status" ] || continue
+  if [ "$selected_connector" != auto ]; then
+    case "$connector_status" in "$drm_root"/card*-"$selected_connector"/status) ;; *) continue ;; esac
+  fi
   connector_forced=0
   if [ -f "$forced_connectors" ] && grep -Fqx "$connector_status" "$forced_connectors"; then
     connector_forced=1
@@ -99,6 +154,8 @@ chmod 0644 "$config_tmp"
 chown cyberos:cyberos "$config_tmp"
 mv -f "$config_tmp" "$runtime_dir/weston.ini"
 trap - EXIT HUP INT TERM
+printf '%s\n' "$selected_connector" > "$runtime_dir/applied-connector"
+chmod 0644 "$runtime_dir/applied-connector"
 
 # 专用 TV 合成器只启用 HDMI，避免休眠影响其他连接器。
 for connector_status in "$drm_root"/card*-*/status; do
@@ -106,7 +163,7 @@ for connector_status in "$drm_root"/card*-*/status; do
   connector_dir=${connector_status%/status}
   connector=${connector_dir##*/}
   connector=${connector#*-}
-  case "$connector" in HDMI-A-*) continue ;; esac
+  case "$connector" in HDMI-A-*) [ "$selected_connector" = auto ] || [ "$connector" = "$selected_connector" ] && continue ;; esac
   cat >> "$runtime_dir/weston.ini" <<EOF
 
 [output]

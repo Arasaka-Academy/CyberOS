@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖 API 运行时和各领域 HTTP 注册器。
+ * [OUTPUT]: 注册系统、存储、媒体和 TV 输出接口。
+ * [POS]: API 组合入口到领域路由的依赖分发层。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import type { FastifyInstance } from "fastify";
 import type { ApiRouteContext } from "../context.js";
 import { registerApprovalRoutes } from "./approvals.js";
@@ -31,6 +37,7 @@ import { registerMediaRoutes } from "./media.js";
 import { registerMediaStreamRoutes } from "./media-stream.js";
 import { registerPlaybackRoutes } from "./playback.js";
 import { registerTvRoutes } from "./tv.js";
+import { registerTvOutputRoutes } from "./tv-outputs.js";
 import { registerAgentResourceRoutes } from "./agent-resources.js";
 import { registerAudioRoutes } from "./audio.js";
 import { registerNvrRoutes } from "./nvr.js";
@@ -68,6 +75,7 @@ export function registerApiRoutes(server: FastifyInstance, context: ApiRouteCont
   registerMediaStreamRoutes(server, context);
   registerMusicRoutes(server, context);
   registerTvRoutes(server, context);
+  registerTvOutputRoutes(server, context);
   registerDownloadRoutes(server, context);
   registerPhotoRoutes(server, context);
   registerMonitoringRoutes(server, context);

@@ -1,3 +1,7 @@
+# [INPUT]: root 宿主命令与受限系统目录。
+# [OUTPUT]: hostd 服务与 TV 控制状态的精确写入边界。
+# [POS]: systemd 特权宿主层；不授予其他服务 root 身份。
+# [PROTOCOL]: Update this header on change, then check AGENTS.md
 [Unit]
 Description=CyberOS privileged host integration daemon
 Documentation=file:///usr/share/doc/cyberos/README.md
@@ -22,7 +26,7 @@ TimeoutStopSec=180
 ProtectSystem=strict
 ProtectHome=read-only
 # Dynamic share accounts require useradd to atomically replace passwd/shadow files.
-ReadWritePaths=/etc /run/cyberos /run/mdadm /cyberos/state/hostd /cyberos/state/shares /cyberos/data
+ReadWritePaths=/etc /run/cyberos /run/mdadm /cyberos/state/hostd /cyberos/state/shares /cyberos/state/tv /cyberos/data
 # smbpasswd needs Samba's lock, state, cache, and log directories to initialize its databases.
 ReadWritePaths=-/run/samba -/var/lib/samba -/var/cache/samba -/var/log/samba
 ReadWritePaths=-/cyberos/state/hostd/docker-daemon /cyberos/state/hostd/network-manager /cyberos/state/hostd/bluetooth

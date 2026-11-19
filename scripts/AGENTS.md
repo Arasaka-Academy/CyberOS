@@ -28,6 +28,7 @@ settings-browser-fixtures.mjs: 公开 nvrSettingsFixture, populatedSettings。
 settings-test-workbook.mjs: 公开 settingsTestWorkbook。
 sqlite-security.test.mjs: sqlite-security 的行为与契约验证。
 sync-cyberui-date-picker.mjs: sync-cyberui-date-picker 模块入口或运行脚本。
+sync-cyberui-slider.mjs: 从固定上游提交同步滑块并校验来源哈希。
 test-card-surfaces.mjs: test-card-surfaces 的行为与契约验证。
 test-chat-session-switch.mjs: test-chat-session-switch 的行为与契约验证。
 test-download-settings.mjs: test-download-settings 的行为与契约验证。

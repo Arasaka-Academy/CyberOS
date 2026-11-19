@@ -19,3 +19,11 @@ node scripts/sync-cyberui-date-picker.mjs --source /path/to/CyberUI
 node scripts/sync-cyberui-date-picker.mjs --source /path/to/CyberUI --check
 node scripts/sync-cyberui-date-picker.mjs --check
 ```
+
+The shared Slider uses CyberUI v0.3.0 at the same fixed base commit as DatePicker. `CYBERUI-SLIDER.json` records source and snapshot hashes. The adapter preserves upstream React Aria behavior and adds a shared 44px touch target outside vendor/. CSS Module class lookups use `cx` for strict optional types.
+
+```sh
+node scripts/sync-cyberui-slider.mjs --source /path/to/CyberUI
+node scripts/sync-cyberui-slider.mjs --source /path/to/CyberUI --check
+node scripts/sync-cyberui-slider.mjs --check
+```

@@ -1,7 +1,7 @@
 /**
- * [INPUT]: 依赖 Fastify、系统运行服务与能力执行队列。
+ * [INPUT]: 依赖 Fastify、原生音频、TV 输出监测与能力队列。
  * [OUTPUT]: 提供 HTTP/MCP 服务及生命周期清理。
- * [POS]: API 组合入口；启动恢复后消费已授权能力运行。
+ * [POS]: API 组合入口；共享音频运行时并恢复已授权能力。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
 import cors from "@fastify/cors";
@@ -28,7 +28,7 @@ import {
 } from "@cyberos/db";
 import { MonitoringReader } from "@cyberos/monitoring";
 import type { ApiRouteContext, ServerDependencies } from "./context.js";
-import { createVodPlayerRuntime, type MonitoringQueryRequest } from "@cyberos/shared";
+import { createPlaybackRuntime, createVodPlayerRuntime, type MonitoringQueryRequest } from "@cyberos/shared";
 import { AudioCoordinator } from "./lib/audio-coordinator.js";
 import { VoiceMediaStore } from "./lib/voice-media.js";
 import { UnixAudioRuntime, audioSocketPath } from "./lib/audio-runtime.js";
@@ -63,6 +63,7 @@ import {
 } from "./lib/mcp-resources.js";
 import { reconcileAgentMcp } from "./lib/agent-mcp-settings.js";
 import { TvDisplayClient } from "./lib/tv-display.js";
+import { TvOutputMonitor } from "./lib/tv-output-monitor.js";
 
 export type { ServerDependencies } from "./context.js";
 
@@ -140,15 +141,25 @@ export async function buildServer({ buildInfo, config, db, monitoring: monitorin
     ...(system ? { system } : {})
   });
   const capabilityRuntime = { db, config, adapters: capabilityAdapters };
+  const nativeAudio = audioRuntime ?? new UnixAudioRuntime(audioSocketPath(config.paths.runDir));
   const audio = audioDependency ?? new AudioCoordinator(db,
-    audioRuntime ?? new UnixAudioRuntime(audioSocketPath(config.paths.runDir)),
+    nativeAudio,
     new CyberAudioClient(), new MediaAudioFocus(vodPlayer ?? createVodPlayerRuntime({ ...config.vodPlayer, enabled: true })),
     new VoiceMediaStore(config.paths.stateDir, db));
   const displayClient = tvDisplayDependency ? null : new TvDisplayClient(config.environment === "production" ? "/run/cyberos-tv/display.sock" : path.join(config.paths.tvStateDir, "display.sock"));
   const tvDisplay = tvDisplayDependency ?? displayClient!;
+  const reconfigureOutput = tvMode?.reconfigure?.bind(tvMode);
+  const outputMonitor = config.environment === "production" && reconfigureOutput ? new TvOutputMonitor({
+    db,
+    loadSettings: () => getTvSettings(db) ?? defaultTvSettings(),
+    playback: createPlaybackRuntime(config.vodPlayer),
+    tvMode: { reconfigure: reconfigureOutput },
+    log: server.log
+  }) : undefined;
   const routeContext: ApiRouteContext = {
     tvDisplay,
     audio,
+    audioRuntime: nativeAudio,
     ...(buildInfo ? { buildInfo } : {}),
     config,
     db,
@@ -284,6 +295,7 @@ export async function buildServer({ buildInfo, config, db, monitoring: monitorin
   let stopCapabilityRunQueue: (() => Promise<void>) | undefined;
   server.addHook("onReady", async () => {
     displayClient?.start(() => getTvSettings(db) ?? defaultTvSettings());
+    outputMonitor?.start();
     const recoveredRuns = await recoverCapabilityRuns(capabilityRuntime);
     if (recoveredRuns.expired > 0 || recoveredRuns.interrupted > 0 || recoveredRuns.resumed > 0) {
       server.log.info(recoveredRuns, "Recovered capability runs");
@@ -323,6 +335,8 @@ export async function buildServer({ buildInfo, config, db, monitoring: monitorin
   });
 
   server.addHook("onClose", async () => {
+    // 停止新采样；已提交 hostd 的重配独立收尾，不阻塞 HTTP 关闭。
+    outputMonitor?.stop();
     displayClient?.close();
     await stopCapabilityRunQueue?.();
     await audio.close();

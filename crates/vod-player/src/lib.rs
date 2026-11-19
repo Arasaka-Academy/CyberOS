@@ -11,6 +11,7 @@ mod display;
 pub mod error;
 pub mod mpv;
 pub mod music;
+mod output_gate;
 pub mod preferences;
 pub mod progress;
 pub mod protocol;

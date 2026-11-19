@@ -5,7 +5,7 @@
 AGENTS.md: 本目录成员和依赖边界。
 App.tsx: 应用状态和页面组合；区分自动运行与等待用户输入。
 api.test.ts: api 的行为与契约验证。
-api.ts: 第一方 REST 客户端与响应类型；凭据输入使用独立接口。
+api.ts: 第一方 REST 客户端；TV 输出枚举与应用，凭据独立提交。
 boot.test.ts: boot 的行为与契约验证。
 file-type-utils.test.ts: file-type-utils 的行为与契约验证。
 file-type-utils.ts: 公开 FileVisualKind, FileVisualInput, FileVisualDescriptor, FILE_TYPE_LABELS 等接口。

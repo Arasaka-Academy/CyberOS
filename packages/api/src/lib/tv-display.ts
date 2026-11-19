@@ -1,5 +1,5 @@
 /**
- * [INPUT]: 依赖 Weston 本机 socket 与已保存 TV 策略。
+ * [INPUT]: 依赖 Weston socket、待机开关与记忆分钟值。
  * [OUTPUT]: 提供显示快照、策略续租和渲染就绪握手。
  * [POS]: API 与非 root Weston 模块的通信边界。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
@@ -50,7 +50,7 @@ export class TvDisplayClient {
   rendererReady(ready: boolean): void { this.ready = ready; this.send(`RENDERER ${Number(ready)}`); }
   policy(): string {
     const milliseconds = (minutes: number | null | undefined) => minutes === null || minutes === undefined || !this.settings?.enabled ? 0 : minutes * 60_000;
-    return `POLICY ${milliseconds(this.settings?.screensaverAfterMinutes)} ${milliseconds(this.settings?.screenOffAfterMinutes)}`;
+    return `POLICY ${milliseconds(this.settings?.screensaverEnabled === false ? null : this.settings?.screensaverAfterMinutes)} ${milliseconds(this.settings?.screenOffEnabled === false ? null : this.settings?.screenOffAfterMinutes)}`;
   }
   status(): TvDisplayStatus { return this.current; }
   subscribe(listener: () => void): () => void { this.listeners.add(listener); return () => this.listeners.delete(listener); }

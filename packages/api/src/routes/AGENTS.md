@@ -64,8 +64,11 @@ tv-music.test.ts: tv-music 的行为与契约验证。
 tv.test.ts: tv 的行为与契约验证。
 tv-display.ts: TV 显示事件流；渲染握手限本机，隔离远程 TV 页面。
 tv-display.test.ts: 显示事件断连清理、渲染输入和素材接口回归。
-tv-screensaver.ts: 已保存 NAS 素材的只读清单与图片接口。
+tv-screensaver.ts: 已保存 NAS 素材清单、图片接口与视频范围读取。
+tv-screensaver-video.test.ts: 视频范围读取、素材替换与失效来源的 HTTP 回归。
 tv.ts: 公开 registerTvRoutes。
+tv-outputs.ts: 输出候选与显式重配接口；拒绝播放会话占用。
+tv-outputs.test.ts: 验证确认、会话保护与设置串行应用。
 vms.test.ts: vms 的行为与契约验证。
 vms.ts: 公开 vmConsoleSpawnSpec, registerVmRoutes。
 vod-player.test.ts: vod-player 的行为与契约验证。

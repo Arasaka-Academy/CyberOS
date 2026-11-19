@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖共享空闲策略校验与 SQLite 设置存储。
- * [OUTPUT]: 提供兼容旧记录的整机 TV 设置持久化。
+ * [OUTPUT]: 提供兼容旧记录的 TV 设置与独立待机开关。
  * [POS]: 隔离 TV 输出与空闲策略；不执行宿主操作。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
@@ -58,6 +58,8 @@ export function validateTvSettings(
     audioDevice: validated.audioDevice,
     hardwareDecoding: validated.hardwareDecoding,
     screensaverSource: validated.screensaverSource,
+    screensaverEnabled: validated.screensaverEnabled,
+    screenOffEnabled: validated.screenOffEnabled,
     screensaverAfterMinutes: validated.screensaverAfterMinutes,
     screenOffAfterMinutes: validated.screenOffAfterMinutes
   };

@@ -1,13 +1,13 @@
 /**
- * [INPUT]: 依赖媒体和 TV 的第一方 HTTP 契约。
+ * [INPUT]: 依赖媒体、视频素材和 TV 的第一方 HTTP 契约。
  * [OUTPUT]: 提供 TV 页面读取、播放与屏保渲染接口。
  * [POS]: TV 网络边界；不创建本地媒体播放节点。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
-import type { MediaHome, MediaTitleDetail, MediaTitlePage, TvModeStatus, TvSettingsRecord, TvDisplayStatus, VodPlayerCommand, VodPlayerStatus } from "@cyberos/shared";
+import type { MediaHome, MediaTitleDetail, MediaTitlePage, TvModeStatus, TvSettingsRecord, TvDisplayStatus, TvScreensaverItems, VodPlayerCommand, VodPlayerStatus } from "@cyberos/shared";
 
 export interface TvDisplaySnapshot { display: TvDisplayStatus; settings: TvSettingsRecord }
-export interface TvScreensaverItems { items: { id: string; url: string }[]; nextCursor: string | null; sourceKey: string; fallbackReason: string | null }
+export type { TvScreensaverItems };
 export function getTvScreensaverItems(cursor: string | null, signal: AbortSignal): Promise<TvScreensaverItems> {
   return fetchJson(`/api/tv/screensaver/items${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`, { signal });
 }

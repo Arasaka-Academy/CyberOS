@@ -806,7 +806,7 @@ describe("native packaging artifacts", () => {
     expect(unit).toContain("TimeoutStopSec=180");
     expect(unit).toContain("/run/mdadm");
     expect(unit).toContain("ProtectSystem=strict");
-    expect(unit).toContain("ReadWritePaths=/etc /run/cyberos /run/mdadm /cyberos/state/hostd /cyberos/state/shares /cyberos/data");
+    expect(unit).toContain("ReadWritePaths=/etc /run/cyberos /run/mdadm /cyberos/state/hostd /cyberos/state/shares /cyberos/state/tv /cyberos/data");
     expect(unit).toContain("ReadWritePaths=-/run/samba -/var/lib/samba -/var/cache/samba -/var/log/samba");
     expect(unit).toContain("ReadWritePaths=-/cyberos/state/hostd/docker-daemon /cyberos/state/hostd/network-manager /cyberos/state/hostd/bluetooth");
     expect(unit).not.toMatch(/ReadWritePaths=.*(?:^|\s)\/var\/lib\/cyberos(?:\s|$)/mu);

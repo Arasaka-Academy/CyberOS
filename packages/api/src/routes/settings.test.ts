@@ -44,6 +44,19 @@ describe("settings routes", () => {
     expect((await server.inject({ method: "GET", url: "/api/settings/tv" })).json().settings.screenOffAfterMinutes).toBe(60);
     await server.close();
   });
+  it("stores idle switches and remembered minutes while accepting legacy null patches", async () => {
+    const server = createServer(db);
+    const update = (payload: object) => server.inject({ method: "PATCH", url: "/api/settings/tv", payload });
+    expect((await update({ screensaverEnabled: false, screenOffEnabled: false, screensaverAfterMinutes: 17, screenOffAfterMinutes: 3 })).statusCode).toBe(200);
+    expect((await server.inject("/api/settings/tv")).json().settings).toMatchObject({ screensaverEnabled: false, screenOffEnabled: false, screensaverAfterMinutes: 17, screenOffAfterMinutes: 3 });
+    expect((await update({ screensaverEnabled: true, screenOffEnabled: true })).statusCode).toBe(400);
+    expect((await update({ screenOffAfterMinutes: 23, screenOffEnabled: true })).statusCode).toBe(200);
+    const legacyOff = await update({ screenOffAfterMinutes: null });
+    expect(legacyOff.json().settings).toMatchObject({ screenOffEnabled: false, screenOffAfterMinutes: 23 });
+    const legacyOn = await update({ screenOffAfterMinutes: 19 });
+    expect(legacyOn.json().settings).toMatchObject({ screenOffEnabled: true, screenOffAfterMinutes: 19 });
+    await server.close();
+  });
   it("saves full access independently and preserves it across partial policy updates", async () => {
     const server = createServer(db);
     expect((await server.inject({ method: "GET", url: "/api/settings/agent-capability-policy" })).json().settings.fullAccess).toBe(false);
@@ -323,7 +336,7 @@ describe("settings routes", () => {
       payload: { enabled: false, confirmed: true }
     });
     expect(response.statusCode).toBe(500);
-    expect(apply.mock.calls).toEqual([[false], [true]]);
+    expect(apply.mock.calls).toEqual([[false, null], [true, null]]);
     await server.close();
   });
 
@@ -334,7 +347,7 @@ describe("settings routes", () => {
       method: "PATCH", url: "/api/settings/tv", payload: { enabled: true, confirmed: true }
     });
     expect(response.statusCode).toBe(200);
-    expect(apply.mock.calls).toEqual([[true]]);
+    expect(apply.mock.calls).toEqual([[true, null]]);
     expect(getTvSettings(db)?.enabled).toBe(true);
     await server.close();
   });

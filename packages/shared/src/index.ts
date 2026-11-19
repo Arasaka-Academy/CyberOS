@@ -35,3 +35,5 @@ export * from "./audio-settings.js";
 export * from "./tv.js";
 export * from "./nvr-client.js";
 export * from "./generated/nvr.js";
+
+export type { TvOutputOptions, TvOutputApplyResult } from "./tv-outputs.js";

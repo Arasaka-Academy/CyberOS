@@ -1,0 +1,23 @@
+{
+  "repository": "https://github.com/Arasaka-Academy/CyberUI",
+  "version": "0.3.0",
+  "baseCommit": "80c468cf0c6bffecda3d47bd8112c6d583d4fd0e",
+  "transformations": [
+    "Relative TypeScript imports gain .js for NodeNext.",
+    "CSS Module indexed class names use cx for exact optional types."
+  ],
+  "files": [
+    {
+      "source": "packages/react/src/slider.tsx",
+      "sourceSha256": "a09af415626df78ca07a26ebb62d920bc925625765099f89f525f3421c4a8c97",
+      "vendored": "packages/ui/src/vendor/slider.tsx",
+      "vendoredSha256": "1ed1307cac6c592958fd8e36315f493717ad5676b8b9bc077b4c19d2f4f84c70"
+    },
+    {
+      "source": "packages/react/src/slider.module.css",
+      "sourceSha256": "87a8984ddaa619be9577efdde6561e7148cef29d2a73dc642428851b6bd60d44",
+      "vendored": "packages/ui/src/vendor/slider.module.css",
+      "vendoredSha256": "87a8984ddaa619be9577efdde6561e7148cef29d2a73dc642428851b6bd60d44"
+    }
+  ]
+}

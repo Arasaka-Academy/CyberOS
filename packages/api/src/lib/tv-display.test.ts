@@ -46,4 +46,11 @@ describe("TV display bridge", () => {
     expect(client.policy()).toBe("POLICY 0 0");
     expect(client.status()).toMatchObject({ state: "active", supported: false });
   });
+  it("sends zero only for disabled timers while preserving their configured minute values", () => {
+    const client = new TvDisplayClient("/nonexistent/tv-display.sock");
+    client.configure({ ...defaultTvSettings(), screensaverEnabled: false, screensaverAfterMinutes: 17, screenOffAfterMinutes: 23 });
+    expect(client.policy()).toBe("POLICY 0 1380000");
+    client.configure({ ...defaultTvSettings(), screenOffEnabled: false, screensaverAfterMinutes: 17, screenOffAfterMinutes: 23 });
+    expect(client.policy()).toBe("POLICY 1020000 0");
+  });
 });

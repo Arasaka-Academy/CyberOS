@@ -1,6 +1,6 @@
 /**
- * [INPUT]: 接收版本化命令、mpv 事件和硬件音频路由证据。
- * [OUTPUT]: 串行推进播放会话并续租原生显示抑制。
+ * [INPUT]: 接收命令、mpv 事件、音频路由及输出重配共享锁。
+ * [OUTPUT]: 固定会话输出、推进播放并续租原生显示抑制。
  * [POS]: 音乐和视频共享 mpv 的唯一状态所有者。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
@@ -292,6 +292,11 @@ impl Controller {
     }
 
     async fn handle_command(&mut self, command: Command) -> Result<Status, VodError> {
+        let _output_guard = if matches!(&command, Command::Status) {
+            None
+        } else {
+            Some(crate::output_gate::shared(&self.config)?)
+        };
         if !matches!(
             &command,
             Command::Status
@@ -634,6 +639,10 @@ impl Controller {
         }
         match self.attempt_start().await {
             Ok(()) => {}
+            Err(error) if error.code == ErrorCode::SessionConflict => {
+                // 输出应用结束后重试，保留原会话与持久化检查点。
+                self.retry_at = Some(Instant::now() + Duration::from_secs(1));
+            }
             Err(error) if error.retryable() => self.schedule_recovery(error),
             Err(error) => self.set_terminal_error(error),
         }
@@ -671,6 +680,7 @@ impl Controller {
     }
 
     async fn attempt_start(&mut self) -> Result<(), VodError> {
+        let _output_guard = crate::output_gate::shared(&self.config)?;
         let desired = self
             .desired
             .clone()
@@ -685,12 +695,14 @@ impl Controller {
             desired.audio_device_id.clone()
         };
         self.resolved_audio_device = Some(audio_device_id.clone());
-        let mut playback_config = if is_music {
-            self.config.for_music_session(audio_device_id.is_some())
-        } else if let Some(pinned) = &self.resolved_tv_config {
+        let mut playback_config = if let Some(pinned) = &self.resolved_tv_config {
             pinned.clone()
         } else {
-            let config = self.config.for_video_session()?;
+            let config = if is_music {
+                self.config.for_music_session(audio_device_id.is_some())?
+            } else {
+                self.config.for_video_session()?
+            };
             self.resolved_tv_config = Some(config.clone());
             config
         };
@@ -928,8 +940,16 @@ impl Controller {
     async fn refresh_capabilities(&mut self) {
         self.last_capability_probe = Instant::now();
         let mut playback_config = if self.status.owner == Some(PlaybackOwner::Music) {
-            self.config
-                .for_music_session(self.status.effective_audio_device_id.is_some())
+            match &self.resolved_tv_config {
+                Some(config) => config.clone(),
+                None => match self
+                    .config
+                    .for_music_session(self.status.effective_audio_device_id.is_some())
+                {
+                    Ok(config) => config,
+                    Err(_) => return,
+                },
+            }
         } else {
             self.resolved_tv_config
                 .clone()
@@ -1675,6 +1695,90 @@ mod tests {
             sender,
             done_receiver,
         )
+    }
+
+    #[tokio::test]
+    async fn output_reconfiguration_blocks_video_music_and_guarded_starts_before_mutation() {
+        use nix::fcntl::{Flock, FlockArg};
+        let directory = tempfile::tempdir().unwrap();
+        let file = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create_new(true)
+            .open(directory.path().join("tv-output.lock"))
+            .unwrap();
+        let exclusive = Flock::lock(file, FlockArg::LockExclusiveNonblock).unwrap();
+        let (mut controller, _sender, _done) = test_controller(directory.path());
+        let before = serde_json::to_value(&controller.status).unwrap();
+        let video = Command::Play {
+            storage_pool_id: "pool-1".into(),
+            relative_path: "video.mp4".into(),
+            start_position_seconds: None,
+            audio_device_id: None,
+            media_file_id: None,
+            expected_session_id: None,
+        };
+        let music = Command::Music {
+            command: music::MusicCommand::Replace {
+                entries: vec![music::tests::entry("a")],
+                expected_queue_version: 0,
+                expected_session_id: None,
+            },
+        };
+        for command in [
+            video.clone(),
+            music,
+            Command::Guarded {
+                service_instance_id: "instance".into(),
+                expected_session_id: None,
+                command: Box::new(video.clone()),
+            },
+        ] {
+            let error = controller.handle_command(command).await.unwrap_err();
+            assert_eq!(error.code, ErrorCode::SessionConflict);
+            assert_eq!(error.status_code, 409);
+            assert_eq!(serde_json::to_value(&controller.status).unwrap(), before);
+            assert!(controller.desired.is_none());
+        }
+        assert!(controller.handle_command(Command::Status).await.is_ok());
+        drop(exclusive);
+        assert!(controller.handle_command(video).await.is_ok());
+        assert!(controller.desired.is_some());
+    }
+
+    #[tokio::test]
+    async fn output_reconfiguration_blocks_internal_session_recovery() {
+        use nix::fcntl::{Flock, FlockArg};
+        let directory = tempfile::tempdir().unwrap();
+        let file = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create_new(true)
+            .open(directory.path().join("tv-output.lock"))
+            .unwrap();
+        let _exclusive = Flock::lock(file, FlockArg::LockExclusiveNonblock).unwrap();
+        let (mut controller, _sender, _done) = test_controller(directory.path());
+        controller.desired = Some(DesiredSession {
+            session_id: "saved".into(),
+            storage_pool_id: "pool-1".into(),
+            relative_path: "video.mp4".into(),
+            position_seconds: 0.0,
+            volume: 50.0,
+            paused: false,
+            audio_device_id: None,
+            media_file_id: None,
+            identity: None,
+        });
+        let error = controller.attempt_start().await.unwrap_err();
+        assert_eq!(error.code, ErrorCode::SessionConflict);
+        assert!(controller.mpv.is_none());
+        assert!(controller.resolved_tv_config.is_none());
+        assert!(controller.resolved_audio_device.is_none());
+        let before = serde_json::to_value(&controller.status).unwrap();
+        controller.try_start_or_schedule().await;
+        assert!(!controller.desired.as_ref().unwrap().paused);
+        assert_eq!(serde_json::to_value(&controller.status).unwrap(), before);
+        assert!(controller.retry_at.is_some());
     }
 
     #[tokio::test]

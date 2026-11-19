@@ -1,3 +1,8 @@
+/* [INPUT]: 依赖媒体设置结构和共享控件。
+ * [OUTPUT]: 提供媒体状态、TV 等待滑块和输出操作布局。
+ * [POS]: 设置样式层；复用共享颜色和表单容器断点。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 .settings-tv-control-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
@@ -92,6 +97,11 @@
 .settings-tv-overall.is-degraded {
   color: var(--danger-text);
 }
+
+.settings-tv-timer { display: grid; gap: 12px; min-width: 0; }
+.settings-tv-output-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.settings-tv-directory { max-width: 100%; overflow-wrap: anywhere; text-align: left; }
+.settings-tv-pending { margin: 12px 0 0; color: var(--warning-text); font-size: 12px; overflow-wrap: anywhere; }
 
 .settings-media-list,
 .settings-media-match-list {

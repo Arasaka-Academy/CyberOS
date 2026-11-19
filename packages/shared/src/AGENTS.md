@@ -51,7 +51,8 @@ tailscale.ts: 公开 parseTailscaleStatus, unavailableTailscaleStatus。
 terminal-protocol.test.ts: terminal-protocol 的行为与契约验证。
 terminal-protocol.ts: 公开 TERMINAL_PROTOCOL_VERSION, TERMINAL_MAX_FRAME_BYTES, TERMINAL_MAX_INPUT_BYTES, TERMINAL_MAX_OUTPUT_BYTES 等接口。
 types.ts: shared 的跨进程类型契约。
-tv.ts: TV 屏保来源、空闲策略校验与显示状态契约。
+tv.ts: TV 图片与视频来源、独立待机开关和分钟范围校验。
+tv-outputs.ts: TV HDMI、ALSA 候选与显式输出应用契约。
 video.ts: 公开 MediaPersonalState, VideoTitle, VideoTitleDetail, MediaCollection 等接口。
 vod-player-client.test.ts: vod-player-client 的行为与契约验证。
 vod-player-client.ts: 公开 VodPlayerRuntime, VodPlayerRuntimeError, createVodPlayerRuntime。

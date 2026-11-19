@@ -9,7 +9,7 @@ index.ts: 加载配置并监听 API 服务。
 photos-search-benchmark.ts: photos-search-benchmark 模块入口或运行脚本。
 production-bundle.test.ts: production-bundle 的行为与契约验证。
 server.test.ts: server 的行为与契约验证。
-server.ts: API 组合入口；启动恢复后消费已授权能力运行。
+server.ts: API 组合入口；共享原生音频、启动 TV 接屏监测并恢复已授权能力。
 state-init.ts: 初始化安装后的 state 目录与产品状态。
 storage-status.test.ts: storage-status 的行为与契约验证。
 web-static.test.ts: web-static 的行为与契约验证。
