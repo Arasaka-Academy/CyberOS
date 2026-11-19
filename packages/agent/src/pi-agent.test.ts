@@ -375,7 +375,7 @@ describe("Pi MCP tool selection", () => {
     }
   });
 
-  it("filters dynamically registered MCP tools to configured servers and resource helpers", async () => {
+  it.each([{ mcpServerNames: ["cyberos"] }, { mcpServerNames: ["cyberos", "external"] }])("filters dynamically registered MCP tools with $mcpServerNames", async ({ mcpServerNames }) => {
     const settingsManager = SettingsManager.inMemory({ defaultProjectTrust: "never" });
     const resourceLoader = new DefaultResourceLoader({
       cwd: tempDir,
@@ -386,8 +386,8 @@ describe("Pi MCP tool selection", () => {
         (pi) => {
           pi.on("session_start", () => {
             for (const tool of [
-              stubTool("mcp__cyberos__files_read", "direct"),
-              stubTool("mcp__cyberos__apps_inspect", "codemode"),
+              stubTool("mcp_cyberos_files_read", "direct"),
+              stubTool("mcp_cyberos_apps_inspect", "codemode"),
               stubTool("mcp__external__danger", "direct"),
               stubTool("mcp__external__lookup", "codemode"),
               stubTool("list_mcp_resources", "direct"),
@@ -407,7 +407,7 @@ describe("Pi MCP tool selection", () => {
     await resourceLoader.reload();
     const { session } = await createAgentSession({
       cwd: tempDir,
-      tools: piAgentToolNames({ mcpServerNames: ["cyberos", "external"] }),
+      tools: piAgentToolNames({ mcpServerNames }),
       resourceLoader,
       settingsManager,
       sessionManager: SessionManager.inMemory(tempDir)
@@ -418,11 +418,11 @@ describe("Pi MCP tool selection", () => {
 
       const activeTools = session.getActiveToolNames();
       const callableTools = session.getCallableToolNames();
-      expect(activeTools).toContain("mcp__cyberos__files_read");
-      expect(activeTools).not.toContain("mcp__cyberos__apps_inspect");
-      expect(callableTools).toContain("mcp__cyberos__apps_inspect");
-      expect(activeTools).toContain("mcp__external__danger");
-      expect(callableTools).toContain("mcp__external__lookup");
+      expect(activeTools).toContain("mcp_cyberos_files_read");
+      expect(activeTools).not.toContain("mcp_cyberos_apps_inspect");
+      expect(callableTools).toContain("mcp_cyberos_apps_inspect");
+      expect(activeTools.includes("mcp__external__danger")).toBe(mcpServerNames.includes("external"));
+      expect(callableTools.includes("mcp__external__lookup")).toBe(mcpServerNames.includes("external"));
       expect(callableTools).toEqual(expect.arrayContaining([
         "list_mcp_resources",
         "list_mcp_resource_templates",
@@ -443,6 +443,7 @@ describe("Pi MCP tool selection", () => {
       "codemode",
       "tool_search",
       "mcp__cyberos__*",
+      "mcp_cyberos_*",
       "mcp__home_assistant__*",
       "list_mcp_resources",
       "list_mcp_resource_templates",

@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖真实 Pi SDK、隔离会话与本地 MCP 服务。
+ * [OUTPUT]: 验证 SDK 升级边界和 CyberOS 工具命名契约。
+ * [POS]: Agent 宿主与 SDK 的集成回归测试。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { copyFile, mkdtemp, readFile, rm } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import os from "node:os";
@@ -11,18 +17,82 @@ import {
   SessionManager,
   SettingsManager,
   type ExtensionFactory,
+  type ExtensionAPI,
   type ToolDefinition
 } from "@earendil-works/pi-coding-agent";
 import { McpClient } from "@earendil-works/pi-mcp";
 import { Type } from "typebox";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { capabilityPendingRunId, loadControlledPiMcpConfig, projectPiSessionEntry, registerConfiguredProvider } from "./pi-agent.js";
+import { capabilityPendingRunId, loadControlledPiMcpConfig, piAgentToolNames, projectPiSessionEntry, registerConfiguredProvider } from "./pi-agent.js";
+import { createCyberOsMcpExtension } from "./pi-mcp-extension.js";
 
 let directory: string;
 beforeEach(async () => { directory = await mkdtemp(path.join(os.tmpdir(), "cyberos-pi-upgrade-")); });
 afterEach(async () => { vi.unstubAllEnvs(); await rm(directory, { recursive: true, force: true }); });
 
 describe("embedded Pi upgrade boundaries", () => {
+  it("discovers and executes single-underscore CyberOS names through direct tools and Codemode", async () => {
+    const probe = await mcpNamingSession();
+    const { session } = probe;
+    try {
+      const prompt = await session.extensionRunner.emitBeforeAgentStart(
+        { messageType: "user", prompt: "List downloads" }, { cwd: directory }
+      );
+      expect(session.getActiveToolNames()).toContain("mcp_cyberos_files_read");
+      expect(session.getCallableToolNames()).toContain("mcp_cyberos_downloads_list");
+      expect(session.getCallableToolNames()).not.toContain("mcp__cyberos__downloads_list");
+      expect(prompt.systemPromptOptions.sections.mcp_servers).toContain("- mcp_cyberos (codemode)");
+      const direct = session.agent.state.tools.find((tool) => tool.name === "mcp_cyberos_files_read")!;
+      expect(JSON.stringify(await direct.execute("direct", { path: "notes.txt" }))).toContain("files.read");
+      const result = await executeCodemode(session, "discovery", `
+        text(await describeNamespace("mcp_cyberos"));
+        text(await searchTools("downloads", { namespace: "mcp_cyberos" }));
+        text(await tools.mcp_cyberos_downloads_list({}));
+      `);
+      expect(JSON.stringify(result)).toContain("mcp_cyberos_downloads_list");
+      expect(JSON.stringify(result)).toContain("downloads.list");
+      expect(probe.calls).toEqual([
+        { name: "files.read", arguments: { path: "notes.txt" } },
+        { name: "downloads.list", arguments: {} }
+      ]);
+    } finally { await probe.close(); }
+  });
+
+  it("waits for a connecting CyberOS server before a single-underscore Codemode call", async () => {
+    const gate = latch();
+    const probe = await mcpNamingSession(gate.promise);
+    try {
+      let settled = false;
+      const ready = probe.session.extensionRunner.emitToolCall({
+        type: "tool_call", toolCallId: "cold", toolName: "codemode",
+        input: { code: "await tools.mcp_cyberos_downloads_list({});" }
+      }).finally(() => { settled = true; });
+      await delay(30);
+      expect(settled).toBe(false);
+      gate.release();
+      await ready;
+      const result = await executeCodemode(probe.session, "cold", "text(await tools.mcp_cyberos_downloads_list({}));");
+      expect(JSON.stringify(result)).toContain("downloads.list");
+      expect(probe.calls).toEqual([{ name: "downloads.list", arguments: {} }]);
+    } finally { gate.release(); await probe.close(); }
+  });
+
+  it("hides withdrawn single-underscore tools and restores them after reconnecting", async () => {
+    const probe = await mcpNamingSession(undefined, true);
+    try {
+      await probe.session.extensionRunner.emitBeforeAgentStart(
+        { messageType: "user", prompt: "Read a file" }, { cwd: directory }
+      );
+      const prepared = probe.session.agent.state.tools.find((tool) => tool.name === "mcp_cyberos_files_read")!;
+      probe.control!.unregisterMcpServer("cyberos");
+      await vi.waitFor(() => expect(probe.session.getCallableToolNames()).not.toContain("mcp_cyberos_files_read"));
+      await expect(prepared.execute("withdrawn", {})).rejects.toThrow(/disabled|no longer available/);
+      probe.control!.registerMcpServer("cyberos", probe.config);
+      await vi.waitFor(() => expect(probe.session.getActiveToolNames()).toContain("mcp_cyberos_files_read"));
+      expect(probe.session.getCallableToolNames()).toContain("mcp_cyberos_downloads_list");
+    } finally { await probe.close(); }
+  });
+
   it("reopens a Pi 1.1 JSONL without changing message or projection identities", async () => {
     const sessionFile = path.join(directory, "legacy.jsonl");
     await copyFile(new URL("./fixtures/pi-1.1.0-session.jsonl", import.meta.url), sessionFile);
@@ -227,6 +297,60 @@ async function sdkSession(url: string, extensions: ExtensionFactory[], tools: st
   });
   await session.bindExtensions({});
   return session;
+}
+
+async function mcpNamingSession(listGate?: Promise<void>, dynamic = false) {
+  const calls: unknown[] = [];
+  const server = createServer(async (request, response) => {
+    if (request.method !== "POST") { response.writeHead(405).end(); return; }
+    let body = "";
+    for await (const chunk of request) body += String(chunk);
+    const rpc = JSON.parse(body) as { id?: number; method: string; params?: Record<string, unknown> };
+    if (rpc.id === undefined) { response.writeHead(202).end(); return; }
+    let result: unknown;
+    if (rpc.method === "initialize") {
+      result = { protocolVersion: rpc.params?.protocolVersion, capabilities: { tools: {} }, serverInfo: { name: "naming", version: "1" } };
+    } else if (rpc.method === "tools/list") {
+      await listGate;
+      result = { tools: ["files.read", "downloads.list"].map((name) => ({
+        name, description: name, inputSchema: { type: "object", properties: {} }
+      })) };
+    } else {
+      calls.push({ name: rpc.params?.name, arguments: rpc.params?.arguments });
+      result = { content: [{ type: "text", text: String(rpc.params?.name) }] };
+    }
+    response.writeHead(200, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ jsonrpc: "2.0", id: rpc.id, result }));
+  });
+  const url = await listen(server);
+  const loaded = await loadControlledPiMcpConfig({ generation: 1, servers: [{
+    id: "builtin", name: "cyberos", url, description: "CyberOS", exposure: "codemode", timeoutSeconds: 3, allowInsecureHttp: true
+  }] });
+  if (listGate) loaded.config.servers[0]!.config.toolExposure = {};
+  const config = loaded.config.servers[0]!.config;
+  let control: ExtensionAPI | undefined;
+  const session = await sdkSession("http://127.0.0.1:1/v1", [
+    createCodemodeExtension({ mode: "on", models: false }),
+    (pi) => { control = pi; if (dynamic) pi.registerMcpServer("cyberos", config); },
+    createCyberOsMcpExtension({
+      loadConfig: () => dynamic ? { ...loaded.config, servers: [] } : loaded.config,
+      createTransport: loaded.createTransport, logPath: path.join(directory, "mcp.log")
+    })
+  ], piAgentToolNames({ mcpServerNames: ["cyberos"] }));
+  return { session, calls, control, config, close: async () => { session.dispose(); await loaded.close(); await close(server); } };
+}
+
+async function executeCodemode(session: Awaited<ReturnType<typeof sdkSession>>, id: string, code: string) {
+  const assistant = {
+    role: "assistant" as const, content: [{ type: "toolCall" as const, id, name: "codemode", arguments: { code } }],
+    api: "openai-completions" as const, provider: "openai", model: "upgrade-test-model",
+    usage: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, totalTokens: 2,
+      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+    stopReason: "toolUse" as const, timestamp: 0
+  };
+  session.sessionManager.appendMessage(assistant);
+  session.agent.state.messages.push(assistant);
+  return session.agent.state.tools.find((tool) => tool.name === "codemode")!.execute(id, { code });
 }
 
 function latch() {

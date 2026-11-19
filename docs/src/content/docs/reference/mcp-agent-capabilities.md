@@ -6,6 +6,7 @@ status: current
 audience: [developer, operator]
 sourceOfTruth:
   - packages/agent/src/pi-agent.ts
+  - packages/agent/src/pi-mcp-extension.ts
   - packages/worker/src/processor.ts
   - packages/api/src/routes/agent-resources.ts
   - packages/api/src/lib/agent-mcp-service.ts
@@ -51,7 +52,7 @@ CyberOS 内置 MCP 缺少设置记录时默认开启。**设置 > MCP** 可以�
 
 内置 MCP 复用 loopback API 的 `/mcp` 路由。完全权限只作用于内部 Pi 身份，不增加对外访问能力。
 
-工具名省略能力 ID 的 `cyberos.` 前缀。例如，能力 `cyberos.downloads.list` 对应 MCP 工具 `downloads.list`，Pi 显示为 `mcp__cyberos__downloads_list`。`catalog.get` 返回稳定的 `id` 和可调用的 `toolName`；下表使用能力 ID。历史 `cyberos.*` 工具调用继续有效，但工具发现只返回短名称。
+工具名省略能力 ID 的 `cyberos.` 前缀。例如，能力 `cyberos.downloads.list` 对应 MCP 工具 `downloads.list`，Pi 使用单下划线名称 `mcp_cyberos_downloads_list`，Codemode 命名空间为 `mcp_cyberos`。第三方 MCP 保留 Pi SDK 的名称规则。`catalog.get` 返回稳定的 `id` 和可调用的 `toolName`；下表使用能力 ID。历史 `cyberos.*` 协议工具调用继续有效，但工具发现只返回短名称。
 
 ### 音乐、影视与 NAS 播放
 

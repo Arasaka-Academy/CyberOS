@@ -76,6 +76,13 @@ CyberOS exposes file, photo, and system capabilities only through the internal
 `cyberos` MCP server. Disabling MCP removes those tools instead of enabling a
 direct-tool fallback.
 
+`pi-mcp-extension.ts` adapts the built-in server's model-facing tool names to
+`mcp_cyberos_<tool>` and its Codemode namespace to `mcp_cyberos`. Protocol names
+remain unchanged. Third-party servers retain SDK naming. The adapter gives the
+MCP extension its original name view for ownership, exposure, renderers, and
+connection readiness. Keep the SDK-prefixed allowlist entry as well as the
+public name entry: Pi 1.4 uses that prefix to enable strict MCP filtering.
+
 MCP `structuredContent` may be any JSON value, including arrays and `null`.
 Approval detection only accepts an object with a run id and
 `data.state = "waiting_approval"`; unrelated structured results are not approvals.
@@ -88,8 +95,8 @@ CyberOS concurrency increase.
 
 Pi 1.4 counts session startup as busy, including `before_agent_start` handlers.
 Those handlers now discriminate user and custom messages with `messageType`.
-CyberOS has no custom handler to migrate, but abort/steer/follow-up startup races
-remain part of the worker compatibility tests.
+CyberOS wraps MCP startup handlers to publish its namespace. Abort/steer/follow-up
+startup races remain part of the worker compatibility tests.
 
 Compaction summaries use the model's output limit. `compaction.reserveTokens`
 controls when compaction starts, not the summary output limit. No classifier,

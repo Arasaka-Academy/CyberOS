@@ -1,5 +1,5 @@
 /**
- * [INPUT]: 依赖 Pi SDK、模型绑定、会话资源与 MCP 短工具名策略。
+ * [INPUT]: 依赖 Pi SDK、模型绑定、会话资源与 MCP 单下划线适配。
  * [OUTPUT]: 提供可续跑 Agent 会话、工具事件和运行结果。
  * [POS]: Pi 会话宿主；权限改变后重建工具目录，复用对话历史。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
@@ -10,7 +10,6 @@ import path from "node:path";
 import {
   createAgentSession,
   createCodemodeExtension,
-  createMcpExtension,
   createToolSearchExtension,
   DefaultResourceLoader,
   SessionManager,
@@ -40,6 +39,7 @@ import {
 } from "./model-runtime-manager.js";
 import { AgentSessionManager } from "./agent-session-manager.js";
 import { PiResourcePolicy } from "./pi-resource-policy.js";
+import { createCyberOsMcpExtension } from "./pi-mcp-extension.js";
 
 export { registerConfiguredProvider } from "./model-runtime-manager.js";
 
@@ -341,7 +341,7 @@ export class PiAgentSessionHost {
       extensionFactories: mcpConfig ? [
         createCodemodeExtension({ mode: "on", models: false }),
         createToolSearchExtension(),
-        createMcpExtension({
+        createCyberOsMcpExtension({
           loadConfig: () => mcpConfig,
           updateConfig: () => undefined,
           createTransport: mcpRuntime!.createTransport,
@@ -828,7 +828,11 @@ export function piAgentToolNames(options: {
       ? [
           "codemode",
           "tool_search",
-          ...options.mcpServerNames.map((name) => `mcp__${mcpNamespaceName(name)}__*`),
+          // 保留 SDK 前缀项以启用严格 MCP 过滤，再允许内置公开名称。
+          ...options.mcpServerNames.flatMap((name) => [
+            `mcp__${mcpNamespaceName(name)}__*`,
+            ...(name === "cyberos" ? ["mcp_cyberos_*"] : [])
+          ]),
           ...MCP_RESOURCE_TOOL_NAMES
         ]
       : [])
