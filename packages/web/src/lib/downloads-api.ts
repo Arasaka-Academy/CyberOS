@@ -32,4 +32,3 @@ export async function deleteDownloadObserved(id: string): Promise<DownloadObserv
   if (!observation) throw new Error("Download deletion observation is missing");
   return JSON.parse(observation) as DownloadObservation;
 }
-

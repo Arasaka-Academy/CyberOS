@@ -188,4 +188,3 @@ function formatChecksum(
   if (task.actualSha256) return t("workspace.downloads.checksumMismatch");
   return t("workspace.downloads.checksumPending");
 }
-

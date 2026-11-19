@@ -1,3 +1,9 @@
+cyberos (2.4.14) unstable; urgency=medium
+
+  * Fix BT resume progress and improve download history layout and scrolling.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Thu, 19 Nov 2026 05:40:59 +0000
+
 cyberos (2.4.13) unstable; urgency=medium
 
   * Add TV screensaver sources, idle display power control, and HDMI-aware music presentation.
