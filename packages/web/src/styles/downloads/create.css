@@ -1,3 +1,8 @@
+/* [INPUT]: 共享控件、下载元信息与创建表单。
+ * [OUTPUT]: 任务操作、错误与创建弹窗布局。
+ * [POS]: 下载面板的交互样式；窗口列表位于 list.css。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 .download-task-meta {
   display: flex;
   flex-wrap: wrap;
@@ -18,7 +23,7 @@
 .download-task-actions {
   display: flex;
   align-items: center;
-  align-self: center;
+  align-self: start;
   justify-content: flex-end;
   width: var(--download-actions-width);
   gap: 4px;

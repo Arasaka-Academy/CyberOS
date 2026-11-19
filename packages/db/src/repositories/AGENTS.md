@@ -19,6 +19,9 @@ docker-operations.ts: 公开 createDockerOperationRecord, getDockerOperation, li
 docker-registry-credentials.ts: 公开 DockerRegistryCredentialRecord, DockerRegistryCredentialConflictError, listDockerRegistryCredentials, createDockerRegistryCredential 等接口。
 downloads.test.ts: downloads 的行为与契约验证。
 downloads.ts: 公开 createTorrentPreview, getTorrentPreview, deleteTorrentPreview, claimNextTorrentPreview 等接口。
+downloads-list.ts: 稳定游标和锚点分页、可见窗口及完整任务汇总。
+downloads-list.test.ts: 大历史、同毫秒边界、筛选与窗口成员回归。
+downloads-mapper.ts: 下载数据库投影和统一任务记录转换。
 execution-locks.ts: 公开 acquireExecutionLock, isExecutionLockOwner, heartbeatExecutionLock, releaseExecutionLock。
 file-batches.ts: 公开 FileBatchItemRecord, ClaimedFileBatchItem, createFileBatch, FileBatchConflictError 等接口。
 file-operations.ts: 公开 recordAppliedOperation, getFileOperation, markFileOperationRolledBack, createTrashEntry 等接口。

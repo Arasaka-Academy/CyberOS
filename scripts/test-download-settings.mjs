@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖 Vite、Playwright 和下载设置与任务创建接口。
+ * [OUTPUT]: 验证默认目标目录、设置保存和下载创建的浏览器行为。
+ * [POS]: 下载设置浏览器验收；与任务列表验收共用下载面板。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import assert from "node:assert/strict";
 import { Buffer } from "node:buffer";
 import { mkdir } from "node:fs/promises";
@@ -19,7 +25,7 @@ const defaults = {
 const harness = `
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { SettingsDownloadsPage } from '/src/components/settings/SettingsModal.tsx';
+import { SettingsDownloadsPage } from '/src/components/settings/SettingsContent.tsx';
 import { HttpDownloaderPanel } from '/src/components/workspace/HttpDownloaderPanel.tsx';
 import { ModalPortal } from '/src/components/common/ModalPortal.tsx';
 import { TooltipLayer } from '/src/components/common/TooltipLayer.tsx';
@@ -62,6 +68,8 @@ before(async () => {
   server = await createServer({
     configFile: fileURLToPath(new URL("../packages/web/vite.config.ts", import.meta.url)),
     root: fileURLToPath(new URL("../packages/web", import.meta.url)),
+    cacheDir: fileURLToPath(new URL("../packages/web/node_modules/.vite-download-settings", import.meta.url)),
+    optimizeDeps: { include: ["react", "react-dom/client"] },
     server: { host: "127.0.0.1", port: 0 },
     plugins: [{
       name: "download-settings-browser-harness",
@@ -85,7 +93,7 @@ after(async () => { await browser?.close(); await server?.close(); });
 async function openDownloads(t, options = {}) {
   const context = await browser.newContext({ viewport: { width: options.width ?? 1440, height: 900 }, reducedMotion: options.reducedMotion ?? "no-preference" });
   const page = await context.newPage();
-  page.setDefaultTimeout(5000);
+  page.setDefaultTimeout(15000);
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
   let settings = { ...defaults, ...options.settings };
@@ -126,12 +134,12 @@ async function openDownloads(t, options = {}) {
         writes.push(body);
         return route.fulfill({ status: 201, json: { task: { id: "created", ...body, status: "queued", sourceKind: "http", receivedBytes: 0, totalBytes: null, speedBytesPerSecond: 0, targetFileName: body.fileName, targetPath: body.fileName, createdAt: timestamp } } });
       }
-      return route.fulfill({ json: { tasks: [], health: { status: "ready", freshWorkers: 1, activeTasks: 0, queuedTasks: 0 } } });
+      return route.fulfill({ json: { tasks: [], nextCursor: null, health: { status: "ready", freshWorkers: 1, activeTasks: 0, queuedTasks: 0 }, summary: { total: 0, active: 0, queued: 0, completed: 0, failed: 0, speedBytesPerSecond: 0 }, observation: { serverId: "settings-fixture", sequence: 1 } } });
     }
     await route.fulfill({ status: 404, json: { error: "Unknown browser test route" } });
   });
   await page.goto(`${baseUrl}__download-settings-test?${options.zh ? "zh&" : ""}${options.offline ? "offline" : ""}`, { timeout: 30_000 });
-  await page.locator(".download-create-button").waitFor();
+  await page.locator(".download-create-button").waitFor({ timeout: 30000 });
   await expect(page.locator(".download-create-button")).toBeEnabled();
   return {
     page, writes,

@@ -17,6 +17,8 @@ bluetooth-transfers.ts: 公开 registerBluetoothTransferRoutes, finalizeBluetoot
 docker.ts: 公开 registerDockerRoutes, streamDockerDaemonEvents。
 downloads.test.ts: downloads 的行为与契约验证。
 downloads.ts: 公开 registerDownloadRoutes。
+downloads-list.ts: 兼容列表与窗口事件流；同步数据库观察版本隔离迟到响应。
+downloads-list.test.ts: 分页兼容、参数校验、观察顺序与窗口事件回归。
 files.ts: 公开 registerFileRoutes。
 health-status.ts: 公开 registerHealthStatusRoutes。
 health.ts: 公开 registerHealthRoutes。

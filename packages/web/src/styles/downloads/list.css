@@ -1,3 +1,8 @@
+/* [INPUT]: 共享主题与下载任务状态。
+ * [OUTPUT]: 紧凑任务行、悬停反馈与窗口列表。
+ * [POS]: 下载面板布局；创建弹窗样式位于 create.css。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 .workspace-management {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -193,16 +198,16 @@
 }
 
 .download-task-row {
-  --download-actions-width: 132px;
+  --download-actions-width: 146px;
   --download-status-text: var(--neutral-status-text);
   --download-status-fill: var(--neutral-status-text);
   --download-status-bg: var(--neutral-status-bg);
   --download-status-border: var(--line);
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--download-actions-width);
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
-  padding: 14px 16px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--line-soft);
   transition: background-color 180ms var(--control-easing), border-color 180ms var(--control-easing);
 }
@@ -258,7 +263,7 @@
 
 .download-task-main {
   display: grid;
-  gap: 7px;
+  gap: 6px;
   min-width: 0;
 }
 
@@ -303,7 +308,7 @@
 .download-task-status {
   padding: 3px 6px;
   border: 1px solid var(--download-status-border);
-  border-radius: 3px;
+  border-radius: 0;
   color: var(--download-status-text);
   background: var(--download-status-bg);
   font-size: 10px;
@@ -328,7 +333,7 @@
 .download-progress-track {
   height: 6px;
   overflow: hidden;
-  border-radius: 2px;
+  border-radius: 0;
   background: color-mix(in srgb, var(--download-status-fill) 18%, var(--line));
   transition: background-color 180ms var(--control-easing);
 }
@@ -362,3 +367,29 @@
     transform: translateX(260%) skewX(-18deg);
   }
 }
+
+.downloads-virtual-list { position: relative; width: 100%; overflow-anchor: none; }
+.downloads-virtual-row { position: absolute; top: 0; left: 0; width: 100%; }
+.downloads-list { overflow-anchor: none; }
+.download-task-row:hover { background: var(--surface-hover); border-bottom-color: var(--cyber-accent2); }
+.download-task-row:focus-within { background: var(--surface-hover); }
+.download-task-heading { grid-row: 1; }
+.download-progress-track { grid-row: 2; }
+.download-task-meta { grid-row: 3; }
+.download-task-path { grid-row: 4; font-size: 10px; color: var(--muted-2); }
+.download-task-status.is-icon { display: grid; place-items: center; padding: 0; width: 24px; height: 24px; border: 0; background: transparent; }
+.download-task-percentage { color: var(--text); font-variant-numeric: tabular-nums; }
+.download-task-actions { align-self: start; }
+.downloads-pagination { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 16px; color: var(--muted); font-size: 12px; }
+.downloads-pagination.is-error { flex-wrap: wrap; color: var(--danger-text); }
+.downloads-pagination > span { overflow-wrap: anywhere; min-width: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .download-task-row, .download-progress-track, .download-progress-track > span { transition: none; }
+  .download-progress-track.is-indeterminate > span::after { animation: none; }
+}
+
+.downloads-header .management-title-copy > p:empty, .downloads-header .mobile-app-title-copy > p:empty { display: none; }
+
+.download-task-error { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+
+.downloads-header .management-title-copy { grid-template-rows: auto; align-content: center; gap: 0; }

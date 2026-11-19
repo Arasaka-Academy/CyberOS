@@ -8,6 +8,7 @@ export * from "./agent-capability-policy.js";
 export * from "./config.js";
 export * from "./docker-images.js";
 export * from "./docker-resources.js";
+export * from "./download-list.js";
 export * from "./hostd-protocol.js";
 export * from "./tailscale.js";
 export * from "./iscsi.js";

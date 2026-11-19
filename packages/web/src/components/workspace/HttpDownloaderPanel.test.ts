@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 下载面板、任务行与创建选择器。
+ * [OUTPUT]: 验证紧凑布局、真实进度阶段和状态操作。
+ * [POS]: 下载展示与创建入口回归。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeAll, describe, expect, it, vi } from "vitest";
@@ -29,7 +35,7 @@ describe("HttpDownloaderPanel download creation", () => {
     const header = html.match(/<header[^>]*class="management-header app-titlebar downloads-header"[^>]*>[\s\S]*?<\/header>/u)?.[0] ?? "";
 
     expect(header).toContain("<h2>Downloads</h2>");
-    expect(header).toContain("Queue and monitor public web, Magnet, and torrent downloads.");
+    expect(header).not.toContain("Queue and monitor public web, Magnet, and torrent downloads.");
     expect(header).not.toContain("HTTP transfer");
     expect(header).not.toContain("downloads-connection");
     expect(html).not.toContain("downloads-connection");
@@ -97,6 +103,26 @@ describe("DownloadTaskRow progress states", () => {
     }
   });
 
+  it("keeps confirmed progress while verifying and hides transfer estimates", () => {
+    const html = renderDownloadRow({ phase: "verifying", receivedBytes: 50, totalBytes: 100, speedBytesPerSecond: 20 });
+    expect(html).toContain('aria-valuenow="50"');
+    expect(html).toContain("Verifying");
+    expect(html).not.toContain("20 B/s");
+    expect(html).not.toContain("ETA unknown");
+    expect(html).not.toContain("is-indeterminate");
+  });
+  it.each(["completed", "failed"] as const)("uses an accessible %s icon instead of a text badge", (status) => {
+    const html = renderDownloadRow({ status });
+    expect(html).toContain('class="download-task-status is-icon" role="img"');
+    expect(html).toContain(`aria-label="${status === "completed" ? "Completed" : "Failed"}"`);
+    expect(html).not.toContain(`class="download-task-status">`);
+  });
+  it.each(["paused", "completed", "failed"] as const)("hides stale speed and ETA for %s tasks", (status) => {
+    const html = renderDownloadRow({ status, speedBytesPerSecond: 20 });
+    expect(html).not.toContain("20 B/s");
+    expect(html).not.toContain("ETA unknown");
+  });
+
   it("shows torrent upload telemetry and seeding controls", () => {
     const html = renderDownloadRow({
       sourceKind: "magnet",
@@ -112,7 +138,7 @@ describe("DownloadTaskRow progress states", () => {
       url: "magnet:?xt=urn:btih:0123456789012345678901234567890123456789"
     });
 
-    expect(html).toContain("Linux release");
+    expect(html).not.toContain("Linux release");
     expect(html).toContain("50 B uploaded");
     expect(html).toContain("10 B/s upload");
     expect(html).toContain("4 peers");

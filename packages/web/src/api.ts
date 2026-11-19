@@ -1,10 +1,11 @@
 /**
  * [INPUT]: 依赖公共契约与同源 HTTP 接口。
- * [OUTPUT]: 提供 Web 类型、设置、TV 输出应用与凭据提交。
+ * [OUTPUT]: 提供 Web 类型、下载分页、版本化操作与设置提交。
  * [POS]: Web 请求边界；秘密输入使用独立接口。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
 export * from "./lib/tailscale-api.js";
+export * from "./lib/downloads-api.js";
 import type {
   PublicAudioSettings,
   AudioSettingsPatch,

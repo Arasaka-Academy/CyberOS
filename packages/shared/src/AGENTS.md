@@ -17,6 +17,7 @@ docker-images.test.ts: docker-images 的行为与契约验证。
 docker-images.ts: 公开 normalizeDockerRegistryServerAddress, parseDockerImageReference。
 docker-resources.test.ts: docker-resources 的行为与契约验证。
 docker-resources.ts: 公开 DOCKER_RESOURCE_FIELDS, getDockerResourceCapability, getUnsupportedDockerResource。
+download-list.ts: 下载游标分页、全局汇总和窗口观察版本契约。
 hostd-protocol.test.ts: hostd-protocol 的行为与契约验证。
 hostd-protocol.ts: 公开 HostdRequest, HostdNetworkMutationRequest, HostdNetworkInspectionResult, HostdResult 等接口。
 hud-tokens.css: hud-tokens 视觉样式。

@@ -31,6 +31,7 @@ sync-cyberui-date-picker.mjs: sync-cyberui-date-picker 模块入口或运行脚�
 sync-cyberui-slider.mjs: 从固定上游提交同步滑块并校验来源哈希。
 test-card-surfaces.mjs: test-card-surfaces 的行为与契约验证。
 test-chat-session-switch.mjs: test-chat-session-switch 的行为与契约验证。
+test-download-panel.mjs: 下载任务进度、窗口快照、一万条历史滚动和响应式浏览器验收。
 test-download-settings.mjs: test-download-settings 的行为与契约验证。
 test-nvr-browser.mjs: test-nvr-browser 的行为与契约验证。
 test-photos-semantic-browser.mjs: test-photos-semantic-browser 的行为与契约验证。

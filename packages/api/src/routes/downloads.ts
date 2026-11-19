@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖下载生命周期仓库和存储池安全边界。
+ * [OUTPUT]: 提供下载创建、控制、删除与种子预览接口。
+ * [POS]: 下载命令适配层；列表与事件流由 downloads-list 注册。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { constants as fsConstants } from "node:fs";
 import { access, lstat, rm, stat, unlink } from "node:fs/promises";
 import path from "node:path";
@@ -9,16 +15,15 @@ import {
   deleteTorrentPreview,
   deleteDownloadTask,
   getDownloadTask,
-  getDownloadWorkerHealth,
   getTorrentPreview,
   listDownloadTaskFiles,
-  listDownloadTasks,
   requestDownloadTaskControl,
   transitionDownloadTask,
   type CyberOsDatabase
 } from "@cyberos/db";
 import { type DownloadTaskRecord, type DownloadTaskStatus } from "@cyberos/shared";
 import type { ApiRouteContext } from "../context.js";
+import { registerDownloadListRoutes } from "./downloads-list.js";
 import {
   resolveScopedExistingPath,
   resolveScopedTargetPath,
@@ -35,6 +40,7 @@ const MAX_TORRENT_UPLOAD_BYTES = 16 * 1024 * 1024;
 
 export function registerDownloadRoutes(server: FastifyInstance, { config, db, system }: ApiRouteContext): void {
   const dataRoot = config.paths.dataRoot;
+  registerDownloadListRoutes(server, db);
   server.post<{
     Body: {
       url?: string;
@@ -188,11 +194,6 @@ export function registerDownloadRoutes(server: FastifyInstance, { config, db, sy
     }
     reply.status(409).send({ error: "Torrent preview is currently resolving" });
   });
-
-  server.get("/api/downloads", async () => ({
-    tasks: listDownloadTasks(db, { limit: 500 }),
-    health: getDownloadWorkerHealth(db)
-  }));
 
   server.get<{
     Params: { id: string };
@@ -359,39 +360,7 @@ export function registerDownloadRoutes(server: FastifyInstance, { config, db, sy
     reply.status(204).send();
   });
 
-  server.get("/api/downloads/events", async (request, reply) => {
-    reply.hijack();
-    const raw = reply.raw;
-    raw.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-      "X-Accel-Buffering": "no"
-    });
 
-    let lastSnapshot = "";
-    const flush = () => {
-      if (raw.destroyed) {
-        return;
-      }
-      const snapshot = {
-        tasks: listDownloadTasks(db, { limit: 500 }),
-        health: getDownloadWorkerHealth(db)
-      };
-      const serialized = JSON.stringify(snapshot);
-      if (serialized === lastSnapshot) {
-        return;
-      }
-      lastSnapshot = serialized;
-      raw.write(`event: snapshot\n`);
-      raw.write(`data: ${serialized}\n\n`);
-    };
-
-    raw.write(": connected\n\n");
-    flush();
-    const timer = setInterval(flush, 1_000);
-    request.raw.on("close", () => clearInterval(timer));
-  });
 }
 
 async function createTorrentTaskFromPreview(

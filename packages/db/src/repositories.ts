@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖各领域 SQLite 仓库。
+ * [OUTPUT]: 汇总跨进程使用的持久状态查询与命令。
+ * [POS]: db 公共仓库入口；具体转换留在领域模块。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 export * from "./repositories/agent-session-commands.js";
 export * from "./repositories/audio.js";
 export * from "./repositories/agent-resources.js";
@@ -14,6 +20,7 @@ export {
 } from "./repositories/docker-operations.js";
 export * from "./repositories/docker-registry-credentials.js";
 export * from "./repositories/downloads.js";
+export * from "./repositories/downloads-list.js";
 export * from "./repositories/file-operations.js";
 export * from "./repositories/file-batches.js";
 export * from "./repositories/index-runs.js";

@@ -22,7 +22,7 @@ HTTP 单文件与 BT 目录使用各自的存储目标类型。图中把它们�
 | [src/network.rs](src/network.rs) | URL、DNS/IP、重定向、TLS、请求超时与 Range |
 | [src/p2p.rs](src/p2p.rs) | librqbit 会话、种子预览、文件选择和 BT 任务执行 |
 | [src/storage.rs](src/storage.rs) | `StorageTarget` / `TorrentStorageTarget`、挂载和句柄校验、发布 |
-| [src/db.rs](src/db.rs) | 下载队列、worker、分段、预览、进度、预留与 journal |
+| [src/db.rs](src/db.rs) 与 [src/db/](src/db/) | SQLite actor、下载队列、worker、BT 进度、HTTP 检查点与发布 |
 | [src/retry.rs](src/retry.rs) | 指数退避、jitter、`Retry-After` 解析 |
 | [src/error.rs](src/error.rs) | 稳定错误分类、可重试标记与存储错误识别 |
 
@@ -65,6 +65,10 @@ HTTP 传输字节完成、文件发布完成和任务状态完成是三个需要
 
 当前会话不启用 librqbit 的持久化与 fastresume，UPnP 自动端口映射关闭。产品任务状态、文件选择及恢复由 CyberOS 自己的数据库和存储逻辑承接，不应假定外部引擎替它完成事务恢复。
 
+BT 恢复会先校验现有分片。校验阶段使用 `verifying`，保留已确认的下载量与文件进度，速度和 peer 数归零；扫描字节不计入下载量。已发布内容在重新校验期间保持完整进度和做种状态。校验完成后采用真实分片结果；坏块导致的进度下降会如实保存。
+
+下载总量固定为选中文件的实际大小，已有量由选中文件进度逐项限幅后汇总。引擎为跨文件边界多传输的分片不增加产品总量。校验与传输检查点均校验 worker 所有权和待处理控制，暂停或新 worker 接管后不再提交旧进度。
+
 HTTP 的公网 DNS、重定向和代理限制只在 HTTP 通道实施。BT 的 peer、tracker 和 DHT 行为需要按 `p2p.rs` 及引擎选项独立理解。
 
 ## 持久化与安全边界
@@ -89,6 +93,8 @@ HTTP 的公网 DNS、重定向和代理限制只在 HTTP 通道实施。BT 的 p
 cargo check --locked -p cyberos-downloader
 cargo test --locked -p cyberos-downloader
 ```
+
+隔离 BT 回归使用本地限速 peer、临时数据库和临时文件，覆盖传输中暂停、重新校验、恢复与最终发布。测试不访问公网，也不触碰产品任务。
 
 测试重点包括续传/Range 响应、重定向与地址策略、检查点、磁盘与路径约束、发布恢复以及隔离的 BT 场景。测试中的私网地址注入是测试能力，生产请求配置没有相同开关。
 
