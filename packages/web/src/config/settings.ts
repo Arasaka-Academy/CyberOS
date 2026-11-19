@@ -20,6 +20,7 @@ import type {
 
 export type SettingsSectionId =
   | "overview"
+  | "notifications"
   | "system-profile"
   | "version"
   | "model-providers"
@@ -86,6 +87,10 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   },
   {
     id: "appearance",
+    group: "general"
+  },
+  {
+    id: "notifications",
     group: "general"
   },
   {
@@ -191,6 +196,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
 ];
 
 const SECTION_TITLE_KEYS = {
+  notifications: "browserNotifications.sectionTitle",
   overview: "settings.sections.overview.title",
   "system-profile": "settings.sections.systemProfile.title",
   version: "settings.sections.version.title",
@@ -221,6 +227,7 @@ const SECTION_TITLE_KEYS = {
 } as const satisfies Record<SettingsSectionId, string>;
 
 const SECTION_DESCRIPTION_KEYS = {
+  notifications: "browserNotifications.sectionDescription",
   overview: "settings.sections.overview.description",
   "system-profile": "settings.sections.systemProfile.description",
   version: "settings.sections.version.description",

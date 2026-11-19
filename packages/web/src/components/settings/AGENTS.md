@@ -34,6 +34,8 @@ SettingsMusicLibraryCard.test.tsx: SettingsMusicLibraryCard 的行为与契约�
 SettingsMusicLibraryCard.tsx: 公开 SettingsMusicLibraryCard, SettingsMusicLibraryContent。
 SettingsNvrPage.test.ts: SettingsNvrPage 的行为与契约验证。
 SettingsNvrPage.tsx: 公开 SettingsNvrPage, SettingsNvrContent。
+SettingsNotificationsPage.tsx: 当前浏览器通知权限、Push 连接、三类事件偏好和测试。
+SettingsNotificationsPage.test.ts: 通知状态、不可用原因和中英文渲染回归。
 SettingsOperationsPage.test.ts: SettingsOperationsPage 的行为与契约验证。
 SettingsOperationsPage.tsx: 公开 OPERATIONS_HISTORY_LIMIT, SettingsOperationsPage, operationsPollInterval。
 SettingsPhotosPage.test.ts: SettingsPhotosPage 的行为与契约验证。

@@ -10,6 +10,8 @@ appearance.test.ts: appearance 的行为与契约验证。
 appearance.ts: 公开 AppearancePreference, appearanceSchemes, DEFAULT_APPEARANCE, APPEARANCE_STORAGE_KEY 等接口。
 audio-settings.ts: 公开 AUDIO_SETTING_FIELDS, normalizeAudioSettings, publicAudioSettings, normalizeCyberAudioBaseUrl。
 browser.ts: browser 模块入口或运行脚本。
+browser-push-node.ts: Node 专用 VAPID、固定公网 DNS 加密推送与发送前授权复查。
+browser-push-node.test.ts: 验证私钥权限、并发初始化、公网加密边界与 DNS 重试分类。
 config.test.ts: config 的行为与契约验证。
 config.ts: 公开 DEFAULT_MONITORING_CONFIG, WORKER_POLL_MS, WORKER_CONCURRENCY, HOSTD_SOCKET_PATH 等接口。
 cyberui-tokens.ts: 公开 Palette, Mode, ThemeMode, Locale 等接口。
@@ -36,6 +38,8 @@ music-player.test.ts: music-player 的行为与契约验证。
 music-player.ts: 提供音乐视图、实际音频路由和版本化队列命令。
 music.ts: 公开 MusicScanState, MusicSource, MusicScan, MusicTrack 等接口。
 nvr-client.ts: 公开 NvrMethod, nvrSocketPath, NvrError, NvrRuntime 等接口。
+notifications.ts: 通用通知类型、浏览器订阅、分类偏好和隐私文案；供数据库、发送器与 Web 共用。
+notifications.test.ts: 通知分类开关与锁屏泛化文案的隐私契约。
 paths.test.ts: paths 的行为与契约验证。
 paths.ts: 公开 CyberOsPaths, resolveCyberOsPaths, isPathInside, assertPathInside。
 photos-config.test.ts: photos-config 的行为与契约验证。

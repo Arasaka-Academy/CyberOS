@@ -15,7 +15,7 @@ test-tv-idle-browser.mjs: Chromium 验证 TV 音乐、无帧回调握手和设�
 test-tv-video-screensaver-browser.mjs: Chromium 验证真实静音视频轮播、故障回退和息屏释放。
 src/: Web 页面、领域组件与 TV 独立外壳。
 tv/: TV HTML 入口。
-public/: 图标与静态资源。
+public/: 图标与通知 Service Worker；不建立离线缓存。
 docs/: 本地文档补充材料。
 
 [PROTOCOL]: Update this header on change, then check AGENTS.md

@@ -12,6 +12,7 @@
     "./docker-resources": "./src/docker-resources.ts",
     "./photos-config": "./src/photos-config.ts",
     "./mcp-network": "./src/mcp-network.ts",
+    "./browser-push-node": "./src/browser-push-node.ts",
     "./hud-tokens.css": "./src/hud-tokens.css",
     "./appearance": "./src/appearance.ts",
     "./cyberui-tokens": "./src/cyberui-tokens.ts",
@@ -19,6 +20,10 @@
   },
   "types": "./src/index.ts",
   "dependencies": {
-    "undici": "8.12.2"
+    "undici": "8.12.2",
+    "web-push": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/web-push": "^3.6.4"
   }
 }

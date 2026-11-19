@@ -3,6 +3,7 @@
 
 成员列表
 AGENTS.md: 本目录成员和依赖边界。
+browser-notifications.ts: 当前浏览器推送权限、连接、偏好与测试的中英文文案。
 format.test.ts: format 的行为与契约验证。
 format.ts: 公开 formatBytes, formatDate, formatTime, formatRelativeTime 等接口。
 i18next.d.ts: i18next.d 模块入口或运行脚本。

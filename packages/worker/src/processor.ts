@@ -1,6 +1,6 @@
 /**
- * [INPUT]: 依赖 Agent 运行时、SQLite 作业和共享权限设置。
- * [OUTPUT]: 提供作业执行、自动授权、事件投递和持久续跑。
+ * [INPUT]: 依赖 Agent 运行时、SQLite 原子终态和共享权限设置。
+ * [OUTPUT]: 提供作业执行、自动授权、终态通知和持久续跑。
  * [POS]: worker 的会话执行入口；先建立归属再自动授权。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
@@ -36,6 +36,7 @@ import {
   getAgentResourceGeneration,
   getSession,
   finishAgentSessionCommand,
+  finishAgentJobWithNotification,
   linkAgentJobToCapabilityRun,
   listAgentMcpServers,
   listAgentSkills,
@@ -292,15 +293,7 @@ export async function processNextJob({
 
   if (!session || !message) {
     const error = "Job references a missing session or message";
-    const failed = updateJobStatus(db, job.id, "failed", error, ["running"]);
-    if (failed && session) {
-      appendEvent(db, {
-        sessionId: session.id,
-        jobId: job.id,
-        type: "job.failed",
-        payload: { error }
-      });
-    }
+    finishAgentJobWithNotification(db, { jobId: job.id, workerId, status: "failed", error });
     return true;
   }
 
@@ -332,6 +325,7 @@ export async function processNextJob({
       return currentJob.status === "running" && (leaseLost || currentJob.leaseOwner !== workerId);
     };
     let providerSessionSavedThisTurn: string | null = null;
+    let approvalRequestEmittedThisTurn = false;
 
   try {
     const turnSession = { ...session, currentPath: job.workingPath };
@@ -351,6 +345,7 @@ export async function processNextJob({
           providerSession: getAgentProviderSession(db, session.id),
           ...(agentRunner ? { runner: agentRunner } : {}),
           emit: (event) => {
+            if (event.type === "approval.pending") approvalRequestEmittedThisTurn = true;
             appendCapabilityEvent(db, {
               sessionId: session.id,
               jobId: job.id,
@@ -403,21 +398,16 @@ export async function processNextJob({
       if (providerSessionSavedThisTurn) {
         clearUnpersistedProviderSession(db, session.id, providerSessionSavedThisTurn);
       }
-      if (updateJobStatus(db, job.id, "failed", error, ["running", "waiting_approval"])) {
-        appendEvent(db, {
-          sessionId: session.id,
-          jobId: job.id,
-          type: "job.failed",
-          payload: {
-            error
-          }
-        });
-      }
+      finishAgentJobWithNotification(db, { jobId: job.id, workerId, status: "failed", error });
       return true;
     }
 
     if (result.status === "waiting_approval") {
-      if (updateJobStatus(db, job.id, "waiting_approval", null, ["running"])) {
+      db.transaction(() => {
+        const current = getJob(db, job.id);
+        if (current?.leaseOwner !== workerId || current.status !== "running") return;
+        if (!updateJobStatus(db, job.id, "waiting_approval", null, ["running"])) return;
+        if (!result.runId && approvalRequestEmittedThisTurn) return;
         appendCapabilityEvent(db, {
           sessionId: session.id,
           jobId: job.id,
@@ -429,36 +419,18 @@ export async function processNextJob({
             ...(result.runId ? { runId: result.runId } : {})
           }
         });
-      }
+      }).immediate();
       return true;
     }
 
-    if (!updateJobStatus(db, job.id, "completed", null, ["running", "waiting_approval"])) {
-      return true;
-    }
-    appendEvent(db, {
-      sessionId: session.id,
-      jobId: job.id,
-      type: "job.completed",
-      payload: {
-        jobId: job.id
-      }
-    });
+    finishAgentJobWithNotification(db, { jobId: job.id, workerId, status: "completed",
+      ...(result.summary === undefined ? {} : { reply: result.summary }) });
   } catch (error) {
     const messageText = error instanceof Error ? error.message : String(error);
     if (providerSessionSavedThisTurn) {
       clearUnpersistedProviderSession(db, session.id, providerSessionSavedThisTurn);
     }
-    if (updateJobStatus(db, job.id, "failed", messageText, ["running", "waiting_approval"])) {
-      appendEvent(db, {
-        sessionId: session.id,
-        jobId: job.id,
-        type: "job.failed",
-        payload: {
-          error: messageText
-        }
-      });
-    }
+    finishAgentJobWithNotification(db, { jobId: job.id, workerId, status: "failed", error: messageText });
   }
 
     return true;

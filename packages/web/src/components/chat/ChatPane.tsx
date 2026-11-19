@@ -571,7 +571,7 @@ function ChatPaneContent({
           {transcriptLoading ? <TranscriptSkeleton /> : hasConversationContent ? (
             <>
               {transcript.map((item) => (
-                <article key={item.presentation?.key ?? item.id} aria-live={item.presentation ? "off" : undefined} className={`message message-${item.role}${item.streaming ? " is-streaming" : ""}`}>
+                <article key={item.presentation?.key ?? item.id} data-transcript-id={item.id} aria-live={item.presentation ? "off" : undefined} className={`message message-${item.role}${item.streaming ? " is-streaming" : ""}`}>
                   <div className="avatar" aria-hidden="true">
                     {item.role === "assistant" ? <Bot size={17} /> : <MessageSquare size={17} />}
                   </div>
@@ -605,7 +605,7 @@ function ChatPaneContent({
                 </article>
               ))}
               {activeCapabilityApprovals.map((approval) => (
-                <article key={`capability-approval-${approval.id}`} className="message message-assistant message-approval">
+                <article key={`capability-approval-${approval.id}`} data-capability-run={approval.run.id} className="message message-assistant message-approval">
                   <div className="avatar" aria-hidden="true">
                     <Bot size={17} />
                   </div>

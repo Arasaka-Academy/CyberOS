@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 Web 服务接口、设置资源与 Agent 事件流。
  * [OUTPUT]: 提供应用状态、工作区与设置交互。
- * [POS]: Web 应用组合层；保留本轮工具摘要，新任务重置记录。
+ * [POS]: Web 应用组合层；组合通知会话直达、展示确认与本轮工具记录。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
 import { AppearanceProvider, Button as UiButton } from "@cyberos/ui";
@@ -127,6 +127,8 @@ import {
 } from "./api.js";
 import type { AgentDeliveryMode } from "./components/chat/ChatPane.js";
 import { composeAgentMessage, hasActiveAgentTurn } from "./lib/agent-composer.js";
+import { loadNotificationSession, notificationSessionId, writeNotificationSessionLocation } from "./lib/notification-navigation.js";
+import { useBrowserNotifications } from "./lib/use-browser-notifications.js";
 const ChatPane = lazy(() => import("./components/chat/ChatPane.js").then((module) => ({ default: module.ChatPane })));
 import { NotificationCenter } from "./components/notifications/NotificationCenter.js";
 import { FileEditorModal } from "./components/editor/FileEditorModal.js";
@@ -368,6 +370,7 @@ function AppContent() {
   const transcriptRef = useRef<HTMLDivElement | null>(null);
   const fileListingRequestId = useRef(0);
   const sessionViewRequestId = useRef(0);
+  const notificationNavigationRequestId = useRef(0);
   const activeSessionIdRef = useRef(activeSessionId);
   const activeSearchQueryRef = useRef("");
   const currentPathRef = useRef(currentPath);
@@ -404,6 +407,12 @@ function AppContent() {
   const notificationRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const notificationFileListingRefreshRef = useRef(false);
   const workQueueRefreshRef = useRef<ReturnType<typeof createTrailingSingleFlight> | null>(null);
+  useBrowserNotifications({
+    sessionId: activeSessionId,
+    chatVisible: (!navigation.compact || navigation.route === "agent") && !settingsOpen && !voiceOpen && !notificationCenterOpen && !editorMeta,
+    transcriptRef,
+    onOpenSession: (id) => { void openBrowserNotificationSession(id); }
+  });
 
   const storagePoolOptions = useMemo(() => {
     return (storageSummary?.pools ?? [])
@@ -501,6 +510,22 @@ function AppContent() {
       }
       let nextSession: Session | SessionSummary | null = nextSessions.find(isAgentSession) ?? null;
       let nextSessionList = nextSessions;
+      let linkedSnapshot: SessionTranscriptSnapshot | null = null;
+      const requestedSessionId = notificationSessionId(window.location.search);
+      if (requestedSessionId) {
+        try {
+          const linked = await loadNotificationSession(requestedSessionId);
+          if (!active || !isCurrentSessionViewRequest(sessionRequestId)) return;
+          nextSession = linked.session;
+          linkedSnapshot = linked.snapshot;
+          if (!nextSessionList.some(item => item.id === linked.session.id)) {
+            nextSessionList = [{ ...linked.session, createdAt: linked.session.createdAt ?? "", updatedAt: linked.session.updatedAt ?? "", firstMessage: null, lastMessage: null, pendingApprovalCount: 0 }, ...nextSessionList];
+          }
+          navigation.openApp("agent");
+        } catch {
+          setError(t("browserNotifications.conversationUnavailable"));
+        }
+      }
 
       if (!nextSession) {
         nextSession = await createSession(".");
@@ -519,7 +544,7 @@ function AppContent() {
       setComposerPath(null);
       dispatchTranscript({ type: "begin", sessionId: nextSession.id });
       const [nextTranscript, nextApprovals] = await Promise.allSettled([
-        getTranscript(nextSession.id),
+        linkedSnapshot ? Promise.resolve(linkedSnapshot) : getTranscript(nextSession.id),
         getApprovals(nextSession.id)
       ]);
 
@@ -529,6 +554,7 @@ function AppContent() {
 
       if (nextTranscript.status === "rejected") throw nextTranscript.reason;
       restoreTranscriptSnapshot(nextSession.id, nextTranscript.value);
+      if (requestedSessionId) writeNotificationSessionLocation(nextSession.id);
       if (nextApprovals.status === "fulfilled") setCapabilityApprovals(nextApprovals.value.capabilityApprovals);
       else setError(toErrorMessage(nextApprovals.reason));
       void refreshWorkQueues();
@@ -1368,6 +1394,7 @@ function AppContent() {
         return;
       }
       restoreTranscriptSnapshot(nextSession.id, nextTranscript);
+      writeNotificationSessionLocation(nextSession.id);
     } catch (nextError) {
       if (!isCurrentSessionViewRequest(sessionRequestId)) {
         return;
@@ -1375,6 +1402,38 @@ function AppContent() {
       dispatchTranscript({ type: "failed", sessionId: nextSession.id });
       setError(toErrorMessage(nextError));
       setStatus("error");
+    }
+  }
+
+  async function openBrowserNotificationSession(sessionId: string): Promise<void> {
+    const navigationRequestId = ++notificationNavigationRequestId.current;
+    const currentViewRequestId = sessionViewRequestId.current;
+    try {
+      const { session: nextSession, snapshot } = await loadNotificationSession(sessionId);
+      if (notificationNavigationRequestId.current !== navigationRequestId || !isCurrentSessionViewRequest(currentViewRequestId)) return;
+      beginSessionViewRequest();
+      settingsResources.close();
+      setSettingsOpen(false);
+      setVoiceOpen(false);
+      setNotificationCenterOpen(false);
+      setEditorMeta(null);
+      navigation.openApp("agent");
+      setError(null);
+      setCapabilityApprovals([]);
+      commitActiveAgentJob(EMPTY_ACTIVE_AGENT_JOB);
+      activeSessionIdRef.current = sessionId;
+      setSession(nextSession);
+      setActiveSessionId(sessionId);
+      setComposerPath(null);
+      setSessions(current => current.some(item => item.id === sessionId) ? current : [{ ...nextSession, createdAt: nextSession.createdAt ?? "", updatedAt: nextSession.updatedAt ?? "", firstMessage: null, lastMessage: null, pendingApprovalCount: 0 }, ...current]);
+      dispatchTranscript({ type: "begin", sessionId });
+      restoreTranscriptSnapshot(sessionId, snapshot);
+      writeNotificationSessionLocation(sessionId);
+      void refreshWorkQueues();
+    } catch {
+      if (notificationNavigationRequestId.current === navigationRequestId && isCurrentSessionViewRequest(currentViewRequestId)) {
+        setError(t("browserNotifications.conversationUnavailable"));
+      }
     }
   }
 
@@ -1407,6 +1466,7 @@ function AppContent() {
       setSessions(nextSessions);
       restoreTranscriptSnapshot(nextSession.id, nextTranscript);
       setMobileView("chat");
+      writeNotificationSessionLocation(nextSession.id);
     } catch (nextError) {
       if (!isCurrentSessionViewRequest(sessionRequestId)) {
         return;
@@ -1432,6 +1492,7 @@ function AppContent() {
       }
       restoreTranscriptSnapshot(nextSession.id, nextTranscript);
       setComposerPath(null);
+      writeNotificationSessionLocation(nextSession.id);
     } catch (error) {
       if (isCurrentSessionViewRequest(sessionRequestId)) {
         dispatchTranscript({ type: "failed", sessionId: nextSession.id });

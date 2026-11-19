@@ -16,7 +16,7 @@ source-layout work.
 
 - `packages/web`: React/Vite web UI.
 - `packages/api`: Fastify API, WebSocket/SSE endpoints, and production static files.
-- `packages/worker`: agent job worker.
+- `packages/worker`: agent job worker and durable browser notification delivery.
 - `packages/capabilities`, `packages/capability-runtime`, `packages/mcp`:
   capability contracts, durable authorized execution, and internal Agent MCP.
 - `packages/ops`, `packages/backup`: one-shot operations and restic jobs.
@@ -281,6 +281,14 @@ making UI changes. Update that document when intentionally changing shared
 visual tokens, layout breakpoints, interaction semantics, or responsive
 information architecture; do not introduce page-local design rules that
 contradict it.
+
+Browser notifications use a durable event/outbox pipeline and standard Web Push.
+Agent job outcomes and human input requests publish through `@cyberos/db`;
+the worker sends encrypted payloads and the Web Service Worker displays them.
+Subscriptions belong to one browser and HTTPS origin. Keep VAPID private keys
+under `secretsDir`; never place subscription endpoints or tokens in logs.
+Foreground observation confirms rendered content for one subscription only;
+it does not change notification-center read state.
 
 ## Git
 

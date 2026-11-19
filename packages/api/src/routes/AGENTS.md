@@ -12,6 +12,8 @@ audio-device.ts: 公开 registerAudioDevice。
 audio.test.ts: audio 的行为与契约验证。
 audio.ts: 公开 registerAudioRoutes。
 backup.ts: 公开 registerBackupRoutes。
+browser-push.ts: 同源浏览器订阅、身份授权、测试事件和前台观察流。
+browser-push.test.ts: 验证推送公开配置、来源、令牌和观察边界。
 bluetooth-transfers.test.ts: bluetooth-transfers 的行为与契约验证。
 bluetooth-transfers.ts: 公开 registerBluetoothTransferRoutes, finalizeBluetoothReceives, bluetoothAudioDevices, streamBluetoothTransfers。
 docker.ts: 公开 registerDockerRoutes, streamDockerDaemonEvents。

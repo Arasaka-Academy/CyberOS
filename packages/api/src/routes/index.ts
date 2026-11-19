@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 API 运行时和各领域 HTTP 注册器。
- * [OUTPUT]: 注册系统、存储、媒体和 TV 输出接口。
+ * [OUTPUT]: 注册系统、存储、媒体、浏览器推送和 TV 输出接口。
  * [POS]: API 组合入口到领域路由的依赖分发层。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
@@ -15,6 +15,7 @@ import { registerBackupRoutes } from "./backup.js";
 import { registerHealthStatusRoutes } from "./health-status.js";
 import { registerJobRoutes } from "./jobs.js";
 import { registerOperationRoutes } from "./operations.js";
+import { registerBrowserPushRoutes } from "./browser-push.js";
 import { registerNotificationRoutes } from "./notifications.js";
 import { registerSessionRoutes } from "./sessions.js";
 import { registerSettingsRoutes } from "./settings.js";
@@ -65,6 +66,7 @@ export function registerApiRoutes(server: FastifyInstance, context: ApiRouteCont
   registerApprovalRoutes(server, context);
   registerOperationRoutes(server, context);
   registerNotificationRoutes(server, context);
+  registerBrowserPushRoutes(server, context);
   registerDockerRoutes(server, context);
   registerShareRoutes(server, context);
   registerTerminalRoutes(server, context);

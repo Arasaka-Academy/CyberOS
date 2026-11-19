@@ -26,6 +26,17 @@ Agent 事件通过 session SSE stream 传递；terminal、Docker console 和 VM 
 
 第三方只支持 MCP Streamable HTTP，不支持旧 SSE 或 stdio。第三方工具调用按用户信任直接执行，不创建逐次 CyberOS capability approval；Server 配置和 Skill 安装仍要求高风险确认。
 
+## 浏览器通知
+
+- `GET /api/notifications/push/config` 返回 `available` 和 VAPID 公钥，不返回私钥。
+- `POST /api/notifications/push/subscriptions` 接收标准 `subscription`、`locale`、分类 `preferences` 和可选原 `identity`。返回当前浏览器的订阅记录及管理身份；endpoint 重复且缺少原身份时返回 `409`，不接管已有订阅。
+- `GET/PATCH/DELETE /api/notifications/push/subscriptions/:id` 使用 Bearer 管理令牌。PATCH 支持 `enabled`、`locale` 和回复、人工处理、失败三类偏好。公开记录不返回 endpoint、加密密钥或令牌摘要。
+- `POST /api/notifications/push/test` 接收当前订阅 `identity`，只为该浏览器创建测试投递。
+- `GET /api/notifications/events` 提供带 ID 的 `notification` SSE，初次从最新位置开始；重连优先使用 `Last-Event-ID`，其次 `?after=`。`ready` 返回当前游标。该接口只传泛化事件与受控站内引用。
+- `POST /api/notifications/events/:id/observed` 接收 `identity`，只确认该订阅实际展示的事件，不修改站内通知中心的 `readAt`。
+
+写接口要求安全同源请求，并绑定订阅的 HTTPS origin；开发环境允许 localhost HTTP。endpoint 必须使用 HTTPS 并只解析到公网地址，发送时固定校验结果且禁止重定向。响应禁用缓存。客户端不能通过这些接口创建任意业务通知或执行审批。
+
 ## Docker 与虚拟机开关
 
 - `GET/PATCH /api/settings/docker` 管理 CyberOS 的 Docker 能力开关，PATCH 只接受 `{ enabled: boolean }`。Engine socket、Compose 命令、操作超时和控制台 shell 是固定运行时常量。运行时由安装器预先安装；关闭开关后 Docker API 与 Agent/MCP mutation 不可用。

@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖各领域的顺序迁移和 SQLite 连接。
+ * [OUTPUT]: 提供迁移清单与串行幂等迁移执行。
+ * [POS]: 数据库初始化唯一入口；迁移与标记同事务提交。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import type Database from "better-sqlite3";
 import { currentMigrations } from "./migrations/current.js";
 import { agentResourceMigrations } from "./migrations/agent-resources.js";
@@ -11,6 +17,7 @@ import type { Migration } from "./migrations/types.js";
 import { audioMigrations } from "./migrations/audio.js";
 import { photosSemanticMigrations } from "./migrations/photos-semantic.js";
 import nvrMigration from "./migrations/nvr.json" with { type: "json" };
+import { notificationMigrations } from "./migrations/notifications.js";
 
 export type { Migration } from "./migrations/types.js";
 
@@ -25,7 +32,8 @@ export const migrations: Migration[] = [
   ...photosIndexPerformanceMigrations,
   ...audioMigrations,
   ...photosSemanticMigrations,
-  nvrMigration
+  nvrMigration,
+  ...notificationMigrations
 ];
 
 export function runMigrations(db: Database.Database): void {

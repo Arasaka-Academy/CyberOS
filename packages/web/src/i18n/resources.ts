@@ -6,7 +6,9 @@
  */
 import { nvrEn, nvrZh } from "./nvr.js";
 import { tvIdleEn, tvIdleZh } from "./tv-idle.js";
+import { browserNotificationsEn, browserNotificationsZh } from "./browser-notifications.js";
 export const en = {
+  browserNotifications: browserNotificationsEn,
   tvIdle: tvIdleEn,
   nvr: nvrEn,
   voice: {
@@ -3613,6 +3615,7 @@ type LocaleResource<T> = {
 };
 
 export const zhCN = {
+  browserNotifications: browserNotificationsZh,
   tvIdle: tvIdleZh,
   nvr: nvrZh,
   voice: {

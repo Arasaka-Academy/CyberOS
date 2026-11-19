@@ -4,6 +4,7 @@
 成员列表
 AGENTS.md: 本目录成员和依赖边界。
 agent-full-access.test.ts: agent-full-access 的行为与契约验证。
+agent-notifications.test.ts: Agent 通知范围、原子终态与审批去重验证。
 agent-resources.test.ts: agent-resources 的行为与契约验证。
 audio.test.ts: audio 的行为与契约验证。
 bluetooth-transfers.test.ts: bluetooth-transfers 的行为与契约验证。
@@ -16,6 +17,7 @@ index.ts: 本模块公共导出入口。
 mcp-resource-tokens.test.ts: mcp-resource-tokens 的行为与契约验证。
 media-library.test.ts: media-library 的行为与契约验证。
 music.test.ts: music 的行为与契约验证。
+notifications.test.ts: 订阅身份、原子事件和独立投递的行为验证。
 ops-maintenance.test.ts: ops-maintenance 的行为与契约验证。
 ops-runs.test.ts: ops-runs 的行为与契约验证。
 photos-search-corpus.test.ts: photos-search-corpus 的行为与契约验证。

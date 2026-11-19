@@ -5,6 +5,7 @@
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
 export * from "./docker-images.js";
+export * from "./notifications.js";
 export * from "./docker-resources.js";
 export * from "./hostd-protocol.js";
 export * from "./tailscale.js";

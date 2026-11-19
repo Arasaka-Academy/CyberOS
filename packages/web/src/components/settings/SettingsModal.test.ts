@@ -33,7 +33,7 @@ describe("SettingsModal", () => {
       count: [...match[2]!.matchAll(/<button/gu)].length
     }));
     expect(groups).toEqual([
-      { title: "General", count: 4 },
+      { title: "General", count: 5 },
       { title: "Network & Connections", count: 4 },
       { title: "Files & Data", count: 4 },
       { title: "Media & Downloads", count: 5 },

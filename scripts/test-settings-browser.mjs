@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖隔离 API、设置页面与 Playwright。
- * [OUTPUT]: 验证设置保存、响应布局与交互契约。
+ * [OUTPUT]: 验证设置保存、通知入口、响应布局与交互契约。
  * [POS]: 浏览器设置验收入口，不访问生产配置。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
@@ -276,7 +276,7 @@ test("settings navigation groups keep their order, search and selection on deskt
           : ["常规", "网络与连接", "文件与数据", "媒体与下载", "AI 与语音", "系统与维护"];
         await expect(navigation.locator("h3")).toHaveText(labels);
         await expect(navigation.locator("button strong")).toHaveText(view.sections.map(section => section.title));
-        assert.deepEqual(await navigation.locator("section").evaluateAll(groups => groups.map(group => group.querySelectorAll("button").length)), [4, 4, 4, 4, 5, 5]);
+        assert.deepEqual(await navigation.locator("section").evaluateAll(groups => groups.map(group => group.querySelectorAll("button").length)), [5, 4, 4, 5, 5, 5]);
         const clippedLabels = await navigation.locator("h3, button strong").evaluateAll(elements => elements.filter(element => element.scrollWidth > element.clientWidth + 1).map(element => element.textContent));
         assert.deepEqual(clippedLabels, []);
         await expect(navigation).toHaveCSS("scroll-padding-bottom", "6px");

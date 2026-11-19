@@ -1,12 +1,13 @@
 /**
- * [INPUT]: 依赖 Agent 作业归属、提案快照与当前权限设置。
- * [OUTPUT]: 提供交互类型判断和系统自动授权。
+ * [INPUT]: 依赖 Agent 作业归属、提案快照、权限设置和通知仓库。
+ * [OUTPUT]: 提供交互判断、系统自动授权和人工处理通知。
  * [POS]: worker 与第一方输入路由共用的授权边界。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
 import type { CyberOsDatabase } from "../connection.js";
 import { getAgentCapabilityPolicySettings } from "./settings.js";
 import { decideCapabilityApproval, getAgentCapabilityApproval, getCapabilityApprovalByRun, getCapabilityRunForAgentJob } from "./capability-runs.js";
+import { publishAgentJobNotification } from "./notifications.js";
 
 export type AgentCapabilityInteraction = "approval" | "input_required" | "automatic";
 export const FULL_ACCESS_DECISION_SOURCE = "system:full-access";
@@ -51,6 +52,9 @@ export function authorizeAgentCapabilityRun(
         approvalId: approval.id, expectedRevision: approval.revision,
         decision: "approved", decidedBy: FULL_ACCESS_DECISION_SOURCE, confirmed: true
       })) throw new Error("Capability run changed before automatic authorization");
+    }
+    if (interaction !== "automatic" && approval.status === "pending") {
+      publishAgentJobNotification(db, { jobId: input.jobId, type: "agent.action_required", runId: input.runId });
     }
     return interaction;
   }).immediate();

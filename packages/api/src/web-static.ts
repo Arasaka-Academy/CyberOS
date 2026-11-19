@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖 Web/文档构建目录与 Fastify 静态文件服务。
+ * [OUTPUT]: 提供静态资源、缓存策略和页面导航回退。
+ * [POS]: Web 发布边界；通知 worker 缺失时保持 404，不回退为 HTML。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import path from "node:path";
 import fastifyStatic from "@fastify/static";
 import type { FastifyInstance, FastifyRequest } from "fastify";
@@ -75,6 +81,7 @@ function isWebNavigation(request: FastifyRequest): boolean {
   const pathname = request.url.split("?", 1)[0] ?? "/";
   if (
     pathname === "/api" ||
+    pathname === "/sw.js" ||
     pathname.startsWith("/api/") ||
     pathname.startsWith("/assets/") ||
     pathname === "/docs" ||

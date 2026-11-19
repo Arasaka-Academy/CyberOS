@@ -8,6 +8,9 @@ agent-job-state.test.ts: agent-job-state 的行为回归。
 agent-job-state.ts: 提供 ActiveAgentJobState, EMPTY_ACTIVE_AGENT_JOB, markActiveAgentJobRunning, markActiveAgentJobWaitingApproval。
 browser-audio-focus.test.ts: browser-audio-focus 的行为回归。
 browser-audio-focus.ts: 提供 acquireBrowserAudioFocus。
+browser-notifications.ts: 当前浏览器的显式 Push 订阅、身份恢复、偏好与观察确认。
+browser-notifications.test.ts: 权限手势、幂等注册、身份恢复与受控跳转回归。
+browser-notification-worker.test.ts: 根 Service Worker 的必展示与同源窗口跳转回归。
 chat-paths.test.ts: chat-paths 的行为回归。
 chat-paths.ts: 提供 WorkspaceMessagePath, MessagePathSegment, resolveWorkspaceMessagePath, resolveWorkspaceMessageLink。
 client-id.test.ts: client-id 的行为回归。
@@ -41,6 +44,11 @@ music-state.test.ts: music-state 的行为回归。
 music-state.ts: 提供 VersionedMusicSnapshot, acceptMusicSnapshot, moveQueueItem, MusicLyricLine。
 network-traffic.test.ts: network-traffic 的行为回归。
 network-traffic.ts: 提供 NetworkTrafficRate, calculateNetworkTrafficRate。
+notification-navigation.ts: 通知会话深链接；直接读取历史会话，不依赖最近会话列表。
+notification-navigation.test.ts: 历史会话直读与 URL 参数校验。
+notification-observation.ts: 当前会话、焦点与实际内容展示的免打扰规则。
+notification-observation.test.ts: 后台、未渲染、非当前会话与未完成内容不确认。
+use-browser-notifications.ts: 通用通知 SSE、有界重试的展示确认与通知点击跳转。
 playback-dock-state.test.ts: playback-dock-state 的行为回归。
 playback-dock-state.ts: 提供 readPlaybackBarExpanded, writePlaybackBarExpanded, getPlaybackDockState。
 playback-menu-layout.test.ts: playback-menu-layout 的行为回归。

@@ -5,6 +5,7 @@
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
 export * from "./agent-capability-policy.js";
+export * from "./notifications.js";
 export * from "./config.js";
 export * from "./docker-images.js";
 export * from "./docker-resources.js";

@@ -3,7 +3,7 @@
 
 成员列表
 AGENTS.md: 本目录成员和依赖边界。
-agent-capability-authorization.ts: Agent 授权边界；按作业归属区分自动执行、凭据输入和人工审批。
+agent-capability-authorization.ts: Agent 授权边界；区分自动执行并发布人工处理通知。
 agent-mappers.ts: 公开 mapSession, mapMessage, mapJob, mapEvent。
 agent-resources.ts: 公开 AgentMcpServerInput, AgentSkillInput, getAgentResourceGeneration, listAgentMcpServers 等接口。
 agent-session-commands.ts: 公开 AgentSessionCommandStateError, createAgentSessionCommand, getAgentSessionCommand, getAgentSessionCommandByKey 等接口。
@@ -33,13 +33,14 @@ index-search.ts: 公开 queryIndexedText, queryIndexAdvanced。
 indexed-file-maintenance.ts: 公开 upsertIndexedFile, removeMissingIndexedFiles。
 indexed-files.ts: 公开 IndexedFileSnapshot, listIndexedFilesForStoragePool, removeIndexedFile。
 indexer-queue.ts: 公开 EnqueueIndexTaskInput, EnqueuedIndexTask, enqueueIndexTask, getIndexerServiceStatus。
-jobs.ts: 作业租约、状态转换和事件快照仓库。
+jobs.ts: 作业租约、原子终态通知、状态转换和事件快照仓库。
 mcp-clients.ts: 公开 McpClientKind, McpClientRecord, CreatedMcpClient, createMcpClient 等接口。
 mcp-resource-tokens.ts: 公开 McpResourceKind, McpResourceRecord, createMcpResourceToken, consumeMcpResourceToken 等接口。
 mcp-transfer-tokens.ts: 公开 McpTransferRecord, createMcpTransferToken, consumeMcpTransferToken, deleteExpiredMcpTransferTokens。
 media-library.ts: 公开 MediaCatalogEntryInput, defaultMediaLibrarySettings, getMediaLibrarySettings, saveMediaLibrarySettings 等接口。
 monitoring-alerts.ts: 公开 MonitoringAlertRevisionConflictError, MonitoringAlertReferenceConflictError, MonitoringAlertDeliveryCapacityError, MonitoringSmtpUnavailableError 等接口。
 music.ts: 公开 listMusicSources, getMusicSource, createMusicSource, updateMusicSource 等接口。
+notifications.ts: 通用通知持久队列；隔离订阅秘密、独立已见与发送租约。
 operation-mappers.ts: 公开 mapProviderSession, mapDockerOperation, mapShareOperation, mapStorageOperation 等接口。
 operation-notifications.ts: 公开 createOperationNotification, getOperationNotificationByOperation, getOperationNotificationByJob, listOperationNotifications 等接口。
 ops-maintenance.ts: 公开 OpsMaintenanceRetentionResult, runOpsMaintenanceRetention, countUnrestoredTrashEntries。

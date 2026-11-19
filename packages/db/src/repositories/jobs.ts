@@ -1,6 +1,6 @@
 /**
- * [INPUT]: 依赖 SQLite、能力交互与操作通知仓库。
- * [OUTPUT]: 提供作业租约、状态转换和事件快照。
+ * [INPUT]: 依赖 SQLite、能力交互与两类通知仓库。
+ * [OUTPUT]: 提供作业租约、原子终态通知和事件快照。
  * [POS]: worker 调度边界；自动等待不标为待审批。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
@@ -24,7 +24,8 @@ import {
   updateOperationNotificationForJob
 } from "./operation-notifications.js";
 import { cancelAgentCapabilityRunsForJob } from "./capability-runs.js";
-import { agentCapabilityJobInteraction } from "./agent-capability-authorization.js";
+import { agentCapabilityJobInteraction, agentCapabilityRunInteraction } from "./agent-capability-authorization.js";
+import { publishAgentJobNotification } from "./notifications.js";
 import {
   createAgentSessionCommand,
   failQueuedActiveTurnCommands,
@@ -365,7 +366,7 @@ export function recoverExpiredAgentJobs(db: CyberOsDatabase, nowDate = new Date(
         error: "Active agent turn was interrupted before the command could run",
         now: nowDate
       });
-      appendEvent(db, {
+      const event = appendEvent(db, {
         sessionId: row.session_id,
         jobId: row.id,
         type: "job.failed",
@@ -377,6 +378,7 @@ export function recoverExpiredAgentJobs(db: CyberOsDatabase, nowDate = new Date(
           attempt: row.attempt
         }
       });
+      publishAgentJobNotification(db, { jobId: row.id, type: "agent.failed", transcriptEventId: event.id, now: nowDate });
       recovered += 1;
     }
     return recovered;
@@ -437,6 +439,32 @@ export function updateJobStatus(
     return result.changes === 1;
   });
   return tx.immediate();
+}
+
+export function finishAgentJobWithNotification(db: CyberOsDatabase, input: {
+  jobId: string; workerId: string; status: "completed" | "failed";
+  error?: string; reply?: string;
+}): boolean {
+  return db.transaction(() => {
+    const job = getJob(db, input.jobId);
+    // 待审批状态释放租约。只有当前未过期租约能提交终态。
+    if (!job || job.status !== "running" || job.leaseOwner !== input.workerId
+      || !job.leaseUntil || job.leaseUntil <= new Date().toISOString()) return false;
+    if (!updateJobStatus(db, job.id, input.status, input.error ?? null, ["running"])) return false;
+    const event = appendEvent(db, { sessionId: job.sessionId, jobId: job.id,
+      type: input.status === "completed" ? "job.completed" : "job.failed",
+      payload: input.status === "completed" ? { jobId: job.id } : { error: input.error ?? "Agent turn failed" } });
+    if (input.status === "failed") {
+      publishAgentJobNotification(db, { jobId: job.id, type: "agent.failed", transcriptEventId: event.id });
+    } else if (input.reply?.trim()) {
+      const replyEventId = db.prepare(`SELECT id FROM agent_events WHERE job_id=? AND type='agent.message'
+        AND COALESCE(json_extract(payload_json,'$.role'),'assistant')='assistant'
+        AND trim(COALESCE(json_extract(payload_json,'$.content'),''))!='' ORDER BY id DESC LIMIT 1`).pluck().get(job.id);
+      publishAgentJobNotification(db, { jobId: job.id, type: "agent.reply",
+        ...(typeof replyEventId === "number" ? { transcriptEventId: replyEventId } : {}) });
+    }
+    return true;
+  }).immediate();
 }
 
 function failPendingActiveTurnCommands(
@@ -521,6 +549,16 @@ export function appendEvent<TPayload>(
         createdAt
       );
     const eventId = Number(result.lastInsertRowid);
+    if (jobId && (input.type === "approval.pending" || input.type === "approval.updated")) {
+      const payload = input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
+        ? input.payload as Record<string, unknown> : {};
+      const capabilityRunId = typeof payload.runId === "string" ? payload.runId : undefined;
+      const interaction = capabilityRunId ? agentCapabilityRunInteraction(db, capabilityRunId) : payload.interaction;
+      if ((input.type === "approval.pending" && interaction !== "automatic") || interaction === "input_required") {
+        publishAgentJobNotification(db, { jobId, type: "agent.action_required",
+          ...(capabilityRunId ? { runId: capabilityRunId } : { requestId: input.runId ?? sourceId ?? runId }) });
+      }
+    }
     let transcriptSequence: number | null = null;
     if (audience === "chat" && (input.type === "agent.message" || input.type === "job.failed")) {
       const transcriptResult = db.prepare(`

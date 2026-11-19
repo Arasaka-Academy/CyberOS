@@ -27,6 +27,7 @@ import {
   getAgentSessionCommand,
   getJob,
   listEvents,
+  listNotificationEvents,
   listPendingAgentCapabilityApprovals,
   openCyberOsDb,
   recoverInterruptedAgentSessionCommands,
@@ -58,6 +59,50 @@ afterEach(async () => {
 });
 
 describe("worker processor", () => {
+  it("publishes one final reply, and no notification for partial or cancelled turns", async () => {
+    const session = createSession(db, {});
+    const { job } = createUserMessageAndJob(db, { sessionId: session.id, content: "Reply" });
+    const runner: PiAgentRunner = async (input) => {
+      await input.emit({ type: "agent.message", runId: "turn", sequence: 1, payload: { role: "assistant", content: "Final answer" } });
+      expect(listNotificationEvents(db)).toEqual([]);
+      return { status: "completed", summary: "Final answer" };
+    };
+    await processNextJob({ db, config: testConfig(), agentRunner: runner });
+    expect(listNotificationEvents(db)).toEqual([expect.objectContaining({ type: "agent.reply", target: expect.objectContaining({ jobId: job.id }) })]);
+    createUserMessageAndJob(db, { sessionId: session.id, content: "Cancel" });
+    await processNextJob({ db, config: testConfig(), agentRunner: async () => ({ status: "cancelled" }) });
+    expect(listNotificationEvents(db)).toHaveLength(1);
+  });
+
+  it("publishes final failures from returned errors and thrown errors", async () => {
+    const session = createSession(db, {});
+    createUserMessageAndJob(db, { sessionId: session.id, content: "Fail" });
+    await processNextJob({ db, config: testConfig(), agentRunner: async () => ({ status: "failed", error: "provider failed" }) });
+    createUserMessageAndJob(db, { sessionId: session.id, content: "Throw" });
+    await processNextJob({ db, config: testConfig(), agentRunner: async () => { throw new Error("provider threw"); } });
+    expect(listNotificationEvents(db).map(event => event.type)).toEqual(["agent.failed", "agent.failed"]);
+  });
+
+  it("does not let a cancelled worker publish a late reply", async () => {
+    const session = createSession(db, {});
+    const { job } = createUserMessageAndJob(db, { sessionId: session.id, content: "Reply" });
+    await processNextJob({ db, config: testConfig(), agentRunner: async () => {
+      db.prepare("UPDATE jobs SET status='cancelled' WHERE id=?").run(job.id);
+      return { status: "completed", summary: "Late answer" };
+    } });
+    expect(listNotificationEvents(db)).toEqual([]);
+  });
+
+  it("deduplicates a legacy approval event and its final waiting state", async () => {
+    const session = createSession(db, {});
+    createUserMessageAndJob(db, { sessionId: session.id, content: "Approve" });
+    await processNextJob({ db, config: testConfig(), agentRunner: async (input) => {
+      await input.emit({ type: "approval.pending", runId: "legacy-turn", sequence: 1, payload: {} });
+      return { status: "waiting_approval" };
+    } });
+    expect(listNotificationEvents(db)).toHaveLength(1);
+  });
+
   it("queues full-access capability work without emitting an approval request", async () => {
     saveAgentCapabilityPolicySettings(db, { ...defaultAgentCapabilityPolicySettings(), fullAccess: true });
     const session = createSession(db, {});
@@ -77,6 +122,7 @@ describe("worker processor", () => {
     expect(listPendingAgentCapabilityApprovals(db, { sessionId: session.id })).toEqual([]);
     expect(listEvents(db, { sessionId: session.id }).map((event) => event.type)).not.toContain("approval.pending");
     expect(getJob(db, job.id)?.status).toBe("waiting_approval");
+    expect(listNotificationEvents(db)).toEqual([]);
   });
 
   it("claims a queued job and writes ordered agent events", async () => {

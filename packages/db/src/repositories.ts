@@ -35,6 +35,7 @@ export * from "./repositories/mcp-resource-tokens.js";
 export * from "./repositories/mcp-transfer-tokens.js";
 export * from "./repositories/monitoring-alerts.js";
 export * from "./repositories/operation-notifications.js";
+export * from "./repositories/notifications.js";
 export * from "./repositories/photos.js";
 export * from "./repositories/photos-metadata.js";
 export * from "./repositories/photos-semantic.js";

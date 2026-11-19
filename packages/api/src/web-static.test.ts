@@ -31,6 +31,15 @@ afterEach(async () => {
 });
 
 describe("web static delivery", () => {
+  it("serves the notification worker as revalidated JavaScript and never substitutes HTML", async () => {
+    const missing = await server.inject({ method: "GET", url: "/sw.js", headers: { accept: "text/html" } });
+    expect(missing.statusCode).toBe(404);
+    await writeFile(path.join(webDist, "sw.js"), "self.addEventListener('push', () => {});");
+    const worker = await server.inject({ method: "GET", url: "/sw.js" });
+    expect(worker.statusCode).toBe(200);
+    expect(worker.headers["content-type"]).toMatch(/javascript/u);
+    expect(worker.headers["cache-control"]).toBe("no-cache");
+  });
   it("always returns the current HTML shell instead of validating a stale deployment ETag", async () => {
     const response = await server.inject({
       method: "GET",

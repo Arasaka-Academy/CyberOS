@@ -237,6 +237,8 @@ function settingsSectionIcon(section: SettingsSectionId) {
   switch (section) {
     case "overview":
       return <HardDrive aria-hidden="true" size={16} />;
+    case "notifications":
+      return <BellRing aria-hidden="true" size={16} />;
     case "system-profile":
       return <UserRound aria-hidden="true" size={16} />;
     case "version":

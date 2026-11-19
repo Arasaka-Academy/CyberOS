@@ -35,8 +35,9 @@ test-chat-session-switch.mjs: 提供聊天浏览器夹具；验证会话、阅�
 test-download-panel.mjs: 下载状态图标、多选删除、窗口快照、一万条历史滚动和响应式浏览器验收。
 test-download-settings.mjs: test-download-settings 的行为与契约验证。
 test-nvr-browser.mjs: test-nvr-browser 的行为与契约验证。
+test-notifications-browser.mjs: 隔离通知设置、历史会话、展示确认与本地注入后台推送验收。
 test-photos-semantic-browser.mjs: test-photos-semantic-browser 的行为与契约验证。
-test-settings-browser.mjs: test-settings-browser 的行为与契约验证。
+test-settings-browser.mjs: 设置保存、通知入口、分组导航、主题和响应布局验收。
 test-terminal-browser.mjs: test-terminal-browser 的行为与契约验证。
 test-tv-interactions.mjs: test-tv-interactions 的行为与契约验证。
 test-tv-navigation.mjs: test-tv-navigation 的行为与契约验证。

@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖产品 HTTP 动作与能力清单的映射契约。
  * [OUTPUT]: 提供补充映射和第一方专用接口的排除理由。
- * [POS]: 产品动作覆盖边界；凭据、屏保与 TV 输出保留第一方。
+ * [POS]: 产品动作覆盖边界；浏览器授权、凭据与物理输出保留第一方。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
 /** Product actions omitted from an entry's original route list, with their implemented capability. */
@@ -44,6 +44,12 @@ export const ADDITIONAL_PRODUCT_ACTIONS: Readonly<Record<string, readonly string
 
 /** Exact exclusions are reviewed when a product route changes; there is no catch-all exclusion. */
 export const PRODUCT_ACTION_EXCLUSIONS: readonly { reason: string; actions: readonly string[] }[] = [
+  { reason: "浏览器通知权限与订阅令牌只属于当前浏览器；模型不得替用户启用推送、修改订阅偏好或确认用户已经看到内容。", actions: [
+    "GET /api/notifications/push/config", "POST /api/notifications/push/subscriptions",
+    "GET /api/notifications/push/subscriptions/:id", "PATCH /api/notifications/push/subscriptions/:id",
+    "DELETE /api/notifications/push/subscriptions/:id", "POST /api/notifications/push/test",
+    "GET /api/notifications/events", "POST /api/notifications/events/:id/observed"
+  ] },
   { reason: "First-party approval decisions and Agent job recovery must remain outside model-callable tools.", actions: [
     "GET /api/approvals", "POST /api/capability-approvals/:id/decision", "POST /api/jobs/:id/cancel", "POST /api/jobs/:id/retry"
   ] },

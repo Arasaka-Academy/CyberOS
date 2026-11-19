@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖临时 SQLite、迁移清单与并发初始化进程。
+ * [OUTPUT]: 验证格式身份、追加迁移和原有数据保留。
+ * [POS]: db 表结构与升级安全的集成回归测试。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
@@ -8,10 +14,13 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   CYBEROS_DATABASE_FORMAT_VERSION,
   createMediaSource,
+  createOperationNotification,
   getMediaFile,
   migrations,
   openCyberOsDb,
   openCyberOsDbReadOnly,
+  markOperationNotificationRead,
+  runMigrations,
   saveMediaProgress,
   upsertMediaCatalogEntry
 } from "./index.js";
@@ -47,7 +56,8 @@ describe("CyberOS 2.0 SQLite schema", () => {
         "012_photos_embedding_retention",
         "013_photos_search_corpus_revision",
         "014_photos_embedding_cache_runtime",
-        "015_nvr"
+        "015_nvr",
+        "016_browser_notifications"
       ]);
       expect(database.pragma("foreign_key_check")).toEqual([]);
     } finally {
@@ -74,7 +84,8 @@ describe("CyberOS 2.0 SQLite schema", () => {
         "012_photos_embedding_retention",
         "013_photos_search_corpus_revision",
         "014_photos_embedding_cache_runtime",
-        "015_nvr"
+        "015_nvr",
+        "016_browser_notifications"
     ]);
   });
 
@@ -105,6 +116,27 @@ describe("CyberOS 2.0 SQLite schema", () => {
     } finally {
       database.close();
     }
+  });
+
+  it("adds browser notifications without changing operation notifications or their read status", () => {
+    const previous = new Database(":memory:");
+    try {
+      previous.pragma("foreign_keys = ON");
+      previous.exec("CREATE TABLE schema_migrations(id TEXT PRIMARY KEY,applied_at TEXT NOT NULL)");
+      for (const migration of migrations.filter(entry => entry.id < "016_browser_notifications")) {
+        migration.prepare?.(previous);
+        previous.exec(migration.sql);
+        previous.prepare("INSERT INTO schema_migrations VALUES(?,?)").run(migration.id, "2026-11-19T00:00:00.000Z");
+      }
+      const notification = createOperationNotification(previous, { operationId: "existing-operation", kind: "storage", status: "succeeded", summary: "Existing operation" });
+      markOperationNotificationRead(previous, notification.id, new Date("2026-11-19T00:01:00.000Z"));
+      const snapshot = previous.prepare("SELECT * FROM operation_notifications").all();
+      runMigrations(previous);
+      runMigrations(previous);
+      expect(previous.prepare("SELECT * FROM operation_notifications").all()).toEqual(snapshot);
+      expect(previous.prepare("SELECT name FROM sqlite_schema WHERE type='table' AND name IN ('notification_events','notification_deliveries','browser_push_subscriptions')").all()).toHaveLength(3);
+      expect(previous.pragma("foreign_key_check")).toEqual([]);
+    } finally { previous.close(); }
   });
 
   it("upgrades a populated pre-video 2.x database without changing media or settings", () => {
@@ -420,7 +452,8 @@ describe("CyberOS 2.0 SQLite schema", () => {
         "012_photos_embedding_retention",
         "013_photos_search_corpus_revision",
         "014_photos_embedding_cache_runtime",
-        "015_nvr"
+        "015_nvr",
+        "016_browser_notifications"
       ]);
       expect(database.pragma("foreign_key_check")).toEqual([]);
     } finally {

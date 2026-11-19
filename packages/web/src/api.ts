@@ -357,6 +357,7 @@ type PersistedTranscriptMessage = Omit<TranscriptMessage, "sequence" | "turnSequ
 };
 
 export interface SessionTranscriptSnapshot {
+  session?: Session;
   transcript: PersistedTranscriptMessage[];
   lastEventId: number;
   activeJob: Job | null;
