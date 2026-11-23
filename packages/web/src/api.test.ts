@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖 Web 请求接口与模拟浏览器传输。
+ * [OUTPUT]: 验证请求契约、照片上传进度与错误传播。
+ * [POS]: Web 请求边界的回归测试。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as api from "./api.js";
 import { createTerminalTab, initializeTerminalTabs, type TerminalTabState } from "./api.js";
@@ -11,6 +17,67 @@ const terminalState: TerminalTabState = {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe("photo upload requests", () => {
+  function request() {
+    const xhr = {
+      open: vi.fn(), setRequestHeader: vi.fn(), send: vi.fn(), abort: vi.fn(),
+      responseType: "", status: 201, statusText: "", response: { path: "Photos/a.jpg", operation: {} },
+      upload: { onprogress: null as null | ((event: { loaded: number; total: number; lengthComputable: boolean }) => void) },
+      onload: null as null | (() => void), onerror: null as null | (() => void), onabort: null as null | (() => void)
+    };
+    vi.stubGlobal("XMLHttpRequest", vi.fn(function () { return xhr; }));
+    return xhr;
+  }
+
+  it("reports real byte progress and waits for the server response", async () => {
+    const xhr = request();
+    const progress = vi.fn();
+    const file = new File(["1234"], "a.jpg");
+    let settled = false;
+    const result = api.uploadPhoto(file, "Photos/旅行", progress).then((value) => { settled = true; return value; });
+    expect(xhr.open).toHaveBeenCalledWith("PUT", "/api/photos/upload?name=a.jpg&directory=Photos%2F%E6%97%85%E8%A1%8C");
+    expect(xhr.send).toHaveBeenCalledWith(file);
+    expect(xhr.setRequestHeader).toHaveBeenCalledWith("Content-Type", "application/octet-stream");
+    xhr.upload.onprogress?.({ loaded: 4, total: 4, lengthComputable: true });
+    await Promise.resolve();
+    expect(progress).toHaveBeenCalledWith({ loadedBytes: 4, totalBytes: 4, lengthComputable: true });
+    expect(settled).toBe(false);
+    xhr.onload?.();
+    await expect(result).resolves.toEqual(xhr.response);
+  });
+
+  it("preserves server errors and rejects network failures", async () => {
+    const xhr = request();
+    const failed = api.uploadPhoto(new File(["x"], "a.jpg"));
+    xhr.status = 409;
+    xhr.response = { error: "Photo library is still scanning" } as unknown as typeof xhr.response;
+    xhr.onload?.();
+    await expect(failed).rejects.toThrow("Photo library is still scanning");
+    const network = request();
+    const disconnected = api.uploadPhoto(new File(["x"], "a.jpg"));
+    network.onerror?.();
+    await expect(disconnected).rejects.toThrow("Upload failed");
+  });
+
+  it("keeps file uploads on the same byte-progress transport and supports cancellation", async () => {
+    const xhr = request();
+    const file = new File(["1234"], "a.jpg");
+    const onProgress = vi.fn();
+    const controller = new AbortController();
+    const uploading = api.uploadFile({ storagePoolId: "pool", path: "Photos/a.jpg", file, onProgress, signal: controller.signal });
+    expect(xhr.open).toHaveBeenCalledWith("PUT", "/api/files/upload?storagePoolId=pool&path=Photos%2Fa.jpg");
+    xhr.upload.onprogress?.({ loaded: 2, total: 4, lengthComputable: true });
+    expect(onProgress).toHaveBeenCalledWith({ loadedBytes: 2, totalBytes: 4, lengthComputable: true });
+    controller.abort();
+    expect(xhr.abort).toHaveBeenCalledOnce();
+    xhr.onabort?.();
+    await expect(uploading).rejects.toMatchObject({ name: "AbortError" });
+    const cancelled = request();
+    await expect(api.uploadFile({ storagePoolId: "pool", path: "a.jpg", file, signal: controller.signal })).rejects.toMatchObject({ name: "AbortError" });
+    expect(cancelled.send).not.toHaveBeenCalled();
+  });
 });
 
 describe("terminal tab requests", () => {

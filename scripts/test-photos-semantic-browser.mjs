@@ -1,4 +1,11 @@
+/**
+ * [INPUT]: 依赖 Vite、Playwright 与照片组件隔离夹具。
+ * [OUTPUT]: 验证照片搜索、真实限速上传和浮窗响应布局。
+ * [POS]: 照片前端的浏览器验收；上传仅写入测试 HTTP 流。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
 import { mkdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { before, after, test } from "node:test";
@@ -7,6 +14,7 @@ import { createServer } from "vite";
 
 const { chromium, expect } = createRequire(new URL("../docs/package.json", import.meta.url))("@playwright/test");
 let server, browser, baseUrl;
+const photoUploads = [];
 const space = "a".repeat(64);
 const defaults = { enabled: true, baseUrl: "https://mac-mini.example.ts.net:9443", model: "Qwen/Qwen3-VL-Embedding-2B",
   apiKeyConfigured: true, dimensions: 2048, embeddingSpaceId: space, minSimilarity: 0.35 };
@@ -18,8 +26,11 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { PhotosSemanticSettingsCard } from '/src/components/settings/PhotosSemanticSettingsCard.tsx';
 import { PhotoLibraryPanel } from '/src/components/workspace/PhotoLibraryPanel.tsx';
+import { PhotoUploadsProvider } from '/src/components/workspace/PhotoUploads.tsx';
 import { TooltipLayer } from '/src/components/common/TooltipLayer.tsx';
 import { initI18n, i18n } from '/src/i18n/index.ts';
+import '@cyberos/ui/fonts.css';
+import '@cyberos/ui/styles.css';
 import '/src/styles.css';
 await initI18n();
 await i18n.changeLanguage(new URLSearchParams(location.search).has('zh') ? 'zh-CN' : 'en');
@@ -27,13 +38,18 @@ const library = new URLSearchParams(location.search).has('library');
 const noop = () => {};
 globalThis.__photoErrors = [];
 const notifyError = message => globalThis.__photoErrors.push(message);
-createRoot(document.getElementById('root')).render(<div className="app-shell" style={{display:'block',height:'100dvh',overflow:'auto'}}>
-  {library ? <PhotoLibraryPanel pools={[{id:'pool',name:'Photos',path:'.',filesystem:'ext4',status:'ready'}]} locale="en"
-    onWorkQueuesChanged={noop} onNotifyError={notifyError} onNotifySuccess={noop} onNotifyWarning={noop} onOpenSettings={noop} configurationUpdatedAt={null} /> :
+function LibraryHarness() {
+  const [visible, setVisible] = React.useState(true);
+  globalThis.__setPhotoLibraryVisible = setVisible;
+  return visible ? <PhotoLibraryPanel pools={[{id:'pool',name:'Photos',path:'.',filesystem:'ext4',status:'ready'}]} locale="en"
+    onWorkQueuesChanged={noop} onNotifyError={notifyError} onNotifySuccess={noop} onNotifyWarning={noop} onOpenSettings={noop} configurationUpdatedAt={null} /> : <div>Other workspace</div>;
+}
+createRoot(document.getElementById('root')).render(<PhotoUploadsProvider><div className="app-shell" style={{display:'block',height:'100dvh',overflow:'auto'}}>
+  {library ? <LibraryHarness /> :
   <section className="settings-modal" style={{width:'100%',height:'100%',maxHeight:'none',display:'block'}}>
     <main className="settings-section-page"><div className="settings-section-body"><PhotosSemanticSettingsCard /></div></main>
   </section>}<TooltipLayer />
-</div>);
+</div></PhotoUploadsProvider>);
 `;
 
 before(async () => {
@@ -43,6 +59,16 @@ before(async () => {
       resolveId(id) { if (id === "/__photos-semantic-entry.tsx") return id; },
       load(id) { if (id === "/__photos-semantic-entry.tsx") return harness; },
       configureServer(vite) { vite.middlewares.use(async (request, response, next) => {
+        if (request.url?.startsWith("/api/photos/upload?")) {
+          const name = new URL(request.url, "http://localhost").searchParams.get("name");
+          let received = 0;
+          request.on("data", (chunk) => { received += chunk.length; });
+          request.on("end", () => photoUploads.push({ name, received, reply(status = 201) {
+            response.writeHead(status, { "Content-Type": "application/json" });
+            response.end(JSON.stringify(status === 201 ? { path: `Photos/${name}`, operation: {} } : { error: "Upload test: disk full" }));
+          } }));
+          return;
+        }
         if (!request.url?.startsWith("/__photos-semantic-test")) return next();
         response.setHeader("Content-Type", "text/html");
         response.end(await vite.transformIndexHtml(request.url, '<html><body><div id="root"></div><script type="module" src="/__photos-semantic-entry.tsx"></script></body></html>'));
@@ -63,6 +89,7 @@ async function open(t, { width = 1440, zh = false, failInitial = false, library 
   t.after(async () => { slow.resolve(); await context.close(); assert.deepEqual(errors, []); });
   await page.route("**/api/**", async route => {
     const request = route.request(), path = new URL(request.url()).pathname;
+    if (path === "/api/photos/upload") return route.continue();
     if (path === "/api/photos/settings") return route.fulfill({ json: { settings: { storagePoolId: "pool", path: "Photos", updatedAt: "2026-01-01" } } });
     if (path === "/api/photos/status") { statusReads++; return route.fulfill({ json: {
       status: { state: photoState, total: 120, failed: 0, scanned: 120, processed: 120, updatedAt: "2026-01-01" },
@@ -109,6 +136,103 @@ async function open(t, { width = 1440, zh = false, failInitial = false, library 
   const card = page.locator(".photos-semantic-settings");
   return { page, card, writes, tests, queries, releaseSlow: () => slow.resolve(), gets: () => gets, statusReads: () => statusReads };
 }
+
+test("photo upload floating window tracks real bytes, processing, failures, and workspace changes", async t => {
+  photoUploads.length = 0;
+  const { page } = await open(t, { library: true });
+  await expect(page.locator(".photo-tile")).toHaveCount(2);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Network.enable");
+  await cdp.send("Network.emulateNetworkConditions", { offline: false, latency: 10, downloadThroughput: -1, uploadThroughput: 128 * 1024 });
+  const input = page.locator('input[type="file"]');
+  await input.setInputFiles([
+    { name: "trip.xmp", mimeType: "application/xml", buffer: Buffer.from("<xmp/>") },
+    { name: "旅行-很长的照片文件名称-".repeat(6) + ".jpg", mimeType: "image/jpeg", buffer: Buffer.alloc(512 * 1024) },
+    { name: "broken.jpg", mimeType: "image/jpeg", buffer: Buffer.alloc(1024) },
+    { name: "last.jpg", mimeType: "image/jpeg", buffer: Buffer.alloc(1024) }
+  ]);
+  const window = page.locator(".photo-upload-window");
+  await expect(window).toBeVisible();
+  await expect(window.locator("li")).toHaveCount(4);
+  await expect(window.locator(".ui-dialog-header")).toHaveCount(1);
+  await expect(window.locator(".ui-status")).toHaveCount(4);
+  const transferring = window.locator('li[data-state="uploading"] [role="progressbar"]');
+  await expect.poll(async () => transferring.count() ? Number(await transferring.getAttribute("aria-valuenow")) : 0).toBeGreaterThan(0);
+  assert(Number(await transferring.getAttribute("aria-valuenow")) < 100);
+  await window.getByRole("button", { name: "Collapse uploads" }).click();
+  await expect(window.locator("ol")).toBeHidden();
+  await page.evaluate(() => globalThis.__setPhotoLibraryVisible(false));
+  await expect(page.locator(".photo-library")).toHaveCount(0);
+  await expect(window).toBeVisible();
+  await window.getByRole("button", { name: "Expand uploads" }).click();
+  await expect.poll(() => photoUploads.length).toBe(1);
+  assert(photoUploads[0].name.endsWith(".jpg"));
+  assert.equal(photoUploads[0].received, 512 * 1024);
+  await expect(window.locator('li[data-state="processing"]')).toHaveCount(1);
+  await expect(window.locator('li[data-state="completed"]')).toHaveCount(0);
+  photoUploads[0].reply();
+  await expect.poll(() => photoUploads.length).toBe(2);
+  photoUploads[1].reply(409);
+  await expect.poll(() => photoUploads.length).toBe(3);
+  photoUploads[2].reply();
+  await expect.poll(() => photoUploads.length).toBe(4);
+  assert.equal(photoUploads[3].name, "trip.xmp");
+  photoUploads[3].reply();
+  await expect(window.locator('li[data-state="completed"]')).toHaveCount(3);
+  await expect(window.locator('li[data-state="failed"]')).toContainText("Upload test: disk full");
+  await expect(window.getByRole("status")).toContainText("3 / 4 uploaded · 1 failed");
+  await page.evaluate(() => globalThis.__setPhotoLibraryVisible(true));
+  await expect(page.locator(".photo-library")).toHaveCount(1);
+  await expect(window).toBeVisible();
+  await mkdir(".cyberos/photos-semantic-browser", { recursive: true });
+  await page.screenshot({ path: ".cyberos/photos-semantic-browser/upload-en-1440.png" });
+  for (const zh of [false, true]) for (const width of [1440, 820, 560, 390, 320]) {
+    await page.setViewportSize({ width, height: 720 });
+    await page.evaluate(async (zh) => {
+      const { i18n } = await import("/src/i18n/index.ts");
+      await i18n.changeLanguage(zh ? "zh-CN" : "en");
+    }, zh);
+    const box = await window.boundingBox();
+    assert(box.x >= 0 && box.x + box.width <= width);
+    assert(box.y >= 0 && box.y + box.height <= 720);
+    assert.equal(await window.evaluate((node) => node.scrollWidth <= node.clientWidth), true);
+    for (const button of await window.getByRole("button").all()) {
+      const size = await button.boundingBox();
+      const minimum = width <= 560 ? 44 : 32;
+      assert(size.width >= minimum && size.height >= minimum);
+      assert.equal(await button.evaluate((node) => globalThis.getComputedStyle(node).borderRadius), "0px");
+    }
+  }
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const scheme of ["neon", "mono", "graphite", "synthwave", "bloodline", "terminal", "amber"]) for (const mode of ["dark", "light"]) {
+    await page.evaluate(({ scheme, mode }) => {
+      Object.assign(globalThis.document.documentElement.dataset, { cyberScheme: scheme, cyberMode: mode, theme: mode });
+    }, { scheme, mode });
+    const colors = await window.evaluate((node) => {
+      const style = globalThis.getComputedStyle(node);
+      const cell = node.querySelector('[data-filled="true"]');
+      return { background: style.backgroundColor, text: style.color, progress: globalThis.getComputedStyle(cell).backgroundColor };
+    });
+    assert.notEqual(colors.background, "rgba(0, 0, 0, 0)");
+    assert.notEqual(colors.progress, "rgba(0, 0, 0, 0)");
+    assert.notEqual(colors.text, colors.background);
+  }
+  await page.evaluate(() => {
+    globalThis.document.documentElement.dataset.cyberScheme = "neon";
+    globalThis.document.documentElement.dataset.cyberMode = "light";
+    globalThis.document.documentElement.dataset.theme = "light";
+  });
+  await page.screenshot({ path: ".cyberos/photos-semantic-browser/upload-zh-320.png" });
+  await page.setViewportSize({ width: 320, height: 400 });
+  await window.locator("ol").focus();
+  await page.keyboard.press("End");
+  await expect.poll(() => window.locator("ol").evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+  await page.keyboard.press("Escape");
+  await expect(window.locator("ol")).toBeHidden();
+  await expect(window.getByRole("button", { name: "展开上传列表" })).toBeFocused();
+  await window.getByRole("button", { name: "关闭上传列表" }).click();
+  await expect(window).toHaveCount(0);
+});
 
 test("keyword searches cancel obsolete requests, prefer relevance and show empty offline results", async t => {
   const { page, queries, releaseSlow } = await open(t, { library: true });

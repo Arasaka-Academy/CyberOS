@@ -1,4 +1,11 @@
+/*
+ * [INPUT]: 依赖照片页面与应用级上传浮窗样式。
+ * [OUTPUT]: 聚合照片工作区样式。
+ * [POS]: app 样式层的照片入口。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 @import "./photos/library.css";
+@import "./photos/uploads.css";
 @import "./photos/filters.css";
 @import "./photos/map.css";
 @import "./photos/timeline.css";

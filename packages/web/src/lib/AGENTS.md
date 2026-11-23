@@ -55,6 +55,8 @@ playback-menu-layout.test.ts: playback-menu-layout 的行为回归。
 playback-menu-layout.ts: 提供 playbackMenuLayout。
 playback-state.test.ts: playback-state 的行为回归。
 playback-state.ts: 提供 playbackControlTarget, acceptPlaybackRevision。
+photo-uploads.ts: 照片逐文件上传快照；媒体先于 XMP，失败后继续队列。
+photo-uploads.test.ts: 验证上传字节、处理状态、重复文件名与部分失败。
 preview-settings.test.ts: preview-settings 的行为回归。
 preview-settings.ts: 提供 BYTES_PER_MEBIBYTE, DEFAULT_PREVIEW_FILE_SIZE_LIMIT_BYTES, MIN_PREVIEW_FILE_SIZE_LIMIT_BYTES, MAX_PREVIEW_FILE_SIZE_LIMIT_BYTES。
 remote-keys.ts: 提供 isBackKey, isHomeKey。

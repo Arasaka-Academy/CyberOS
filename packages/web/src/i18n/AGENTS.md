@@ -13,6 +13,6 @@ locale.ts: 公开 DEFAULT_LOCALE, SUPPORTED_LOCALES, LANGUAGE_STORAGE_KEY, Suppo
 nvr.ts: 公开 nvrEn, nvrZh。
 tv-idle.ts: TV 输出选择、视频屏保、待机开关和音乐页面的中英文文案。
 resources.test.ts: resources 的行为与契约验证。
-resources.ts: 界面中英文文案；包含权限、工具摘要及下载多选删除提示。
+resources.ts: 中英文界面文案；包含权限、工具摘要、上传进度和下载操作。
 
 [PROTOCOL]: Update this header on change, then check AGENTS.md

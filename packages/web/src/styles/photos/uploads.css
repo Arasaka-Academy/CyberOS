@@ -1,0 +1,55 @@
+/*
+ * [INPUT]: 依赖 CyberUI 标题、状态、分段进度与主题令牌。
+ * [OUTPUT]: 提供上传浮窗、逐文件进度与窄屏布局。
+ * [POS]: 照片样式层；固定浮窗避开底部播放与移动导航。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
+.photo-upload-window {
+  position: fixed;
+  z-index: 80;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: calc(112px + env(safe-area-inset-bottom));
+  width: min(400px, calc(100vw - 32px));
+  max-height: calc(100dvh - 136px - env(safe-area-inset-bottom) - env(safe-area-inset-top));
+  display: flex;
+  flex-direction: column;
+  color: var(--cyber-ink);
+  background: var(--cyber-bg);
+  border: 1px solid var(--cyber-line);
+  border-top: 2px solid var(--cyber-accent);
+  box-shadow: 4px 4px 0 var(--cyber-soft);
+}
+
+.photo-upload-header {
+  --dialog-title-size: 14px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--cyber-soft);
+}
+
+.photo-upload-header h3::before { content: "// "; color: var(--cyber-accent-text); }
+.photo-upload-header .ui-dialog-heading > p { font-size: 11px; }
+.photo-upload-header .ui-dialog-header-actions { gap: 4px; }
+
+.photo-upload-total { display: flex; align-items: center; gap: 10px; padding: 12px; }
+.photo-upload-total > .photo-upload-meter { flex: 1; width: 0; }
+.photo-upload-total > span { font: 11px var(--font-mono); }
+
+.photo-upload-files { min-height: 0; max-height: 320px; overflow-y: auto; overscroll-behavior: contain; padding: 0; margin: 0; list-style: none; border-top: 1px solid var(--line); }
+.photo-upload-files[hidden] { display: none; }
+.photo-upload-file { padding: 12px; border-bottom: 1px solid var(--line-soft); }
+.photo-upload-file:last-child { border-bottom: 0; }
+.photo-upload-file-heading { display: flex; align-items: center; gap: 7px; min-width: 0; margin-bottom: 8px; }
+.photo-upload-file-heading > svg { flex: none; color: var(--muted); }
+.photo-upload-name { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
+.photo-upload-state { flex: none; }
+.photo-upload-file > .photo-upload-meter { width: 100%; }
+.photo-upload-file-meta { display: flex; justify-content: space-between; gap: 8px; margin-top: 6px; color: var(--muted); font: 10px var(--font-mono); }
+.photo-upload-file[data-state="completed"] .photo-upload-file-heading > svg { color: var(--green); }
+.photo-upload-file[data-state="failed"] .photo-upload-file-heading > svg { color: var(--danger-text); }
+.photo-upload-error { margin: 8px 0 0; color: var(--danger-text); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+
+@media (max-width: 560px) {
+  .photo-upload-window { right: max(8px, env(safe-area-inset-right)); width: calc(100vw - 16px); }
+}

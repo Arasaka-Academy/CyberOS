@@ -1,10 +1,11 @@
 /**
  * [INPUT]: 依赖 Web 服务接口、设置资源与 Agent 事件流。
  * [OUTPUT]: 提供应用状态、工作区与设置交互。
- * [POS]: Web 应用组合层；组合通知会话直达、展示确认与本轮工具记录。
+ * [POS]: Web 应用组合层；持有跨页面上传、通知与 Agent 状态。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
 import { AppearanceProvider, Button as UiButton } from "@cyberos/ui";
+import { PhotoUploadsProvider } from "./components/workspace/PhotoUploads.js";
 import { getMusicPlayer } from "./lib/music-api.js";
 import { MusicTakeoverDialog, MusicProvider } from "./components/music/MusicProvider.js";
 import { PlaybackBar } from "./components/playback/PlaybackBar.js";
@@ -227,7 +228,7 @@ function vodPlayerErrorCode(error: unknown): NonNullable<VodPlayerStatus["errorC
 
 export function App() {
   const { i18n: language } = useTranslation();
-  return <AppearanceProvider locale={language.resolvedLanguage === "en" ? "en" : "zh-CN"}><MobileNavigationProvider><PlaybackProvider><MusicProvider><AppContent /></MusicProvider></PlaybackProvider></MobileNavigationProvider></AppearanceProvider>;
+  return <AppearanceProvider locale={language.resolvedLanguage === "en" ? "en" : "zh-CN"}><MobileNavigationProvider><PlaybackProvider><MusicProvider><PhotoUploadsProvider><AppContent /></PhotoUploadsProvider></MusicProvider></PlaybackProvider></MobileNavigationProvider></AppearanceProvider>;
 }
 
 function AppContent() {

@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 Web 的统一翻译键约定。
  * [OUTPUT]: 提供中文与英文界面文案。
- * [POS]: 集中维护权限、工具摘要和下载选择删除文案。
+ * [POS]: 集中维护权限、工具摘要、上传进度和下载操作文案。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
 import { nvrEn, nvrZh } from "./nvr.js";
@@ -1118,6 +1118,14 @@ export const en = {
       scanQueued: "Photo scan queued.",
       upload: "Upload media",
       uploaded: "Uploaded {{count}} media items.",
+      uploadProgress: "Photo uploads",
+      uploadSummary: "{{completed}} / {{total}} uploaded",
+      uploadFailures: "{{count}} failed",
+      uploadProcessing: "Processing",
+      totalUploadProgress: "Total upload progress",
+      collapseUploads: "Collapse uploads",
+      expandUploads: "Expand uploads",
+      dismissUploads: "Dismiss uploads",
       unsupportedUpload: "Choose a supported image, video, or RAW file.",
       dropTitle: "Drop media to upload",
       dropBody: "Supported media will be added to the configured library directory.",
@@ -4725,6 +4733,14 @@ export const zhCN = {
       scanQueued: "照片扫描已排队。",
       upload: "上传媒体",
       uploaded: "已上传 {{count}} 个媒体项。",
+      uploadProgress: "照片上传",
+      uploadSummary: "已上传 {{completed}} / {{total}} 个文件",
+      uploadFailures: "{{count}} 个失败",
+      uploadProcessing: "处理中",
+      totalUploadProgress: "总上传进度",
+      collapseUploads: "收起上传列表",
+      expandUploads: "展开上传列表",
+      dismissUploads: "关闭上传列表",
       unsupportedUpload: "请选择支持的图片、视频或 RAW 文件。",
       dropTitle: "松开即可上传媒体",
       dropBody: "支持的媒体会添加到已配置的照片目录。",

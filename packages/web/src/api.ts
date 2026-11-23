@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖公共契约与同源 HTTP 接口。
- * [OUTPUT]: 提供 Web 类型、下载分页、版本化操作与设置提交。
+ * [OUTPUT]: 提供 Web 类型、上传字节进度、下载分页与设置提交。
  * [POS]: Web 请求边界；秘密输入使用独立接口。
  * [PROTOCOL]: Update this header on change, then check AGENTS.md
  */
@@ -2244,16 +2244,14 @@ export async function updateMediaMatch(
   ).then((body) => body.title);
 }
 
-export async function uploadPhoto(file: File, directory?: string): Promise<{ path: string; operation: FileOperation }> {
+export async function uploadPhoto(
+  file: File,
+  directory?: string,
+  onProgress?: (progress: UploadProgress) => void
+): Promise<{ path: string; operation: FileOperation }> {
   const params = new URLSearchParams({ name: file.name });
   if (directory) params.set("directory", directory);
-  const response = await fetch(`/api/photos/upload?${params.toString()}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/octet-stream" },
-    body: file
-  });
-  await ensureOk(response);
-  return (await response.json()) as { path: string; operation: FileOperation };
+  return uploadBinary({ url: `/api/photos/upload?${params.toString()}`, file, ...(onProgress ? { onProgress } : {}) });
 }
 
 export async function applyPhotoOperation(input: {
@@ -2698,11 +2696,17 @@ export async function uploadFile(input: {
   signal?: AbortSignal;
   onProgress?: (progress: UploadProgress) => void;
 }): Promise<UploadFileResult> {
-  return await new Promise<UploadFileResult>((resolve, reject) => {
-    const params = new URLSearchParams({
-      storagePoolId: input.storagePoolId,
-      path: input.path
-    });
+  const params = new URLSearchParams({ storagePoolId: input.storagePoolId, path: input.path });
+  return uploadBinary({ ...input, url: `/api/files/upload?${params.toString()}` });
+}
+
+function uploadBinary<Result>(input: {
+  url: string;
+  file: File;
+  signal?: AbortSignal;
+  onProgress?: (progress: UploadProgress) => void;
+}): Promise<Result> {
+  return new Promise<Result>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     let abortListener: (() => void) | null = null;
 
@@ -2713,7 +2717,7 @@ export async function uploadFile(input: {
       abortListener = null;
     }
 
-    xhr.open("PUT", `/api/files/upload?${params.toString()}`);
+    xhr.open("PUT", input.url);
     xhr.responseType = "json";
     xhr.setRequestHeader("Content-Type", "application/octet-stream");
     xhr.upload.onprogress = (event) => {
@@ -2730,11 +2734,13 @@ export async function uploadFile(input: {
         return;
       }
 
-      const response =
-        xhr.response && typeof xhr.response === "object"
-          ? (xhr.response as UploadFileResult)
-          : (JSON.parse(xhr.responseText) as UploadFileResult);
-      resolve(response);
+      try {
+        resolve(xhr.response && typeof xhr.response === "object"
+          ? xhr.response as Result
+          : JSON.parse(xhr.responseText) as Result);
+      } catch (error) {
+        reject(error);
+      }
     };
     xhr.onerror = () => {
       cleanup();
@@ -2747,7 +2753,7 @@ export async function uploadFile(input: {
 
     if (input.signal) {
       if (input.signal.aborted) {
-        xhr.abort();
+        reject(new DOMException("Upload cancelled", "AbortError"));
         return;
       }
       abortListener = () => xhr.abort();

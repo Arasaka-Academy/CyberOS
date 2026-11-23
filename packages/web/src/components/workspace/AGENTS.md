@@ -37,7 +37,8 @@ PanelHeader.test.ts: PanelHeader 的行为回归。
 PanelHeader.tsx: 提供 PanelHeaderProps, PanelHeader, PanelHeaderActions, PanelHeaderAction。
 PanelLoadingSkeletons.tsx: 提供 PhotoQuerySkeleton, PhotoTimelineSkeleton, DownloadsInitialSkeleton, TerminalTabsSkeleton。
 PhotoLibraryPanel.test.ts: PhotoLibraryPanel 的行为回归。
-PhotoLibraryPanel.tsx: 提供 PHOTO_ACCEPT, shouldRefreshPhotoSnapshot, PhotoLibraryPanel, PhotoLibraryEmptyState。
+PhotoLibraryPanel.tsx: 照片查询与媒体操作；将上传交给应用级队列。
+PhotoUploads.tsx: 跨页面上传 Provider、逐文件进度与可收起浮窗。
 PhotoMapView.tsx: 提供 configureMapLibreWorker, PhotoMapView, mapArchiveReady, PhotoMapDownloadPanel。
 PhotoSearchFilterMenu.tsx: 提供 PhotoSearchFilterMenu, photoFilterMenuIsActive, photoFiltersWithTextOnly, mergePhotoFilterDraft。
 ShareManagementPanel.test.ts: ShareManagementPanel 的行为回归。

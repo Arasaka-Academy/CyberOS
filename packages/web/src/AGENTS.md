@@ -3,9 +3,9 @@
 
 成员列表
 AGENTS.md: 本目录成员和依赖边界。
-App.tsx: 应用状态和页面组合；通知会话直达与实际展示确认；保留本轮工具摘要，区分自动运行与等待用户输入。
-api.test.ts: api 的行为与契约验证。
-api.ts: 第一方 REST 客户端；重导出下载分页接口，凭据独立提交。
+App.tsx: 应用状态和页面组合；跨页面照片上传、通知直达与本轮工具摘要。
+api.test.ts: 请求契约、照片上传字节进度与错误传播回归。
+api.ts: 第一方 REST 客户端；共用二进制上传、下载分页与独立凭据提交。
 boot.test.ts: boot 的行为与契约验证。
 file-type-utils.test.ts: file-type-utils 的行为与契约验证。
 file-type-utils.ts: 公开 FileVisualKind, FileVisualInput, FileVisualDescriptor, FILE_TYPE_LABELS 等接口。

@@ -36,7 +36,7 @@ test-download-panel.mjs: 下载状态图标、多选删除、窗口快照、一�
 test-download-settings.mjs: test-download-settings 的行为与契约验证。
 test-nvr-browser.mjs: test-nvr-browser 的行为与契约验证。
 test-notifications-browser.mjs: 隔离通知设置、历史会话、展示确认与本地注入后台推送验收。
-test-photos-semantic-browser.mjs: test-photos-semantic-browser 的行为与契约验证。
+test-photos-semantic-browser.mjs: 照片搜索、上传浮窗、部分失败和窄屏浏览器验收。
 test-settings-browser.mjs: 设置保存、通知入口、分组导航、主题和响应布局验收。
 test-terminal-browser.mjs: test-terminal-browser 的行为与契约验证。
 test-tv-interactions.mjs: test-tv-interactions 的行为与契约验证。

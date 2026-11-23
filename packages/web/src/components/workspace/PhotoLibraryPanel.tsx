@@ -1,4 +1,11 @@
+/**
+ * [INPUT]: 依赖照片查询接口、应用级上传队列与共享交互组件。
+ * [OUTPUT]: 提供照片时间轴、地图、筛选、预览与媒体操作。
+ * [POS]: Workspace 照片入口；上传状态由应用级 Provider 保留。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { Button as UiButton, DialogHeader, EmptyState, Input, InputGroup } from "@cyberos/ui";
+import { usePhotoUploads } from "./PhotoUploads.js";
 import type { PhotosSemanticIndexStatus, PhotosSearchInfo } from "@cyberos/shared";
 import { ModalPortal } from "../common/ModalPortal.js";
 import { useAppScroll, useAppViewState, useMobileBack } from "../../mobile/MobileNavigation.js";
@@ -51,7 +58,6 @@ import {
   applyPhotoOperation,
   queryPhotos,
   requestPhotoScan,
-  uploadPhoto,
   type PhotoAsset,
   type PhotoMetadataDetail,
   type PhotoMetadataField,
@@ -153,7 +159,9 @@ export function PhotoLibraryPanel({
   const [lightboxId, setLightboxId] = useAppViewState<string | null>("photos.detail", null);
   const [restoredLightbox, setRestoredLightbox] = useState<PhotoQueryAsset | null>(null);
   const [zoom, setZoom] = useState(1);
-  const [busyAction, setBusyAction] = useState<string | null>(null);
+  const photoUploads = usePhotoUploads();
+  const [localBusyAction, setBusyAction] = useState<string | null>(null);
+  const busyAction = photoUploads.active ? "upload" : localBusyAction;
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [dropActive, setDropActive] = useState(false);
   const [runtimeAlertOpen, setRuntimeAlertOpen] = useState(false);
@@ -535,26 +543,18 @@ export function PhotoLibraryPanel({
   async function uploadFiles(files: File[]) {
     if (!settings || !files.length || busyAction) return;
     const supported = files
-      .filter((file) => photoMediaKind(file.name) !== null || photoExtension(file.name) === PHOTOS_XMP_EXTENSION)
-      .sort((left, right) => Number(photoExtension(left.name) === PHOTOS_XMP_EXTENSION) - Number(photoExtension(right.name) === PHOTOS_XMP_EXTENSION));
+      .filter((file) => photoMediaKind(file.name) !== null || photoExtension(file.name) === PHOTOS_XMP_EXTENSION);
     if (!supported.length) {
       onNotifyWarning(t("workspace.photos.unsupportedUpload"));
       return;
     }
     setBusyAction("upload");
-    let completed = 0;
-    const failures: string[] = [];
-    for (const file of supported) {
-      try {
-        await uploadPhoto(file, settings.path);
-        completed += 1;
-      } catch (error) {
-        failures.push(`${file.name}: ${errorMessage(error)}`);
-      }
-    }
-    if (completed) onNotifySuccess(t("workspace.photos.uploaded", { count: completed }));
-    if (failures.length) onNotifyWarning(failures.slice(0, 3).join("\n"));
     try {
+      const uploaded = await photoUploads.upload(supported, settings.path);
+      const completed = uploaded.filter((item) => item.status === "completed").length;
+      const failures = uploaded.filter((item) => item.status === "failed").map((item) => `${item.name}: ${item.error}`);
+      if (completed) onNotifySuccess(t("workspace.photos.uploaded", { count: completed }));
+      if (failures.length) onNotifyWarning(failures.slice(0, 3).join("\n"));
       const snapshot = await getPhotoStatus();
       setStatus(snapshot.status);
       setWorkerHealth(snapshot.workerHealth);

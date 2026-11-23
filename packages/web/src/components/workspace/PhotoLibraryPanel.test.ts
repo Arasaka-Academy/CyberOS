@@ -1,4 +1,11 @@
+/**
+ * [INPUT]: 依赖照片组件、上传 Provider 与翻译资源。
+ * [OUTPUT]: 验证照片查询、媒体选择与页面呈现契约。
+ * [POS]: 照片工作区的组件回归。
+ * [PROTOCOL]: Update this header on change, then check AGENTS.md
+ */
 import { beforeAll, describe, expect, it } from "vitest";
+import { PhotoUploadsProvider } from "./PhotoUploads.js";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type {
@@ -124,7 +131,7 @@ describe("photo timeline grouping", () => {
     ]) expect(shouldRefreshPhotoSnapshot({ ...idle, ...patch })).toBe(false);
   });
   it("renders the full library skeleton instead of an initial centered spinner", () => {
-    const html = renderToStaticMarkup(createElement(PhotoLibraryPanel, {
+    const html = renderToStaticMarkup(createElement(PhotoUploadsProvider, { children: createElement(PhotoLibraryPanel, {
       pools: [],
       locale: "en",
       onWorkQueuesChanged: () => undefined,
@@ -133,7 +140,7 @@ describe("photo timeline grouping", () => {
       onNotifyWarning: () => undefined,
       onOpenSettings: () => undefined,
       configurationUpdatedAt: null
-    }));
+    }) }));
 
     expect(html).toContain('aria-busy="true"');
     expect(html).not.toContain("photo-library-bar-skeleton");
@@ -151,7 +158,7 @@ describe("photo timeline grouping", () => {
   });
 
   it("allows selecting multiple media files for upload", () => {
-    const html = renderToStaticMarkup(createElement(PhotoLibraryPanel, {
+    const html = renderToStaticMarkup(createElement(PhotoUploadsProvider, { children: createElement(PhotoLibraryPanel, {
       pools: [],
       locale: "en",
       onWorkQueuesChanged: () => undefined,
@@ -160,7 +167,7 @@ describe("photo timeline grouping", () => {
       onNotifyWarning: () => undefined,
       onOpenSettings: () => undefined,
       configurationUpdatedAt: null
-    }));
+    }) }));
 
     expect(html).toMatch(/<input(?=[^>]*type="file")(?=[^>]*multiple="")[^>]*>/u);
   });
