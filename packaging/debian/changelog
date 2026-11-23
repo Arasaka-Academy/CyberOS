@@ -1,3 +1,9 @@
+cyberos (2.4.15) unstable; urgency=medium
+
+  * Show per-file photo upload progress in a persistent CyberUI floating window.
+
+ -- CyberOS Maintainers <maintainers@cyberos.local>  Mon, 23 Nov 2026 08:54:17 +0000
+
 cyberos (2.4.14) unstable; urgency=medium
 
   * Fix BT resume progress and improve download history layout and scrolling.
