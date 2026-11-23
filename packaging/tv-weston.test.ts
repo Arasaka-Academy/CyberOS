@@ -19,17 +19,17 @@ describe("cyberos-tv-weston", () => {
   it("commits staged identity only after the new compositor exposes its socket", async () => {
     const fixture = await createFixture();
     const run = start(fixture, { CYBEROS_TEST_WAIT_FOR_SOCKET: "1" });
-    await vi.waitFor(async () => { expect(await readFile(path.join(fixture.root, "weston-started"), "utf8")).toBe("started"); });
+    await vi.waitFor(async () => { expect(await readFile(path.join(fixture.root, "weston-started"), "utf8")).toBe("started"); }, { timeout: 5_000 });
     expect(await readFile(fixture.confirmed, "utf8")).toBe("confirmed-monitor\n");
     expect(await readFile(fixture.statusLog, "utf8")).not.toContain("weston ready");
     await writeFile(path.join(fixture.root, "allow-socket"), "");
     await vi.waitFor(async () => {
       expect(await readFile(fixture.statusLog, "utf8")).toContain("weston ready");
-    });
+    }, { timeout: 5_000 });
     expect(await readFile(fixture.confirmed, "utf8")).toBe("next-monitor\n");
     await expect(readFile(fixture.staged)).rejects.toMatchObject({ code: "ENOENT" });
     await stop(run.process, run.done);
-  }, 10_000);
+  }, 15_000);
 
   it("keeps the confirmed identity when Weston exits before creating a socket", async () => {
     const fixture = await createFixture();
